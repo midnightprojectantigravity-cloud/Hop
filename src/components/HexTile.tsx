@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { hexToPixel } from '../game/hex';
 import type { Point } from '../game/types';
 import { TILE_SIZE } from '../game/constants';

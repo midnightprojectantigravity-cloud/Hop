@@ -1,4 +1,4 @@
-import React, { useReducer } from 'react';
+import { useReducer } from 'react';
 import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';
 import { gameReducer, generateInitialState } from './game/logic'; // Fix import path if needed (logic vs reducer)

@@ -24,7 +24,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove }) => {
         <div className="flex justify-center items-center p-8">
             <svg width={800} height={600} viewBox={`-${width / 2} -${height / 2} ${width} ${height}`}>
                 <g>
-                    {cells.map((hex, i) => {
+                    {cells.map((hex) => {
                         const dist = hexDistance(hex, gameState.player.position);
                         const isValidMove = dist === 1;
 
