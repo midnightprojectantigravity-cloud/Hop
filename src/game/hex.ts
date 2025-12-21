@@ -39,3 +39,17 @@ export const getGridCells = (radius: number): Point[] => {
     }
     return cells;
 };
+
+export const hexDirection = (dir: number): Point => DIRECTIONS[dir % 6];
+
+export const getHexLine = (start: Point, end: Point): Point[] => {
+    const dist = hexDistance(start, end);
+    const results: Point[] = [];
+    for (let i = 0; i <= dist; i++) {
+        const t = dist === 0 ? 0 : i / dist;
+        const q = start.q + (end.q - start.q) * t;
+        const r = start.r + (end.r - start.r) * t;
+        results.push(createHex(Math.round(q), Math.round(r)));
+    }
+    return results;
+};

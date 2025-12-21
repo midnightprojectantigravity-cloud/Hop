@@ -9,5 +9,6 @@ export const INITIAL_PLAYER_STATS = {
 
 export const ENEMY_STATS = {
     footman: { hp: 2, maxHp: 2, range: 1, damage: 1 },
-    archer: { hp: 1, maxHp: 1, range: 3, damage: 1 },
+    archer: { hp: 1, maxHp: 1, range: 4, damage: 1 },
+    bomber: { hp: 1, maxHp: 1, range: 3, damage: 1 }
 };

@@ -1,0 +1,9 @@
+{
+  "id": "example-empty",
+  "seed": "example-seed-0",
+  "actions": [],
+  "score": 0,
+  "floor": 1,
+  "date": "2025-12-20T00:00:00.000Z",
+  "note": "This is a minimal example showing the replay file format. Use the in-app Replay Manager to export real replays."
+}

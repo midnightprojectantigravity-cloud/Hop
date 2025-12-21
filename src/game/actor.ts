@@ -1,0 +1,31 @@
+import type { Entity } from './types';
+
+/** Apply damage to an actor and return a new actor object. Does not mutate input. */
+export const applyDamage = (actor: Entity, amount: number): Entity => {
+  return { ...actor, hp: Math.max(0, actor.hp - amount) };
+};
+
+/** Heal an actor by amount up to maxHp. Returns new actor. */
+export const applyHeal = (actor: Entity, amount: number): Entity => {
+  return { ...actor, hp: Math.min(actor.maxHp, actor.hp + amount) };
+};
+
+/** Increase actor max HP (and optionally heal by same amount). */
+export const increaseMaxHp = (actor: Entity, amount: number, heal: boolean = true): Entity => {
+  const newMax = actor.maxHp + amount;
+  const newHp = heal ? Math.min(newMax, actor.hp + amount) : actor.hp;
+  return { ...actor, maxHp: newMax, hp: newHp };
+};
+
+/**
+ * Resolve a simple melee attack: attacker deals 1 damage to target.
+ * Returns { attacker, target, messages }
+ */
+export const resolveMeleeAttack = (attacker: Entity, target: Entity): { attacker: Entity; target: Entity; messages: string[] } => {
+  // For now attacks deal flat 1 damage (configurable later)
+  const newTarget = applyDamage(target, 1);
+  const messages = [`${attacker.subtype || attacker.type} hits ${target.subtype || target.type}!`];
+  return { attacker: { ...attacker }, target: newTarget, messages };
+};
+
+export default { applyDamage, applyHeal, increaseMaxHp, resolveMeleeAttack };

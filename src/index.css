@@ -8,3 +8,16 @@ body {
     margin: 0;
     font-family: 'Inter', sans-serif;
 }
+
+/* Movement animation for hex tiles */
+.hex-tile {
+  transition: transform 0.2s ease-out, fill 0.2s ease-out, stroke 0.2s ease-out;
+}
+
+/* Entity HP bars */
+.hp-bar-bg { fill: #2d2d2d; }
+.hp-bar-fill { fill: #34d399; transition: width 0.2s ease; }
+.entity-emoji { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.6)); }
+
+/* Enemy HP color override */
+rect[fill="#fb7185"] { fill: #fb7185; }
