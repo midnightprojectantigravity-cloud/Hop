@@ -3,8 +3,18 @@
 @tailwind utilities;
 
 body {
-    background-color: #1a1a1a;
-    color: #ffffff;
+  /* Medieval apocalyptic palette */
+  --bg-1: #0b0b0b; /* near-black */
+  --bg-2: #2b1f17; /* burnt umber */
+  --accent: #8b5e34; /* aged bronze */
+  --lava: #f97316; /* molten */
+  --shrine: #6d28d9; /* corrupted purple */
+  --muted: #6b6b6b;
+  --hp-fill: #b91c1c; /* blood red */
+  --hp-enemy: #fb7185; /* enemy hurt */
+
+  background: radial-gradient(circle at 20% 10%, rgba(139,94,52,0.04), transparent 15%), linear-gradient(180deg, var(--bg-1), var(--bg-2));
+  color: #efe6da;
     margin: 0;
     font-family: 'Inter', sans-serif;
 }
@@ -15,9 +25,19 @@ body {
 }
 
 /* Entity HP bars */
-.hp-bar-bg { fill: #2d2d2d; }
-.hp-bar-fill { fill: #34d399; transition: width 0.2s ease; }
-.entity-emoji { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.6)); }
+.hp-bar-bg { fill: #2b1f17; }
+.hp-bar-fill { fill: var(--hp-fill); transition: width 0.2s ease; }
+.entity-emoji { filter: drop-shadow(0 3px 4px rgba(0,0,0,0.7)); }
 
 /* Enemy HP color override */
-rect[fill="#fb7185"] { fill: #fb7185; }
+rect[fill="#fb7185"] { fill: var(--hp-enemy); }
+
+/* Subtle grain overlay for apocalyptic feel */
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.03"/></svg>');
+  mix-blend-mode: overlay;
+}

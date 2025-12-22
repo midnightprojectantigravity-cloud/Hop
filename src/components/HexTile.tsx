@@ -31,16 +31,17 @@ export const HexTile: React.FC<HexTileProps> = ({ hex, onClick, isCenter, isVali
     const { x, y } = hexToPixel(hex, TILE_SIZE);
 
     // Determine color
-    let fill = isStairs ? '#1e3a8a' : (isLava ? '#f97316' : (isShrine ? '#4f46e5' : '#333'));
-    let stroke = isStairs ? '#3b82f6' : (isLava ? '#ea580c' : (isShrine ? '#818cf8' : '#555'));
+    // Medieval apocalyptic palette
+    let fill = isStairs ? 'var(--shrine)' : (isLava ? 'var(--lava)' : (isShrine ? 'var(--shrine)' : '#2f241c'));
+    let stroke = isStairs ? 'rgba(255,255,255,0.06)' : (isLava ? '#7c2d04' : (isShrine ? '#9370db' : '#4c392f'));
 
-    if (isCenter) fill = isStairs ? '#1e40af' : (isLava ? '#fb923c' : (isShrine ? '#4338ca' : '#444'));
+    if (isCenter) fill = isStairs ? 'rgba(109,40,217,0.16)' : (isLava ? 'rgba(249,115,22,0.12)' : '#372a22');
     if (isValidMove) {
-        fill = '#2a4a3a';
-        stroke = '#4ade80';
+        fill = '#3b2f28';
+        stroke = 'var(--accent)';
     }
     if (isTargeted) {
-        stroke = '#ef4444';
+        stroke = '#a4382a';
     }
 
     return (
