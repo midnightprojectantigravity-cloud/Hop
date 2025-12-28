@@ -1,9 +1,9 @@
 import React from 'react';
 import type { GameState, Point } from '../game/types';
-import { getGridCells, hexDistance, hexEquals } from '../game/hex';
+import { hexDistance, hexEquals } from '../game/hex';
 import { HexTile } from './HexTile';
 import { Entity } from './Entity';
-import { TILE_SIZE } from '../game/constants';
+import { TILE_SIZE, GRID_WIDTH, GRID_HEIGHT } from '../game/constants';
 
 interface GameBoardProps {
     gameState: GameState;
@@ -13,18 +13,22 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, onThrowSpear, onLeap }) => {
-    const cells = getGridCells(gameState.gridRadius);
+    // Collect all hexes from rooms (or just use gameState.rooms[0].hexes)
+    const cells = gameState.rooms?.[0]?.hexes || [];
 
-    // Calculate ViewBox
-    const width = (gameState.gridRadius * 2 + 2) * TILE_SIZE * 2;
-    const height = (gameState.gridRadius * 2 + 2) * TILE_SIZE * 2;
-    // Center 0,0 is in middle of SVG.
-    // SVG viewBox x,y,w,h.
-    // We want 0,0 to be center. so -w/2, -h/2.
+    // Calculate ViewBox for a 9x11 grid
+    // Width: (9 columns * 1.5 * size)
+    // Height: (11 rows * sqrt(3) * size)
+    const viewWidth = (GRID_WIDTH + 1) * 1.5 * TILE_SIZE;
+    const viewHeight = (GRID_HEIGHT + 1) * Math.sqrt(3) * TILE_SIZE;
+
+    // Offset viewbox to center the grid
+    const offsetX = -TILE_SIZE;
+    const offsetY = -TILE_SIZE;
 
     return (
-        <div className="flex justify-center items-center p-8">
-            <svg width={800} height={600} viewBox={`-${width / 2} -${height / 2} ${width} ${height}`}>
+        <div className="flex justify-center items-center p-8 bg-[#1f2937]/50 rounded-xl">
+            <svg width={800} height={600} viewBox={`${offsetX} ${offsetY} ${viewWidth} ${viewHeight}`}>
                 <g>
                     {cells.map((hex) => {
                         const dist = hexDistance(hex, gameState.player.position);
@@ -32,14 +36,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, onThrow
                         const isTargeted = gameState.enemies.some(e => e.intentPosition && hexEquals(e.intentPosition, hex));
                         const isStairs = hexEquals(hex, gameState.stairsPosition);
                         const isLava = gameState.lavaPositions.some(lp => hexEquals(lp, hex));
+                        const isWall = gameState.wallPositions?.some(wp => hexEquals(wp, hex));
                         const isShrine = gameState.shrinePosition && hexEquals(hex, gameState.shrinePosition);
 
                         const handleClick = () => {
-                            if (dist === 1) {
+                            if (dist === 1 && !isWall) {
                                 onMove(hex);
                             } else if (dist === 2 && gameState.upgrades.includes('LEAP')) {
                                 onLeap(hex);
-                            } else if (gameState.hasSpear && dist > 1 && dist <= 4) {
+                            } else if (gameState.hasSpear && dist > 1 && dist <= 4 && !isWall) {
                                 onThrowSpear(hex);
                             }
                         };
@@ -49,12 +54,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, onThrow
                                 key={`${hex.q},${hex.r}`}
                                 hex={hex}
                                 onClick={handleClick}
-                                isCenter={hex.q === 0 && hex.r === 0}
-                                isValidMove={isValidMove || (dist === 2 && gameState.upgrades.includes('LEAP'))}
+                                isValidMove={isValidMove && !isWall}
                                 isTargeted={isTargeted}
                                 isStairs={isStairs}
                                 isLava={isLava}
                                 isShrine={isShrine}
+                                isWall={isWall}
                             />
                         );
                     })}
@@ -64,7 +69,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, onThrow
                     {gameState.spearPosition && (
                         <Entity entity={{
                             id: 'spear',
-                            type: 'enemy', // Using enemy type just to reuse component for now
+                            type: 'player', // Using player type for coloring for now
                             subtype: 'footman',
                             position: gameState.spearPosition,
                             hp: 1, maxHp: 1

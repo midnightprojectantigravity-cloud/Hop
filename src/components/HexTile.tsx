@@ -1,24 +1,26 @@
 import React from 'react';
 import { hexToPixel } from '../game/hex';
 import type { Point } from '../game/types';
-import { TILE_SIZE } from '../game/constants';
+import { TILE_SIZE, COLORS } from '../game/constants';
 
 interface HexTileProps {
     hex: Point;
     onClick: (hex: Point) => void;
     isCenter?: boolean;
-    isSelected?: boolean; // e.g. for mouse hover highlights or valid moves
+    isSelected?: boolean;
     isValidMove?: boolean;
     isTargeted?: boolean;
     isStairs?: boolean;
     isLava?: boolean;
     isShrine?: boolean;
+    isWall?: boolean;
 }
 
 const getHexCorners = (size: number): string => {
     const points: string[] = [];
     for (let i = 0; i < 6; i++) {
-        const angle_deg = 60 * i - 30;
+        // Flat-top hex angles: 0, 60, 120, 180, 240, 300
+        const angle_deg = 60 * i;
         const angle_rad = Math.PI / 180 * angle_deg;
         const x = size * Math.cos(angle_rad);
         const y = size * Math.sin(angle_rad);
@@ -27,37 +29,60 @@ const getHexCorners = (size: number): string => {
     return points.join(' ');
 };
 
-export const HexTile: React.FC<HexTileProps> = ({ hex, onClick, isCenter, isValidMove, isTargeted, isStairs, isLava, isShrine }) => {
+export const HexTile: React.FC<HexTileProps> = ({
+    hex, onClick, isValidMove, isTargeted, isStairs, isLava, isShrine, isWall
+}) => {
     const { x, y } = hexToPixel(hex, TILE_SIZE);
 
-    // Determine color
-    // Medieval apocalyptic palette
-    let fill = isStairs ? 'var(--shrine)' : (isLava ? 'var(--lava)' : (isShrine ? 'var(--shrine)' : '#2f241c'));
-    let stroke = isStairs ? 'rgba(255,255,255,0.06)' : (isLava ? '#7c2d04' : (isShrine ? '#9370db' : '#4c392f'));
+    // Color selection from design doc
+    let fill: string = COLORS.floor;
+    let stroke = 'rgba(0,0,0,0.2)';
+    let cursor = 'default';
 
-    if (isCenter) fill = isStairs ? 'rgba(109,40,217,0.16)' : (isLava ? 'rgba(249,115,22,0.12)' : '#372a22');
+    if (isWall) {
+        fill = COLORS.wall;
+        stroke = '#1f2937';
+    } else if (isLava) {
+        fill = COLORS.lava;
+        stroke = '#7f1d1d';
+    } else if (isStairs) {
+        fill = COLORS.portal;
+        stroke = '#000000';
+    } else if (isShrine) {
+        fill = COLORS.shrine;
+        stroke = '#c2410c';
+    }
+
     if (isValidMove) {
-        fill = '#3b2f28';
-        stroke = 'var(--accent)';
+        stroke = '#ffffff';
+        cursor = 'pointer';
     }
     if (isTargeted) {
-        stroke = '#a4382a';
+        stroke = '#ff0000';
     }
 
     return (
         <g transform={`translate(${x},${y})`}
             onClick={() => onClick(hex)}
-            style={{ cursor: isValidMove ? 'pointer' : 'default' }}
+            style={{ cursor }}
             className="hex-tile transition-colors duration-200"
         >
+            {/* Draw Wall with slight offset for 3D look if it's a wall */}
+            {isWall && (
+                <polygon
+                    points={getHexCorners(TILE_SIZE - 2)}
+                    fill="#111827"
+                    transform="translate(0, 4)"
+                />
+            )}
             <polygon
-                points={getHexCorners(TILE_SIZE - 2)} // -2 for margin
+                points={getHexCorners(TILE_SIZE - 2)}
                 fill={fill}
                 stroke={stroke}
-                strokeWidth={isTargeted ? "4" : "2"}
+                strokeWidth={isTargeted || isValidMove ? "3" : "1"}
             />
-            {/* Debug Coords */}
-            <text x="0" y="0" textAnchor="middle" fill="#666" fontSize="10" dy=".3em" pointerEvents="none">
+            {/* Debug Coords - optional, let's keep it dim */}
+            <text x="0" y="0" textAnchor="middle" fill="rgba(0,0,0,0.15)" fontSize="8" dy=".3em" pointerEvents="none">
                 {`${hex.q},${hex.r}`}
             </text>
         </g>

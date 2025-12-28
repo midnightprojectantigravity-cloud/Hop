@@ -1,40 +1,83 @@
 // src/game/helpers.ts
 
 import type { GameState, Point, Entity } from './types';
-import { hexEquals } from './hex';
+import { hexEquals, isHexInRectangularGrid } from './hex';
 import { applyDamage } from './actor';
+import { GRID_WIDTH, GRID_HEIGHT } from './constants';
 
 /**
- * Determines if a point is a special tile (player start, stairs, shrine, or lava).
+ * Determines if a point is a special tile (player start, stairs, shrine, lava, or wall).
+ * This is primarily used during map generation to avoid overlapping key elements.
  */
 export const isSpecialTile = (
     point: Point,
-    stairsPos: Point,
-    shrinePos?: Point,
-    lavaPositions?: Point[]
+    specialPositions: {
+        playerStart?: Point;
+        stairsPosition: Point;
+        shrinePosition?: Point;
+        lavaPositions?: Point[];
+        wallPositions?: Point[];
+    }
 ): boolean => {
-    if (hexEquals(point, createHex(0, 0))) return true; // player start
-    if (hexEquals(point, stairsPos)) return true;
-    if (shrinePos && hexEquals(point, shrinePos)) return true;
-    if (lavaPositions && lavaPositions.some(lp => hexEquals(lp, point))) return true;
+    if (specialPositions.playerStart && hexEquals(point, specialPositions.playerStart)) return true;
+    if (hexEquals(point, specialPositions.stairsPosition)) return true;
+    if (specialPositions.shrinePosition && hexEquals(point, specialPositions.shrinePosition)) return true;
+    if (specialPositions.lavaPositions?.some(lp => hexEquals(lp, point))) return true;
+    if (specialPositions.wallPositions?.some(wp => hexEquals(wp, point))) return true;
     return false;
 };
 
 /**
- * Apply lava damage to a given position. Returns the new HP and any messages.
+ * Checks if a position is walkable (exists in grid and is not a wall or lava).
+ */
+export const isWalkable = (
+    position: Point,
+    wallPositions: Point[],
+    lavaPositions: Point[]
+): boolean => {
+    const isWall = wallPositions?.some(w => hexEquals(w, position));
+    if (isWall) return false;
+    const isLava = lavaPositions?.some(l => hexEquals(l, position));
+    if (isLava) return false;
+    return isHexInRectangularGrid(position, GRID_WIDTH, GRID_HEIGHT);
+};
+
+/**
+ * Checks if a position is occupied by another actor.
+ */
+export const isOccupied = (
+    position: Point,
+    state: GameState
+): boolean => {
+    if (hexEquals(state.player.position, position)) return true;
+    return state.enemies.some(e => hexEquals(e.position, position));
+};
+
+/**
+ * Checks if a position is occupied by an enemy.
+ */
+export const getEnemyAt = (
+    enemies: Entity[],
+    position: Point
+): Entity | undefined => {
+    return enemies.find(e => hexEquals(e.position, position));
+};
+
+/**
+ * Apply lava damage to a given position. Returns the new Entity and any messages.
  */
 export const applyLavaDamage = (
     state: GameState,
     position: Point,
-    playerIn?: Entity
-): { player: Entity; messages: string[] } => {
+    entityIn?: Entity
+): { entity: Entity; messages: string[] } => {
     const messages: string[] = [];
-    let player = playerIn ?? state.player;
+    let entity = entityIn ?? state.player;
     if (state.lavaPositions.some(lp => hexEquals(lp, position))) {
-        player = applyDamage(player, 1);
-        messages.push('Burned by lava!');
+        entity = applyDamage(entity, 1);
+        messages.push(`${entity.type === 'player' ? 'You were' : entity.subtype + ' was'} burned by lava!`);
     }
-    return { player, messages };
+    return { entity, messages };
 };
 
 /**
@@ -56,6 +99,3 @@ export const checkStairs = (
 ): boolean => {
     return hexEquals(position, state.stairsPosition);
 };
-
-/** Helper to create the origin hex (0,0). */
-const createHex = (q: number, r: number) => ({ q, r, s: -q - r });

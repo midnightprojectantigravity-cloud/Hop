@@ -1,103 +1,126 @@
 import type { GameState, Action, Point } from './types';
-import { createRng } from './rng';
-import { createHex, hexDistance, hexEquals, getGridCells } from './hex';
+import { hexDistance, hexEquals, getNeighbors } from './hex';
 import { resolveTelegraphedAttacks, computeNextEnemies } from './combat';
-import { INITIAL_PLAYER_STATS, ENEMY_STATS, GRID_RADIUS } from './constants';
-import { applyLavaDamage, checkShrine, checkStairs } from './helpers';
+import { INITIAL_PLAYER_STATS } from './constants';
+import { applyLavaDamage, checkShrine, checkStairs, getEnemyAt, isWalkable, isOccupied } from './helpers';
 import { increaseMaxHp } from './actor';
+import { generateDungeon, generateEnemies, getFloorTheme } from './mapGeneration';
+import {
+    tickSkillCooldowns,
+    UPGRADE_DEFINITIONS,
+    addUpgrade,
+    createDefaultSkills,
+    executeShieldBash,
+    executeJump,
+} from './skills';
 
+/**
+ * Generate initial state with the new tactical arena generation
+ */
+export const generateInitialState = (
+    floor: number = 1,
+    seed: string = String(Date.now()),
+    initialSeed?: string,
+    preservePlayer?: { hp: number; maxHp: number; upgrades: string[]; activeSkills?: any[] }
+): GameState => {
+    // Determine floor theme
+    const theme = getFloorTheme(floor);
 
-const createIdFromRng = (rng: ReturnType<typeof createRng>) => rng.id(9);
+    // Use tactical arena generation for all floors
+    const dungeon = generateDungeon(floor, seed);
+    const enemies = generateEnemies(floor, dungeon.spawnPositions, seed);
 
-export const generateInitialState = (floor: number = 1, seed: string = String(Date.now()), initialSeed?: string): GameState => {
-    const rng = createRng(seed);
-    const cells = getGridCells(GRID_RADIUS);
-    const stairsPos = cells[Math.floor(rng.next() * cells.length)];
-    const lavaCount = 5 + Math.floor(rng.next() * 5);
-    const lavaPositions: Point[] = [];
+    // Build player state (preserve HP/upgrades/skills across floors)
+    const playerStats = preservePlayer ? {
+        hp: preservePlayer.hp,
+        maxHp: preservePlayer.maxHp,
+    } : INITIAL_PLAYER_STATS;
 
-    // Position shrine every 2 floors
-    let shrinePos: Point | undefined;
-    if (floor % 2 === 0) {
-        shrinePos = cells[Math.floor(rng.next() * cells.length)];
-    }
+    const upgrades = preservePlayer?.upgrades || [];
+    const activeSkills = preservePlayer?.activeSkills || createDefaultSkills();
 
-    while (lavaPositions.length < lavaCount) {
-        const potential = cells[Math.floor(rng.next() * cells.length)];
-        const isSpecial = hexEquals(potential, createHex(0, 0)) ||
-            hexEquals(potential, stairsPos) ||
-            (shrinePos && hexEquals(potential, shrinePos));
-        if (!isSpecial && !lavaPositions.some(lp => hexEquals(lp, potential))) {
-            lavaPositions.push(potential);
-        }
-    }
+    // Use the fixed playerSpawn from dungeon generation
+    const playerPos = dungeon.playerSpawn;
 
     return {
         turn: 1,
         player: {
             id: 'player',
             type: 'player',
-            position: createHex(0, 0),
-            ...INITIAL_PLAYER_STATS
+            position: playerPos,
+            previousPosition: playerPos,
+            ...playerStats,
+            activeSkills,
         },
-        enemies: [
-            {
-                id: createIdFromRng(rng),
-                type: 'enemy',
-                subtype: 'footman',
-                position: createHex(0, -2),
-                ...ENEMY_STATS.footman
-            },
-            {
-                id: createIdFromRng(rng),
-                type: 'enemy',
-                subtype: 'archer',
-                position: createHex(2, 2),
-                ...ENEMY_STATS.archer
-            },
-            {
-                id: createIdFromRng(rng),
-                type: 'enemy',
-                subtype: 'bomber',
-                position: createHex(-2, 0),
-                ...ENEMY_STATS.bomber
-            }
-        ],
-        gridRadius: GRID_RADIUS,
+        enemies: enemies.map(e => ({ ...e, previousPosition: e.position })),
+        gridRadius: 5, // Legacy support
         gameStatus: 'playing',
-        message: floor === 1 ? 'Welcome to the arena. Survive.' : `Floor ${floor}. Be careful.`,
+        message: floor === 1
+            ? 'Welcome to the arena. Survive.'
+            : `Floor ${floor} - ${theme.charAt(0).toUpperCase() + theme.slice(1)}. Be careful.`,
         hasSpear: true,
-    rngSeed: seed,
-    initialSeed: initialSeed ?? (floor === 1 ? seed : undefined),
-    rngCounter: 0,
-        stairsPosition: stairsPos,
-        lavaPositions,
-        shrinePosition: shrinePos,
+        rngSeed: seed,
+        initialSeed: initialSeed ?? (floor === 1 ? seed : undefined),
+        rngCounter: 0,
+        stairsPosition: dungeon.stairsPosition,
+        lavaPositions: dungeon.lavaPositions,
+        wallPositions: dungeon.wallPositions,
+        shrinePosition: dungeon.shrinePosition,
         floor: floor,
-        upgrades: [],
-        actionLog: []
+        upgrades,
+        actionLog: [],
+        rooms: dungeon.rooms,
+        theme,
     };
 };
 
 const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState => {
     let player = state.player;
+    let enemies = state.enemies;
     const messages: string[] = [];
 
-    // 1. Resolve existing telegraphed attacks (returns updated player)
-    const tele = resolveTelegraphedAttacks(state, playerMovedTo);
-    player = tele.player;
-    messages.push(...tele.messages);
+    // Store previous positions for Punch passive
+    const previousPositions = new Map<string, Point>();
+    enemies.forEach(e => previousPositions.set(e.id, e.position));
 
-    // 2. Resolve Lava Damage for Player using helper (apply to updated player)
-    const lavaResult = applyLavaDamage(state, playerMovedTo, player);
-    player = lavaResult.player;
-    messages.push(...lavaResult.messages);
+    // 1. Resolve existing telegraphed attacks
+    // Special: Check if blocking (from intent system)
+    const isBlocking = player.intent === 'Blocking';
+    const tele = resolveTelegraphedAttacks(state, playerMovedTo);
+
+    if (isBlocking && tele.messages.length > 0) {
+        messages.push('Shield blocked the attack!');
+        player = { ...tele.player, intent: undefined, hp: player.hp }; // Don't take damage if blocked
+    } else {
+        player = tele.player;
+        messages.push(...tele.messages);
+    }
+
+    // 2. Resolve Lava Damage for Player
+    const lavaRes = applyLavaDamage(state, playerMovedTo, player);
+    player = lavaRes.entity;
+    messages.push(...lavaRes.messages);
 
     // 3. Enemies move or prepare next attack
-    const nextEnemiesResult = computeNextEnemies(state, playerMovedTo);
-    const nextEnemies = nextEnemiesResult.enemies;
-    // update state in case computeNextEnemies consumed RNG in future
-    state = { ...state, ...nextEnemiesResult.nextState };
+    const nextResult = computeNextEnemies(state, playerMovedTo);
+    enemies = nextResult.enemies;
+    state = { ...state, ...nextResult.nextState };
+
+    // 4. Punch Passive: hit enemies that were adjacent at start and are still adjacent
+    const neighbors = getNeighbors(playerMovedTo);
+    enemies = enemies.map(e => {
+        const prevPos = previousPositions.get(e.id);
+        if (!prevPos) return e;
+
+        const wasAdjacent = getNeighbors(state.player.position).some(n => hexEquals(n, prevPos));
+        const isAdjacent = neighbors.some(n => hexEquals(n, e.position));
+
+        if (wasAdjacent && isAdjacent) {
+            messages.push(`Punched ${e.subtype}!`);
+            return { ...e, hp: e.hp - 1 };
+        }
+        return e;
+    }).filter(e => e.hp > 0);
 
     // Pick up spear if player moves onto it
     let hasSpear = state.hasSpear;
@@ -105,9 +128,28 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
     if (spearPos && hexEquals(playerMovedTo, spearPos)) {
         hasSpear = true; spearPos = undefined;
         messages.push('Picked up your spear.');
+
+        // Cleave upgrade: Picking up spear hits all adjacent
+        if (player.activeSkills?.some(s => s.id === 'SPEAR_THROW' && s.activeUpgrades.includes('CLEAVE'))) {
+            const adj = getNeighbors(playerMovedTo);
+            enemies = enemies.map(e => {
+                if (adj.some(a => hexEquals(a, e.position))) {
+                    messages.push(`Cleave hit ${e.subtype}!`);
+                    return { ...e, hp: e.hp - 1 };
+                }
+                return e;
+            }).filter(e => e.hp > 0);
+        }
     }
 
-    // Check Shrine using helper
+    // Update positions and turn state
+    player = { ...player, previousPosition: playerMovedTo, position: playerMovedTo };
+    enemies = enemies.map(e => ({ ...e, previousPosition: e.position }));
+
+    // 5. Tick skill cooldowns
+    player = tickSkillCooldowns(player);
+
+    // Check Shrine
     if (checkShrine(state, playerMovedTo)) {
         return {
             ...state,
@@ -117,13 +159,10 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
         };
     }
 
-    // Check for level progression
-    // Check for level progression using helper
+    // Check Stairs
     if (checkStairs(state, playerMovedTo)) {
-        // If we've reached the final arcade floor, end run and mark completedRun for leaderboard
-        const arcadeMax = 5;
+        const arcadeMax = 10;
         if (state.floor >= arcadeMax) {
-            // Use deterministic fallback when deriving completed run seed
             const baseSeed = state.initialSeed ?? state.rngSeed ?? '0';
             const score = (player.hp || 0) + (state.floor || 0) * 100;
             return {
@@ -140,16 +179,21 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
             };
         }
 
-        // Derive next-floor seed deterministically from current run seed (if any)
-    const baseSeed = state.initialSeed ?? state.rngSeed ?? '0';
+        const baseSeed = state.initialSeed ?? state.rngSeed ?? '0';
         const nextSeed = `${baseSeed}:${state.floor + 1}`;
-        return generateInitialState(state.floor + 1, nextSeed, baseSeed);
+
+        return generateInitialState(state.floor + 1, nextSeed, baseSeed, {
+            hp: player.hp,
+            maxHp: player.maxHp,
+            upgrades: state.upgrades,
+            activeSkills: player.activeSkills,
+        });
     }
 
     return {
         ...state,
-        enemies: nextEnemies,
-        player: { ...player, position: playerMovedTo },
+        enemies,
+        player,
         hasSpear,
         spearPosition: spearPos,
         turn: state.turn + 1,
@@ -174,51 +218,152 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         case 'RESET':
             // Create a fresh seeded run on reset
             return generateInitialState(1, String(Date.now()));
+
         case 'SELECT_UPGRADE': {
-            const upgrade = action.payload;
+            const upgradeId = action.payload;
             let player = state.player;
-            if (upgrade === 'EXTRA_HP') {
-                // Use actor helper to increase max HP and heal
+
+            const upgradeDef = UPGRADE_DEFINITIONS[upgradeId];
+            if (upgradeDef) {
+                // It's a skill upgrade
+                player = addUpgrade(player, upgradeDef.skill, upgradeId);
+            } else if (upgradeId === 'EXTRA_HP') {
                 player = increaseMaxHp(player, 1, true);
             }
+
             return appendAction({
                 ...state,
                 player,
-                upgrades: [...state.upgrades, upgrade],
+                upgrades: [...state.upgrades, upgradeId],
                 gameStatus: 'playing',
-                message: `Applied ${upgrade}!`
+                shrinePosition: undefined,
+                message: `Gained ${upgradeDef?.name || upgradeId}!`
             }, action);
         }
+
+        case 'USE_SKILL': {
+            const { skillId, target } = action.payload;
+
+            // Check if player has the skill and it's ready
+            const skill = state.player.activeSkills?.find(s => s.id === skillId);
+            if (!skill || skill.currentCooldown > 0) {
+                return { ...state, message: skill ? 'Skill on cooldown!' : 'You don\'t have this skill!' };
+            }
+
+            // Route to appropriate skill executor
+            let result;
+            switch (skillId) {
+                case 'SHIELD_BASH':
+                    if (!target) return { ...state, message: 'Select target for Shield Bash!' };
+                    result = executeShieldBash(target, state);
+                    break;
+                case 'JUMP':
+                    if (!target) return { ...state, message: 'Select target for Jump!' };
+                    result = executeJump(target, state);
+                    break;
+                default:
+                    return { ...state, message: `Unknown skill: ${skillId}` };
+            }
+
+            // Apply any lava created by skill
+            let newLavaPositions = state.lavaPositions;
+            if (result.lavaCreated && result.lavaCreated.length > 0) {
+                newLavaPositions = [...state.lavaPositions, ...result.lavaCreated];
+            }
+
+            // If skill doesn't consume turn (e.g., FREE_JUMP), don't resolve enemy actions
+            if (result.consumesTurn === false) {
+                return appendAction({
+                    ...state,
+                    player: result.player,
+                    enemies: result.enemies,
+                    lavaPositions: newLavaPositions,
+                    message: result.messages.join(' ')
+                }, action);
+            }
+
+            // Resolve enemy actions after skill use
+            return resolveEnemyActions(appendAction({
+                ...state,
+                player: result.player,
+                enemies: result.enemies,
+                lavaPositions: newLavaPositions,
+                message: result.messages.join(' ')
+            }, action), result.playerMoved || state.player.position);
+        }
+
+        case 'MOVE':
         case 'LEAP':
-        case 'MOVE': {
+        case 'JUMP': {
             const target = action.payload;
             const dist = hexDistance(state.player.position, target);
             if (action.type === 'MOVE' && dist !== 1) return state;
-            if (action.type === 'LEAP' && (dist > 2 || dist < 1)) return state;
+            if ((action.type === 'LEAP' || action.type === 'JUMP') && (dist > 2 || dist < 1)) return state;
 
-            const killedEnemies = state.enemies.filter(e =>
-                (hexDistance(state.player.position, e.position) === 2 && hexDistance(target, e.position) === 1)
-            );
+            // Check walkability (Walls/Lava)
+            if (!isWalkable(target, state.wallPositions, state.lavaPositions)) {
+                return { ...state, message: "Blocked!" };
+            }
+
+            // Check occupancy (cant step on enemies/self)
+            if (isOccupied(target, state)) {
+                // If it's an enemy, maybe we should attack? 
+                const targetEnemy = getEnemyAt(state.enemies, target);
+                if (targetEnemy && action.type === 'MOVE') {
+                    // One-hit kill melee attack by moving into them (classic Hoplite)
+                    return resolveEnemyActions(appendAction({
+                        ...state,
+                        enemies: state.enemies.filter(e => e.id !== targetEnemy.id),
+                        message: `Struck ${targetEnemy.subtype}!`
+                    }, action), state.player.position);
+                }
+                return { ...state, message: "Tile occupied!" };
+            }
+
+            // Leap Strike (kills enemies you jump over or land adjacent to if jumped from 2 away)
+            // Simplified: in original Leap, jumping over an enemy kills it.
+            const killedEnemies = (action.type === 'LEAP' || action.type === 'JUMP')
+                ? state.enemies.filter(e =>
+                    (hexDistance(state.player.position, e.position) === 2 && hexDistance(target, e.position) === 1)
+                )
+                : [];
 
             return resolveEnemyActions(appendAction({ ...state, enemies: state.enemies.filter(e => !killedEnemies.includes(e)) }, action), target);
         }
+
         case 'THROW_SPEAR': {
             if (!state.hasSpear) return state;
             const target = action.payload;
 
             // Check if enemy at target
-            const targetEnemy = state.enemies.find(e => hexEquals(e.position, target));
+            const targetEnemy = getEnemyAt(state.enemies, target);
+
+            // Check for precision strike (double damage)
+            const isPrecision = state.player.intent === 'Focused';
+            let enemiesAfter = state.enemies;
+
+            if (targetEnemy) {
+                if (isPrecision) {
+                    // Double damage kills most enemies outright
+                    enemiesAfter = state.enemies.filter(e => e.id !== targetEnemy.id);
+                } else {
+                    enemiesAfter = state.enemies.filter(e => e.id !== targetEnemy.id);
+                }
+            }
 
             return resolveEnemyActions(appendAction({
                 ...state,
-                enemies: state.enemies.filter(e => e.id !== targetEnemy?.id),
+                enemies: enemiesAfter,
                 hasSpear: false,
-                spearPosition: target
+                spearPosition: target,
+                player: isPrecision ? { ...state.player, intent: undefined } : state.player
             }, action), state.player.position);
         }
+
         case 'WAIT': {
             return resolveEnemyActions(appendAction(state, action), state.player.position);
         }
+
         default:
             return state;
     }

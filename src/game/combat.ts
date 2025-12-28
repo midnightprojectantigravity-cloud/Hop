@@ -35,10 +35,18 @@ export const computeNextEnemies = (state: GameState, playerMovedTo: Point): { en
   let curState = state;
   const nextEnemies: Entity[] = [];
   for (const bt of curState.enemies) {
-    // computeEnemyAction now may consume RNG and return an updated state
-    const { entity: moveResult, nextState } = computeEnemyAction(bt, playerMovedTo, curState);
-    curState = nextState;
-    const afterLava = applyLavaToEnemy(moveResult, curState);
+    let nextEnemy: Entity;
+    if (bt.isStunned) {
+      // Stunned enemies skip turn and clear stun
+      nextEnemy = { ...bt, isStunned: false, intentPosition: undefined, intent: undefined };
+    } else {
+      // computeEnemyAction now may consume RNG and return an updated state
+      const { entity: moveResult, nextState } = computeEnemyAction(bt, playerMovedTo, curState);
+      curState = nextState;
+      nextEnemy = moveResult;
+    }
+
+    const afterLava = applyLavaToEnemy(nextEnemy, curState);
     if (afterLava.hp > 0) nextEnemies.push(afterLava);
   }
 

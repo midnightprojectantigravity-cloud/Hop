@@ -13,12 +13,13 @@ export const hexDistance = (a: Point, b: Point): number => {
 };
 
 export const hexToPixel = (hex: Point, size: number): { x: number; y: number } => {
-    const x = size * (Math.sqrt(3) * hex.q + (Math.sqrt(3) / 2) * hex.r);
-    const y = size * ((3 / 2) * hex.r);
+    // Flat-top hex projection
+    const x = size * (3 / 2 * hex.q);
+    const y = size * (Math.sqrt(3) / 2 * hex.q + Math.sqrt(3) * hex.r);
     return { x, y };
 };
 
-// Directions for neighbors
+// Directions for neighbors (axial)
 const DIRECTIONS = [
     createHex(1, 0), createHex(1, -1), createHex(0, -1),
     createHex(-1, 0), createHex(-1, 1), createHex(0, 1)
@@ -38,6 +39,31 @@ export const getGridCells = (radius: number): Point[] => {
         }
     }
     return cells;
+};
+
+/**
+ * Generate a rectangular grid of flat-top hexes
+ * width = number of columns
+ * height = number of rows
+ */
+export const getRectangularGrid = (width: number, height: number): Point[] => {
+    const cells: Point[] = [];
+    for (let q = 0; q < width; q++) {
+        const qOffset = Math.floor(q / 2);
+        for (let r = -qOffset; r < height - qOffset; r++) {
+            cells.push(createHex(q, r));
+        }
+    }
+    return cells;
+};
+
+/**
+ * Check if a hex is within a rectangular grid of flat-top hexes
+ */
+export const isHexInRectangularGrid = (hex: Point, width: number, height: number): boolean => {
+    if (hex.q < 0 || hex.q >= width) return false;
+    const qOffset = Math.floor(hex.q / 2);
+    return hex.r >= -qOffset && hex.r < height - qOffset;
 };
 
 export const hexDirection = (dir: number): Point => DIRECTIONS[dir % 6];
