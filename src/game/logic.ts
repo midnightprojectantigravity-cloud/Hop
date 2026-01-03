@@ -1,7 +1,7 @@
 import type { GameState, Action, Point } from './types';
 import { hexDistance, hexEquals, getNeighbors } from './hex';
 import { resolveTelegraphedAttacks, computeNextEnemies } from './combat';
-import { INITIAL_PLAYER_STATS } from './constants';
+import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
 import { applyLavaDamage, checkShrine, checkStairs, getEnemyAt, isWalkable, isOccupied } from './helpers';
 import { increaseMaxHp } from './actor';
 import { generateDungeon, generateEnemies, getFloorTheme } from './mapGeneration';
@@ -12,7 +12,12 @@ import {
     createDefaultSkills,
     executeShieldBash,
     executeJump,
+    executeSpearThrow,
+    executeLunge,
+    applyPassiveSkills,
+    hasUpgrade,
 } from './skills';
+
 
 /**
  * Generate initial state with the new tactical arena generation
@@ -53,7 +58,8 @@ export const generateInitialState = (
             activeSkills,
         },
         enemies: enemies.map(e => ({ ...e, previousPosition: e.position })),
-        gridRadius: 5, // Legacy support
+        gridWidth: GRID_WIDTH,
+        gridHeight: GRID_HEIGHT,
         gameStatus: 'playing',
         message: floor === 1
             ? 'Welcome to the arena. Survive.'
@@ -71,6 +77,8 @@ export const generateInitialState = (
         actionLog: [],
         rooms: dungeon.rooms,
         theme,
+        kills: preservePlayer ? (preservePlayer as any).kills || 0 : 0,
+        environmentalKills: preservePlayer ? (preservePlayer as any).environmentalKills || 0 : 0,
     };
 };
 
@@ -102,12 +110,16 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
     messages.push(...lavaRes.messages);
 
     // 3. Enemies move or prepare next attack
-    const nextResult = computeNextEnemies(state, playerMovedTo);
-    enemies = nextResult.enemies;
-    state = { ...state, ...nextResult.nextState };
+    // Create a temporary state reflecting player's current status for enemy computations
+    const stateAfterTelegraphAndLava = { ...state, player, enemies };
+    const { enemies: nextEnemies, nextState: s3, messages: enemyMessages } = computeNextEnemies(stateAfterTelegraphAndLava, playerMovedTo);
+    enemies = nextEnemies;
+    player = s3.player; // Player might have taken damage from bombs
+    messages.push(...enemyMessages);
 
     // 4. Punch Passive: hit enemies that were adjacent at start and are still adjacent
     const neighbors = getNeighbors(playerMovedTo);
+    let killsThisTurn = 0;
     enemies = enemies.map(e => {
         const prevPos = previousPositions.get(e.id);
         if (!prevPos) return e;
@@ -117,10 +129,14 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
 
         if (wasAdjacent && isAdjacent) {
             messages.push(`Punched ${e.subtype}!`);
-            return { ...e, hp: e.hp - 1 };
+            const nextHp = e.hp - 1;
+            if (nextHp <= 0) killsThisTurn++;
+            return { ...e, hp: nextHp };
         }
         return e;
     }).filter(e => e.hp > 0);
+
+    const totalKills = (state.kills || 0) + killsThisTurn;
 
     // Pick up spear if player moves onto it
     let hasSpear = state.hasSpear;
@@ -146,8 +162,9 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
     player = { ...player, previousPosition: playerMovedTo, position: playerMovedTo };
     enemies = enemies.map(e => ({ ...e, previousPosition: e.position }));
 
-    // 5. Tick skill cooldowns
+    // 5. Tick skill cooldowns and apply passives
     player = tickSkillCooldowns(player);
+    player = applyPassiveSkills(player);
 
     // Check Shrine
     if (checkShrine(state, playerMovedTo)) {
@@ -164,7 +181,7 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
         const arcadeMax = 10;
         if (state.floor >= arcadeMax) {
             const baseSeed = state.initialSeed ?? state.rngSeed ?? '0';
-            const score = (player.hp || 0) + (state.floor || 0) * 100;
+            const score = (totalKills * 10) + (state.environmentalKills * 25) + (state.floor * 100);
             return {
                 ...state,
                 player: { ...player, position: playerMovedTo },
@@ -182,12 +199,17 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
         const baseSeed = state.initialSeed ?? state.rngSeed ?? '0';
         const nextSeed = `${baseSeed}:${state.floor + 1}`;
 
+        // Restore 1 HP on floor progression (max 1 beyond current HP, respecting maxHp)
+        const nextHp = Math.min(player.maxHp, player.hp + 1);
+
         return generateInitialState(state.floor + 1, nextSeed, baseSeed, {
-            hp: player.hp,
+            hp: nextHp,
             maxHp: player.maxHp,
             upgrades: state.upgrades,
             activeSkills: player.activeSkills,
-        });
+            kills: totalKills,
+            environmentalKills: state.environmentalKills,
+        } as any);
     }
 
     return {
@@ -198,7 +220,9 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
         spearPosition: spearPos,
         turn: state.turn + 1,
         message: messages.join(' ') || 'Enemy turn over.',
-        gameStatus: player.hp <= 0 ? 'lost' : 'playing'
+        gameStatus: player.hp <= 0 ? 'lost' : 'playing',
+        kills: totalKills,
+        environmentalKills: state.environmentalKills,
     };
 };
 
@@ -245,14 +269,28 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             const { skillId, target } = action.payload;
 
             // Check if player has the skill and it's ready
-            const skill = state.player.activeSkills?.find(s => s.id === skillId);
-            if (!skill || skill.currentCooldown > 0) {
+            // Special handling for LUNGE which is an upgrade, not a standalone skill
+            const isLunge = skillId === 'LUNGE';
+            const skill = isLunge
+                ? state.player.activeSkills?.find(s => s.id === 'SPEAR_THROW')
+                : state.player.activeSkills?.find(s => s.id === skillId);
+
+            if (!isLunge && (!skill || skill.currentCooldown > 0)) {
                 return { ...state, message: skill ? 'Skill on cooldown!' : 'You don\'t have this skill!' };
+            }
+
+            // Check if player has LUNGE upgrade for lunge action
+            if (isLunge && !hasUpgrade(state.player, 'SPEAR_THROW', 'LUNGE')) {
+                return { ...state, message: 'You don\'t have the Lunge upgrade!' };
             }
 
             // Route to appropriate skill executor
             let result;
             switch (skillId) {
+                case 'SPEAR_THROW':
+                    if (!target) return { ...state, message: 'Select target for Spear Throw!' };
+                    result = executeSpearThrow(target, state);
+                    break;
                 case 'SHIELD_BASH':
                     if (!target) return { ...state, message: 'Select target for Shield Bash!' };
                     result = executeShieldBash(target, state);
@@ -261,9 +299,14 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     if (!target) return { ...state, message: 'Select target for Jump!' };
                     result = executeJump(target, state);
                     break;
+                case 'LUNGE':
+                    if (!target) return { ...state, message: 'Select target for Lunge!' };
+                    result = executeLunge(target, state);
+                    break;
                 default:
                     return { ...state, message: `Unknown skill: ${skillId}` };
             }
+
 
             // Apply any lava created by skill
             let newLavaPositions = state.lavaPositions;
@@ -278,7 +321,9 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     player: result.player,
                     enemies: result.enemies,
                     lavaPositions: newLavaPositions,
-                    message: result.messages.join(' ')
+                    message: result.messages.join(' '),
+                    environmentalKills: (state.environmentalKills || 0) + (result.environmentalKills || 0),
+                    kills: (state.kills || 0) + (result.kills || 0),
                 }, action);
             }
 
@@ -288,7 +333,9 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 player: result.player,
                 enemies: result.enemies,
                 lavaPositions: newLavaPositions,
-                message: result.messages.join(' ')
+                message: result.messages.join(' '),
+                environmentalKills: (state.environmentalKills || 0) + (result.environmentalKills || 0),
+                kills: (state.kills || 0) + (result.kills || 0),
             }, action), result.playerMoved || state.player.position);
         }
 
@@ -332,31 +379,18 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         }
 
         case 'THROW_SPEAR': {
-            if (!state.hasSpear) return state;
             const target = action.payload;
+            const result = executeSpearThrow(target, state);
 
-            // Check if enemy at target
-            const targetEnemy = getEnemyAt(state.enemies, target);
-
-            // Check for precision strike (double damage)
-            const isPrecision = state.player.intent === 'Focused';
-            let enemiesAfter = state.enemies;
-
-            if (targetEnemy) {
-                if (isPrecision) {
-                    // Double damage kills most enemies outright
-                    enemiesAfter = state.enemies.filter(e => e.id !== targetEnemy.id);
-                } else {
-                    enemiesAfter = state.enemies.filter(e => e.id !== targetEnemy.id);
-                }
+            if (result.messages.includes('Spear not in hand!') || result.messages.includes('Target out of range!')) {
+                return { ...state, message: result.messages[0] };
             }
 
             return resolveEnemyActions(appendAction({
                 ...state,
-                enemies: enemiesAfter,
-                hasSpear: false,
-                spearPosition: target,
-                player: isPrecision ? { ...state.player, intent: undefined } : state.player
+                enemies: result.enemies,
+                hasSpear: result.hasSpear ?? false,
+                spearPosition: result.spearPosition,
             }, action), state.player.position);
         }
 

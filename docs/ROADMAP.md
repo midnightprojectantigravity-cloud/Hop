@@ -18,48 +18,29 @@ This document outlines the expansion plan for Hop, focusing on enemies, skills, 
 
 ## Phase 1: Expanded Enemy Types
 
-### Current Enemies
-| Type | HP | Behavior |
-|------|-----|----------|
-| Footman | 2 | Melee, moves toward player |
-| Archer | 1 | Ranged, requires line-of-sight on axis |
-| Bomber | 1 | AoE, prefers 2-3 hex distance |
+| Type | HP | Behavior | Status |
+|------|-----|----------|--------|
+| Footman | 2 | Melee, moves toward player | ✅ |
+| Archer | 1 | Ranged (axial) | ✅ |
+| Bomber | 1 | AoE, throws bombs | ✅ |
+| Shield Bearer | 3 | Slow, blocks front | ✅ |
+| Sprinter | 1 | Fast (2 hex/turn) | ✅ |
+| Warlock | 2 | Teleport & Cast | ✅ |
+| Assassin | 1 | Stealth Melee | ✅ |
+| Golem | 4 | Heavy Line Attack | ✅ |
+| Bomb | 1 | Delayed Explosion | ✅ |
 
-### New Enemy Proposals
+#### Tier 3 - Elite (Floors 5+, Bosses)
 
-#### Tier 1 - Basic (Floors 1-3)
+**👑 Demon Lord (Boss)**
+- HP: 10
+- Behavior: Multi-phase fight, summons minions
+- Status: **To Do**
 
-**🛡️ Shield Bearer**
-- HP: 3
-- Behavior: Slow movement, blocks frontal attacks
-- Mechanic: Cannot be damaged from the direction they're facing. Must flank.
-- Implementation: Add `facing: number` (0-5 direction) to Entity
-
-**⚡ Sprinter**
-- HP: 1
-- Behavior: Moves 2 hexes per turn toward player
-- Mechanic: Fast but fragile. Creates pressure.
-- Implementation: Add `movementSpeed: number` to Entity
-
-#### Tier 2 - Intermediate (Floors 3-5)
-
-**🧙 Warlock**
-- HP: 2
-- Behavior: Teleports every 2 turns, casts ranged spell
-- Mechanic: Unpredictable positioning
-- Implementation: Add `teleportCooldown: number`, use RNG for destination
-
-**🗡️ Assassin**
-- HP: 1
-- Behavior: Invisible until adjacent. Backstab deals 2 damage.
-- Mechanic: Revealed when player is adjacent or uses detection skill
-- Implementation: Add `isVisible: boolean`, reveal logic in combat
-
-**🪨 Golem**
-- HP: 4
-- Behavior: Slow (moves every other turn), attacks in 3-hex line
-- Mechanic: Telegraph shows multiple hexes, high damage
-- Implementation: Add `actionCooldown: number`, line attack telegraph
+**💀 Death Knight (Mini-boss)**
+- HP: 6
+- Behavior: Charges in straight line, cursed ground
+- Status: **To Do**
 
 #### Tier 3 - Elite (Floors 5+, Bosses)
 
@@ -279,20 +260,20 @@ Each "act" or floor range has a tileset:
 
 ### Required Assets
 
-#### Tile Sprites
-- [ ] Stone floor (catacombs)
-- [ ] Lava tile (animated glow)
-- [ ] Ice tile (frozen depths)
-- [ ] Void tile (dark energy)
-- [ ] Stairs (descent portal)
-- [ ] Shrine (corrupted altar)
+#### Tile Sprites / SVG
+- [x] Stone floor (with texture)
+- [x] Lava tile (animated bubbles/glow)
+- [x] Ice tile (To Do)
+- [x] Void tile (To Do)
+- [x] Stairs (SVG icon)
+- [x] Shrine (Crystal SVG)
 
-#### Entity Sprites
-- [ ] Player (warrior silhouette)
-- [ ] Footman (armored soldier)
-- [ ] Archer (hooded figure with bow)
-- [ ] Bomber (hunched figure with bombs)
-- [ ] Shield Bearer (heavy armor, large shield)
+#### Entity Sprites / Shapes
+- [x] Player (Square SVG)
+- [x] Footman (Diamond shape)
+- [x] Archer (Triangle shape)
+- [x] Bomber (Circle shape)
+- [x] Shield Bearer (Heavy shape)
 - [ ] Warlock (robed, staff)
 - [ ] Golem (stone giant)
 - [ ] Demon Lord (boss, winged demon)
@@ -332,19 +313,17 @@ Each "act" or floor range has a tileset:
 ## Implementation Priority
 
 ### High Priority (Next Sprint)
-1. ⚡ Implement 2-3 new enemy types (Shield Bearer, Sprinter, Warlock)
-2. 🗺️ Basic procedural room generation
-3. 🎨 Generate initial art assets
+1. 🧊 Implementing Frozen & Void themes (Ice/Void tiles)
+2. 👑 Boss encounters (Demon Lord logic)
+3. 🏆 Meta-progression (Global Leaderboard backend)
+4. 🎵 Sound effects & Music integration
 
-### Medium Priority
-4. ⚔️ Implement skill system with 3-4 skills
-5. 🏰 Room templates and corridor generation
-6. 🎵 Sound effects foundation
-
-### Lower Priority
-7. 👑 Boss fights
-8. 🏆 Meta progression
-9. 🎮 Mobile controls
+### Completed ✅
+1. Full 7+ Enemy roster with specialized AI.
+2. 3-slot Skill system with deep upgrade trees.
+3. Visual overhaul (SVG shapes, animations, lava bubbles).
+4. Permanent session persistence & Replay verification.
+5. In-game scoring & local leaderboard.
 
 ---
 

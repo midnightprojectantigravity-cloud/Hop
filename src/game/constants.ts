@@ -67,12 +67,17 @@ export const HAZARD_PERCENTAGE = 0.17;
 
 // Floor enemy budget
 export const FLOOR_ENEMY_BUDGET = [
-    0,   // Floor 0 (unused)
-    2,   // Floor 1 (tutorial)
+    0,   // Floor 0
+    2,   // Floor 1
     3,   // Floor 2
-    4,   // Floor 3
-    5,   // Floor 4
-    6,   // Floor 5+
+    5,   // Floor 3
+    7,   // Floor 4
+    10,  // Floor 5
+    12,  // Floor 6
+    15,  // Floor 7
+    18,  // Floor 8
+    22,  // Floor 9
+    25,  // Floor 10
 ];
 
 // Color palette from design doc

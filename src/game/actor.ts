@@ -2,7 +2,18 @@ import type { Entity } from './types';
 
 /** Apply damage to an actor and return a new actor object. Does not mutate input. */
 export const applyDamage = (actor: Entity, amount: number): Entity => {
-  return { ...actor, hp: Math.max(0, actor.hp - amount) };
+  let remainingDamage = amount;
+  let newArmor = actor.temporaryArmor || 0;
+  let newHp = actor.hp;
+
+  if (newArmor > 0) {
+    const absorbed = Math.min(newArmor, remainingDamage);
+    newArmor -= absorbed;
+    remainingDamage -= absorbed;
+  }
+
+  newHp = Math.max(0, newHp - remainingDamage);
+  return { ...actor, hp: newHp, temporaryArmor: newArmor };
 };
 
 /** Heal an actor by amount up to maxHp. Returns new actor. */

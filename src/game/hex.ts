@@ -14,8 +14,11 @@ export const hexDistance = (a: Point, b: Point): number => {
 
 export const hexToPixel = (hex: Point, size: number): { x: number; y: number } => {
     // Flat-top hex projection
+    // Each column (q) is shifted vertically by 0.5 hex height (sqrt(3)/2 * size)
+    // x = size * 3/2 * q
+    // y = size * sqrt(3) * (r + q/2)
     const x = size * (3 / 2 * hex.q);
-    const y = size * (Math.sqrt(3) / 2 * hex.q + Math.sqrt(3) * hex.r);
+    const y = size * Math.sqrt(3) * (hex.r + hex.q / 2);
     return { x, y };
 };
 
@@ -29,41 +32,42 @@ export const getNeighbors = (hex: Point): Point[] => {
     return DIRECTIONS.map(d => hexAdd(hex, d));
 };
 
-export const getGridCells = (radius: number): Point[] => {
-    const cells: Point[] = [];
-    for (let q = -radius; q <= radius; q++) {
-        const r1 = Math.max(-radius, -q - radius);
-        const r2 = Math.min(radius, -q + radius);
-        for (let r = r1; r <= r2; r++) {
-            cells.push(createHex(q, r));
-        }
-    }
-    return cells;
+/**
+ * Dynamic Coordinate Mask for "Stretched Diamond" geometry.
+ * Shaves top-left and bottom-right corners of the W x H parallelogram.
+ */
+export const isTileInDiamond = (q: number, r: number, width: number, height: number): boolean => {
+    if (q < 0 || q >= width || r < 0 || r >= height) return false;
+
+    const sum = q + r;
+    // Hard reset limits based on user's specific 9x11 constraints:
+    // q + r > 3 (min 4) and q + r < 15 (max 14)
+    const topLimit = 4;
+    const bottomLimit = 14;
+
+    return sum >= topLimit && sum <= bottomLimit;
 };
 
 /**
- * Generate a rectangular grid of flat-top hexes
- * width = number of columns
- * height = number of rows
+ * Generate a diamond-shaped grid (shaved axial parallelogram)
  */
-export const getRectangularGrid = (width: number, height: number): Point[] => {
+export const getDiamondGrid = (width: number, height: number): Point[] => {
     const cells: Point[] = [];
     for (let q = 0; q < width; q++) {
-        const qOffset = Math.floor(q / 2);
-        for (let r = -qOffset; r < height - qOffset; r++) {
-            cells.push(createHex(q, r));
+        for (let r = 0; r < height; r++) {
+            if (isTileInDiamond(q, r, width, height)) {
+                cells.push(createHex(q, r));
+            }
         }
     }
     return cells;
 };
 
 /**
- * Check if a hex is within a rectangular grid of flat-top hexes
+ * Bounds check for the "Stretched Diamond" geometry
  */
 export const isHexInRectangularGrid = (hex: Point, width: number, height: number): boolean => {
-    if (hex.q < 0 || hex.q >= width) return false;
-    const qOffset = Math.floor(hex.q / 2);
-    return hex.r >= -qOffset && hex.r < height - qOffset;
+    return isTileInDiamond(hex.q, hex.r, width, height);
 };
 
 export const hexDirection = (dir: number): Point => DIRECTIONS[dir % 6];

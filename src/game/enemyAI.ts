@@ -1,6 +1,7 @@
 import type { Entity, Point, GameState } from './types';
-import { getNeighbors, hexDistance, hexEquals, hexAdd, hexDirection } from './hex';
+import { getNeighbors, hexDistance, hexEquals, hexAdd, hexDirection, isHexInRectangularGrid } from './hex';
 import { consumeRandom } from './rng';
+import { GRID_WIDTH, GRID_HEIGHT } from './constants';
 
 /**
  * Get the direction from one hex to another (0-5)
@@ -46,9 +47,11 @@ const findBestMove = (
         : hexDistance(enemy.position, targetPos);
 
     for (const n of neighbors) {
-        const isWall = state.wallPositions?.some(w => hexEquals(w, n));
-        const blocked = isWall ||
-            state.enemies.some(e => e.id !== enemy.id && hexEquals(e.position, n)) ||
+        const isInBounds = isHexInRectangularGrid(n, GRID_WIDTH, GRID_HEIGHT);
+        const isWall = state.wallPositions?.some((w: Point) => hexEquals(w, n));
+        const isLava = state.lavaPositions?.some((l: Point) => hexEquals(l, n));
+        const blocked = !isInBounds || isWall || isLava ||
+            state.enemies.some((e: Entity) => e.id !== enemy.id && hexEquals(e.position, n)) ||
             hexEquals(n, targetPos);
 
         if (blocked) continue;
@@ -177,7 +180,7 @@ const computeWarlockAction = (enemy: Entity, playerPos: Point, state: GameState)
         }
 
         // Check if blocked
-        const blocked = state.enemies.some(e => e.id !== enemy.id && hexEquals(e.position, candidate)) ||
+        const blocked = state.enemies.some((e: Entity) => e.id !== enemy.id && hexEquals(e.position, candidate)) ||
             hexEquals(candidate, playerPos);
 
         if (!blocked) {
@@ -328,22 +331,28 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
 
         case 'bomber': {
             // Bomber AI: Tries to stay at distance 2-3 and throw bombs
-            if (dist >= 2 && dist <= 3) {
+            const cooldown = bt.actionCooldown ?? 0;
+            const canBomb = cooldown === 0 && dist >= 2 && dist <= 3;
+
+            if (canBomb) {
                 return {
-                    entity: { ...bt, intent: 'Bombing', intentPosition: { ...playerMovedTo } },
+                    entity: { ...bt, intent: 'Bombing', intentPosition: { ...playerMovedTo }, actionCooldown: 2 },
                     nextState: state
                 };
             }
 
+            // Move to maintain distance 2-3
             const { position, state: newState } = findBestMove(bt, playerMovedTo, state, 2.5);
             const nDist = hexDistance(position, playerMovedTo);
+            const nextCanBomb = (cooldown === 0 || cooldown === 1) && nDist >= 2 && nDist <= 3;
 
             return {
                 entity: {
                     ...bt,
                     position,
-                    intent: (nDist >= 2 && nDist <= 3) ? 'Bombing' : 'Moving',
-                    intentPosition: (nDist >= 2 && nDist <= 3) ? { ...playerMovedTo } : undefined
+                    intent: nextCanBomb ? 'Bombing' : 'Moving',
+                    intentPosition: nextCanBomb ? { ...playerMovedTo } : undefined,
+                    actionCooldown: Math.max(0, cooldown - 1)
                 },
                 nextState: newState
             };

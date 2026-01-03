@@ -82,7 +82,8 @@ export interface GameState {
     turn: number;
     player: Entity;
     enemies: Entity[];
-    gridRadius: number;
+    gridWidth: number;
+    gridHeight: number;
     gameStatus: 'playing' | 'won' | 'lost' | 'choosing_upgrade';
     message: string;
     hasSpear: boolean;
@@ -110,6 +111,10 @@ export interface GameState {
         score?: number;
         floor?: number;
     };
+
+    // Score tracking
+    kills: number;
+    environmentalKills: number;
 }
 
 export type Action =

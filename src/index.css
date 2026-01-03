@@ -4,19 +4,26 @@
 
 body {
   /* Medieval apocalyptic palette */
-  --bg-1: #0b0b0b; /* near-black */
-  --bg-2: #2b1f17; /* burnt umber */
-  --accent: #8b5e34; /* aged bronze */
-  --lava: #f97316; /* molten */
-  --shrine: #6d28d9; /* corrupted purple */
+  --bg-1: #0b0b0b;
+  /* near-black */
+  --bg-2: #2b1f17;
+  /* burnt umber */
+  --accent: #8b5e34;
+  /* aged bronze */
+  --lava: #f97316;
+  /* molten */
+  --shrine: #6d28d9;
+  /* corrupted purple */
   --muted: #6b6b6b;
-  --hp-fill: #b91c1c; /* blood red */
-  --hp-enemy: #fb7185; /* enemy hurt */
+  --hp-fill: #b91c1c;
+  /* blood red */
+  --hp-enemy: #fb7185;
+  /* enemy hurt */
 
-  background: radial-gradient(circle at 20% 10%, rgba(139,94,52,0.04), transparent 15%), linear-gradient(180deg, var(--bg-1), var(--bg-2));
+  background: radial-gradient(circle at 20% 10%, rgba(139, 94, 52, 0.04), transparent 15%), linear-gradient(180deg, var(--bg-1), var(--bg-2));
   color: #efe6da;
-    margin: 0;
-    font-family: 'Inter', sans-serif;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Movement animation for hex tiles */
@@ -25,12 +32,23 @@ body {
 }
 
 /* Entity HP bars */
-.hp-bar-bg { fill: #2b1f17; }
-.hp-bar-fill { fill: var(--hp-fill); transition: width 0.2s ease; }
-.entity-emoji { filter: drop-shadow(0 3px 4px rgba(0,0,0,0.7)); }
+.hp-bar-bg {
+  fill: #2b1f17;
+}
+
+.hp-bar-fill {
+  fill: var(--hp-fill);
+  transition: width 0.2s ease;
+}
+
+.entity-emoji {
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.7));
+}
 
 /* Enemy HP color override */
-rect[fill="#fb7185"] { fill: var(--hp-enemy); }
+rect[fill="#fb7185"] {
+  fill: var(--hp-enemy);
+}
 
 /* Subtle grain overlay for apocalyptic feel */
 body::after {
@@ -40,4 +58,106 @@ body::after {
   inset: 0;
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.03"/></svg>');
   mix-blend-mode: overlay;
+}
+
+/* ============================================
+   SMOOTH ENTITY MOVEMENT TRANSITIONS
+   ============================================ */
+.entity-container {
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ============================================
+   LAVA BUBBLE ANIMATION
+   ============================================ */
+@keyframes lavaBubble {
+
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: translateY(-4px) scale(1.3);
+    opacity: 0.9;
+  }
+}
+
+.lava-bubbles circle {
+  animation: lavaBubble 2s ease-in-out infinite;
+}
+
+/* ============================================
+   SHRINE GLOW ANIMATION
+   ============================================ */
+@keyframes shrineGlow {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    stroke-width: 2px;
+  }
+
+  50% {
+    opacity: 0.7;
+    stroke-width: 4px;
+  }
+}
+
+.shrine-icon {
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.6));
+}
+
+/* ============================================
+   STAIRS PULSE ANIMATION
+   ============================================ */
+@keyframes stairsPulse {
+
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.stairs-icon path {
+  animation: stairsPulse 1.5s ease-in-out infinite;
+}
+
+/* ============================================
+   DAMAGE FLASH ANIMATION
+   ============================================ */
+@keyframes damageFlash {
+
+  0%,
+  100% {
+    filter: none;
+  }
+
+  50% {
+    filter: brightness(2) saturate(0);
+  }
+}
+
+.entity-damaged {
+  animation: damageFlash 0.2s ease-out;
+}
+
+/* ============================================
+   SKILL READY INDICATOR
+   ============================================ */
+@keyframes skillReady {
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.9);
+  }
 }

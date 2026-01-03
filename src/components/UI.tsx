@@ -7,43 +7,57 @@ interface UIProps {
     onWait: () => void;
 }
 
+// Calculate score based on design doc formula
+const calculateScore = (state: GameState): number => {
+    const killScore = (state.kills || 0) * 10;
+    const envKillScore = (state.environmentalKills || 0) * 25;
+    const floorScore = state.floor * 100;
+    return killScore + envKillScore + floorScore;
+};
+
 export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait }) => {
+    const score = calculateScore(gameState);
+
     return (
-        <div className="absolute top-4 left-4 z-10 text-white flex flex-col gap-4">
-            <div className="bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-700">
-                <h1 className="text-xl font-bold mb-2">Hoplite Web</h1>
-                <div className="space-y-1 text-sm font-medium">
-                    <p>Floor: {gameState.floor} | Turn: {gameState.turn}</p>
-                    <p className="text-red-400">HP: {gameState.player.hp} / {gameState.player.maxHp}</p>
-                    <p className={gameState.hasSpear ? "text-yellow-400" : "text-gray-500"}>
-                        Spear: {gameState.hasSpear ? "Available 🔱" : "Thrown!"}
-                    </p>
-                    <p className="text-indigo-400">
-                        Upgrades: {gameState.upgrades.join(', ') || 'None'}
-                    </p>
+        <div className="absolute top-0 left-0 w-full z-10 p-4 pointer-events-none">
+            <div className="max-w-md mx-auto flex justify-between items-center bg-gray-900/90 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/10 shadow-2xl pointer-events-auto">
+                <div className="flex flex-col">
+                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Health</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xl font-black text-red-500">{gameState.player.hp}</span>
+                        <span className="text-white/20">/</span>
+                        <span className="text-gray-400 font-bold">{gameState.player.maxHp}</span>
+                    </div>
+                </div>
+
+                <div className="flex flex-col items-center flex-1 mx-4">
+                    <div className="flex items-center gap-4 mb-1">
+                        <button onClick={onWait} className="p-1 hover:bg-white/10 rounded-full transition-colors" title="Wait (🛡️)">
+                            <span className="text-blue-400">🛡️</span>
+                        </button>
+                        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Floor {gameState.floor}</span>
+                        <button onClick={onReset} className="p-1 hover:bg-white/10 rounded-full transition-colors" title="Reset Level (🔄)">
+                            <span className="text-red-400">🔄</span>
+                        </button>
+                    </div>
+                    <span className="text-lg font-black text-white tracking-widest">{score.toLocaleString()}</span>
+                </div>
+
+
+                <div className="flex flex-col items-end">
+                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Armor</span>
+                    <span className="text-xl font-black text-blue-400">{gameState.player.temporaryArmor || 0}</span>
                 </div>
             </div>
 
             {gameState.message && (
-                <div className="bg-black bg-opacity-80 p-3 rounded border border-gray-700 max-w-xs animate-pulse-once">
-                    {gameState.message}
+                <div className="mt-4 max-w-xs mx-auto text-center">
+                    <div className="inline-block bg-white/5 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10 text-xs text-white/80 font-medium animate-pulse-once">
+                        {gameState.message}
+                    </div>
                 </div>
             )}
-
-            <div className="flex gap-2">
-                <button
-                    onClick={onReset}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold transition-colors shadow-lg"
-                >
-                    Reset Level
-                </button>
-                <button
-                    onClick={onWait}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded font-bold transition-colors shadow-lg"
-                >
-                    Wait 🛡️
-                </button>
-            </div>
         </div>
     );
 };
+

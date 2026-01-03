@@ -2,7 +2,7 @@
 // New 3-slot skill system: Spear (Offensive), Shield (Defensive), Jump (Utility)
 
 import type { GameState, Entity, Point, Skill } from './types';
-import { hexDistance, hexEquals, getNeighbors, hexDirection, hexAdd } from './hex';
+import { hexDistance, hexEquals, getNeighbors, hexDirection, hexAdd, getHexLine } from './hex';
 import { applyDamage } from './actor';
 
 // ============================================================================
@@ -66,13 +66,27 @@ export const UPGRADE_DEFINITIONS: Record<string, { name: string; description: st
     BASH_360: { name: '360° Bash', description: 'Bash hits all neighbors (+1 cooldown)', skill: 'SHIELD_BASH' },
     PASSIVE_PROTECTION: { name: 'Passive Protection', description: '+1 temp armor when shield not on cooldown', skill: 'SHIELD_BASH' },
     WALL_SLAM: { name: 'Wall Slam', description: 'Enemies bashed into walls/enemies are stunned', skill: 'SHIELD_BASH' },
-
     // Jump upgrades
     JUMP_RANGE: { name: 'Extended Jump', description: 'Jump range +1', skill: 'JUMP' },
     JUMP_COOLDOWN: { name: 'Nimble', description: 'Jump cooldown -1', skill: 'JUMP' },
     STUNNING_LANDING: { name: 'Stunning Landing', description: 'All enemies within 1 hex of landing are stunned', skill: 'JUMP' },
     METEOR_IMPACT: { name: 'Meteor Impact', description: 'Can land on enemies to kill them', skill: 'JUMP' },
     FREE_JUMP: { name: 'Free Jump', description: 'Can move after jumping', skill: 'JUMP' },
+};
+
+/**
+ * Reset and apply passive skill effects (like temporary armor)
+ */
+export const applyPassiveSkills = (player: Entity): Entity => {
+    let updatedPlayer = { ...player, temporaryArmor: 0 };
+
+    // Shield: Passive Protection (+1 armor if not on cooldown)
+    const shield = player.activeSkills?.find(s => s.id === 'SHIELD_BASH');
+    if (shield && shield.currentCooldown === 0 && hasUpgrade(player, 'SHIELD_BASH', 'PASSIVE_PROTECTION')) {
+        updatedPlayer.temporaryArmor = (updatedPlayer.temporaryArmor || 0) + 1;
+    }
+
+    return updatedPlayer;
 };
 
 // ============================================================================
@@ -181,6 +195,185 @@ export const getSkillRange = (player: Entity, skillId: string): number => {
 // SKILL EXECUTION
 // ============================================================================
 
+/**
+ * Execute Spear Throw skill
+ */
+export const executeSpearThrow = (
+    target: Point,
+    state: GameState
+): SkillResult => {
+    const messages: string[] = [];
+    let player = state.player;
+    let enemies = [...state.enemies];
+    let kills = 0;
+
+    if (!state.hasSpear) {
+        return { player, enemies, messages: ['Spear not in hand!'] };
+    }
+
+    const range = getSkillRange(player, 'SPEAR_THROW');
+    const dist = hexDistance(player.position, target);
+
+    const isInLine = (player.position.q === target.q) || (player.position.r === target.r) || (player.position.s === target.s);
+
+    if (dist < 1 || dist > range || !isInLine) {
+        return { player, enemies, messages: ['Target must be in a straight line within range!'] };
+    }
+
+    const isWall = state.wallPositions?.some(w => hexEquals(w, target));
+    if (isWall) {
+        return { player, enemies, messages: ['Cannot throw spear into a wall!'] };
+    }
+
+    const targetEnemy = enemies.find(e => hexEquals(e.position, target));
+    if (targetEnemy) {
+        enemies = enemies.filter(e => e.id !== targetEnemy.id);
+        messages.push(`Spear killed ${targetEnemy.subtype}!`);
+        kills++;
+
+        // Deep Breath upgrade: reset Jump cooldown on spear kill
+        if (hasUpgrade(player, 'SPEAR_THROW', 'DEEP_BREATH')) {
+            player = resetSkillCooldown(player, 'JUMP');
+            messages.push('Deep Breath: Jump refreshed!');
+        }
+    } else {
+        messages.push('Spear thrown.');
+    }
+
+    const hasRecall = hasUpgrade(player, 'SPEAR_THROW', 'RECALL');
+    const hasRecallDamage = hasUpgrade(player, 'SPEAR_THROW', 'RECALL_DAMAGE');
+
+    if (hasRecall || hasRecallDamage) {
+        if (hasRecallDamage) {
+            // Damage enemies on return path
+            const line = getHexLine(target, player.position);
+            // Path is everything between target and player
+            // Exclude the starting target (already killed) and the player position
+            const path = line.slice(1, -1);
+
+            path.forEach((pos: Point) => {
+                const enemyOnPath = enemies.find(e => hexEquals(e.position, pos));
+                if (enemyOnPath) {
+                    enemies = enemies.filter(e => e.id !== enemyOnPath.id);
+                    messages.push(`Spear recall hit ${enemyOnPath.subtype}!`);
+                    kills++;
+                }
+            });
+            messages.push('Spear recalled with force!');
+        } else {
+            messages.push('Spear recalled instantly!');
+        }
+        return { player, enemies, messages, hasSpear: true, kills };
+    }
+
+    return {
+        player,
+        enemies,
+        messages,
+        spearThrown: true,
+        hasSpear: false,
+        spearPosition: target,
+        kills
+    };
+};
+
+/**
+ * Execute Lunge skill - move toward enemy 2 tiles away and kill them (spear in hand required)
+ */
+export const executeLunge = (
+    target: Point,
+    state: GameState
+): SkillResult => {
+    const messages: string[] = [];
+    let player = state.player;
+    let enemies = [...state.enemies];
+    let kills = 0;
+
+    if (!state.hasSpear) {
+        return { player, enemies, messages: ['Lunge requires spear in hand!'] };
+    }
+
+    if (!hasUpgrade(player, 'SPEAR_THROW', 'LUNGE')) {
+        return { player, enemies, messages: ['You don\'t have the Lunge upgrade!'] };
+    }
+
+    const dist = hexDistance(player.position, target);
+    if (dist !== 2) {
+        return { player, enemies, messages: ['Lunge target must be exactly 2 tiles away!'] };
+    }
+
+    // Check for enemy at target
+    const targetEnemy = enemies.find(e => hexEquals(e.position, target));
+    if (!targetEnemy) {
+        return { player, enemies, messages: ['Lunge requires an enemy at the target!'] };
+    }
+
+    // Check if path is blocked by wall
+    const isWall = state.wallPositions?.some(w => hexEquals(w, target));
+    if (isWall) {
+        return { player, enemies, messages: ['Cannot lunge into a wall!'] };
+    }
+
+    // Kill the target enemy
+    enemies = enemies.filter(e => e.id !== targetEnemy.id);
+    messages.push(`Lunge killed ${targetEnemy.subtype}!`);
+    kills++;
+
+    // Move player to the target position
+    player = { ...player, position: target };
+
+    // Lunge Arc upgrade: hit enemies in 3-hex arc centered on lunge direction
+    if (hasUpgrade(player, 'SPEAR_THROW', 'LUNGE_ARC')) {
+        const neighbors = getNeighbors(target);
+        // Get direction of lunge for arc calculation
+        const lungeDir = getDirectionFromTo(state.player.position, target);
+        // Arc includes the two adjacent directions
+        const arcDirs = [(lungeDir + 5) % 6, (lungeDir + 1) % 6];
+
+        const arcTargets = neighbors.filter(n => {
+            const dir = getDirectionFromTo(target, n);
+            return arcDirs.includes(dir);
+        });
+
+        arcTargets.forEach(arcHex => {
+            const arcEnemy = enemies.find(e => hexEquals(e.position, arcHex));
+            if (arcEnemy) {
+                enemies = enemies.filter(e => e.id !== arcEnemy.id);
+                messages.push(`Arc Lunge hit ${arcEnemy.subtype}!`);
+                kills++;
+            }
+        });
+    }
+
+    // Deep Breath upgrade: reset Jump cooldown on lunge kill
+    if (hasUpgrade(player, 'SPEAR_THROW', 'DEEP_BREATH') && kills > 0) {
+        player = resetSkillCooldown(player, 'JUMP');
+        messages.push('Deep Breath: Jump refreshed!');
+    }
+
+    return {
+        player,
+        enemies,
+        messages,
+        playerMoved: target,
+        kills
+    };
+};
+
+// Helper: Get direction from one hex to another (used for lunge arc)
+const getDirectionFromTo = (from: Point, to: Point): number => {
+    const dq = to.q - from.q;
+    const dr = to.r - from.r;
+
+    if (dq > 0 && dr === 0) return 0;
+    if (dq > 0 && dr < 0) return 1;
+    if (dq === 0 && dr < 0) return 2;
+    if (dq < 0 && dr === 0) return 3;
+    if (dq < 0 && dr > 0) return 4;
+    return 5;
+};
+
+
 export interface SkillResult {
     player: Entity;
     enemies: Entity[];
@@ -191,6 +384,8 @@ export interface SkillResult {
     hasSpear?: boolean;
     spearPosition?: Point;
     consumesTurn?: boolean;     // False for FREE_JUMP
+    kills?: number;
+    environmentalKills?: number;
 }
 
 /**
@@ -203,6 +398,7 @@ export const executeShieldBash = (
     const messages: string[] = [];
     let player = state.player;
     let enemies = [...state.enemies];
+    let environmentalKills = 0;
 
     const skill = player.activeSkills?.find(s => s.id === 'SHIELD_BASH');
     if (!skill || skill.currentCooldown > 0) {
@@ -257,6 +453,7 @@ export const executeShieldBash = (
             // Pushed into lava = death
             enemies = enemies.filter(e => e.id !== targetEnemy.id);
             messages.push(`Pushed ${targetEnemy.subtype} into lava!`);
+            environmentalKills++;
         } else if (blockedByWall || blockedByEnemy) {
             // Wall slam or enemy collision = stun
             if (hasWallSlam) {
@@ -287,7 +484,7 @@ export const executeShieldBash = (
     );
     player = { ...player, activeSkills: updatedSkills };
 
-    return { player, enemies, messages };
+    return { player, enemies, messages, environmentalKills };
 };
 
 /**
@@ -361,19 +558,6 @@ export const executeJump = (
     const consumesTurn = !hasUpgrade(player, 'JUMP', 'FREE_JUMP');
 
     return { player, enemies, messages, playerMoved: target, consumesTurn };
-};
-
-// Helper: Get direction from one hex to another
-const getDirectionFromTo = (from: Point, to: Point): number => {
-    const dq = to.q - from.q;
-    const dr = to.r - from.r;
-
-    if (dq > 0 && dr === 0) return 0;
-    if (dq > 0 && dr < 0) return 1;
-    if (dq === 0 && dr < 0) return 2;
-    if (dq < 0 && dr === 0) return 3;
-    if (dq < 0 && dr > 0) return 4;
-    return 5;
 };
 
 // ============================================================================
@@ -453,6 +637,9 @@ export default {
     getSkillRange,
     executeShieldBash,
     executeJump,
+    executeSpearThrow,
+    executeLunge,
     applyPunchPassive,
     getShrineUpgradeOptions,
 };
+

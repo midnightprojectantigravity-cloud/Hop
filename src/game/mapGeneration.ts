@@ -2,7 +2,7 @@
 // Tight tactical grid generation for mobile portrait mode
 
 import type { Point, Room, FloorTheme, Entity } from './types';
-import { createHex, hexEquals, hexDistance, getRectangularGrid } from './hex';
+import { createHex, hexEquals, hexDistance, getDiamondGrid } from './hex';
 import { createRng } from './rng';
 import {
     ENEMY_STATS,
@@ -35,19 +35,15 @@ export const generateDungeon = (
 ): DungeonResult => {
     const rng = createRng(seed);
 
-    // 1. Generate the base rectangular grid
-    const allHexes = getRectangularGrid(GRID_WIDTH, GRID_HEIGHT);
+    // 1. Generate the base diamond grid
+    const allHexes = getDiamondGrid(GRID_WIDTH, GRID_HEIGHT);
 
-    // 2. Determine Player Spawn (Bottom-center)
-    const midQ = Math.floor(GRID_WIDTH / 2);
-    const qOffset = Math.floor(midQ / 2);
-    const playerSpawn = createHex(midQ, GRID_HEIGHT - 1 - qOffset);
+    // 2. Determine Player Spawn (Bottom-center: 4, 10)
+    // Matches the corrected q + r < 15 constraint
+    const playerSpawn = createHex(4, GRID_HEIGHT - 1);
 
-    // 3. Place Stairs (Top-center or nearby)
-    const possibleStairs = allHexes.filter(h => hexDistance(h, playerSpawn) >= 8 && h.r < 0);
-    const stairsPosition = possibleStairs.length > 0
-        ? possibleStairs[Math.floor(rng.next() * possibleStairs.length)]
-        : allHexes.find(h => h.q === midQ && h.r === -qOffset) || allHexes[0];
+    // 3. Place Stairs (Top-center: 4, 0)
+    const stairsPosition = createHex(4, 0);
 
     // 4. Place Shrine (if applicable)
     let shrinePosition: Point | undefined;
@@ -70,7 +66,7 @@ export const generateDungeon = (
     const specialPositions = {
         playerStart: playerSpawn,
         stairsPosition,
-        shrinePosition
+        shrinePosition,
     };
 
     const availableForHazards = allHexes.filter(h => !isSpecialTile(h, specialPositions));
@@ -161,14 +157,19 @@ export const generateEnemies = (
         const position = availablePositions[posIdx];
         usedPositions.push(position);
 
+        // Health scaling: +1 HP every 5 floors
+        const hpScale = Math.floor(floor / 5);
+        const finalHp = stats.hp + hpScale;
+        const finalMaxHp = stats.maxHp + hpScale;
+
         enemies.push({
             id: `enemy_${enemies.length}_${rng.next().toString(36).slice(2, 8)}`,
             type: 'enemy',
             subtype: enemyType,
             enemyType: stats.type as 'melee' | 'ranged',
             position,
-            hp: stats.hp,
-            maxHp: stats.maxHp,
+            hp: finalHp,
+            maxHp: finalMaxHp,
             isVisible: true,
         });
 

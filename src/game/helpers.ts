@@ -74,8 +74,10 @@ export const applyLavaDamage = (
     const messages: string[] = [];
     let entity = entityIn ?? state.player;
     if (state.lavaPositions.some(lp => hexEquals(lp, position))) {
-        entity = applyDamage(entity, 1);
-        messages.push(`${entity.type === 'player' ? 'You were' : entity.subtype + ' was'} burned by lava!`);
+        // Lava is instant death for enemies, heavy damage for player
+        const damage = entity.type === 'player' ? 1 : 99;
+        entity = applyDamage(entity, damage);
+        messages.push(`${entity.type === 'player' ? 'You were' : entity.subtype + ' was'} engulfed by lava!`);
     }
     return { entity, messages };
 };

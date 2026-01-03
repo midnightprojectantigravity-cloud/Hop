@@ -1,8 +1,8 @@
 # Hop - Game Mechanics Documentation
 
-*Last Updated: December 25, 2024 (v2.0 - Major Expansion)*
+*Last Updated: January 2, 2026 (v3.0 - Spear & Shield Expansion)*
 
-**✅ IMPLEMENTED**: New enemies, skills, procedural generation, sprites
+**✅ IMPLEMENTED**: 7+ Enemy types, 3-slot Skill System (Offensive/Defensive/Utility), 15+ Upgrades, Visual FX (Lava bubbles, Shrines, smooth transitions), Replay & Scoring.
 
 ---
 
@@ -64,8 +64,19 @@ The game uses a **cube coordinate system** (`q`, `r`, `s`) where `q + r + s = 0`
 | `hexToPixel(hex, size)` | Converts hex coords to screen position |
 
 **Grid Configuration:**
-- `GRID_RADIUS = 3` (creates a 37-tile hexagonal arena)
-- `TILE_SIZE = 40` pixels for rendering
+- `GRID_WIDTH = 9` (Tiles wide)
+- `GRID_HEIGHT = 11` (Tiles tall)
+- `TILE_SIZE = 36` pixels for rendering
+
+### Flat-Top Diamond Geometry
+The grid follows a strict axial parallelogram bounding box:
+- Columns ($q$): $0$ to $8$ (9 tiles wide).
+- Rows ($r$): $0$ to $10$ (11 tiles tall).
+- Visible hexes must satisfy $0 \le q < 9$ and $0 \le r < 11$.
+- Visible hexes must satisfy $4 \le q + r \le 14$ (Sum > 3 and < 15).
+- **Orientation**: Flat-Top hexes. This ensures columns are perfectly straight vertical lines.
+- **Vertical Shift**: Each column $(q)$ is shifted vertically by $0.5$ hex height ($q \times 0.5 \times \sqrt{3} \times size$) to create the tilted diamond look.
+- **Key Spawns**: Player starts at $(4, 10)$ (bottom center), Stairs at $(4, 0)$ (top center).
 
 ### Game State
 
@@ -112,7 +123,13 @@ interface Actor {
     intent?: string;            // 'Attacking!', 'Aiming', 'Bombing', 'Moving'
     intentPosition?: Point;     // Target hex for telegraphed attack
     gear?: { ... };             // Future equipment slots
-    skills?: string[];          // Future ability slots
+    skills?: string[];          // Acquired upgrade IDs
+    activeSkills?: Skill[];     // Detailed skill objects with cooldowns
+    temporaryArmor?: number;    // From Shield upgrades
+    isStunned?: boolean;        // From Wall Slam/Jump upgrades
+    isVisible?: boolean;        // For Assassin stealth
+    facing?: number;            // For Shield Bearer defense
+    actionCooldown?: number;    // For Golem/Bomb timers
 }
 ```
 
@@ -128,11 +145,17 @@ interface Actor {
 
 ### Enemies
 
-| Type | HP | MaxHP | Range | Damage | Behavior |
-|------|-----|-------|-------|--------|----------|
-| **Footman** | 2 | 2 | 1 | 1 | Melee. Moves toward player, attacks when adjacent. |
-| **Archer** | 1 | 1 | 4 | 1 | Ranged. Must be on same axis (q, r, or s). Telegraphs shots. |
-| **Bomber** | 1 | 1 | 3 | 1 | Ranged. Prefers distance 2-3. Throws AoE bombs. |
+| Type | HP | Range | Damage | Behavior |
+|------|-----|-------|--------|----------|
+| **Footman** | 2 | 1 | 1 | Melee. Moves toward player. Uses **Punch** passive. |
+| **Archer** | 1 | 4 | 1 | Ranged (axial). Telegraphs shots. |
+| **Bomber** | 1 | 3 | 1 | Ranged. Throws bombs that explode after 2 turns. |
+| **Sprinter** | 1 | 1 | 1 | Melee. Moves 2 hexes per turn. |
+| **Shield Bearer** | 3 | 1 | 1 | Melee. Blocks frontal attacks. Must be flanked. |
+| **Warlock** | 2 | 4 | 1 | Ranged. Teleports randomly when approached. |
+| **Assassin** | 1 | 1 | 2 | Melee. Invisible until adjacent. |
+| **Golem** | 4 | 3 | 2 | Heavy. Moves every other turn. Powerful line attack. |
+| **Bomb** | 1 | 1 | 1 | Hazard. Explodes in 2 turns, hitting target + neighbors. |
 
 **Enemy Spawns (Floor 1):**
 - Footman at `(0, -2)`
@@ -155,19 +178,17 @@ interface Actor {
 
 ### Action Validation
 
-**MOVE:**
-- Must be exactly 1 hex away from current position
+**USE_SKILL:**
+- Dispatched for `SPEAR_THROW`, `SHIELD_BASH`, `JUMP`, or `LUNGE`.
+- Enforces range and cooldown.
+- **SPEAR_THROW**: Range 2-3 (base). RETRIEVAL required unless RECALL upgraded.
+- **SHIELD_BASH**: Range 1. Pushes enemies. Stuns if bashed into walls.
+- **JUMP**: Range 2. Crosses lava/void.
+- **LUNGE**: Move-attack to enemy 2 tiles away. Requires spear in hand.
 
-**LEAP:**
-- Must have `LEAP` upgrade
-- Distance 1-2 from current position
-- **Kills enemies passed through** (if distance from start is 2 and distance from target is 1)
-
-**THROW_SPEAR:**
-- Must have spear (`hasSpear: true`)
-- Target must be 2-4 hexes away
-- Spear lands at target position (can be picked up later)
-- Instantly kills enemy at target position
+**WAIT:**
+- Regenerates `temporaryArmor` if Passive Protection is active.
+- Advances enemy turns.
 
 ### Action Flow
 
@@ -293,10 +314,22 @@ When multiple hexes are equally valid moves, the AI uses deterministic RNG (`con
 
 Currently available upgrades:
 
-| ID | Name | Effect |
-|----|------|--------|
-| `EXTRA_HP` | ❤️ Extra Heart | Increases maxHp by 1, heals 1 HP |
-| `LEAP` | 👟 Leap Skill | Enables 2-tile jumps that kill enemies passed through |
+| Slot | Name | Description | Upgrades |
+|------|------|-------------|----------|
+| **Offensive** | Spear Throw | Throw/Retrieve kill | Recall, Lunge, Arc Lunge, Recall Damage, Deep Breath, Cleave |
+| **Defensive** | Shield Bash | Push & Stun | Arc Bash, 360° Bash, Wall Slam, Passive Protection, Quick Recovery |
+| **Utility** | Jump | Agile Leap | Meteor Impact, Stunning Landing, Free Jump, Nimble |
+
+### Core Passive: Punch
+Enemies that remain adjacent to the player at the end of the player's turn take 1 damage automatically.
+
+### Key Upgrades
+- **Recall Damage**: Spear kills all enemies on the return path.
+- **Lunge**: Enables the Lunge skill execution.
+- **Passive Protection**: Provides +1 Armor when shield is not on cooldown.
+- **Wall Slam**: Stuns enemies bashed into obstacles.
+- **Meteor Impact**: Jump on enemies to kill them.
+- **Deep Breath**: Spear/Lunge kills reset Jump cooldown.
 
 ### Upgrade Application
 
@@ -427,31 +460,12 @@ Replays can be exported as JSON files and imported for verification.
 
 ## Known Issues & Recommendations
 
-### 🔴 Critical Issues
+None! Replay determinism and core mechanics are stable.
 
-None found - the codebase is well-structured and tests pass.
-
-### 🟡 Minor Issues
-
-1. **`helpers.ts:16` - Duplicate `createHex` function**
-   - The file defines a local `createHex` but also imports from `hex.ts`
-   - **Recommendation:** Remove the local definition and import from `hex.ts`
-
-2. **Unused `energy` field**
-   - `Entity.energy` is defined but never used in game logic
-   - **Recommendation:** Either implement energy mechanics or remove field
-
-3. **Leap kill condition may be confusing**
-   - Current logic kills enemies that end up adjacent after leap
-   - **Clarification needed:** Is this intended? Original Hoplite kills enemies along the path.
-
-4. **Bomber `intentPosition` shows player position**
-   - Bombers telegraph the player's position, but bombs are AoE
-   - **Recommendation:** Consider showing bomb landing zone instead
-
-5. **Spear entity type is `'enemy'`**
-   - `GameBoard.tsx:65-71` creates spear with `type: 'enemy'` hack
-   - **Recommendation:** Create proper spear entity or separate render
+### 🟡 Minor Improvements (WIP)
+1. **Archer/Golem Sprite Differentiation**: Currently all enemies use sprites, but visual hierarchy can be improved.
+2. **Leaderboard Submission**: Scoring is live, but persistence to global backend is optional.
+3. **Multi-room layouts**: Procedural rooms are functional but could use more variety in prefabs.
 
 ### 🟢 Improvement Opportunities
 

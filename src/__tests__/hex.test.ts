@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createHex, hexDistance, getNeighbors, getGridCells } from '../game/hex';
+import { createHex, hexDistance, getNeighbors } from '../game/hex';
 
 describe('hex utilities', () => {
   it('distance between same hex is zero and neighbors distance 1', () => {
@@ -10,13 +10,5 @@ describe('hex utilities', () => {
     for (const n of neigh) {
       expect(hexDistance(center, n)).toBe(1);
     }
-  });
-
-  it('grid cell counts match expected formula', () => {
-    // formula: 1 + 3*r*(r+1)
-    const r = 2;
-    const cells = getGridCells(r);
-    const expected = 1 + 3 * r * (r + 1);
-    expect(cells.length).toBe(expected);
   });
 });
