@@ -64,19 +64,19 @@ The game uses a **cube coordinate system** (`q`, `r`, `s`) where `q + r + s = 0`
 | `hexToPixel(hex, size)` | Converts hex coords to screen position |
 
 **Grid Configuration:**
-- `GRID_WIDTH = 9` (Tiles wide)
-- `GRID_HEIGHT = 11` (Tiles tall)
+- `GRID_WIDTH = 7` (Tiles wide)
+- `GRID_HEIGHT = 9` (Tiles tall)
 - `TILE_SIZE = 36` pixels for rendering
 
 ### Flat-Top Diamond Geometry
 The grid follows a strict axial parallelogram bounding box:
-- Columns ($q$): $0$ to $8$ (9 tiles wide).
-- Rows ($r$): $0$ to $10$ (11 tiles tall).
-- Visible hexes must satisfy $0 \le q < 9$ and $0 \le r < 11$.
-- Visible hexes must satisfy $4 \le q + r \le 14$ (Sum > 3 and < 15).
+- Columns ($q$): $0$ to $6$ (7 tiles wide).
+- Rows ($r$): $0$ to $8$ (9 tiles tall).
+- Visible hexes must satisfy $0 < q < 7$ and $0 < r < 9$.
+- Visible hexes must satisfy $2 < q + r < 12$.
 - **Orientation**: Flat-Top hexes. This ensures columns are perfectly straight vertical lines.
 - **Vertical Shift**: Each column $(q)$ is shifted vertically by $0.5$ hex height ($q \times 0.5 \times \sqrt{3} \times size$) to create the tilted diamond look.
-- **Key Spawns**: Player starts at $(4, 10)$ (bottom center), Stairs at $(4, 0)$ (top center).
+- **Key Spawns**: Player starts at $(3, 7)$ (bottom center), Stairs at $(3, 0)$ (top center).
 
 ### Game State
 

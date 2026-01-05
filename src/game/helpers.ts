@@ -3,7 +3,6 @@
 import type { GameState, Point, Entity } from './types';
 import { hexEquals, isHexInRectangularGrid } from './hex';
 import { applyDamage } from './actor';
-import { GRID_WIDTH, GRID_HEIGHT } from './constants';
 
 /**
  * Determines if a point is a special tile (player start, stairs, shrine, lava, or wall).
@@ -33,13 +32,15 @@ export const isSpecialTile = (
 export const isWalkable = (
     position: Point,
     wallPositions: Point[],
-    lavaPositions: Point[]
+    lavaPositions: Point[],
+    width: number,
+    height: number
 ): boolean => {
     const isWall = wallPositions?.some(w => hexEquals(w, position));
     if (isWall) return false;
     const isLava = lavaPositions?.some(l => hexEquals(l, position));
     if (isLava) return false;
-    return isHexInRectangularGrid(position, GRID_WIDTH, GRID_HEIGHT);
+    return isHexInRectangularGrid(position, width, height);
 };
 
 /**
@@ -60,7 +61,8 @@ export const getEnemyAt = (
     enemies: Entity[],
     position: Point
 ): Entity | undefined => {
-    return enemies.find(e => hexEquals(e.position, position));
+    if (!enemies) return undefined;
+    return enemies.find(e => e && e.position && hexEquals(e.position, position));
 };
 
 /**

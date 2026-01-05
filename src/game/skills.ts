@@ -4,6 +4,7 @@
 import type { GameState, Entity, Point, Skill } from './types';
 import { hexDistance, hexEquals, getNeighbors, hexDirection, hexAdd, getHexLine } from './hex';
 import { applyDamage } from './actor';
+import { isWalkable } from './helpers';
 
 // ============================================================================
 // SKILL DEFINITIONS
@@ -178,6 +179,8 @@ export const addUpgrade = (player: Entity, skillId: string, upgradeId: string): 
 
 export const getSkillRange = (player: Entity, skillId: string): number => {
     if (!player.activeSkills) return 0;
+    if (skillId === 'LUNGE') return 2; // Lunge has fixed range 2
+
     const skill = player.activeSkills.find(s => s.id === skillId);
     if (!skill) return 0;
 
@@ -220,9 +223,9 @@ export const executeSpearThrow = (
         return { player, enemies, messages: ['Target must be in a straight line within range!'] };
     }
 
-    const isWall = state.wallPositions?.some(w => hexEquals(w, target));
-    if (isWall) {
-        return { player, enemies, messages: ['Cannot throw spear into a wall!'] };
+    const walkable = isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight);
+    if (!walkable) {
+        return { player, enemies, messages: ['Target must be a valid walkable tile!'] };
     }
 
     const targetEnemy = enemies.find(e => hexEquals(e.position, target));
@@ -273,7 +276,8 @@ export const executeSpearThrow = (
         spearThrown: true,
         hasSpear: false,
         spearPosition: target,
-        kills
+        kills,
+        lastSpearPath: getHexLine(player.position, target)
     };
 };
 
@@ -312,6 +316,12 @@ export const executeLunge = (
     const isWall = state.wallPositions?.some(w => hexEquals(w, target));
     if (isWall) {
         return { player, enemies, messages: ['Cannot lunge into a wall!'] };
+    }
+
+    // Check if target is walkable (not lava for Lunge)
+    const walkable = isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight);
+    if (!walkable) {
+        return { player, enemies, messages: ['Target must be a walkable tile (cannot lunge into lava)!'] };
     }
 
     // Kill the target enemy
@@ -386,6 +396,8 @@ export interface SkillResult {
     consumesTurn?: boolean;     // False for FREE_JUMP
     kills?: number;
     environmentalKills?: number;
+    lastSpearPath?: Point[];
+    isShaking?: boolean;
 }
 
 /**
@@ -435,42 +447,67 @@ export const executeShieldBash = (
         targetsToHit = [target];
     }
 
-    // Process each target
-    for (const t of targetsToHit) {
-        const targetEnemy = enemies.find(e => hexEquals(e.position, t));
-        if (!targetEnemy) continue;
+    // Recursive bash helper
+    const resolveBash = (
+        sourcePos: Point,
+        actorPos: Point,
+        currentEnemies: Entity[]
+    ): { updatedEnemies: Entity[]; killed: number; messages: string[]; collision?: boolean } => {
+        const localMessages: string[] = [];
+        let localEnemies = [...currentEnemies];
+        let localKilled = 0;
 
-        // Calculate push direction (away from player)
-        const direction = getDirectionFromTo(player.position, t);
-        const pushDest = hexAdd(t, hexDirection(direction));
+        const targetActor = localEnemies.find(e => hexEquals(e.position, actorPos));
+        if (!targetActor) return { updatedEnemies: localEnemies, killed: 0, messages: [] };
 
-        // Check what's at push destination
+        const direction = getDirectionFromTo(sourcePos, actorPos);
+        const pushDest = hexAdd(actorPos, hexDirection(direction));
+
         const blockedByWall = state.wallPositions?.some(w => hexEquals(w, pushDest));
-        const blockedByEnemy = enemies.some(e => e.id !== targetEnemy.id && hexEquals(e.position, pushDest));
+        const blockingEnemy = localEnemies.find(e => e.id !== targetActor.id && hexEquals(e.position, pushDest));
         const lavaAtDest = state.lavaPositions?.some(l => hexEquals(l, pushDest));
+        const isOutOfBounds = !isWalkable(pushDest, [], [], state.gridWidth, state.gridHeight); // Check if it's in the actual grid
 
-        if (lavaAtDest) {
-            // Pushed into lava = death
-            enemies = enemies.filter(e => e.id !== targetEnemy.id);
-            messages.push(`Pushed ${targetEnemy.subtype} into lava!`);
-            environmentalKills++;
-        } else if (blockedByWall || blockedByEnemy) {
-            // Wall slam or enemy collision = stun
-            if (hasWallSlam) {
-                enemies = enemies.map(e =>
-                    e.id === targetEnemy.id ? { ...e, isStunned: true } : e
-                );
-                messages.push(`Bashed ${targetEnemy.subtype} into ${blockedByWall ? 'wall' : 'enemy'} - Stunned!`);
-            } else {
-                messages.push(`Bashed ${targetEnemy.subtype}!`);
-            }
-        } else {
-            // Normal push
-            enemies = enemies.map(e =>
-                e.id === targetEnemy.id ? { ...e, position: pushDest } : e
+        if (isOutOfBounds || blockedByWall || blockingEnemy) {
+            // Collision!
+            localEnemies = localEnemies.map(e =>
+                e.id === targetActor.id ? { ...e, isStunned: true } : e
             );
-            messages.push(`Pushed ${targetEnemy.subtype}!`);
+            localMessages.push(`Bashed ${targetActor.subtype} into ${isOutOfBounds ? 'the void' : blockedByWall ? 'a wall' : 'another enemy'} - Stunned!`);
+
+            if (blockingEnemy && hasWallSlam) { // Only trigger cascade if Wall Slam is present
+                // Recursive step: the blocking enemy also gets hit/pushed?
+                // For "Collision Cascade", we resolve the bash on the next one too
+                const next = resolveBash(actorPos, pushDest, localEnemies);
+                localEnemies = next.updatedEnemies;
+                localKilled += next.killed;
+                localMessages.push(...next.messages);
+            }
+            return { updatedEnemies: localEnemies, killed: localKilled, messages: localMessages, collision: true };
+        } else if (lavaAtDest) {
+            localEnemies = localEnemies.filter(e => e.id !== targetActor.id);
+            const name = targetActor.subtype ? targetActor.subtype.charAt(0).toUpperCase() + targetActor.subtype.slice(1) : 'Enemy';
+            localMessages.push(`${name} fell into Lava!`);
+            localKilled++;
+        } else {
+            // Normal move
+            localEnemies = localEnemies.map(e =>
+                e.id === targetActor.id ? { ...e, position: pushDest } : e
+            );
+            localMessages.push(`Pushed ${targetActor.subtype}!`);
         }
+
+        return { updatedEnemies: localEnemies, killed: localKilled, messages: localMessages, collision: false };
+    };
+
+    let anyCollision = false;
+    // Process each target from the bash
+    for (const t of targetsToHit) {
+        const result = resolveBash(player.position, t, enemies);
+        enemies = result.updatedEnemies;
+        environmentalKills += result.killed;
+        messages.push(...result.messages);
+        if (result.collision) anyCollision = true;
     }
 
     // Put skill on cooldown
@@ -484,7 +521,7 @@ export const executeShieldBash = (
     );
     player = { ...player, activeSkills: updatedSkills };
 
-    return { player, enemies, messages, environmentalKills };
+    return { player, enemies, messages, environmentalKills, isShaking: anyCollision };
 };
 
 /**
@@ -518,10 +555,10 @@ export const executeJump = (
         return { player, enemies, messages: ['Cannot land on enemy!'] };
     }
 
-    // Check for wall collision
-    const blockedByWall = state.wallPositions?.some(w => hexEquals(w, target));
-    if (blockedByWall) {
-        return { player, enemies, messages: ['Cannot jump onto wall!'] };
+    // Check for target validity (must be walkable grid tile, no walls or lava)
+    const walkable = isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight);
+    if (!walkable) {
+        return { player, enemies, messages: ['Target must be a valid walkable tile (walls block jumps)!'] };
     }
 
     // Execute jump

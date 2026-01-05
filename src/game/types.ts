@@ -9,6 +9,55 @@ export interface Point {
 // Skill slot types
 export type SkillSlot = 'offensive' | 'defensive' | 'utility';
 
+/** Atomic Effects: Discrete engine instructions */
+export type AtomicEffect =
+    | { type: 'Displacement'; target: 'self' | 'targetActor'; destination: Point; source?: Point }
+    | { type: 'Damage'; target: 'targetActor' | 'area' | Point; amount: number }
+    | { type: 'ApplyStatus'; target: 'targetActor'; status: 'stunned' | 'poisoned'; duration: number }
+    | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
+    | { type: 'Message'; text: string }
+    | { type: 'Juice'; effect: 'shake' | 'flash' | 'lavaSink' | 'spearTrail'; target?: Point; path?: Point[] }
+    | { type: 'ModifyCooldown'; skillId: string; amount: number; setExact?: boolean };
+
+export interface SkillModifier {
+    id: string;
+    name: string;
+    description: string;
+    modifyRange?: number;
+    modifyCooldown?: number;
+    extraEffects?: AtomicEffect[];
+}
+
+export interface ScenarioV2 {
+    id: string;              // Unique ID (e.g., "bash_into_lava")
+    title: string;           // Tutorial Title
+    description: string;     // Tutorial Instructions
+    setup: (engine: any) => void; // Functional setup (mutates state/engine)
+    run: (engine: any) => void;   // The specific action to take
+    verify: (state: GameState, logs: string[]) => boolean; // The behavioral assertion
+}
+
+export interface SkillDefinition {
+    id: string;
+    name: string;
+    description: string;
+    slot: SkillSlot;
+    icon: string;
+    baseVariables: {
+        range: number;
+        cost: number;
+        cooldown: number;
+    };
+    /** Core Logic: Functional execution returning a list of effects */
+    execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades?: string[]) => {
+        effects: AtomicEffect[];
+        messages: string[];
+        consumesTurn?: boolean;
+    };
+    upgrades: Record<string, SkillModifier>;
+    scenarios: ScenarioV2[];
+}
+
 // Skill with cooldown tracking and upgrade system
 export interface Skill {
     id: string;
@@ -85,13 +134,18 @@ export interface GameState {
     gridWidth: number;
     gridHeight: number;
     gameStatus: 'playing' | 'won' | 'lost' | 'choosing_upgrade';
-    message: string;
+    message: string[];
     hasSpear: boolean;
     spearPosition?: Point;
     stairsPosition: Point;
     lavaPositions: Point[];
     wallPositions: Point[];      // Wall tiles that block movement
     shrinePosition?: Point;
+
+    // Shield Mechanics
+    hasShield: boolean;
+    shieldPosition?: Point;
+
     floor: number;
     upgrades: string[];
 
@@ -115,6 +169,12 @@ export interface GameState {
     // Score tracking
     kills: number;
     environmentalKills: number;
+
+    // Juice & Animations
+    dyingEntities?: Entity[];    // Entities currently playing death animation
+    lastSpearPath?: Point[];    // For spear trail animation
+    isShaking?: boolean;        // Trigger screen shake
+    occupiedCurrentTurn?: Point[]; // Internal: track occupied tiles to prevent stacking
 }
 
 export type Action =
@@ -129,3 +189,40 @@ export type Action =
     | { type: 'SELECT_UPGRADE'; payload: string }
     | { type: 'USE_SKILL'; payload: { skillId: string; target?: Point } }
     | { type: 'LOAD_STATE'; payload: GameState };
+
+export interface Scenario {
+    id: string;
+    metadata: {
+        title: string;
+        text: string;
+    };
+    grid: {
+        w: number;
+        h: number;
+    };
+    state: {
+        player: {
+            pos: Point;
+            skills: string[];
+            hp?: number;
+            maxHp?: number;
+        };
+        enemies: Array<{
+            id: string;
+            type: string;
+            pos: Point;
+            hp?: number;
+        }>;
+        lava: Point[];
+        walls?: Point[];
+    };
+    assertions: {
+        onAction: Action | { type: 'SKILL'; id: string; target: Point };
+        expect: {
+            enemies?: string[]; // IDs of expected remaining enemies
+            playerPos?: Point;
+            messages?: string[];
+            gameStatus?: string;
+        };
+    };
+}

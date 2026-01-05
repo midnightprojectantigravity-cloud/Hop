@@ -11,7 +11,8 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "start-server": "node server/index.js",
-    "test": "vitest"
+    "test": "vitest",
+    "test:engine": "tsx src/scripts/testEngine.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
@@ -31,6 +32,7 @@
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",

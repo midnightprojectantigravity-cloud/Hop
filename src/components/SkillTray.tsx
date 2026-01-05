@@ -18,7 +18,7 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
     const slots: SkillSlot[] = ['offensive', 'defensive', 'utility'];
 
     return (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-50">
+        <div className="flex flex-col gap-4">
             {slots.map(slot => {
                 const skill = skills.find(s => s.slot === slot);
                 if (!skill) return null;
@@ -26,7 +26,7 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                 const isSelected = selectedSkillId === skill.id;
                 const isOnCooldown = skill.currentCooldown > 0;
                 const isSpearSlot = skill.id === 'SPEAR_THROW';
-                const cannotUse = isOnCooldown || (isSpearSlot && !hasSpear);
+                const cannotUse = (isOnCooldown && !isSpearSlot) || (isSpearSlot && !hasSpear);
 
                 return (
                     <button
@@ -34,29 +34,29 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                         disabled={cannotUse}
                         onClick={() => onSelectSkill(isSelected ? null : skill.id)}
                         className={`
-                            relative w-20 h-20 rounded-2xl flex flex-col items-center justify-center gap-1
-                            border-2 transition-all transform hover:scale-105
+                            relative w-full h-24 rounded-2xl flex flex-col items-center justify-center gap-1
+                            border transition-all transform hover:translate-x-1
                             ${isSelected
                                 ? 'bg-blue-600 border-white shadow-[0_0_20px_rgba(59,130,246,0.5)]'
-                                : 'bg-gray-800/80 border-gray-600 hover:border-blue-400'}
-                            ${cannotUse ? 'opacity-50 grayscale' : 'cursor-pointer'}
+                                : 'bg-white/5 border-white/10 hover:border-blue-500/50'}
+                            ${cannotUse ? 'opacity-40 grayscale pointer-events-none' : 'cursor-pointer'}
                         `}
                     >
-                        <span className="text-2xl">
+                        <span className="text-3xl">
                             {skill.id === 'SPEAR_THROW' ? '🔱' : (skill.id === 'SHIELD_BASH' ? '🛡️' : '🏷️')}
                         </span>
-                        <span className="text-[10px] uppercase font-bold text-gray-300">
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-white/50">
                             {skill.name}
                         </span>
 
-                        {isOnCooldown && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl">
-                                <span className="text-2xl font-bold text-white">{skill.currentCooldown}</span>
+                        {isOnCooldown && !isSpearSlot && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl backdrop-blur-[2px]">
+                                <span className="text-3xl font-black text-white">{skill.currentCooldown}</span>
                             </div>
                         )}
 
                         {/* Slot Label */}
-                        <div className="absolute -top-3 px-2 py-0.5 bg-gray-700 rounded-full border border-gray-600 text-[8px] uppercase tracking-wider text-gray-400">
+                        <div className="absolute -top-2 left-4 px-2 py-0.5 bg-[#030712] rounded-full border border-white/10 text-[8px] uppercase font-black tracking-widest text-white/40">
                             {slot}
                         </div>
                     </button>

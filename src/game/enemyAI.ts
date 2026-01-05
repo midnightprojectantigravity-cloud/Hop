@@ -38,6 +38,7 @@ const findBestMove = (
     enemy: Entity,
     targetPos: Point,
     state: GameState,
+    occupiedPositions: Point[] = [],
     preferDistance?: number
 ): { position: Point; state: GameState } => {
     const neighbors = getNeighbors(enemy.position);
@@ -51,6 +52,7 @@ const findBestMove = (
         const isWall = state.wallPositions?.some((w: Point) => hexEquals(w, n));
         const isLava = state.lavaPositions?.some((l: Point) => hexEquals(l, n));
         const blocked = !isInBounds || isWall || isLava ||
+            occupiedPositions.some((p: Point) => hexEquals(p, n)) ||
             state.enemies.some((e: Entity) => e.id !== enemy.id && hexEquals(e.position, n)) ||
             hexEquals(n, targetPos);
 
@@ -85,7 +87,7 @@ const findBestMove = (
 /**
  * Sprinter AI: Moves 2 hexes toward player, attacks when adjacent
  */
-const computeSprinterAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState } => {
+const computeSprinterAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState; message?: string } => {
     const dist = hexDistance(enemy.position, playerPos);
 
     if (dist === 1) {
@@ -103,27 +105,28 @@ const computeSprinterAction = (enemy: Entity, playerPos: Point, state: GameState
         if (hexDistance(curPos, playerPos) <= 1) break;
 
         const tempEnemy = { ...enemy, position: curPos };
-        const { position, state: newState } = findBestMove(tempEnemy, playerPos, curState);
+        const { position, state: newState } = findBestMove(tempEnemy, playerPos, curState, state.occupiedCurrentTurn);
         curPos = position;
         curState = newState;
     }
 
-    const nDist = hexDistance(curPos, playerPos);
+    const moved = !hexEquals(curPos, enemy.position);
     return {
         entity: {
             ...enemy,
             position: curPos,
-            intent: nDist === 1 ? 'Attacking!' : 'Charging',
-            intentPosition: nDist === 1 ? { ...playerPos } : undefined
+            intent: moved ? 'Moving' : 'Attacking!',
+            intentPosition: moved ? undefined : { ...playerPos }
         },
-        nextState: curState
+        nextState: curState,
+        message: moved ? `${enemy.subtype} moves to (${curPos.q}, ${curPos.r})` : undefined
     };
 };
 
 /**
  * Shield Bearer AI: Moves toward player, turns to face them, blocks frontal attacks
  */
-const computeShieldBearerAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState } => {
+const computeShieldBearerAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState; message?: string } => {
     const dist = hexDistance(enemy.position, playerPos);
 
     // Always face the player
@@ -136,25 +139,26 @@ const computeShieldBearerAction = (enemy: Entity, playerPos: Point, state: GameS
         };
     }
 
-    const { position, state: newState } = findBestMove(enemy, playerPos, state);
-    const nDist = hexDistance(position, playerPos);
+    const { position, state: newState } = findBestMove(enemy, playerPos, state, state.occupiedCurrentTurn);
 
+    const moved = !hexEquals(position, enemy.position);
     return {
         entity: {
             ...enemy,
             position,
-            facing: getDirectionTo(position, playerPos),
-            intent: nDist === 1 ? 'Attacking!' : 'Advancing',
-            intentPosition: nDist === 1 ? { ...playerPos } : undefined
+            facing: moved ? getDirectionTo(enemy.position, position) : facingDir,
+            intent: moved ? 'Advancing' : 'Attacking!',
+            intentPosition: moved ? undefined : { ...playerPos }
         },
-        nextState: newState
+        nextState: newState,
+        message: moved ? `${enemy.subtype} advances to (${position.q}, ${position.r})` : undefined
     };
 };
 
 /**
  * Warlock AI: Teleports randomly, casts ranged spell
  */
-const computeWarlockAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState } => {
+const computeWarlockAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState; message?: string } => {
     const dist = hexDistance(enemy.position, playerPos);
     let curState = state;
 
@@ -179,8 +183,14 @@ const computeWarlockAction = (enemy: Entity, playerPos: Point, state: GameState)
             candidate = hexAdd(candidate, hexDirection(teleportDir));
         }
 
-        // Check if blocked
-        const blocked = state.enemies.some((e: Entity) => e.id !== enemy.id && hexEquals(e.position, candidate)) ||
+        // Check if blocked OR non-walkable
+        const isInBounds = isHexInRectangularGrid(candidate, GRID_WIDTH, GRID_HEIGHT);
+        const isWall = state.wallPositions?.some((w: Point) => hexEquals(w, candidate));
+        const isLava = state.lavaPositions?.some((l: Point) => hexEquals(l, candidate));
+
+        const blocked = !isInBounds || isWall || isLava ||
+            state.occupiedCurrentTurn?.some((p: Point) => hexEquals(p, candidate)) ||
+            state.enemies.some((e: Entity) => e.id !== enemy.id && hexEquals(e.position, candidate)) ||
             hexEquals(candidate, playerPos);
 
         if (!blocked) {
@@ -188,25 +198,26 @@ const computeWarlockAction = (enemy: Entity, playerPos: Point, state: GameState)
         }
     }
 
-    // Cast spell if in range
+    const moved = !hexEquals(newPos, enemy.position);
     const newDist = hexDistance(newPos, playerPos);
-    const canCast = newDist >= 2 && newDist <= 4;
+    const canCast = !moved && newDist >= 2 && newDist <= 4;
 
     return {
         entity: {
             ...enemy,
             position: newPos,
-            intent: canCast ? 'Casting' : 'Preparing',
+            intent: moved ? 'Repositioning' : (canCast ? 'Casting' : 'Preparing'),
             intentPosition: canCast ? { ...playerPos } : undefined
         },
-        nextState: curState
+        nextState: curState,
+        message: moved ? `${enemy.subtype} teleports to (${newPos.q}, ${newPos.r})` : undefined
     };
 };
 
 /**
  * Assassin AI: Invisible until adjacent, then strikes
  */
-const computeAssassinAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState } => {
+const computeAssassinAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState; message?: string } => {
     const dist = hexDistance(enemy.position, playerPos);
 
     if (dist === 1) {
@@ -222,25 +233,27 @@ const computeAssassinAction = (enemy: Entity, playerPos: Point, state: GameState
     }
 
     // Move toward player (stealthily)
-    const { position, state: newState } = findBestMove(enemy, playerPos, state);
-    const nDist = hexDistance(position, playerPos);
+    const { position, state: newState } = findBestMove(enemy, playerPos, state, state.occupiedCurrentTurn);
+
+    const moved = !hexEquals(position, enemy.position);
 
     return {
         entity: {
             ...enemy,
             position,
-            isVisible: nDist <= 1,
-            intent: nDist === 1 ? 'Backstab!' : undefined,
-            intentPosition: nDist === 1 ? { ...playerPos } : undefined
+            isVisible: moved ? false : (dist <= 1),
+            intent: moved ? 'Moving' : 'Backstab!',
+            intentPosition: moved ? undefined : { ...playerPos }
         },
-        nextState: newState
+        nextState: newState,
+        message: moved ? `You hear footsteps nearby...` : undefined
     };
 };
 
 /**
  * Golem AI: Slow movement (every other turn), powerful line attack
  */
-const computeGolemAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState } => {
+const computeGolemAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState; message?: string } => {
     const cooldown = enemy.actionCooldown ?? 0;
 
     // If on cooldown, just wait
@@ -267,16 +280,18 @@ const computeGolemAction = (enemy: Entity, playerPos: Point, state: GameState): 
     }
 
     // Move toward player
-    const { position, state: newState } = findBestMove(enemy, playerPos, state);
+    const { position, state: newState } = findBestMove(enemy, playerPos, state, state.occupiedCurrentTurn);
+    const moved = !hexEquals(position, enemy.position);
 
     return {
         entity: {
             ...enemy,
             position,
-            intent: 'Lumbering',
+            intent: moved ? 'Lumbering' : 'Waiting',
             actionCooldown: 0
         },
-        nextState: newState
+        nextState: newState,
+        message: moved ? `${enemy.subtype} lumbers to (${position.q}, ${position.r})` : undefined
     };
 };
 
@@ -284,7 +299,7 @@ const computeGolemAction = (enemy: Entity, playerPos: Point, state: GameState): 
  * Compute an enemy's next move/intent given the player's position and the current state.
  * Returns a new Entity instance (do not mutate input).
  */
-export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: GameState): { entity: Entity; nextState: GameState } => {
+export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: GameState & { occupiedCurrentTurn?: Point[] }): { entity: Entity; nextState: GameState; message?: string } => {
     const dist = hexDistance(bt.position, playerMovedTo);
 
     // Route to specialized AI based on subtype
@@ -314,18 +329,18 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
                 };
             }
 
-            const { position, state: newState } = findBestMove(bt, playerMovedTo, state);
-            const nDist = hexDistance(position, playerMovedTo);
-            const canAim = (position.q === playerMovedTo.q) || (position.r === playerMovedTo.r) || (position.s === playerMovedTo.s);
+            const { position, state: newState } = findBestMove(bt, playerMovedTo, state, state.occupiedCurrentTurn);
+            const moved = !hexEquals(position, bt.position);
 
             return {
                 entity: {
                     ...bt,
                     position,
-                    intent: (canAim && nDist > 1) ? 'Aiming' : 'Moving',
-                    intentPosition: (canAim && nDist > 1) ? { ...playerMovedTo } : undefined
+                    intent: moved ? 'Moving' : 'Idle',
+                    intentPosition: undefined
                 },
-                nextState: newState
+                nextState: newState,
+                message: moved ? `${bt.subtype} moves to (${position.q}, ${position.r})` : undefined
             };
         }
 
@@ -335,26 +350,40 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
             const canBomb = cooldown === 0 && dist >= 2 && dist <= 3;
 
             if (canBomb) {
-                return {
-                    entity: { ...bt, intent: 'Bombing', intentPosition: { ...playerMovedTo }, actionCooldown: 2 },
-                    nextState: state
-                };
+                // Find valid bomb target (adjacent to player, not player's tile, walkable)
+                const candidateTargets = getNeighbors(playerMovedTo).filter(n => {
+                    const isInBounds = isHexInRectangularGrid(n, GRID_WIDTH, GRID_HEIGHT);
+                    const isWall = state.wallPositions?.some((w: Point) => hexEquals(w, n));
+                    const isLava = state.lavaPositions?.some((l: Point) => hexEquals(l, n));
+                    return isInBounds && !isWall && !isLava && !hexEquals(n, playerMovedTo);
+                });
+
+                if (candidateTargets.length > 0) {
+                    const { value, nextState } = consumeRandom(state);
+                    const targetIdx = Math.floor(value * candidateTargets.length) % candidateTargets.length;
+                    const bombTarget = candidateTargets[targetIdx];
+
+                    return {
+                        entity: { ...bt, intent: 'Bombing', intentPosition: bombTarget, actionCooldown: 2 },
+                        nextState
+                    };
+                }
             }
 
             // Move to maintain distance 2-3
-            const { position, state: newState } = findBestMove(bt, playerMovedTo, state, 2.5);
-            const nDist = hexDistance(position, playerMovedTo);
-            const nextCanBomb = (cooldown === 0 || cooldown === 1) && nDist >= 2 && nDist <= 3;
+            const { position, state: newState } = findBestMove(bt, playerMovedTo, state, state.occupiedCurrentTurn, 2.5);
+            const moved = !hexEquals(position, bt.position);
 
             return {
                 entity: {
                     ...bt,
                     position,
-                    intent: nextCanBomb ? 'Bombing' : 'Moving',
-                    intentPosition: nextCanBomb ? { ...playerMovedTo } : undefined,
+                    intent: moved ? 'Moving' : 'Waiting',
+                    intentPosition: undefined,
                     actionCooldown: Math.max(0, cooldown - 1)
                 },
-                nextState: newState
+                nextState: newState,
+                message: moved ? `${bt.subtype} repositioning to (${position.q}, ${position.r})` : undefined
             };
         }
 
@@ -367,17 +396,18 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
                 };
             }
 
-            const { position, state: newState } = findBestMove(bt, playerMovedTo, state);
-            const nDist = hexDistance(position, playerMovedTo);
+            const { position, state: newState } = findBestMove(bt, playerMovedTo, state, state.occupiedCurrentTurn);
+            const moved = !hexEquals(position, bt.position);
 
             return {
                 entity: {
                     ...bt,
                     position,
-                    intent: nDist === 1 ? 'Attacking!' : 'Moving',
-                    intentPosition: nDist === 1 ? { ...playerMovedTo } : undefined
+                    intent: moved ? 'Moving' : 'Attacking!',
+                    intentPosition: moved ? undefined : { ...playerMovedTo }
                 },
-                nextState: newState
+                nextState: newState,
+                message: moved ? `${bt.subtype} moves to (${position.q}, ${position.r})` : undefined
             };
         }
     }

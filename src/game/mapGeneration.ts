@@ -38,12 +38,14 @@ export const generateDungeon = (
     // 1. Generate the base diamond grid
     const allHexes = getDiamondGrid(GRID_WIDTH, GRID_HEIGHT);
 
-    // 2. Determine Player Spawn (Bottom-center: 4, 10)
-    // Matches the corrected q + r < 15 constraint
-    const playerSpawn = createHex(4, GRID_HEIGHT - 1);
+    const topLimit = Math.floor(GRID_WIDTH / 2);
+    const bottomLimit = (GRID_WIDTH - 1) + (GRID_HEIGHT - 1) - topLimit;
 
-    // 3. Place Stairs (Top-center: 4, 0)
-    const stairsPosition = createHex(4, 0);
+    // 2. Determine Player Spawn (Bottom-center)
+    const playerSpawn = createHex(bottomLimit - (GRID_HEIGHT - 1), GRID_HEIGHT - 1);
+
+    // 3. Place Stairs (Top-center)
+    const stairsPosition = createHex(topLimit, 0);
 
     // 4. Place Shrine (if applicable)
     let shrinePosition: Point | undefined;

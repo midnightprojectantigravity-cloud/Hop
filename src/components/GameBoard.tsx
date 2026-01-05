@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { GameState, Point } from '../game/types';
-import { hexDistance, hexEquals } from '../game/hex';
+import { hexDistance, hexEquals, isTileInDiamond, hexToPixel } from '../game/hex';
 import { HexTile } from './HexTile';
 import { Entity } from './Entity';
-import { TILE_SIZE, GRID_WIDTH, GRID_HEIGHT } from '../game/constants';
+import { TILE_SIZE } from '../game/constants';
+import { getSkillRange } from '../game/skills';
 
 interface GameBoardProps {
     gameState: GameState;
@@ -13,40 +14,64 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selectedSkillId, showMovementRange }) => {
-    // Collect all hexes from rooms (or just use gameState.rooms[0].hexes)
-    const cells = gameState.rooms?.[0]?.hexes || [];
+    // 1. Filter cells based on dynamic diamond geometry
+    const cells = useMemo(() => {
+        return (gameState.rooms?.[0]?.hexes || []).filter(h =>
+            isTileInDiamond(h.q, h.r, gameState.gridWidth, gameState.gridHeight)
+        );
+    }, [gameState.rooms, gameState.gridWidth, gameState.gridHeight]);
 
-    // Find the current skill's range if one is selected
-    const selectedSkill = selectedSkillId
-        ? gameState.player.activeSkills?.find(s => s.id === selectedSkillId)
-        : null;
+    // 2. Dynamically calculate the Bounding Box of the actual hexes to maximize size
+    const bounds = useMemo(() => {
+        if (cells.length === 0) return { minX: 0, minY: 0, width: 100, height: 100 };
 
-    // Calculate ViewBox for the "Flat-Top Diamond" geometry
-    const viewWidth = (GRID_WIDTH + 1) * 1.5 * TILE_SIZE;
-    const viewHeight = (GRID_HEIGHT + (GRID_WIDTH / 2) + 1) * Math.sqrt(3) * TILE_SIZE;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
-    // Offset viewbox to center the leaning grid
-    const offsetX = -TILE_SIZE;
-    const offsetY = -TILE_SIZE;
+        cells.forEach(hex => {
+            const { x, y } = hexToPixel(hex, TILE_SIZE);
+            // Add half-tile buffer for the hex corners
+            minX = Math.min(minX, x - TILE_SIZE);
+            minY = Math.min(minY, y - TILE_SIZE);
+            maxX = Math.max(maxX, x + TILE_SIZE);
+            maxY = Math.max(maxY, y + TILE_SIZE);
+        });
 
+        return {
+            minX,
+            minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }, [cells]);
+
+    // Use the helper to calculate real range (including upgrades)
+    const selectedSkillRange = selectedSkillId ? getSkillRange(gameState.player, selectedSkillId) : 0;
 
     return (
-        <div className="flex justify-center items-center p-8 bg-[#1f2937]/50 rounded-xl">
-            <svg width={800} height={600} viewBox={`${offsetX} ${offsetY} ${viewWidth} ${viewHeight}`} shapeRendering="geometricPrecision">
+        <div className="w-full h-full flex justify-center items-center overflow-hidden">
+            <svg
+                width="100%"
+                height="100%"
+                viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
+                preserveAspectRatio="xMidYMid meet"
+                shapeRendering="geometricPrecision"
+                className="max-h-full max-w-full"
+            >
                 <g>
                     {cells.map((hex) => {
                         const dist = hexDistance(hex, gameState.player.position);
                         const isWall = gameState.wallPositions?.some(wp => hexEquals(wp, hex));
+                        const isLava = gameState.lavaPositions.some(lp => hexEquals(lp, hex));
 
                         // Contextual Highlights:
                         // 1. If movement range toggle is on, show distance 1
                         const isMoveHighlight = showMovementRange && dist === 1;
 
                         // 2. If a skill is selected, show its specific range
-                        let isSkillHighlight = !!(selectedSkill && dist > 0 && dist <= selectedSkill.range);
+                        let isSkillHighlight = !!(selectedSkillId && dist > 0 && dist <= selectedSkillRange);
 
                         // Enforce straight line for Spear Throw
-                        if (selectedSkill?.id === 'SPEAR_THROW') {
+                        if (selectedSkillId === 'SPEAR_THROW') {
                             const isInLine = (hex.q === gameState.player.position.q) ||
                                 (hex.r === gameState.player.position.r) ||
                                 (hex.s === gameState.player.position.s);
@@ -54,11 +79,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                         }
 
                         // Final highlight state (respects walkable constraint: !isWall)
-                        const showRangeHighlight = (isMoveHighlight || isSkillHighlight) && !isWall;
+                        let showRangeHighlight = (isMoveHighlight || isSkillHighlight) && !isWall;
+
+                        // Target restrictions:
+                        // Spear Throw, Jump, and Lunge cannot target lava
+                        if ((selectedSkillId === 'SPEAR_THROW' || selectedSkillId === 'JUMP' || selectedSkillId === 'LUNGE') && isLava) {
+                            showRangeHighlight = false;
+                        }
 
                         const isTargeted = gameState.enemies.some(e => e.intentPosition && hexEquals(e.intentPosition, hex));
                         const isStairs = hexEquals(hex, gameState.stairsPosition);
-                        const isLava = gameState.lavaPositions.some(lp => hexEquals(lp, hex));
                         const isShrine = gameState.shrinePosition && hexEquals(hex, gameState.shrinePosition);
 
                         return (
@@ -77,11 +107,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                     })}
                 </g>
                 <g>
+                    {/* Spear Trail */}
+                    {gameState.lastSpearPath && gameState.lastSpearPath.length >= 2 && (() => {
+                        const pathPoints = gameState.lastSpearPath.map(p => hexToPixel(p, TILE_SIZE));
+                        const d = pathPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                        return <path d={d} stroke="rgba(255, 255, 255, 0.15)" strokeWidth="2" fill="none" strokeDasharray="4 2" strokeLinecap="round" />;
+                    })()}
+
                     {/* Spear on ground */}
                     {gameState.spearPosition && (
                         <Entity entity={{
                             id: 'spear',
-                            type: 'player', // Using player type for coloring for now
+                            type: 'player',
                             subtype: 'footman',
                             position: gameState.spearPosition,
                             hp: 1, maxHp: 1
@@ -89,6 +126,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                     )}
                     <Entity entity={gameState.player} />
                     {gameState.enemies.map(e => <Entity key={e.id} entity={e} />)}
+                    {gameState.dyingEntities?.map(e => <Entity key={`dying-${e.id}-${gameState.turn}`} entity={e} isDying={true} />)}
                 </g>
             </svg>
         </div>

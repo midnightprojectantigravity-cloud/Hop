@@ -3,11 +3,13 @@ import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';
 import { UpgradeOverlay } from './components/UpgradeOverlay';
 import { SkillTray } from './components/SkillTray';
+import { TutorialManager } from './components/TutorialManager';
 import ReplayManager from './components/ReplayManager';
 import { gameReducer, generateInitialState } from './game/logic';
-import type { Point, Action } from './game/types';
+import type { Point, Action, GameState } from './game/types';
 import type { ReplayRecord } from './components/ReplayManager';
 import { hexEquals } from './game/hex';
+import { GRID_WIDTH, GRID_HEIGHT } from './game/constants';
 
 function App() {
   const [gameState, dispatch] = useReducer(gameReducer, generateInitialState(), (initial) => {
@@ -15,7 +17,16 @@ function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.gameStatus === 'playing' || parsed.gameStatus === 'choosing_upgrade') return parsed;
+        // Integrity Check: Discard save if grid dimensions changed in constants.ts
+        const isCompatible = parsed.gridWidth === GRID_WIDTH && parsed.gridHeight === GRID_HEIGHT;
+
+        if (isCompatible && (parsed.gameStatus === 'playing' || parsed.gameStatus === 'choosing_upgrade')) {
+          // Migration: ensure message is an array
+          if (!Array.isArray(parsed.message)) {
+            parsed.message = [];
+          }
+          return parsed;
+        }
       } catch (e) { console.error("Failed to load save", e); }
     }
     return initial;
@@ -31,6 +42,7 @@ function App() {
 
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [showMovementRange, setShowMovementRange] = useState(false);
+  const [tutorialInstructions, setTutorialInstructions] = useState<string | null>(null);
 
   const replayIndexRef = useRef(0);
   const replayTimerRef = useRef<number | null>(null);
@@ -109,31 +121,78 @@ function App() {
     replayIndexRef.current = idx + 1;
   };
 
+  const handleLoadScenario = (state: GameState, instructions: string) => {
+    dispatch({ type: 'LOAD_STATE', payload: state });
+    setTutorialInstructions(instructions);
+    setSelectedSkillId(null);
+  };
+
   return (
-    <div className="w-screen h-screen bg-[#030712] flex justify-center items-center overflow-hidden relative">
-      <UI gameState={gameState} onReset={handleReset} onWait={handleWait} />
+    <div className="flex w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
+      {/* Left Sidebar: HUD & Tactical Log */}
+      <aside className="w-80 border-r border-white/5 bg-[#030712] flex flex-col z-20 overflow-y-auto">
+        <UI gameState={gameState} onReset={handleReset} onWait={handleWait} />
+      </aside>
 
-      <ReplayManager
-        gameState={gameState}
-        onStartReplay={startReplay}
-        onStopReplay={stopReplay}
-        onStepReplay={stepReplay}
-      />
+      {/* Center: The Map (Full Height) */}
+      <main className="flex-1 relative flex items-center justify-center bg-[#020617] overflow-hidden">
+        <div className="w-full h-full p-8 flex items-center justify-center">
+          <div className={`w-full h-full relative border border-white/5 bg-[#030712]/50 rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
+            <GameBoard
+              gameState={gameState}
+              onMove={handleTileClick}
+              selectedSkillId={selectedSkillId}
+              showMovementRange={showMovementRange}
+            />
+          </div>
+        </div>
+      </main>
 
-      <GameBoard
-        gameState={gameState}
-        onMove={handleTileClick}
-        selectedSkillId={selectedSkillId}
-        showMovementRange={showMovementRange}
-      />
+      {/* Right Sidebar: Skills & Replays */}
+      <aside className="w-80 border-l border-white/5 bg-[#030712] flex flex-col z-20 overflow-y-auto">
+        <div className="p-6 flex flex-col gap-8 h-full">
+          <div className="flex-1">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/30 mb-6">Tactical Skills</h3>
+            <SkillTray
+              skills={gameState.player.activeSkills || []}
+              selectedSkillId={selectedSkillId}
+              onSelectSkill={setSelectedSkillId}
+              hasSpear={gameState.hasSpear}
+            />
+          </div>
 
-      <SkillTray
-        skills={gameState.player.activeSkills || []}
-        selectedSkillId={selectedSkillId}
-        onSelectSkill={setSelectedSkillId}
-        hasSpear={gameState.hasSpear}
-      />
+          <div className="pt-8 border-t border-white/5">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/30 mb-4">Historical Replay</h3>
+            <ReplayManager
+              gameState={gameState}
+              onStartReplay={startReplay}
+              onStopReplay={stopReplay}
+              onStepReplay={stepReplay}
+            />
+          </div>
 
+          <div className="pt-8 border-t border-white/5">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/30 mb-4">Training Simulations</h3>
+            <TutorialManager onLoadScenario={handleLoadScenario} />
+          </div>
+        </div>
+      </aside>
+
+      {/* Tutorial Instructions Overlay */}
+      {tutorialInstructions && (
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-blue-900/90 border border-blue-500/30 p-4 rounded-xl backdrop-blur-md shadow-xl z-30 max-w-lg text-center animate-in fade-in slide-in-from-top-4">
+          <h4 className="text-blue-200 font-bold uppercase text-xs tracking-widest mb-1">Simulation Objective</h4>
+          <p className="text-white text-sm">{tutorialInstructions}</p>
+          <button
+            onClick={() => setTutorialInstructions(null)}
+            className="absolute -top-2 -right-2 w-6 h-6 bg-blue-950 rounded-full border border-blue-500/50 flex items-center justify-center text-xs hover:bg-blue-800 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Overlays */}
       {gameState.gameStatus === 'choosing_upgrade' && (
         <UpgradeOverlay onSelect={handleSelectUpgrade} gameState={gameState} />
       )}

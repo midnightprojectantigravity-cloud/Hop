@@ -11,7 +11,7 @@ describe('rng id generation from state', () => {
       gridWidth: 9,
       gridHeight: 11,
       gameStatus: 'playing',
-      message: '',
+      message: [],
       hasSpear: false,
       stairsPosition: { q: 0, r: 0, s: 0 },
       lavaPositions: [],

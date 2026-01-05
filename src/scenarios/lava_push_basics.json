@@ -1,0 +1,58 @@
+{
+    "id": "lava_01",
+    "metadata": {
+        "title": "Gravity Wins",
+        "text": "Push the enemy into the lava."
+    },
+    "grid": {
+        "w": 9,
+        "h": 11
+    },
+    "state": {
+        "player": {
+            "pos": {
+                "q": 4,
+                "r": 6,
+                "s": -10
+            },
+            "skills": [
+                "shield_bash"
+            ]
+        },
+        "enemies": [
+            {
+                "id": "target",
+                "type": "footman",
+                "pos": {
+                    "q": 4,
+                    "r": 5,
+                    "s": -9
+                }
+            }
+        ],
+        "lava": [
+            {
+                "q": 4,
+                "r": 4,
+                "s": -8
+            }
+        ]
+    },
+    "assertions": {
+        "onAction": {
+            "type": "SKILL",
+            "id": "shield_bash",
+            "target": {
+                "q": 4,
+                "r": 5,
+                "s": -9
+            }
+        },
+        "expect": {
+            "enemies": [],
+            "messages": [
+                "Footman fell into Lava!"
+            ]
+        }
+    }
+}

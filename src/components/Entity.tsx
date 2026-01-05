@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Actor as EntityType } from '../game/types';
-import { hexToPixel } from '../game/hex';
+import { hexToPixel, getDirectionFromTo, hexEquals } from '../game/hex';
 import { TILE_SIZE } from '../game/constants';
 
 interface EntityProps {
     entity: EntityType;
     isSpear?: boolean;
+    isDying?: boolean; // For death animations
 }
 
 
@@ -69,27 +70,55 @@ const renderIcon = (entity: EntityType, isPlayer: boolean, size = 24) => {
     }
 };
 
-export const Entity: React.FC<EntityProps> = ({ entity, isSpear }) => {
+export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
     const { x, y } = hexToPixel(entity.position, TILE_SIZE);
+    const [isFlashing, setIsFlashing] = useState(false);
+    const prevHp = useRef(entity.hp);
 
     const isPlayer = entity.type === 'player';
     const targetPixel = entity.intentPosition ? hexToPixel(entity.intentPosition, TILE_SIZE) : null;
+
+    // Handle damage flash
+    useEffect(() => {
+        if (entity.hp < prevHp.current) {
+            setIsFlashing(true);
+            const timer = setTimeout(() => setIsFlashing(false), 150);
+            return () => clearTimeout(timer);
+        }
+        prevHp.current = entity.hp;
+    }, [entity.hp]);
+
+    // Calculate movement stretch
+    let stretchTransform = '';
+    if (entity.previousPosition && !hexEquals(entity.position, entity.previousPosition)) {
+        const dir = getDirectionFromTo(entity.previousPosition, entity.position);
+        if (dir !== -1) {
+            // Rotations for directions 0-5 (flat-top hexes)
+            // 0: +Q (0deg), 1: +Q-R (-60deg?), etc.
+            // Actually simpler to just rotate to the movement direction
+            const angle = dir * 60;
+            // Stretch along the angle
+            stretchTransform = `rotate(${angle}) scale(1.2, 0.8) rotate(${-angle})`;
+        }
+    }
 
     // Handle invisibility (assassin)
     const isInvisible = entity.isVisible === false;
 
     if (isSpear) {
         return (
-            <g transform={`translate(${x},${y})`}>
-                <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize="24">🔱</text>
+            <g style={{ pointerEvents: 'none' }}>
+                <g transform={`translate(${x},${y})`}>
+                    <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize="20" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>🔱</text>
+                </g>
             </g>
         );
     }
 
     return (
-        <g style={{ transition: 'transform 0.2s ease-in-out', pointerEvents: 'none' }}>
+        <g style={{ pointerEvents: 'none' }}>
             {/* Intent Line */}
-            {targetPixel && !isPlayer && (
+            {targetPixel && !isPlayer && !entity.isStunned && (
                 <line
                     x1={x}
                     y1={y}
@@ -102,40 +131,58 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear }) => {
                 />
             )}
 
+            {/* Main Entity Group - Handles smooth movement translation */}
             <g
-                transform={`translate(${x},${y})`}
-                opacity={isInvisible ? 0.3 : 1}
-                style={{ filter: isInvisible ? 'blur(1px)' : 'none' }}
+                style={{
+                    transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transform: `translate(${x}px, ${y}px)`
+                }}
+                className={isDying ? 'animate-lava-sink' : ''}
             >
-                {/* subtle background circle */}
-                <circle r={TILE_SIZE * 0.9} fill={isPlayer ? 'rgba(139,94,52,0.06)' : 'rgba(184,20,20,0.06)'} opacity={1} />
+                {/* Visual Content Group - Handles idle animation, squash/stretch, and damage flash */}
+                <g
+                    transform={stretchTransform}
+                    className={`${isFlashing ? 'entity-damaged' : ''} ${!isDying && !entity.isStunned ? 'animate-idle' : ''}`}
+                    opacity={isInvisible ? 0.3 : 1}
+                    style={{ filter: isInvisible ? 'blur(1px)' : 'none' }}
+                >
+                    {/* subtle background circle */}
+                    <circle r={TILE_SIZE * 0.9} fill={isPlayer ? 'rgba(139,94,52,0.06)' : 'rgba(184,20,20,0.06)'} opacity={1} />
 
-                {/* SVG icon */}
-                <g transform="translate(0,-2) scale(0.9)">
-                    {renderIcon(entity, isPlayer, 18)}
+                    {/* SVG icon */}
+                    <g transform="translate(0,-2) scale(0.9)">
+                        {renderIcon(entity, isPlayer, 18)}
+                    </g>
+
+                    {/* Stun Icon */}
+                    {entity.isStunned && (
+                        <g transform={`translate(0, -${TILE_SIZE * 0.8})`} className="stun-icon">
+                            <text fontSize="14" textAnchor="middle">⭐</text>
+                            <text fontSize="8" textAnchor="middle" dy="-3" dx="6">✨</text>
+                        </g>
+                    )}
+
+                    {/* Shield direction indicator for shield bearer */}
+                    {entity.subtype === 'shieldBearer' && entity.facing !== undefined && !entity.isStunned && (
+                        <line
+                            x1={0}
+                            y1={0}
+                            x2={Math.cos((entity.facing * 60 - 90) * Math.PI / 180) * TILE_SIZE * 0.5}
+                            y2={Math.sin((entity.facing * 60 - 90) * Math.PI / 180) * TILE_SIZE * 0.5}
+                            stroke="#fbbf24"
+                            strokeWidth={3}
+                            strokeLinecap="round"
+                        />
+                    )}
+
+                    {/* Intent label for enemies */}
+                    {!isPlayer && entity.intent && !entity.isStunned && (
+                        <text x={0} y={-TILE_SIZE * 0.6} textAnchor="middle" fontSize={8} fill="#ef4444" fontWeight="bold">
+                            {entity.intent}
+                        </text>
+                    )}
+                    <title>{`${entity.subtype || entity.type} — HP ${entity.hp}/${entity.maxHp}${entity.intent ? ` — ${entity.intent}` : ''}`}</title>
                 </g>
-
-
-                {/* Shield direction indicator for shield bearer */}
-                {entity.subtype === 'shieldBearer' && entity.facing !== undefined && (
-                    <line
-                        x1={0}
-                        y1={0}
-                        x2={Math.cos((entity.facing * 60 - 90) * Math.PI / 180) * TILE_SIZE * 0.5}
-                        y2={Math.sin((entity.facing * 60 - 90) * Math.PI / 180) * TILE_SIZE * 0.5}
-                        stroke="#fbbf24"
-                        strokeWidth={3}
-                        strokeLinecap="round"
-                    />
-                )}
-
-                {/* Intent label for enemies */}
-                {!isPlayer && entity.intent && (
-                    <text x={0} y={-TILE_SIZE * 0.6} textAnchor="middle" fontSize={8} fill="#ef4444" fontWeight="bold">
-                        {entity.intent}
-                    </text>
-                )}
-                <title>{`${entity.subtype || entity.type} — HP ${entity.hp}/${entity.maxHp}${entity.intent ? ` — ${entity.intent}` : ''}`}</title>
             </g>
         </g>
     );

@@ -17,6 +17,8 @@ import {
     applyPassiveSkills,
     hasUpgrade,
 } from './skills';
+import { COMPOSITIONAL_SKILLS } from './skillRegistry';
+import { applyEffects } from './effectEngine';
 
 
 /**
@@ -57,13 +59,14 @@ export const generateInitialState = (
             ...playerStats,
             activeSkills,
         },
+        hasShield: true,
         enemies: enemies.map(e => ({ ...e, previousPosition: e.position })),
         gridWidth: GRID_WIDTH,
         gridHeight: GRID_HEIGHT,
         gameStatus: 'playing',
         message: floor === 1
-            ? 'Welcome to the arena. Survive.'
-            : `Floor ${floor} - ${theme.charAt(0).toUpperCase() + theme.slice(1)}. Be careful.`,
+            ? ['Welcome to the arena. Survive.']
+            : [...(preservePlayer as any)?.message || [], `Floor ${floor} - ${theme.charAt(0).toUpperCase() + theme.slice(1)}. Be careful.`].slice(-50),
         hasSpear: true,
         rngSeed: seed,
         initialSeed: initialSeed ?? (floor === 1 ? seed : undefined),
@@ -112,7 +115,7 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
     // 3. Enemies move or prepare next attack
     // Create a temporary state reflecting player's current status for enemy computations
     const stateAfterTelegraphAndLava = { ...state, player, enemies };
-    const { enemies: nextEnemies, nextState: s3, messages: enemyMessages } = computeNextEnemies(stateAfterTelegraphAndLava, playerMovedTo);
+    const { enemies: nextEnemies, nextState: s3, messages: enemyMessages, dyingEntities } = computeNextEnemies(stateAfterTelegraphAndLava, playerMovedTo);
     enemies = nextEnemies;
     player = s3.player; // Player might have taken damage from bombs
     messages.push(...enemyMessages);
@@ -158,6 +161,14 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
         }
     }
 
+    // Pick up shield if player moves onto it
+    let hasShield = state.hasShield;
+    let shieldPos = state.shieldPosition;
+    if (shieldPos && hexEquals(playerMovedTo, shieldPos)) {
+        hasShield = true; shieldPos = undefined;
+        messages.push('Picked up your shield.');
+    }
+
     // Update positions and turn state
     player = { ...player, previousPosition: playerMovedTo, position: playerMovedTo };
     enemies = enemies.map(e => ({ ...e, previousPosition: e.position }));
@@ -172,7 +183,7 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
             ...state,
             player: { ...player, position: playerMovedTo },
             gameStatus: 'choosing_upgrade',
-            message: 'A holy shrine! Choose an upgrade.'
+            message: ['A holy shrine! Choose an upgrade.']
         };
     }
 
@@ -186,7 +197,7 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
                 ...state,
                 player: { ...player, position: playerMovedTo },
                 gameStatus: 'won',
-                message: 'You cleared the arcade! Submit your run to the leaderboard.',
+                message: ['You cleared the arcade! Submit your run to the leaderboard.'],
                 completedRun: {
                     seed: baseSeed,
                     actionLog: state.actionLog,
@@ -214,15 +225,18 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
 
     return {
         ...state,
-        enemies,
-        player,
+        enemies: enemies.map(e => ({ ...e, previousPosition: previousPositions.get(e.id) || e.position })),
+        player: { ...player, previousPosition: state.player.position },
         hasSpear,
         spearPosition: spearPos,
         turn: state.turn + 1,
-        message: messages.join(' ') || 'Enemy turn over.',
+        message: [...state.message, ...(messages.length > 0 ? messages : ['Enemy turn over.'])].slice(-50),
         gameStatus: player.hp <= 0 ? 'lost' : 'playing',
         kills: totalKills,
         environmentalKills: state.environmentalKills,
+        dyingEntities: dyingEntities, // Show lava sinks/explosions
+        isShaking: state.isShaking || false,   // Preserve shake if triggered by skill
+        lastSpearPath: undefined // Clear trail
     };
 };
 
@@ -235,14 +249,24 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
 
     if (state.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE') return state;
 
-    switch (action.type) {
-        case 'LOAD_STATE': {
-            return action.payload;
-        }
-        case 'RESET':
-            // Create a fresh seeded run on reset
-            return generateInitialState(1, String(Date.now()));
+    // Clear transient visual flags when player starts a NEW action
+    const clearedState = {
+        ...state,
+        isShaking: false,
+        lastSpearPath: undefined,
+        dyingEntities: []
+    };
 
+    switch (action.type) {
+        case 'LOAD_STATE':
+            return action.payload;
+        case 'RESET':
+            return generateInitialState(1, String(Date.now()));
+    }
+
+    if (state.gameStatus !== 'playing' && action.type !== 'SELECT_UPGRADE') return state;
+
+    switch (action.type) {
         case 'SELECT_UPGRADE': {
             const upgradeId = action.payload;
             let player = state.player;
@@ -256,12 +280,12 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             }
 
             return appendAction({
-                ...state,
+                ...clearedState,
                 player,
                 upgrades: [...state.upgrades, upgradeId],
                 gameStatus: 'playing',
                 shrinePosition: undefined,
-                message: `Gained ${upgradeDef?.name || upgradeId}!`
+                message: [...state.message, `Gained ${upgradeDef?.name || upgradeId}!`].slice(-50)
             }, action);
         }
 
@@ -276,35 +300,70 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 : state.player.activeSkills?.find(s => s.id === skillId);
 
             if (!isLunge && (!skill || skill.currentCooldown > 0)) {
-                return { ...state, message: skill ? 'Skill on cooldown!' : 'You don\'t have this skill!' };
+                return { ...clearedState, message: [...state.message, skill ? 'Skill on cooldown!' : 'You don\'t have this skill!'].slice(-50) };
             }
 
             // Check if player has LUNGE upgrade for lunge action
             if (isLunge && !hasUpgrade(state.player, 'SPEAR_THROW', 'LUNGE')) {
-                return { ...state, message: 'You don\'t have the Lunge upgrade!' };
+                return { ...clearedState, message: [...state.message, 'You don\'t have the Lunge upgrade!'].slice(-50) };
             }
 
             // Route to appropriate skill executor
+            // 1. Check Compositional Skill Registry
+            const compDef = COMPOSITIONAL_SKILLS[skillId];
+            if (compDef) {
+                const targetEnemy = target ? getEnemyAt(state.enemies, target) : undefined;
+                const activeUpgrades = skill?.activeUpgrades || [];
+                const execution = compDef.execute(state, state.player, target, activeUpgrades);
+
+                // Apply effects to state
+                let newState = applyEffects(clearedState, execution.effects, { targetId: targetEnemy?.id });
+
+                // Update cooldown for the skill just used
+                newState.player = {
+                    ...newState.player,
+                    activeSkills: newState.player.activeSkills?.map((s: any) =>
+                        s.id === skillId ? { ...s, currentCooldown: compDef.baseVariables.cooldown } : s
+                    )
+                };
+
+                // Check if any Displacement effect moved the player
+                const playerMoveEffect = execution.effects.find(e => e.type === 'Displacement' && e.target === 'self') as { type: 'Displacement', destination: Point } | undefined;
+                const playerMovedTo = playerMoveEffect ? playerMoveEffect.destination : newState.player.position;
+
+                const stateAfterSkill = appendAction({
+                    ...newState,
+                    message: [...newState.message, ...execution.messages].slice(-50)
+                }, action);
+
+                if (execution.consumesTurn === false) {
+                    return stateAfterSkill;
+                }
+
+                return resolveEnemyActions(stateAfterSkill, playerMovedTo);
+            }
+
+            // 2. Legacy Skill Handling
             let result;
             switch (skillId) {
                 case 'SPEAR_THROW':
-                    if (!target) return { ...state, message: 'Select target for Spear Throw!' };
+                    if (!target) return { ...clearedState, message: [...state.message, 'Select target for Spear Throw!'].slice(-50) };
                     result = executeSpearThrow(target, state);
                     break;
                 case 'SHIELD_BASH':
-                    if (!target) return { ...state, message: 'Select target for Shield Bash!' };
+                    if (!target) return { ...clearedState, message: [...state.message, 'Select target for Shield Bash!'].slice(-50) };
                     result = executeShieldBash(target, state);
                     break;
                 case 'JUMP':
-                    if (!target) return { ...state, message: 'Select target for Jump!' };
+                    if (!target) return { ...clearedState, message: [...state.message, 'Select target for Jump!'].slice(-50) };
                     result = executeJump(target, state);
                     break;
                 case 'LUNGE':
-                    if (!target) return { ...state, message: 'Select target for Lunge!' };
+                    if (!target) return { ...clearedState, message: [...state.message, 'Select target for Lunge!'].slice(-50) };
                     result = executeLunge(target, state);
                     break;
                 default:
-                    return { ...state, message: `Unknown skill: ${skillId}` };
+                    return { ...clearedState, message: [...state.message, `Unknown skill: ${skillId}`].slice(-50) };
             }
 
 
@@ -317,25 +376,31 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             // If skill doesn't consume turn (e.g., FREE_JUMP), don't resolve enemy actions
             if (result.consumesTurn === false) {
                 return appendAction({
-                    ...state,
+                    ...clearedState,
                     player: result.player,
                     enemies: result.enemies,
                     lavaPositions: newLavaPositions,
-                    message: result.messages.join(' '),
+                    message: [...state.message, ...result.messages].slice(-50),
                     environmentalKills: (state.environmentalKills || 0) + (result.environmentalKills || 0),
                     kills: (state.kills || 0) + (result.kills || 0),
+                    lastSpearPath: result.lastSpearPath,
+                    isShaking: result.isShaking,
+                    dyingEntities: []
                 }, action);
             }
 
             // Resolve enemy actions after skill use
             return resolveEnemyActions(appendAction({
-                ...state,
+                ...clearedState,
                 player: result.player,
                 enemies: result.enemies,
                 lavaPositions: newLavaPositions,
-                message: result.messages.join(' '),
+                message: [...state.message, ...result.messages].slice(-50),
                 environmentalKills: (state.environmentalKills || 0) + (result.environmentalKills || 0),
                 kills: (state.kills || 0) + (result.kills || 0),
+                lastSpearPath: result.lastSpearPath,
+                isShaking: result.isShaking,
+                dyingEntities: []
             }, action), result.playerMoved || state.player.position);
         }
 
@@ -344,12 +409,12 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         case 'JUMP': {
             const target = action.payload;
             const dist = hexDistance(state.player.position, target);
-            if (action.type === 'MOVE' && dist !== 1) return state;
-            if ((action.type === 'LEAP' || action.type === 'JUMP') && (dist > 2 || dist < 1)) return state;
+            if (action.type === 'MOVE' && dist !== 1) return clearedState;
+            if ((action.type === 'LEAP' || action.type === 'JUMP') && (dist > 2 || dist < 1)) return clearedState;
 
             // Check walkability (Walls/Lava)
-            if (!isWalkable(target, state.wallPositions, state.lavaPositions)) {
-                return { ...state, message: "Blocked!" };
+            if (!isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight)) {
+                return { ...clearedState, message: [...state.message, "Blocked!"].slice(-50) };
             }
 
             // Check occupancy (cant step on enemies/self)
@@ -359,12 +424,13 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 if (targetEnemy && action.type === 'MOVE') {
                     // One-hit kill melee attack by moving into them (classic Hoplite)
                     return resolveEnemyActions(appendAction({
-                        ...state,
+                        ...clearedState,
                         enemies: state.enemies.filter(e => e.id !== targetEnemy.id),
-                        message: `Struck ${targetEnemy.subtype}!`
+                        message: [...state.message, `Struck ${targetEnemy.subtype}!`].slice(-50),
+                        dyingEntities: [targetEnemy]
                     }, action), state.player.position);
                 }
-                return { ...state, message: "Tile occupied!" };
+                return { ...clearedState, message: [...state.message, "Tile occupied!"].slice(-50) };
             }
 
             // Leap Strike (kills enemies you jump over or land adjacent to if jumped from 2 away)
@@ -383,19 +449,24 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             const result = executeSpearThrow(target, state);
 
             if (result.messages.includes('Spear not in hand!') || result.messages.includes('Target out of range!')) {
-                return { ...state, message: result.messages[0] };
+                return { ...clearedState, message: [...state.message, result.messages[0]].slice(-50) };
             }
 
             return resolveEnemyActions(appendAction({
-                ...state,
+                ...clearedState,
                 enemies: result.enemies,
                 hasSpear: result.hasSpear ?? false,
                 spearPosition: result.spearPosition,
+                message: [...state.message, ...result.messages].slice(-50),
+                kills: (state.kills || 0) + (result.kills || 0),
+                lastSpearPath: result.lastSpearPath,
+                isShaking: result.isShaking,
+                dyingEntities: []
             }, action), state.player.position);
         }
 
         case 'WAIT': {
-            return resolveEnemyActions(appendAction(state, action), state.player.position);
+            return resolveEnemyActions(appendAction(clearedState, action), state.player.position);
         }
 
         default:

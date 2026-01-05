@@ -23,7 +23,7 @@ export const hexToPixel = (hex: Point, size: number): { x: number; y: number } =
 };
 
 // Directions for neighbors (axial)
-const DIRECTIONS = [
+export const DIRECTIONS = [
     createHex(1, 0), createHex(1, -1), createHex(0, -1),
     createHex(-1, 0), createHex(-1, 1), createHex(0, 1)
 ];
@@ -40,10 +40,11 @@ export const isTileInDiamond = (q: number, r: number, width: number, height: num
     if (q < 0 || q >= width || r < 0 || r >= height) return false;
 
     const sum = q + r;
-    // Hard reset limits based on user's specific 9x11 constraints:
-    // q + r > 3 (min 4) and q + r < 15 (max 14)
-    const topLimit = 4;
-    const bottomLimit = 14;
+
+    // For the 9x11 Tutorial Standard: q+r must be between 4 and 14
+    // This shaves the corners of the axial parallelogram to create a balanced diamond.
+    const topLimit = Math.floor(width / 2); // e.g., 4 for width 9
+    const bottomLimit = (width - 1) + (height - 1) - topLimit; // e.g., 8 + 10 - 4 = 14 for 9x11
 
     return sum >= topLimit && sum <= bottomLimit;
 };
@@ -82,4 +83,14 @@ export const getHexLine = (start: Point, end: Point): Point[] => {
         results.push(createHex(Math.round(q), Math.round(r)));
     }
     return results;
+};
+export const getDirectionFromTo = (start: Point, end: Point): number => {
+    const diff = hexSubtract(end, start);
+    // Find the closest axial direction index (0-5)
+    // For non-neighbors, we divide by distance to normalize
+    const dist = hexDistance(start, end);
+    if (dist === 0) return -1;
+    const dq = Math.round(diff.q / dist);
+    const dr = Math.round(diff.r / dist);
+    return DIRECTIONS.findIndex(d => d.q === dq && d.r === dr);
 };

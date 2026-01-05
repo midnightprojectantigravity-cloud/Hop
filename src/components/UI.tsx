@@ -18,42 +18,94 @@ const calculateScore = (state: GameState): number => {
 export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait }) => {
     const score = calculateScore(gameState);
 
+    const messages = Array.isArray(gameState.message) ? gameState.message : [];
+    const logRef = React.useRef<HTMLDivElement>(null);
+
+    // Auto-scroll to bottom of log
+    React.useEffect(() => {
+        if (logRef.current) {
+            logRef.current.scrollTop = logRef.current.scrollHeight;
+        }
+    }, [messages]);
+
     return (
-        <div className="absolute top-0 left-0 w-full z-10 p-4 pointer-events-none">
-            <div className="max-w-md mx-auto flex justify-between items-center bg-gray-900/90 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/10 shadow-2xl pointer-events-auto">
-                <div className="flex flex-col">
-                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Health</span>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xl font-black text-red-500">{gameState.player.hp}</span>
-                        <span className="text-white/20">/</span>
-                        <span className="text-gray-400 font-bold">{gameState.player.maxHp}</span>
+        <div className="flex flex-col h-full max-h-screen">
+            <div className="flex flex-col gap-8 p-8 overflow-y-auto flex-1 min-h-0">
+                <div>
+                    <h1 className="text-xl font-black uppercase tracking-widest text-white/90 mb-1">Hoplite</h1>
+                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Tactical Arena</p>
+                </div>
+
+                {/* Health & Armor Section */}
+                <div className="space-y-6">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2">Vitality</span>
+                        <div className="flex items-end gap-2">
+                            <span className="text-4xl font-black text-red-500 leading-none">{gameState.player.hp}</span>
+                            <span className="text-xl text-white/20 font-bold leading-none mb-1">/</span>
+                            <span className="text-xl text-gray-500 font-bold leading-none mb-1">{gameState.player.maxHp}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col">
+                        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2">Guardian Plating</span>
+                        <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-sm ${gameState.player.temporaryArmor ? 'bg-blue-400 rotate-45' : 'bg-white/5 border border-white/10'}`}></div>
+                            <span className="text-2xl font-black text-blue-400 leading-none">{gameState.player.temporaryArmor || 0}</span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center flex-1 mx-4">
-                    <div className="flex items-center gap-4 mb-1">
-                        <button onClick={onWait} className="p-1 hover:bg-white/10 rounded-full transition-colors" title="Wait (🛡️)">
-                            <span className="text-blue-400">🛡️</span>
-                        </button>
-                        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Floor {gameState.floor}</span>
-                        <button onClick={onReset} className="p-1 hover:bg-white/10 rounded-full transition-colors" title="Reset Level (🔄)">
-                            <span className="text-red-400">🔄</span>
-                        </button>
+                {/* Stats Section */}
+                <div className="py-8 border-y border-white/5 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Floor</span>
+                        <span className="text-xl font-black">{gameState.floor}</span>
                     </div>
-                    <span className="text-lg font-black text-white tracking-widest">{score.toLocaleString()}</span>
+                    <div className="flex justify-between items-center">
+                        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Current Score</span>
+                        <span className="text-xl font-black text-white">{score.toLocaleString()}</span>
+                    </div>
                 </div>
 
-
-                <div className="flex flex-col items-end">
-                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Armor</span>
-                    <span className="text-xl font-black text-blue-400">{gameState.player.temporaryArmor || 0}</span>
+                {/* Actions Section */}
+                <div className="flex flex-col gap-3">
+                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Directives</span>
+                    <button
+                        onClick={onWait}
+                        className="w-full flex justify-between items-center px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group"
+                    >
+                        <span className="text-sm font-bold text-white/70">Secure & Wait</span>
+                        <span className="text-lg grayscale group-hover:grayscale-0 transition-all">🛡️</span>
+                    </button>
+                    <button
+                        onClick={onReset}
+                        className="w-full flex justify-between items-center px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-all group"
+                    >
+                        <span className="text-sm font-bold text-red-400/80">Reset Chronology</span>
+                        <span className="text-lg grayscale group-hover:grayscale-0 transition-all">🔄</span>
+                    </button>
                 </div>
             </div>
 
-            {gameState.message && (
-                <div className="mt-4 max-w-xs mx-auto text-center">
-                    <div className="inline-block bg-white/5 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10 text-xs text-white/80 font-medium animate-pulse-once">
-                        {gameState.message}
+            {/* Message Feed - Fixed at bottom */}
+            {messages.length > 0 && (
+                <div className="p-8 border-t border-white/5 bg-[#030712]/80 backdrop-blur-sm">
+                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-3 block">Tactical Log</span>
+                    <div
+                        ref={logRef}
+                        className="flex flex-col gap-2 bg-white/[0.02] border border-white/5 p-4 rounded-2xl overflow-y-auto max-h-[140px]"
+                    >
+                        {messages.slice(-20).map((msg, i) => (
+                            <div key={i} className="flex gap-2 items-start">
+                                <span className="text-[10px] text-white/20 font-bold mt-1 leading-none shrink-0">
+                                    [{messages.length - 20 + i < 0 ? i : messages.length - 20 + i}]
+                                </span>
+                                <p className="text-[11px] leading-tight text-white/70 font-medium whitespace-pre-wrap">
+                                    {msg}
+                                </p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
