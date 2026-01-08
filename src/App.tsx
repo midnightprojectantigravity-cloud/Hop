@@ -1,3 +1,8 @@
+/**
+ * MAIN COMPOSITION ROOT (View Layer)
+ * Manages UI state, React side-effects, and orchestrates the game loop via dispatch.
+ * TODO: Implement "Infinite Undo" button in the UI using gameState.undoStack.
+ */
 import { useReducer, useRef, useState, useEffect } from 'react';
 import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';

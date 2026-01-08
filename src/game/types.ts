@@ -1,3 +1,12 @@
+/**
+ * ARCHITECTURE OVERVIEW: "Gold Standard" Tech Stack
+ * Logic: Immutable State + Command Pattern (see Command, StateDelta)
+ * Validation: TDD for Scenarios + Fuzzing for stability
+ * Performance: Spatial Hashing/Bitmasks for the AI (see GameState.occupancyMask)
+ * Meta: Strategic Hub with serialized JSON Loadouts
+ * 
+ * ECS-Lite: The Actor model stores data and components, Logic is handled by pure Systems.
+ */
 export interface Point {
     q: number;
     r: number;
@@ -7,17 +16,54 @@ export interface Point {
 // (Actor model introduced below; `Entity` is now an alias to `Actor`)
 
 // Skill slot types
-export type SkillSlot = 'offensive' | 'defensive' | 'utility';
+export type SkillSlot = 'offensive' | 'defensive' | 'utility' | 'passive';
+
+/** Status Effects: Buffs/Debuffs with logic hooks */
+export interface StatusEffect {
+    id: string;
+    type: 'stunned' | 'poisoned' | 'armored' | 'hidden';
+    duration: number; // -1 for permanent
+    stacks?: number;
+    // Interceptor hooks
+    onIncomingDamage?: (damage: number) => number;
+    onTurnStart?: (actor: Actor, state: GameState) => AtomicEffect[];
+    onTurnEnd?: (actor: Actor, state: GameState) => AtomicEffect[];
+}
+
+/** Effect Middleware: Intercepts and modifies AtomicEffects before resolution */
+export type EffectInterceptor = (effect: AtomicEffect, state: GameState, context: { targetId?: string; sourceId?: string }) => AtomicEffect | null;
+
+// Command Pattern: For Replays, Undo, and Determinism
+export interface Command {
+    id: string;
+    timestamp: number;
+    action: Action;
+    // For Undo: store the delta produced by this command
+    delta?: StateDelta;
+}
+
+export interface StateDelta {
+    id: string;
+    undoData: any; // Opaque data for revert_delta system
+}
 
 /** Atomic Effects: Discrete engine instructions */
 export type AtomicEffect =
     | { type: 'Displacement'; target: 'self' | 'targetActor'; destination: Point; source?: Point }
     | { type: 'Damage'; target: 'targetActor' | 'area' | Point; amount: number }
-    | { type: 'ApplyStatus'; target: 'targetActor'; status: 'stunned' | 'poisoned'; duration: number }
+    | { type: 'Heal'; target: 'targetActor'; amount: number }
+    | { type: 'ApplyStatus'; target: 'targetActor' | Point; status: 'stunned' | 'poisoned'; duration: number }
     | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
+    | { type: 'PickupShield'; position?: Point }
+    | { type: 'GrantSkill'; skillId: string }
     | { type: 'Message'; text: string }
-    | { type: 'Juice'; effect: 'shake' | 'flash' | 'lavaSink' | 'spearTrail'; target?: Point; path?: Point[] }
+    | { type: 'Juice'; effect: 'shake' | 'flash' | 'lavaSink' | 'spearTrail' | 'freeze' | 'combat_text'; target?: Point; path?: Point[]; intensity?: 'low' | 'medium' | 'high'; direction?: Point; text?: string }
     | { type: 'ModifyCooldown'; skillId: string; amount: number; setExact?: boolean };
+
+export interface VisualEvent {
+    type: 'shake' | 'freeze' | 'combat_text' | 'vfx';
+    payload: any;
+}
 
 export interface SkillModifier {
     id: string;
@@ -47,12 +93,14 @@ export interface SkillDefinition {
         range: number;
         cost: number;
         cooldown: number;
+        damage?: number;
     };
     /** Core Logic: Functional execution returning a list of effects */
-    execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades?: string[]) => {
+    execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades?: string[], context?: Record<string, any>) => {
         effects: AtomicEffect[];
         messages: string[];
         consumesTurn?: boolean;
+        kills?: number;
     };
     upgrades: Record<string, SkillModifier>;
     scenarios: ScenarioV2[];
@@ -85,31 +133,25 @@ export interface Actor {
     intent?: string;
     intentPosition?: Point;
 
-    // Movement and combat modifiers
-    movementSpeed?: number;   // Hexes per turn (default 1)
-    facing?: number;          // Direction 0-5 for Shield Bearer
-    isVisible?: boolean;      // For visibility mechanics
-    actionCooldown?: number;  // For slow enemies
+    // Movement and combat variables
+    movementSpeed?: number;
+    facing?: number;
+    isVisible?: boolean;
+    actionCooldown?: number;
 
-    // New mechanics from design doc
-    temporaryArmor?: number;  // Shield passive: +1 armor that resets each turn
-    isStunned?: boolean;      // From Wall Slam or Stunning Landing
-    previousPosition?: Point; // Track for Punch passive (hit enemies that started and ended adjacent)
-    enemyType?: 'melee' | 'ranged'; // Visual: melee=diamond, ranged=triangle
+    // Logic state
+    previousPosition?: Point;
+    enemyType?: 'melee' | 'ranged';
 
-    // Equipment slots (optional, can be extended later)
-    gear?: {
-        weapon?: string;
-        head?: string;
-        body?: string;
-        [key: string]: string | undefined;
-    };
+    // Status system
+    statusEffects: StatusEffect[];
+    temporaryArmor: number;
 
-    // Skills or abilities the actor can use (old string array for upgrades)
-    skills?: string[];
+    // ECS-Lite: Components can be stored here as optional records
+    components?: Record<string, any>;
 
-    // New skill system with cooldowns (3 slots: offensive, defensive, utility)
-    activeSkills?: Skill[];
+    // Skills
+    activeSkills: Skill[];
 }
 
 // Backwards-compatible alias: existing code that expects `Entity` keeps working.
@@ -139,10 +181,14 @@ export interface GameState {
     spearPosition?: Point;
     stairsPosition: Point;
     lavaPositions: Point[];
-    wallPositions: Point[];      // Wall tiles that block movement
-    shrinePosition?: Point;
+    wallPositions: Point[];
 
-    // Shield Mechanics
+    // Spatial Hashing / Bitmasks (Goal 3)
+    occupancyMask: bigint[];
+
+    shrinePosition?: Point;
+    shrineOptions?: string[];
+
     hasShield: boolean;
     shieldPosition?: Point;
 
@@ -150,15 +196,17 @@ export interface GameState {
     upgrades: string[];
 
     // Procedural generation
-    rooms?: Room[];          // Generated dungeon rooms
-    theme?: FloorTheme;      // Visual/gameplay theme
+    rooms?: Room[];
+    theme?: FloorTheme;
 
-    // New deterministic / replay fields:
-    rngSeed?: string;            // seed used for initial generation
-    actionLog?: Action[];        // recorded player actions for replay
-    initialSeed?: string;        // original run seed (stays constant across floors)
-    rngCounter?: number;         // number of deterministic random draws consumed so far
-    // Completed run snapshot for post-run actions (leaderboard submission, export)
+    // Command & Replay (Goal 2)
+    commandLog: Command[];
+    undoStack: StateDelta[];
+
+    rngSeed?: string;
+    actionLog?: Action[];
+    initialSeed?: string;
+    rngCounter?: number;
     completedRun?: {
         seed?: string;
         actionLog?: Action[];
@@ -166,15 +214,17 @@ export interface GameState {
         floor?: number;
     };
 
-    // Score tracking
+    // Score
     kills: number;
     environmentalKills: number;
 
-    // Juice & Animations
-    dyingEntities?: Entity[];    // Entities currently playing death animation
-    lastSpearPath?: Point[];    // For spear trail animation
-    isShaking?: boolean;        // Trigger screen shake
-    occupiedCurrentTurn?: Point[]; // Internal: track occupied tiles to prevent stacking
+    // Juice
+    dyingEntities?: Entity[];
+    lastSpearPath?: Point[];
+    isShaking?: boolean;
+    occupiedCurrentTurn?: Point[];
+    visualEvents: VisualEvent[];
+    turnsSpent: number;
 }
 
 export type Action =
@@ -183,7 +233,7 @@ export type Action =
     | { type: 'JUMP'; payload: Point }       // New: Jump skill
     | { type: 'ATTACK'; payload: string }
     | { type: 'WAIT' }
-    | { type: 'RESET' }
+    | { type: 'RESET'; payload?: { seed: string } }
     | { type: 'THROW_SPEAR'; payload: Point }
     | { type: 'SHIELD_BASH'; payload: Point } // New: Shield Bash skill
     | { type: 'SELECT_UPGRADE'; payload: string }
@@ -204,6 +254,7 @@ export interface Scenario {
         player: {
             pos: Point;
             skills: string[];
+            upgrades?: string[];
             hp?: number;
             maxHp?: number;
         };
@@ -212,6 +263,7 @@ export interface Scenario {
             type: string;
             pos: Point;
             hp?: number;
+            isStunned?: boolean;
         }>;
         lava: Point[];
         walls?: Point[];

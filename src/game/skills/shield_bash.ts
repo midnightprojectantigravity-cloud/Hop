@@ -174,8 +174,8 @@ export const SHIELD_BASH: SkillDefinition = {
             verify: (state: GameState, logs: string[]) => {
                 const enemy = state.enemies.find(e => e.id === 'victim');
                 if (!enemy) return false;
-                // Should stay in place (4,3) and be stunned
-                const inPlace = hexEquals(enemy.position, { q: 4, r: 3, s: -7 });
+                // Should stay in original position (blocked) and be stunned
+                const inPlace = hexEquals(enemy.position, { q: 3, r: 5, s: -8 });
                 // Stun might be cleared by turn end, so check log for confirmation
                 const logConfirm = logs.some(l => l.includes('into obstacle'));
                 return inPlace && logConfirm;

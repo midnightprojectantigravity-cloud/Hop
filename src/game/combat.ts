@@ -1,28 +1,45 @@
+/**
+ * COMBAT SYSTEM
+ * Manages telegraphed attacks and enemy turn resolution.
+ * TODO: Fully migrate telegraphed attacks to the SkillDefinition/COMPOSITIONAL_SKILLS system.
+ */
 import type { GameState, Point, Entity } from './types';
-import { hexEquals, hexDistance } from './hex';
+import { hexEquals, hexDistance, getNeighbors } from './hex';
 import { computeEnemyAction } from './enemyAI';
 import { applyDamage } from './actor';
+import { applyAutoAttack } from './skills/auto_attack';
+import { COMPOSITIONAL_SKILLS } from './skillRegistry';
+import { applyEffects } from './effectEngine';
+import { isStunned } from './helpers';
 // RNG helpers available if needed in future (consumeRandom, nextIdFromState)
 
-/** Resolve telegraphed attacks: enemies that had intentPosition equal to player's moved-to hex. */
 export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point): { player: Entity; messages: string[] } => {
-  let player = state.player;
+  let curState = state;
   const messages: string[] = [];
 
   state.enemies.forEach(e => {
-    if (e.intentPosition && hexEquals(e.intentPosition, playerMovedTo)) {
-      if (e.subtype === 'bomber') {
-        // Bomber creates a bomb instead of direct damage
-        messages.push(`${e.subtype} threw a bomb!`);
-        // Bomb will be added during computeNextEnemies to avoid modifying state during forEach
-      } else {
-        player = applyDamage(player, 1);
-        messages.push(`Hit by ${e.subtype}! (HP: ${player.hp}/${player.maxHp})`);
+    if (e.intent && e.intentPosition) {
+      // 1. Try to find a compositional skill that matches the intent
+      const skillDef = COMPOSITIONAL_SKILLS[e.intent];
+      const activeSkill = e.activeSkills?.find(s => s.id === e.intent);
+
+      if (skillDef && activeSkill) {
+        // Execute skill AT THE INTENDED POSITION
+        // We pass curState which has the player at playerMovedTo
+        const result = skillDef.execute(curState, e, e.intentPosition, activeSkill.activeUpgrades);
+        curState = applyEffects(curState, result.effects, { targetId: curState.player.id });
+        messages.push(...result.messages);
+      } else if (e.subtype === 'bomber') {
+        // Bomber logic is handled in computeNextEnemies
+      } else if (hexEquals(e.intentPosition, playerMovedTo)) {
+        // Fallback to legacy damage if it was a basic attack intent
+        curState = { ...curState, player: applyDamage(curState.player, 1) };
+        messages.push(`Hit by ${e.subtype}! (HP: ${curState.player.hp}/${curState.player.maxHp})`);
       }
     }
   });
 
-  return { player, messages };
+  return { player: curState.player, messages };
 };
 
 /** Apply lava damage to an actor (enemy). Returns a new Entity with hp adjusted and messages. */
@@ -68,8 +85,10 @@ export const computeNextEnemies = (state: GameState, playerMovedTo: Point): { en
     }
 
     let nextEnemy: Entity;
-    if (bt.isStunned) {
-      nextEnemy = { ...bt, isStunned: false, intentPosition: undefined, intent: undefined };
+    if (isStunned(bt)) {
+      // Tick down stun
+      const nextStatuses = bt.statusEffects.map(s => s.type === 'stunned' ? { ...s, duration: s.duration - 1 } : s).filter(s => s.duration !== 0);
+      nextEnemy = { ...bt, statusEffects: nextStatuses, intentPosition: undefined, intent: undefined };
     } else if (bt.intent === 'Bombing' && bt.intentPosition) {
       // BOMBER SPECIAL: If it just finished its telegraph, it spawns the bomb AND STAYS STILL
       messages.push(`${bt.subtype} placed a bomb.`);
@@ -81,6 +100,9 @@ export const computeNextEnemies = (state: GameState, playerMovedTo: Point): { en
         hp: 1,
         maxHp: 1,
         actionCooldown: 2, // 2 turn fuse
+        statusEffects: [],
+        temporaryArmor: 0,
+        activeSkills: [],
       });
       // The enemy stays at its current position and clears intent
       nextEnemy = { ...bt, intent: undefined, intentPosition: undefined };
@@ -106,12 +128,11 @@ export const computeNextEnemies = (state: GameState, playerMovedTo: Point): { en
     // are visible to the next enemy in the list.
     const updatedEnemiesInState = curState.enemies.map(e => e.id === bt.id ? nextEnemy : e);
     curState = { ...curState, enemies: updatedEnemiesInState, occupiedCurrentTurn };
-
-    // Footman passive punch: if player stayed adjacent
-    if (nextEnemy.subtype === 'footman' && hexDistance(nextEnemy.position, playerMovedTo) === 1 && hexDistance(nextEnemy.position, state.player.position) === 1) {
-      curState = { ...curState, player: applyDamage(curState.player, 1) };
-      messages.push(`Footman punched you! (HP: ${curState.player.hp}/${curState.player.maxHp})`);
-    }
+    // Unified End-of-turn passives for enemy
+    const enemyPrevNeighbors = getNeighbors(bt.position);
+    const autoAttackResult = applyAutoAttack(curState, nextEnemy, enemyPrevNeighbors);
+    curState = autoAttackResult.state;
+    messages.push(...autoAttackResult.messages);
 
     const { enemy: afterLava, messages: lavaMsgs } = applyLavaToEnemy(nextEnemy, curState);
     messages.push(...lavaMsgs);

@@ -1,10 +1,14 @@
-// src/game/skills.ts
-// New 3-slot skill system: Spear (Offensive), Shield (Defensive), Jump (Utility)
-
+/**
+ * LEGACY SKILL SYSTEM (DEPRECATED)
+ * This file contains legacy implementations of Spear, Shield, and Jump.
+ * NEW DEVELOPMENT should happen in src/game/skills/ as individual SkillDefinitions.
+ * TODO: Fully evacuate this file and delete it.
+ */
 import type { GameState, Entity, Point, Skill } from './types';
 import { hexDistance, hexEquals, getNeighbors, hexDirection, hexAdd, getHexLine } from './hex';
-import { applyDamage } from './actor';
 import { isWalkable } from './helpers';
+import { addStatus } from './actor';
+import { COMPOSITIONAL_SKILLS } from './skillRegistry';
 
 // ============================================================================
 // SKILL DEFINITIONS
@@ -95,6 +99,23 @@ export const applyPassiveSkills = (player: Entity): Entity => {
 // ============================================================================
 
 export const createSkill = (skillId: string): Skill | null => {
+    // Try compositional first
+    const compDef = COMPOSITIONAL_SKILLS[skillId];
+    if (compDef) {
+        return {
+            id: compDef.id,
+            name: compDef.name,
+            description: compDef.description,
+            slot: compDef.slot,
+            cooldown: compDef.baseVariables.cooldown,
+            currentCooldown: 0,
+            range: compDef.baseVariables.range,
+            upgrades: Object.keys(compDef.upgrades),
+            activeUpgrades: [],
+            energyCost: compDef.baseVariables.cost
+        };
+    }
+
     const def = SKILL_DEFINITIONS[skillId];
     if (!def) return null;
     return {
@@ -106,6 +127,8 @@ export const createSkill = (skillId: string): Skill | null => {
 
 export const createDefaultSkills = (): Skill[] => {
     return [
+        createSkill('BASIC_ATTACK')!,
+        createSkill('AUTO_ATTACK')!,
         createSkill('SPEAR_THROW')!,
         createSkill('SHIELD_BASH')!,
         createSkill('JUMP')!,
@@ -471,7 +494,7 @@ export const executeShieldBash = (
         if (isOutOfBounds || blockedByWall || blockingEnemy) {
             // Collision!
             localEnemies = localEnemies.map(e =>
-                e.id === targetActor.id ? { ...e, isStunned: true } : e
+                e.id === targetActor.id ? addStatus(e, 'stunned', 1) : e
             );
             localMessages.push(`Bashed ${targetActor.subtype} into ${isOutOfBounds ? 'the void' : blockedByWall ? 'a wall' : 'another enemy'} - Stunned!`);
 
@@ -576,7 +599,7 @@ export const executeJump = (
         const adjacentEnemies = enemies.filter(e => neighbors.some(n => hexEquals(n, e.position)));
         if (adjacentEnemies.length > 0) {
             enemies = enemies.map(e =>
-                adjacentEnemies.some(ae => ae.id === e.id) ? { ...e, isStunned: true } : e
+                adjacentEnemies.some(ae => ae.id === e.id) ? addStatus(e, 'stunned', 1) : e
             );
             messages.push(`Stunned ${adjacentEnemies.length} enemies!`);
         }
@@ -595,44 +618,6 @@ export const executeJump = (
     const consumesTurn = !hasUpgrade(player, 'JUMP', 'FREE_JUMP');
 
     return { player, enemies, messages, playerMoved: target, consumesTurn };
-};
-
-// ============================================================================
-// PUNCH PASSIVE
-// ============================================================================
-
-/**
- * Check and apply Punch passive: hits enemies that started and ended turn adjacent
- */
-export const applyPunchPassive = (
-    player: Entity,
-    enemies: Entity[],
-    previousEnemyPositions: Map<string, Point>
-): { enemies: Entity[]; messages: string[] } => {
-    const messages: string[] = [];
-    const neighbors = getNeighbors(player.position);
-
-    let updatedEnemies = enemies.map(enemy => {
-        const prevPos = previousEnemyPositions.get(enemy.id);
-        if (!prevPos) return enemy;
-
-        const wasAdjacent = getNeighbors(player.position).some(n => hexEquals(n, prevPos));
-        const isAdjacent = neighbors.some(n => hexEquals(n, enemy.position));
-
-        if (wasAdjacent && isAdjacent) {
-            // Punch!
-            const damaged = applyDamage(enemy, 1);
-            messages.push(`Punched ${enemy.subtype}!`);
-            return damaged;
-        }
-
-        return enemy;
-    });
-
-    // Remove dead enemies
-    updatedEnemies = updatedEnemies.filter(e => e.hp > 0);
-
-    return { enemies: updatedEnemies, messages };
 };
 
 // ============================================================================
@@ -676,7 +661,6 @@ export default {
     executeJump,
     executeSpearThrow,
     executeLunge,
-    applyPunchPassive,
     getShrineUpgradeOptions,
 };
 

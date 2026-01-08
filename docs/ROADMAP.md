@@ -32,10 +32,10 @@ This document outlines the expansion plan for Hop, focusing on enemies, skills, 
 
 #### Tier 3 - Elite (Floors 5+, Bosses)
 
-**👑 Demon Lord (Boss)**
-- HP: 10
-- Behavior: Multi-phase fight, summons minions
-- Status: **To Do**
+**👑 The Sentinel (Boss)**
+- HP: 20
+- Behavior: Area-of-effect "Projected Attacks", stays range 5.
+- Status: ✅ **Completed**
 
 **💀 Death Knight (Mini-boss)**
 - HP: 6
@@ -314,16 +314,18 @@ Each "act" or floor range has a tileset:
 
 ### High Priority (Next Sprint)
 1. 🧊 Implementing Frozen & Void themes (Ice/Void tiles)
-2. 👑 Boss encounters (Demon Lord logic)
-3. 🏆 Meta-progression (Global Leaderboard backend)
-4. 🎵 Sound effects & Music integration
+2. 🏆 Meta-progression (Global Leaderboard backend)
+3. 🎵 Sound effects & Music integration
+4. 🧠 Advanced AI MCTS simulation (using occupancyMask)
 
 ### Completed ✅
-1. Full 7+ Enemy roster with specialized AI.
-2. 3-slot Skill system with deep upgrade trees.
+1. Full 8+ Enemy roster with specialized AI, including The Sentinel (Boss).
+2. 3-slot Skill system with deep upgrade trees and compositional framework.
 3. Visual overhaul (SVG shapes, animations, lava bubbles).
 4. Permanent session persistence & Replay verification.
-5. In-game scoring & local leaderboard.
+5. In-game scoring & leaderboard with Arcade Mode formula.
+6. **"The Juice" System**: Granular VisualEvent pipeline for screenshakes, freezes, and combat text.
+7. **10-Level Arcade Progression**: 1-10 level curve with tactical escalation.
 
 ---
 

@@ -1,3 +1,8 @@
+/**
+ * ENEMY AI SYSTEM
+ * Uses Goal 3 (Spatial Hashing / Bitmasks) for high-performance move simulations.
+ * TODO: Fully migrate specialized enemy logic (Bomber/Warlock) into the Compositional Skill Framework.
+ */
 import type { Entity, Point, GameState } from './types';
 import { getNeighbors, hexDistance, hexEquals, hexAdd, hexDirection, isHexInRectangularGrid } from './hex';
 import { consumeRandom } from './rng';
@@ -92,7 +97,7 @@ const computeSprinterAction = (enemy: Entity, playerPos: Point, state: GameState
 
     if (dist === 1) {
         return {
-            entity: { ...enemy, intent: 'Attacking!', intentPosition: { ...playerPos } },
+            entity: { ...enemy, intent: 'BASIC_ATTACK', intentPosition: { ...playerPos } },
             nextState: state
         };
     }
@@ -115,7 +120,7 @@ const computeSprinterAction = (enemy: Entity, playerPos: Point, state: GameState
         entity: {
             ...enemy,
             position: curPos,
-            intent: moved ? 'Moving' : 'Attacking!',
+            intent: moved ? 'Moving' : 'BASIC_ATTACK',
             intentPosition: moved ? undefined : { ...playerPos }
         },
         nextState: curState,
@@ -134,7 +139,7 @@ const computeShieldBearerAction = (enemy: Entity, playerPos: Point, state: GameS
 
     if (dist === 1) {
         return {
-            entity: { ...enemy, facing: facingDir, intent: 'Attacking!', intentPosition: { ...playerPos } },
+            entity: { ...enemy, facing: facingDir, intent: 'BASIC_ATTACK', intentPosition: { ...playerPos } },
             nextState: state
         };
     }
@@ -147,7 +152,7 @@ const computeShieldBearerAction = (enemy: Entity, playerPos: Point, state: GameS
             ...enemy,
             position,
             facing: moved ? getDirectionTo(enemy.position, position) : facingDir,
-            intent: moved ? 'Advancing' : 'Attacking!',
+            intent: moved ? 'Advancing' : 'BASIC_ATTACK',
             intentPosition: moved ? undefined : { ...playerPos }
         },
         nextState: newState,
@@ -225,7 +230,7 @@ const computeAssassinAction = (enemy: Entity, playerPos: Point, state: GameState
             entity: {
                 ...enemy,
                 isVisible: true,
-                intent: 'Backstab!',
+                intent: 'BASIC_ATTACK',
                 intentPosition: { ...playerPos }
             },
             nextState: state
@@ -242,11 +247,32 @@ const computeAssassinAction = (enemy: Entity, playerPos: Point, state: GameState
             ...enemy,
             position,
             isVisible: moved ? false : (dist <= 1),
-            intent: moved ? 'Moving' : 'Backstab!',
+            intent: moved ? 'Moving' : 'BASIC_ATTACK',
             intentPosition: moved ? undefined : { ...playerPos }
         },
         nextState: newState,
         message: moved ? `You hear footsteps nearby...` : undefined
+    };
+};
+
+/**
+ * Sentinel AI: Boss logic
+ */
+const computeSentinelAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState; message?: string } => {
+    const dist = hexDistance(enemy.position, playerPos);
+
+    if (dist <= 5) {
+        return {
+            entity: { ...enemy, intent: 'SENTINEL_BLAST', intentPosition: { ...playerPos } },
+            nextState: state,
+            message: 'The Sentinel focuses energy...'
+        };
+    }
+
+    const { position, state: newState } = findBestMove(enemy, playerPos, state, state.occupiedCurrentTurn);
+    return {
+        entity: { ...enemy, position, intent: 'Moving', intentPosition: undefined },
+        nextState: newState
     };
 };
 
@@ -272,7 +298,7 @@ const computeGolemAction = (enemy: Entity, playerPos: Point, state: GameState): 
             entity: {
                 ...enemy,
                 actionCooldown: 2, // Reset cooldown
-                intent: 'Smashing!',
+                intent: 'BASIC_ATTACK', // Use basic attack for now
                 intentPosition: { ...playerPos }
             },
             nextState: state
@@ -319,12 +345,15 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
         case 'golem':
             return computeGolemAction(bt, playerMovedTo, state);
 
+        case 'sentinel':
+            return computeSentinelAction(bt, playerMovedTo, state);
+
         case 'archer': {
             // Archer AI
             const isInLine = (bt.position.q === playerMovedTo.q) || (bt.position.r === playerMovedTo.r) || (bt.position.s === playerMovedTo.s);
             if (isInLine && dist > 1 && dist <= 4) {
                 return {
-                    entity: { ...bt, intent: 'Aiming', intentPosition: { ...playerMovedTo } },
+                    entity: { ...bt, intent: 'SPEAR_THROW', intentPosition: { ...playerMovedTo } },
                     nextState: state
                 };
             }
@@ -388,10 +417,10 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
         }
 
         default: {
-            // Footman AI (default melee)
+            // Default melee
             if (dist === 1) {
                 return {
-                    entity: { ...bt, intent: 'Attacking!', intentPosition: { ...playerMovedTo } },
+                    entity: { ...bt, intent: 'BASIC_ATTACK', intentPosition: { ...playerMovedTo } },
                     nextState: state
                 };
             }
@@ -403,7 +432,7 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
                 entity: {
                     ...bt,
                     position,
-                    intent: moved ? 'Moving' : 'Attacking!',
+                    intent: moved ? 'Moving' : 'BASIC_ATTACK',
                     intentPosition: moved ? undefined : { ...playerMovedTo }
                 },
                 nextState: newState,
@@ -414,4 +443,3 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
 };
 
 export default computeEnemyAction;
-

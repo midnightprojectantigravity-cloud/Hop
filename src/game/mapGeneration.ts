@@ -1,6 +1,9 @@
-// src/game/mapGeneration.ts
-// Tight tactical grid generation for mobile portrait mode
-
+/**
+ * MAP GENERATION SYSTEM
+ * Deterministic procedural generation of tactical arenas.
+ * Optimized for mobile portrait (diamond grid).
+ * TODO: Implement "Hazard Generation" (e.g. dynamic spikes or traps) using the same RNG seed.
+ */
 import type { Point, Room, FloorTheme, Entity } from './types';
 import { createHex, hexEquals, hexDistance, getDiamondGrid } from './hex';
 import { createRng } from './rng';
@@ -14,6 +17,7 @@ import {
     HAZARD_PERCENTAGE
 } from './constants';
 import { isSpecialTile } from './helpers';
+import { createSkill } from './skills';
 
 export interface DungeonResult {
     rooms: Room[];
@@ -173,6 +177,9 @@ export const generateEnemies = (
             hp: finalHp,
             maxHp: finalMaxHp,
             isVisible: true,
+            statusEffects: [],
+            temporaryArmor: 0,
+            activeSkills: (stats as any).skills?.map((s: string) => createSkill(s)).filter(Boolean) || [],
         });
 
         remainingBudget -= stats.cost;

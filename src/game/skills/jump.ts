@@ -96,45 +96,21 @@ export const JUMP: SkillDefinition = {
         // Stunning Landing
         if (activeUpgrades.includes('STUNNING_LANDING')) {
             const neighbors = getNeighbors(target);
+
             for (const n of neighbors) {
                 const neighborEnemy = getEnemyAt(state.enemies, n);
-                // Note: If Meteor Impact killed the target, it's gone from state.enemies?
-                // Actually 'damage' effect happens on 'state' inside effect engine. 
-                // 'state' passed to us is immutable initial state. 
-                // We are generating a list of effects based on INITIAL state.
-                // If we kill target with meteor, we should NOT stun it (it's dead).
-                // But neighbors are distinct.
+
+                // Only stun if there is an enemy there, and it's NOT the one we just Meteor Impacted
                 if (neighborEnemy && (!enemyAtTarget || neighborEnemy.id !== enemyAtTarget.id)) {
-                    // We can't target specific ID easily with current AtomicEffect 'ApplyStatus' target 'targetActor'.
-                    // 'targetActor' uses context.targetId.
-                    // We need a way to apply status to arbitrary ID or Position.
-                    // Current AtomicEffect definition:
-                    // | { type: 'ApplyStatus'; target: 'targetActor'; status: 'stunned' | 'poisoned'; duration: number }
-
-                    // Limitation: Can only apply status to "the target".
-                    // We need to extend AtomicEffect or use a workaround.
-                    // Workaround: We can't without extending.
-                    // Let's assume for now we skip stunning or we extend AtomicEffect.
-                    // Refactoring logic.ts/effectEngine for this is big.
-                    // Actually, we can use 'Damage' with 0 amount? No.
-
-                    // WAIT. EffectEngine 'Damage' supports `target: Point`.
-                    // `| { type: 'Damage'; target: 'targetActor' | 'area' | Point; amount: number }`
-                    // But 'ApplyStatus' only supports 'targetActor'.
-                    // I should extend 'ApplyStatus' to support Point or ID.
-                    // For now, I will omit the implementation of stunning specific neighbors until I extend the type.
-                    // OR, I can use a 'Juice' effect to trigger it via side-channel? No.
-
-                    // Let's look at types.ts again.
-                    // `| { type: 'ApplyStatus'; target: 'targetActor'; status: 'stunned' | 'poisoned'; duration: number }`
-
-                    // I will proceed without modifying types for now to avoid scope creep, 
-                    // OR I can quickly update types.ts/effectEngine.ts since I already have them open.
-                    // Extending it is the right way.
+                    effects.push({
+                        type: 'ApplyStatus',
+                        target: n,           // This works now!
+                        status: 'stunned',
+                        duration: 1
+                    });
+                    messages.push(`${neighborEnemy.subtype || 'Enemy'} stunned by landing!`);
                 }
             }
-            // Temporarily disable stunning neighbors logic until engine support is added.
-            messages.push('(Stunning Landing applied visual only)');
             effects.push({ type: 'Juice', effect: 'shake' });
         }
 
@@ -189,6 +165,35 @@ export const JUMP: SkillDefinition = {
                 const dead = !enemy || enemy.hp <= 0;
                 const playerAtTarget = hexEquals(state.player.position, { q: 3, r: 4, s: -7 });
                 return dead && playerAtTarget && logs.some(l => l.includes('Meteor Impact killed'));
+            }
+        },
+        {
+            id: 'jump_stunning_landing',
+            title: 'Stunning Landing Test',
+            description: 'Jump into a group of enemies and ensure neighbors are stunned.',
+            setup: (engine: any) => {
+                // Player starts at distance 2
+                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['JUMP']);
+                engine.addUpgrade('JUMP', 'STUNNING_LANDING');
+
+                // Target hex will be (0, 2, -2). 
+                // We place enemies in the neighbors of that target hex.
+                engine.spawnEnemy('shieldBearer', { q: 3, r: 7, s: -10 }, 'neighbor_1');
+                engine.spawnEnemy('shieldBearer', { q: 4, r: 7, s: -11 }, 'neighbor_2');
+                // This enemy is too far away to be stunned
+                engine.spawnEnemy('shieldBearer', { q: 3, r: 5, s: -8 }, 'distant_enemy');
+            },
+            run: (engine: any) => {
+                // Jump to the center of the neighbors
+                engine.useSkill('JUMP', { q: 3, r: 8, s: -11 });
+            },
+            verify: (state: GameState, logs: string[]) => {
+                // Stuns are cleared at end of enemy turn, so check logs instead
+                const n1Stunned = logs.filter(l => l.includes('stunned by landing')).length >= 2;
+                const distantNotStunned = !logs.some(l => l.includes('distant_enemy') && l.includes('stunned'));
+                const playerAtTarget = state.player.position.r === 8;
+
+                return n1Stunned && distantNotStunned && playerAtTarget;
             }
         }
     ]

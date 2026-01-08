@@ -12,7 +12,7 @@
     "deploy": "gh-pages -d dist",
     "start-server": "node server/index.js",
     "test": "vitest",
-    "test:engine": "tsx src/scripts/testEngine.ts"
+    "test:skills": "tsx src/scripts/testSkills.ts"
   },
   "dependencies": {
     "react": "^19.2.0",

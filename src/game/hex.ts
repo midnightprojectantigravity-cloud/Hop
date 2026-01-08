@@ -1,3 +1,7 @@
+/**
+ * HEX GEOMETRY ENGINE
+ * Axiomatic hex math implementation. Pure functions only.
+ */
 import type { Point } from './types';
 
 export const createHex = (q: number, r: number): Point => ({ q, r, s: -q - r });

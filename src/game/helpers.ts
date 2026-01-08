@@ -1,5 +1,8 @@
-// src/game/helpers.ts
-
+/**
+ * STATELESS HELPERS
+ * Pure utility functions for grid and entity queries.
+ * TODO: Prioritize bitmask checks (spatial.ts) in isOccupied/isWalkable for high-performance loops.
+ */
 import type { GameState, Point, Entity } from './types';
 import { hexEquals, isHexInRectangularGrid } from './hex';
 import { applyDamage } from './actor';
@@ -44,17 +47,6 @@ export const isWalkable = (
 };
 
 /**
- * Checks if a position is occupied by another actor.
- */
-export const isOccupied = (
-    position: Point,
-    state: GameState
-): boolean => {
-    if (hexEquals(state.player.position, position)) return true;
-    return state.enemies.some(e => hexEquals(e.position, position));
-};
-
-/**
  * Checks if a position is occupied by an enemy.
  */
 export const getEnemyAt = (
@@ -63,6 +55,31 @@ export const getEnemyAt = (
 ): Entity | undefined => {
     if (!enemies) return undefined;
     return enemies.find(e => e && e.position && hexEquals(e.position, position));
+};
+
+/**
+ * Gets the actor (player or enemy) at a position.
+ */
+export const getActorAt = (state: GameState, position: Point): Entity | undefined => {
+    if (hexEquals(state.player.position, position)) return state.player;
+    return getEnemyAt(state.enemies, position);
+};
+
+/**
+ * Checks if an actor is currently stunned.
+ */
+export const isStunned = (actor: Entity): boolean => {
+    return actor.statusEffects.some(s => s.type === 'stunned' && s.duration !== 0);
+};
+
+/**
+ * Checks if a position is occupied by another actor.
+ */
+export const isOccupied = (
+    position: Point,
+    state: GameState
+): boolean => {
+    return !!getActorAt(state, position);
 };
 
 /**

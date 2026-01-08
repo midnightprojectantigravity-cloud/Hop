@@ -67,76 +67,31 @@ Contributing / notes for maintainers
   - `src/components/ReplayManager.tsx` — UI for saving/loading and submitting replays
 
 If you want me to generate a short development README for the server or add CI config for lint/tests, say which you'd prefer and I'll add it.
-# React + TypeScript + Vite
+## Architectural "Gold Standard" Tech Stack
+This project is built using a world-class architecture designed for scale and performance:
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+- **Logic: Immutable State + Command Pattern**
+  - All actions generate a `Command` and `StateDelta`.
+  - Enables **Infinite Undo** and microscopic replay files.
+- **Validation: TDD for Scenarios + Fuzzing**
+  - Integrated tactical scenarios verify skill logic automatically.
+  - Behavioral fuzzing script finds edge cases by simulating thousands of random turns.
+- **Performance: Spatial Hashing / Bitmasks**
+  - BigInt bitmasks provide constant-time occupancy checks for AI simulations.
+- **Meta: Strategic Hub & Serialized Loadouts**
+  - Character configurations are fully serializable JSON objects.
 
-Currently, two official plugins are available:
+For a deep dive into the technical details, see [ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## Detailed Documentation
+- [Status Document](./docs/STATUS.md) — Current feature completion and roadmap.
+- [Architecture Guide](./docs/ARCHITECTURE.md) — Technical deep-dive into the engine design.
+- [Game Mechanics](./docs/GAME_MECHANICS.md) — Rules, skills, and unit archetypes.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Contributing / notes for maintainers
+- **Strict Immutability:** Never mutate `GameState` fields directly.
+- **Skill Migration:** All new skills should be implemented in `src/game/skills/` using the `SkillDefinition` interface.
+- **Testing:** Always run `npm test` and `src/scripts/fuzzTest.ts` after major architectural changes.
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```

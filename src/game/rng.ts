@@ -1,3 +1,9 @@
+/**
+ * DETERMINISTIC RNG
+ * Essential for Goal 2 (Deterministic Replays).
+ * Uses seeded xfnv1a/Mulberry32 for cross-platform consistency.
+ * TODO: Support "PCG (Permuted Congruential Generator)" for even better performance in high-sim loops.
+ */
 export type RNG = { next: () => number; id: (len?: number) => string };
 
 // Simple string -> uint32 hash (xfnv1a)

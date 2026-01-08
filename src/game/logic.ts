@@ -1,3 +1,9 @@
+/**
+ * CORE ENGINE LOGIC
+ * Follows the Command Pattern & Immutable State.
+ * resolveEnemyActions and gameReducer are the primary entry points.
+ * TODO: Migrate all remaining legacy skills (Spear/Shield/Jump) to the Compositional Framework.
+ */
 import type { GameState, Action, Point } from './types';
 import { hexDistance, hexEquals, getNeighbors } from './hex';
 import { resolveTelegraphedAttacks, computeNextEnemies } from './combat';
@@ -19,23 +25,35 @@ import {
 } from './skills';
 import { COMPOSITIONAL_SKILLS } from './skillRegistry';
 import { applyEffects } from './effectEngine';
+import { applyAutoAttack } from './skills/auto_attack';
+import { refreshOccupancyMask } from './spatial';
+import { createCommand, createDelta } from './commands';
 
 
 /**
  * Generate initial state with the new tactical arena generation
  */
+import { consumeRandom } from './rng';
+import { applyLoadoutToPlayer, type Loadout } from './loadout';
+
+// In generateInitialState signature
 export const generateInitialState = (
     floor: number = 1,
-    seed: string = String(Date.now()),
+    seed?: string,
     initialSeed?: string,
-    preservePlayer?: { hp: number; maxHp: number; upgrades: string[]; activeSkills?: any[] }
+    preservePlayer?: { hp: number; maxHp: number; upgrades: string[]; activeSkills?: any[] },
+    loadout?: Loadout
 ): GameState => {
+    // If no seed provided, we MUST generate one, but this should be rare in strict mode.
+    // For now, fall back to Date.now() ONLY if strictly necessary, but ideally caller provides it.
+    const actualSeed = seed || String(Date.now());
+
     // Determine floor theme
     const theme = getFloorTheme(floor);
 
     // Use tactical arena generation for all floors
-    const dungeon = generateDungeon(floor, seed);
-    const enemies = generateEnemies(floor, dungeon.spawnPositions, seed);
+    const dungeon = generateDungeon(floor, actualSeed);
+    const enemies = generateEnemies(floor, dungeon.spawnPositions, actualSeed);
 
     // Build player state (preserve HP/upgrades/skills across floors)
     const playerStats = preservePlayer ? {
@@ -43,13 +61,13 @@ export const generateInitialState = (
         maxHp: preservePlayer.maxHp,
     } : INITIAL_PLAYER_STATS;
 
-    const upgrades = preservePlayer?.upgrades || [];
-    const activeSkills = preservePlayer?.activeSkills || createDefaultSkills();
+    const upgrades = preservePlayer?.upgrades || (loadout ? loadout.startingUpgrades : []);
+    const activeSkills = preservePlayer?.activeSkills || (loadout ? applyLoadoutToPlayer(loadout).activeSkills : createDefaultSkills());
 
     // Use the fixed playerSpawn from dungeon generation
     const playerPos = dungeon.playerSpawn;
 
-    return {
+    const initialState: GameState = {
         turn: 1,
         player: {
             id: 'player',
@@ -57,10 +75,16 @@ export const generateInitialState = (
             position: playerPos,
             previousPosition: playerPos,
             ...playerStats,
+            statusEffects: [],
+            temporaryArmor: 0,
             activeSkills,
         },
-        hasShield: true,
-        enemies: enemies.map(e => ({ ...e, previousPosition: e.position })),
+        enemies: enemies.map(e => ({
+            ...e,
+            previousPosition: e.position,
+            statusEffects: e.statusEffects || [],
+            temporaryArmor: e.temporaryArmor || 0
+        })),
         gridWidth: GRID_WIDTH,
         gridHeight: GRID_HEIGHT,
         gameStatus: 'playing',
@@ -68,21 +92,32 @@ export const generateInitialState = (
             ? ['Welcome to the arena. Survive.']
             : [...(preservePlayer as any)?.message || [], `Floor ${floor} - ${theme.charAt(0).toUpperCase() + theme.slice(1)}. Be careful.`].slice(-50),
         hasSpear: true,
-        rngSeed: seed,
-        initialSeed: initialSeed ?? (floor === 1 ? seed : undefined),
+        rngSeed: actualSeed,
+        initialSeed: initialSeed ?? (floor === 1 ? actualSeed : undefined),
         rngCounter: 0,
         stairsPosition: dungeon.stairsPosition,
         lavaPositions: dungeon.lavaPositions,
         wallPositions: dungeon.wallPositions,
+        occupancyMask: [], // Will be refreshed below
         shrinePosition: dungeon.shrinePosition,
+        shrineOptions: undefined,
+        hasShield: true,
         floor: floor,
         upgrades,
+        commandLog: [],
+        undoStack: [],
         actionLog: [],
         rooms: dungeon.rooms,
         theme,
         kills: preservePlayer ? (preservePlayer as any).kills || 0 : 0,
         environmentalKills: preservePlayer ? (preservePlayer as any).environmentalKills || 0 : 0,
+        turnsSpent: preservePlayer ? (preservePlayer as any).turnsSpent || 0 : 0,
+        visualEvents: [],
     };
+
+    initialState.occupancyMask = refreshOccupancyMask(initialState);
+
+    return initialState;
 };
 
 const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState => {
@@ -120,24 +155,13 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
     player = s3.player; // Player might have taken damage from bombs
     messages.push(...enemyMessages);
 
-    // 4. Punch Passive: hit enemies that were adjacent at start and are still adjacent
-    const neighbors = getNeighbors(playerMovedTo);
-    let killsThisTurn = 0;
-    enemies = enemies.map(e => {
-        const prevPos = previousPositions.get(e.id);
-        if (!prevPos) return e;
-
-        const wasAdjacent = getNeighbors(state.player.position).some(n => hexEquals(n, prevPos));
-        const isAdjacent = neighbors.some(n => hexEquals(n, e.position));
-
-        if (wasAdjacent && isAdjacent) {
-            messages.push(`Punched ${e.subtype}!`);
-            const nextHp = e.hp - 1;
-            if (nextHp <= 0) killsThisTurn++;
-            return { ...e, hp: nextHp };
-        }
-        return e;
-    }).filter(e => e.hp > 0);
+    // 4. Auto Attack (Punch Passive): Use the skill system if player has AUTO_ATTACK
+    const previousNeighbors = getNeighbors(state.player.position);
+    let intermediateState = { ...state, player: { ...player, position: playerMovedTo }, enemies };
+    const autoAttackResult = applyAutoAttack(intermediateState, player, previousNeighbors);
+    enemies = autoAttackResult.state.enemies;
+    messages.push(...autoAttackResult.messages);
+    const killsThisTurn = autoAttackResult.kills;
 
     const totalKills = (state.kills || 0) + killsThisTurn;
 
@@ -179,10 +203,29 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
 
     // Check Shrine
     if (checkShrine(state, playerMovedTo)) {
+        // Use consumeRandom for deterministic selection of upgrade options
+        const allUpgrades = Object.keys(UPGRADE_DEFINITIONS);
+        const available = allUpgrades.filter(u => !state.upgrades.includes(u));
+
+        const picked: string[] = [];
+        let rngState = { ...state }; // Snapshot for RNG purposes
+
+        for (let i = 0; i < 3 && available.length > 0; i++) {
+            const res = consumeRandom(rngState);
+            rngState = res.nextState; // Advance RNG
+            const idx = Math.floor(res.value * available.length);
+            picked.push(available[idx]);
+            available.splice(idx, 1);
+        }
+
         return {
-            ...state,
+            ...state, // Base on original state? No, we need Player/Enemies updates.
+            // We need to merge everything.
             player: { ...player, position: playerMovedTo },
+            enemies: enemies, // Updated enemies
+            rngCounter: rngState.rngCounter, // KEEP THE RNG ADVANCEMENT!
             gameStatus: 'choosing_upgrade',
+            shrineOptions: picked.length > 0 ? picked : ['EXTRA_HP'],
             message: ['A holy shrine! Choose an upgrade.']
         };
     }
@@ -192,12 +235,15 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
         const arcadeMax = 10;
         if (state.floor >= arcadeMax) {
             const baseSeed = state.initialSeed ?? state.rngSeed ?? '0';
-            const score = (totalKills * 10) + (state.environmentalKills * 25) + (state.floor * 100);
+            const speedBonus = Math.max(0, (state.floor * 30 - state.turnsSpent) * 50);
+            const damagePenalty = (player.maxHp - player.hp) * 10;
+            const score = (state.floor * 1000) + speedBonus - damagePenalty;
+
             return {
                 ...state,
                 player: { ...player, position: playerMovedTo },
                 gameStatus: 'won',
-                message: ['You cleared the arcade! Submit your run to the leaderboard.'],
+                message: [`Arcade Cleared! Final Score: ${score}`],
                 completedRun: {
                     seed: baseSeed,
                     actionLog: state.actionLog,
@@ -229,6 +275,8 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
         player: { ...player, previousPosition: state.player.position },
         hasSpear,
         spearPosition: spearPos,
+        hasShield,
+        shieldPosition: shieldPos,
         turn: state.turn + 1,
         message: [...state.message, ...(messages.length > 0 ? messages : ['Enemy turn over.'])].slice(-50),
         gameStatus: player.hp <= 0 ? 'lost' : 'playing',
@@ -241,235 +289,246 @@ const resolveEnemyActions = (state: GameState, playerMovedTo: Point): GameState 
 };
 
 export const gameReducer = (state: GameState, action: Action): GameState => {
-    // Record action into actionLog when game is playing (or even when ended for full trace)
-    const appendAction = (s: GameState, a: Action): GameState => {
-        const log = s.actionLog ? [...s.actionLog, a] : [a];
-        return { ...s, actionLog: log };
-    };
+    if (state.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE' && action.type !== 'LOAD_STATE') return state;
 
-    if (state.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE') return state;
-
-    // Clear transient visual flags when player starts a NEW action
-    const clearedState = {
+    const clearedState: GameState = {
         ...state,
         isShaking: false,
         lastSpearPath: undefined,
-        dyingEntities: []
+        dyingEntities: [],
+        occupiedCurrentTurn: undefined,
+        visualEvents: []
     };
 
     switch (action.type) {
         case 'LOAD_STATE':
             return action.payload;
-        case 'RESET':
-            return generateInitialState(1, String(Date.now()));
+        case 'RESET': {
+            const newState = generateInitialState(1, action.payload?.seed || String(Date.now()));
+            return {
+                ...newState,
+                commandLog: [],
+                undoStack: [],
+                actionLog: []
+            };
+        }
     }
 
     if (state.gameStatus !== 'playing' && action.type !== 'SELECT_UPGRADE') return state;
 
-    switch (action.type) {
-        case 'SELECT_UPGRADE': {
-            const upgradeId = action.payload;
-            let player = state.player;
+    // Command Pattern (Goal 2)
+    const command = createCommand(action);
+    const oldState = state;
 
-            const upgradeDef = UPGRADE_DEFINITIONS[upgradeId];
-            if (upgradeDef) {
-                // It's a skill upgrade
-                player = addUpgrade(player, upgradeDef.skill, upgradeId);
-            } else if (upgradeId === 'EXTRA_HP') {
-                player = increaseMaxHp(player, 1, true);
-            }
+    let intermediateState: GameState;
 
-            return appendAction({
-                ...clearedState,
-                player,
-                upgrades: [...state.upgrades, upgradeId],
-                gameStatus: 'playing',
-                shrinePosition: undefined,
-                message: [...state.message, `Gained ${upgradeDef?.name || upgradeId}!`].slice(-50)
-            }, action);
-        }
+    // Wrapped logic to produce the next state
+    const resolveGameState = (s: GameState, a: Action): GameState => {
+        switch (a.type) {
+            case 'SELECT_UPGRADE': {
+                if (!('payload' in a)) return s;
+                const upgradeId = a.payload;
+                let player = s.player;
 
-        case 'USE_SKILL': {
-            const { skillId, target } = action.payload;
-
-            // Check if player has the skill and it's ready
-            // Special handling for LUNGE which is an upgrade, not a standalone skill
-            const isLunge = skillId === 'LUNGE';
-            const skill = isLunge
-                ? state.player.activeSkills?.find(s => s.id === 'SPEAR_THROW')
-                : state.player.activeSkills?.find(s => s.id === skillId);
-
-            if (!isLunge && (!skill || skill.currentCooldown > 0)) {
-                return { ...clearedState, message: [...state.message, skill ? 'Skill on cooldown!' : 'You don\'t have this skill!'].slice(-50) };
-            }
-
-            // Check if player has LUNGE upgrade for lunge action
-            if (isLunge && !hasUpgrade(state.player, 'SPEAR_THROW', 'LUNGE')) {
-                return { ...clearedState, message: [...state.message, 'You don\'t have the Lunge upgrade!'].slice(-50) };
-            }
-
-            // Route to appropriate skill executor
-            // 1. Check Compositional Skill Registry
-            const compDef = COMPOSITIONAL_SKILLS[skillId];
-            if (compDef) {
-                const targetEnemy = target ? getEnemyAt(state.enemies, target) : undefined;
-                const activeUpgrades = skill?.activeUpgrades || [];
-                const execution = compDef.execute(state, state.player, target, activeUpgrades);
-
-                // Apply effects to state
-                let newState = applyEffects(clearedState, execution.effects, { targetId: targetEnemy?.id });
-
-                // Update cooldown for the skill just used
-                newState.player = {
-                    ...newState.player,
-                    activeSkills: newState.player.activeSkills?.map((s: any) =>
-                        s.id === skillId ? { ...s, currentCooldown: compDef.baseVariables.cooldown } : s
-                    )
-                };
-
-                // Check if any Displacement effect moved the player
-                const playerMoveEffect = execution.effects.find(e => e.type === 'Displacement' && e.target === 'self') as { type: 'Displacement', destination: Point } | undefined;
-                const playerMovedTo = playerMoveEffect ? playerMoveEffect.destination : newState.player.position;
-
-                const stateAfterSkill = appendAction({
-                    ...newState,
-                    message: [...newState.message, ...execution.messages].slice(-50)
-                }, action);
-
-                if (execution.consumesTurn === false) {
-                    return stateAfterSkill;
+                const upgradeDef = UPGRADE_DEFINITIONS[upgradeId];
+                if (upgradeDef) {
+                    player = addUpgrade(player, upgradeDef.skill, upgradeId);
+                } else if (upgradeId === 'EXTRA_HP') {
+                    player = increaseMaxHp(player, 1, true);
                 }
 
-                return resolveEnemyActions(stateAfterSkill, playerMovedTo);
+                return {
+                    ...s,
+                    player,
+                    upgrades: [...s.upgrades, upgradeId],
+                    gameStatus: 'playing',
+                    shrinePosition: undefined,
+                    shrineOptions: undefined,
+                    message: [...s.message, `Gained ${upgradeDef?.name || upgradeId}!`].slice(-50)
+                };
             }
 
-            // 2. Legacy Skill Handling
-            let result;
-            switch (skillId) {
-                case 'SPEAR_THROW':
-                    if (!target) return { ...clearedState, message: [...state.message, 'Select target for Spear Throw!'].slice(-50) };
-                    result = executeSpearThrow(target, state);
-                    break;
-                case 'SHIELD_BASH':
-                    if (!target) return { ...clearedState, message: [...state.message, 'Select target for Shield Bash!'].slice(-50) };
-                    result = executeShieldBash(target, state);
-                    break;
-                case 'JUMP':
-                    if (!target) return { ...clearedState, message: [...state.message, 'Select target for Jump!'].slice(-50) };
-                    result = executeJump(target, state);
-                    break;
-                case 'LUNGE':
-                    if (!target) return { ...clearedState, message: [...state.message, 'Select target for Lunge!'].slice(-50) };
-                    result = executeLunge(target, state);
-                    break;
-                default:
-                    return { ...clearedState, message: [...state.message, `Unknown skill: ${skillId}`].slice(-50) };
-            }
+            case 'USE_SKILL': {
+                if (!('payload' in a)) return s;
+                const { skillId, target } = a.payload;
 
+                // Lunge handling (as upgrade of Spear Throw)
+                const isLunge = skillId === 'LUNGE';
+                const skill = isLunge
+                    ? s.player.activeSkills?.find(s => s.id === 'SPEAR_THROW')
+                    : s.player.activeSkills?.find(s => s.id === skillId);
 
-            // Apply any lava created by skill
-            let newLavaPositions = state.lavaPositions;
-            if (result.lavaCreated && result.lavaCreated.length > 0) {
-                newLavaPositions = [...state.lavaPositions, ...result.lavaCreated];
-            }
+                if (!isLunge && (!skill || skill.currentCooldown > 0)) {
+                    return { ...s, message: [...s.message, skill ? 'Skill on cooldown!' : 'You don\'t have this skill!'].slice(-50) };
+                }
 
-            // If skill doesn't consume turn (e.g., FREE_JUMP), don't resolve enemy actions
-            if (result.consumesTurn === false) {
-                return appendAction({
-                    ...clearedState,
+                if (isLunge && !hasUpgrade(s.player, 'SPEAR_THROW', 'LUNGE')) {
+                    return { ...s, message: [...s.message, 'You don\'t have the Lunge upgrade!'].slice(-50) };
+                }
+
+                // 1. Compositional Skill
+                const compDef = COMPOSITIONAL_SKILLS[skillId];
+                if (compDef) {
+                    const targetEnemy = target ? getEnemyAt(s.enemies, target) : undefined;
+                    const activeUpgrades = skill?.activeUpgrades || [];
+                    const execution = compDef.execute(s, s.player, target, activeUpgrades);
+
+                    let newState = applyEffects(s, execution.effects, { targetId: targetEnemy?.id });
+
+                    newState.player = {
+                        ...newState.player,
+                        activeSkills: newState.player.activeSkills?.map((s: any) =>
+                            s.id === skillId ? { ...s, currentCooldown: compDef.baseVariables.cooldown } : s
+                        )
+                    };
+
+                    const playerMoveEffect = execution.effects.find(e => e.type === 'Displacement' && e.target === 'self') as { type: 'Displacement', destination: Point } | undefined;
+                    const playerMovedTo = playerMoveEffect ? playerMoveEffect.destination : newState.player.position;
+
+                    const stateAfterSkill = {
+                        ...newState,
+                        message: [...newState.message, ...execution.messages].slice(-50)
+                    };
+
+                    if (execution.consumesTurn === false) {
+                        return stateAfterSkill;
+                    }
+                    return resolveEnemyActions(stateAfterSkill, playerMovedTo);
+                }
+
+                // 2. Legacy Skills (Fallback)
+                let result;
+                switch (skillId) {
+                    case 'SPEAR_THROW': result = executeSpearThrow(target!, state); break;
+                    case 'SHIELD_BASH': result = executeShieldBash(target!, state); break;
+                    case 'JUMP': result = executeJump(target!, state); break;
+                    case 'LUNGE': result = executeLunge(target!, state); break;
+                    default: return { ...clearedState, message: [...state.message, `Unknown skill: ${skillId}`].slice(-50) };
+                }
+
+                if (result.messages[0].includes('not in hand') || result.messages[0].includes('out of range')) {
+                    return { ...clearedState, message: [...state.message, ...result.messages].slice(-50) };
+                }
+
+                // Legacy skill application
+                let newLavaPositions = state.lavaPositions;
+                if (result.lavaCreated?.length) newLavaPositions = [...state.lavaPositions, ...result.lavaCreated];
+
+                if (result.consumesTurn === false) {
+                    return {
+                        ...s,
+                        player: result.player,
+                        enemies: result.enemies,
+                        lavaPositions: newLavaPositions,
+                        message: [...s.message, ...result.messages].slice(-50),
+                        environmentalKills: (s.environmentalKills || 0) + (result.environmentalKills || 0),
+                        kills: (s.kills || 0) + (result.kills || 0),
+                        lastSpearPath: result.lastSpearPath,
+                        isShaking: result.isShaking
+                    };
+                }
+
+                return resolveEnemyActions({
+                    ...s,
                     player: result.player,
                     enemies: result.enemies,
                     lavaPositions: newLavaPositions,
-                    message: [...state.message, ...result.messages].slice(-50),
-                    environmentalKills: (state.environmentalKills || 0) + (result.environmentalKills || 0),
-                    kills: (state.kills || 0) + (result.kills || 0),
+                    message: [...s.message, ...result.messages].slice(-50),
+                    environmentalKills: (s.environmentalKills || 0) + (result.environmentalKills || 0),
+                    kills: (s.kills || 0) + (result.kills || 0),
                     lastSpearPath: result.lastSpearPath,
-                    isShaking: result.isShaking,
-                    dyingEntities: []
-                }, action);
+                    isShaking: result.isShaking
+                }, result.playerMoved || s.player.position);
             }
 
-            // Resolve enemy actions after skill use
-            return resolveEnemyActions(appendAction({
-                ...clearedState,
-                player: result.player,
-                enemies: result.enemies,
-                lavaPositions: newLavaPositions,
-                message: [...state.message, ...result.messages].slice(-50),
-                environmentalKills: (state.environmentalKills || 0) + (result.environmentalKills || 0),
-                kills: (state.kills || 0) + (result.kills || 0),
-                lastSpearPath: result.lastSpearPath,
-                isShaking: result.isShaking,
-                dyingEntities: []
-            }, action), result.playerMoved || state.player.position);
-        }
+            case 'MOVE':
+            case 'LEAP':
+            case 'JUMP': {
+                if (!('payload' in a)) return s;
+                const target = a.payload;
+                const dist = hexDistance(s.player.position, target);
+                if (a.type === 'MOVE' && dist !== 1) return s;
+                if ((a.type === 'LEAP' || a.type === 'JUMP') && (dist > 2 || dist < 1)) return s;
 
-        case 'MOVE':
-        case 'LEAP':
-        case 'JUMP': {
-            const target = action.payload;
-            const dist = hexDistance(state.player.position, target);
-            if (action.type === 'MOVE' && dist !== 1) return clearedState;
-            if ((action.type === 'LEAP' || action.type === 'JUMP') && (dist > 2 || dist < 1)) return clearedState;
-
-            // Check walkability (Walls/Lava)
-            if (!isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight)) {
-                return { ...clearedState, message: [...state.message, "Blocked!"].slice(-50) };
-            }
-
-            // Check occupancy (cant step on enemies/self)
-            if (isOccupied(target, state)) {
-                // If it's an enemy, maybe we should attack? 
-                const targetEnemy = getEnemyAt(state.enemies, target);
-                if (targetEnemy && action.type === 'MOVE') {
-                    // One-hit kill melee attack by moving into them (classic Hoplite)
-                    return resolveEnemyActions(appendAction({
-                        ...clearedState,
-                        enemies: state.enemies.filter(e => e.id !== targetEnemy.id),
-                        message: [...state.message, `Struck ${targetEnemy.subtype}!`].slice(-50),
-                        dyingEntities: [targetEnemy]
-                    }, action), state.player.position);
+                if (!isWalkable(target, s.wallPositions, s.lavaPositions, s.gridWidth, s.gridHeight)) {
+                    return { ...s, message: [...s.message, "Blocked!"].slice(-50) };
                 }
-                return { ...clearedState, message: [...state.message, "Tile occupied!"].slice(-50) };
+
+                if (isOccupied(target, s)) {
+                    const targetEnemy = getEnemyAt(s.enemies, target);
+                    if (targetEnemy && a.type === 'MOVE') {
+                        const basicAttackDef = COMPOSITIONAL_SKILLS['BASIC_ATTACK'];
+                        const basicAttackSkill = s.player.activeSkills?.find(s => s.id === 'BASIC_ATTACK');
+
+                        if (basicAttackDef && basicAttackSkill) {
+                            const execution = basicAttackDef.execute(s, s.player, target, basicAttackSkill.activeUpgrades);
+
+                            // Apply effects from basic attack
+                            let newState = applyEffects(s, execution.effects, { targetId: targetEnemy.id });
+
+                            return resolveEnemyActions({
+                                ...newState,
+                                message: [...newState.message, ...execution.messages].slice(-50)
+                            }, s.player.position);
+                        } else {
+                            // Fallback to legacy "kill instantly" if skill is missing (shouldn't happen with default setup)
+                            return resolveEnemyActions({
+                                ...s,
+                                enemies: s.enemies.filter(e => e.id !== targetEnemy.id),
+                                message: [...s.message, `Struck ${targetEnemy.subtype}!`].slice(-50),
+                                dyingEntities: [targetEnemy]
+                            }, s.player.position);
+                        }
+                    }
+                    return { ...clearedState, message: [...state.message, "Tile occupied!"].slice(-50) };
+                }
+
+                const killedEnemies = (a.type === 'LEAP' || a.type === 'JUMP')
+                    ? s.enemies.filter(e =>
+                        (hexDistance(s.player.position, e.position) === 2 && hexDistance(target, e.position) === 1)
+                    )
+                    : [];
+
+                return resolveEnemyActions({ ...s, enemies: s.enemies.filter(e => !killedEnemies.includes(e)) }, target);
             }
 
-            // Leap Strike (kills enemies you jump over or land adjacent to if jumped from 2 away)
-            // Simplified: in original Leap, jumping over an enemy kills it.
-            const killedEnemies = (action.type === 'LEAP' || action.type === 'JUMP')
-                ? state.enemies.filter(e =>
-                    (hexDistance(state.player.position, e.position) === 2 && hexDistance(target, e.position) === 1)
-                )
-                : [];
+            case 'THROW_SPEAR': {
+                if (!('payload' in a)) return s;
+                const target = a.payload;
+                const result = executeSpearThrow(target, s);
+                if (result.messages[0].includes('not in hand')) return { ...s, message: [...s.message, result.messages[0]].slice(-50) };
 
-            return resolveEnemyActions(appendAction({ ...state, enemies: state.enemies.filter(e => !killedEnemies.includes(e)) }, action), target);
-        }
-
-        case 'THROW_SPEAR': {
-            const target = action.payload;
-            const result = executeSpearThrow(target, state);
-
-            if (result.messages.includes('Spear not in hand!') || result.messages.includes('Target out of range!')) {
-                return { ...clearedState, message: [...state.message, result.messages[0]].slice(-50) };
+                return resolveEnemyActions({
+                    ...s,
+                    enemies: result.enemies,
+                    hasSpear: result.hasSpear ?? false,
+                    spearPosition: result.spearPosition,
+                    message: [...s.message, ...result.messages].slice(-50),
+                    kills: (s.kills || 0) + (result.kills || 0),
+                    lastSpearPath: result.lastSpearPath,
+                    isShaking: result.isShaking
+                }, s.player.position);
             }
 
-            return resolveEnemyActions(appendAction({
-                ...clearedState,
-                enemies: result.enemies,
-                hasSpear: result.hasSpear ?? false,
-                spearPosition: result.spearPosition,
-                message: [...state.message, ...result.messages].slice(-50),
-                kills: (state.kills || 0) + (result.kills || 0),
-                lastSpearPath: result.lastSpearPath,
-                isShaking: result.isShaking,
-                dyingEntities: []
-            }, action), state.player.position);
-        }
+            case 'WAIT': {
+                return resolveEnemyActions(s, s.player.position);
+            }
 
-        case 'WAIT': {
-            return resolveEnemyActions(appendAction(clearedState, action), state.player.position);
+            default:
+                return s;
         }
+    };
 
-        default:
-            return state;
-    }
+    intermediateState = resolveGameState(clearedState, action);
+
+    // Finalize Command and Delta
+    const delta = createDelta(oldState, intermediateState);
+    command.delta = delta;
+
+    return {
+        ...intermediateState,
+        commandLog: [...(intermediateState.commandLog || []), command],
+        undoStack: [...(intermediateState.undoStack || []), delta],
+        actionLog: [...(intermediateState.actionLog || []), action]
+    };
 };

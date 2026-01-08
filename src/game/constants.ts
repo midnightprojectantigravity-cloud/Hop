@@ -1,3 +1,8 @@
+/**
+ * GAME CONSTANTS
+ * Central repository for stats, types, and grid configuration.
+ * TODO: Move balance-heavy stats (ENEMY_STATS, INITIAL_PLAYER_STATS) to an external JSON for easier modding.
+ */
 // Grid configuration for mobile portrait (9 wide × 11 tall)
 export const GRID_WIDTH = 7;   // Tiles wide
 export const GRID_HEIGHT = 9; // Tiles tall
@@ -53,13 +58,17 @@ export const DEFAULT_SKILLS = {
 // Enemy stats with simplified tiers
 export const ENEMY_STATS = {
     // Melee enemies (Diamond shape in UI)
-    footman: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1 },
-    shieldBearer: { hp: 2, maxHp: 2, range: 1, damage: 1, type: 'melee', cost: 2 },
+    footman: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_ATTACK', 'AUTO_ATTACK'], actionCooldown: 2 },
+    shieldBearer: { hp: 2, maxHp: 2, range: 1, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_ATTACK', 'SHIELD_BASH'], actionCooldown: 2 },
+    sprinter: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_ATTACK'], actionCooldown: 1 },
 
     // Ranged enemies (Triangle shape in UI)
-    archer: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 1 },
-    bomber: { hp: 1, maxHp: 1, range: 3, damage: 1, type: 'ranged', cost: 1 },
-    warlock: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 2 },
+    archer: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 1, skills: ['SPEAR_THROW'], actionCooldown: 3 },
+    bomber: { hp: 1, maxHp: 1, range: 3, damage: 1, type: 'ranged', cost: 1, skills: [], actionCooldown: 2 },
+    warlock: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 2, skills: [], actionCooldown: 2 },
+
+    // Boss
+    sentinel: { hp: 20, maxHp: 20, range: 5, damage: 2, type: 'boss', cost: 0, skills: ['BASIC_ATTACK', 'SENTINEL_BLAST'], actionCooldown: 1 },
 };
 
 // Hazard percentage (15-20% of map)
@@ -108,9 +117,14 @@ export const FLOOR_THEMES: Record<number, string> = {
 
 // Available enemy types per floor proficiency
 export const FLOOR_ENEMY_TYPES: Record<number, string[]> = {
-    1: ['footman', 'archer'],
-    2: ['footman', 'archer', 'bomber'],
-    3: ['footman', 'archer', 'bomber', 'shieldBearer'],
-    4: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock'],
-    5: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock'],
+    1: ['footman'],
+    2: ['footman', 'sprinter'],
+    3: ['footman', 'archer'],
+    4: ['footman', 'archer', 'bomber'],
+    5: ['footman', 'archer', 'bomber', 'shieldBearer'],
+    6: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock'],
+    7: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter'],
+    8: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter'],
+    9: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter'],
+    10: ['sentinel']
 };

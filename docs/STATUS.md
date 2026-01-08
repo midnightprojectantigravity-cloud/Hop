@@ -92,17 +92,16 @@ Players have 3 skill slots. Each skill can be upgraded via **Shrines**.
 
 ## 5. Core Requirements
 1.  **Headless Engine:** The game should be able to run without a UI. (Done)
-2.  **Progression:** The game should be able to save and load the player's progress. (Done - via ReplayManager local storage for finished runs, mid-game save To Do)
-3.  **Replay:** The game should be able to replay a game from a saved state. (Done)
+2.  **Progression:** The game should be able to save and load the player's progress. (Done - via StateDelta/Command Pattern)
+3.  **Replay:** The game should be able to replay a game from a saved state. (Done - via commandLog)
 4.  **Leaderboard:** The game should be able to display a leaderboard of the top players. (Done)
-5. Movement for all entities should be simultaneous (Done)
-9. UI Transparency: Player status (Health, Armor, Skills, Inventory, and Level) is always visible. (Done)
-10. Turn Priority: The player acts first, followed by all enemies acting simultaneously. (Done)
-11. Environmental Interaction: Pushing enemies into Lava/Void tiles results in an immediate kill. (Done)
-12. Death & Permadeath: Reaching 0 Health ends the current run and resets progress. (Done)
-13. Level Progression: Reaching the Portal/Stairs tile generates the next floor and restores 1 Health/Armor; enemy health and spawn rates scale up to increase difficulty. (Done)
-14. Action Economy: Every turn, the player can perform exactly one action (Move, Use Skill, or Wait). (Done)
-15. Clicking on an occupied tile registers as clicking on the tile for spear throw, shield bash, jump, etc. (Done)
+5.  **"Gold Standard" Tech Stack:** (Done)
+    *   Logic: Immutable State + Command Pattern
+    *   Validation: TDD for Scenarios + Fuzzing
+    *   Performance: Spatial Hashing / Bitmasks
+    *   Meta: Strategic Hub with serialized Loadouts
+104:     *   **"The Juice"**: View-Model Event pipeline (shake, freeze, text). (Done)
+105:     *   **Arcade Loop**: 10-level tactical escalation. (Done)
 
 ---
 
@@ -114,16 +113,14 @@ Players have 3 skill slots. Each skill can be upgraded via **Shrines**.
 ---
 
 ## 7. Scoring & Meta-Progression
-*   **Score:** (Kills × 10) + (Environmental Kills × 25) + (Floor reached × 100). (Done)
+*   **Score:** (Level × 1000) + (TurnsRemaining × 50) - (DamageTaken × 10). (Done)
 *   **Achievements:** Unlock new starting skill loadouts (e.g., "Hook" instead of "Spear") by completing specific challenges. (To Do)
 *   **Leaderboard:** Global rankings tracking "Max Floor" and "Total Score." (Done - Local/Replay based)
 
 ---
 
-## 8. Developer Suggestions & Adjustments
-1.  **Unified Skill Framework:** Refactor `THROW_SPEAR` action from `logic.ts` into `skills.ts` as `executeSpearThrow`. This will unify the upgrade logic and make it easier to implement missing spear upgrades.
-2.  **Armor Logic:** Implement `temporaryArmor` in `actor.ts:applyDamage` and `combat.ts` to support the "Passive Protection" shield upgrade.
-3.  **Map Shape:** Update `hex.ts:getRectangularGrid` or add a new `getDiamondGrid` to implement the "Diamond (shaved corners)" shape for better mobile aesthetics.
-4.  **Session Persistence:** Add a "Resume" feature to `App.tsx` that saves the current `GameState` to `localStorage` after every turn, allowing players to continue mid-run.
-5.  **Enemy Visualization:** Explicitly pass shapes (Diamond/Triangle) to the `Enemy` component based on their `enemyType` (melee/ranged).
-6.  **Action Range Enforcement:** Ensure `THROW_SPEAR` and other skills strictly enforce their ranges in the action handler.
+## 8. Developer Suggestions & Adjustments (Updated)
+1.  **Compositional Skill Framework:** (In Progress) Most skills are now in `src/game/skills/`. Final evacuation of legacy `skills.ts` is required.
+2.  **State Delta Optimization:** Current deltas are snapshots. Suggest transitioning to JSON-patching for massive replay files.
+3.  **AI Simulation:** Use `occupancyMask` (Goal 3) for the next iteration of Monte Carlo Tree Search (MCTS) AI.
+4.  **Persistence:** Character loadouts are serialized. Implement a robust cloud-sync strategy for meta-progression.
