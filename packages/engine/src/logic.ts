@@ -112,6 +112,8 @@ export const generateInitialState = (
         shrineOptions: undefined,
         hasShield: true,
         floor: floor,
+        rooms: dungeon.rooms,
+        theme,
         upgrades,
         commandLog: [],
         undoStack: [],

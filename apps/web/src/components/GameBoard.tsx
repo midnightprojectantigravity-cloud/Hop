@@ -16,7 +16,19 @@ interface GameBoardProps {
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selectedSkillId, showMovementRange }) => {
     // 1. Filter cells based on dynamic diamond geometry
     const cells = useMemo(() => {
-        return (gameState.rooms?.[0]?.hexes || []).filter(h =>
+        let hexes = gameState.rooms?.[0]?.hexes;
+
+        // Fallback: If rooms are missing (e.g. legacy saves or engine bug), generate the full diamond grid
+        if (!hexes || hexes.length === 0) {
+            hexes = [];
+            for (let q = 0; q < gameState.gridWidth; q++) {
+                for (let r = 0; r < gameState.gridHeight; r++) {
+                    hexes.push({ q, r, s: -q - r });
+                }
+            }
+        }
+
+        return hexes.filter(h =>
             isTileInDiamond(h.q, h.r, gameState.gridWidth, gameState.gridHeight)
         );
     }, [gameState.rooms, gameState.gridWidth, gameState.gridHeight]);

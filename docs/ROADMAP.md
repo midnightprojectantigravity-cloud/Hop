@@ -12,7 +12,7 @@ Before expanding content, we finalized the core engine reliability to ensure lea
 
 | Milestone | Description | Status |
 | --- | --- | --- |
-| **Monorepo Migration** | Decouple `@hop/engine` from the UI for server-side validation. | 🏗️ In Progress |
+| **Monorepo Migration** | Decouple `@hop/engine` from the UI for server-side validation. | ✅ Done |
 | **Deterministic Command-Stream** | Ensure all state changes are driven by a serializable `ActionLog`. | ✅ Done |
 | **Multi-Condition TDD** | Implement stress-scenarios for `AUTO_ATTACK` (Persistence/Friendly Fire). | ✅ Done |
 | **Bitmask Occupancy** | Optimize grid lookups for AI MCTS simulations. | ✅ Done |
@@ -111,14 +111,16 @@ Players choose a "Loadout" of 3 starting skills:
 
 ### High Priority (Next Sprint)
 
-1. 🏆 **Verification Pipeline**: Finalize the `apps/validator` Node.js script. (Monorepo Migration)
-2. 🧠 **AI Upgrade**: Implement MCTS (Monte Carlo Tree Search) for enemies on Floors 7+.
-3. 📦 **Scenario Engine**: Build the `ScenarioLoader` for JSON board states.
+1. 📦 **Scenario Engine**: Build the `ScenarioLoader` for JSON board states to enable tutorial porting and balance benchmarks.
+2. 🧠 **AI Upgrade**: Implement MCTS (Monte Carlo Tree Search) for enemies on Floors 7+ to increase tactical depth.
+3. Daily Seed System: Implement a global daily seed for competitive leaderboard play.
 
 ### Completed ✅
 
-1. **Command-Stream Architecture**: Infinite undo and tiny replay files.
-2. **Unified Skill System**: Skills work identically for players and enemies.
-3. **Initiative Queue System**: Granular turns and deterministic turn ordering.
-4. **Theme Logic (Slippery/Void)**: Interceptor-based floor hazard system.
-5. **Initiative Queue UI**: Visual representation of turn order in the sidebar.
+1. **Monorepo Migration**: Decoupled `@hop/engine` from UI/Server.
+2. **Unified Validator Server**: Server-side replay verification using shared engine.
+3. **Command-Stream Architecture**: Infinite undo and tiny replay files.
+4. **Unified Skill System**: Skills work identically for players and enemies.
+5. **Initiative Queue System**: Granular turns and deterministic turn ordering.
+6. **Theme Logic (Slippery/Void)**: Interceptor-based floor hazard system.
+7. **Initiative Queue UI**: Visual representation of turn order in the sidebar.
