@@ -1,0 +1,58 @@
+﻿--- Skill Test Runner ---
+Skill: Grapple Hook (GRAPPLE_HOOK)
+  Scenario: Grappling with Fire
+    [PASS]
+  Scenario: Hook & Bash
+    [PASS]
+Skill: Spear Throw (SPEAR_THROW)
+  Scenario: Spear Kill
+    [PASS]
+  Scenario: Spear Miss & Spawn
+    [PASS]
+Skill: Shield Bash (SHIELD_BASH)
+  Scenario: Shield Push
+    [PASS]
+  Scenario: Wall Slam Stun
+    [PASS]
+Skill: Jump (JUMP)
+  Scenario: Basic Jump
+    [PASS]
+  Scenario: Meteor Impact
+    [PASS]
+  Scenario: Stunning Landing Test
+    [PASS]
+Skill: Bulwark Charge (BULWARK_CHARGE)
+  Scenario: The Enyo Chain-Stun
+    [PASS]
+Skill: Basic Attack (BASIC_ATTACK)
+  Scenario: Basic Attack Kill
+    [PASS]
+  Scenario: Basic Attack Out of Range
+    [PASS]
+  Scenario: Basic Attack via Move
+    [PASS]
+  Scenario: Enemy Basic Attack
+    [PASS]
+Skill: Auto Attack (AUTO_ATTACK)
+  Scenario: Auto Attack Punch
+    [PASS]
+  Scenario: Enemy Auto Attack
+    [PASS]
+  Scenario: No Auto Attack on New Neighbor
+    [PASS]
+  Scenario: Symmetry & Persistence Stress Test
+    [PASS]
+Skill: Sentinel Blast (SENTINEL_BLAST)
+Skill: Theme Hazards (THEME_HAZARDS)
+  Scenario: Slippery Slide
+    [PASS]
+  Scenario: Chain Slippery Slide
+    [PASS]
+  Scenario: Void Tile Damage
+    [PASS]
+  Scenario: Slippery into Void
+    [PASS]
+  Scenario: Enemy Slippery Slide
+    [PASS]
+
+Result: 23 passed, 0 failed.
