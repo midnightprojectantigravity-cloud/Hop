@@ -16,129 +16,70 @@ export const SHIELD_BASH: SkillDefinition = {
         cost: 0,
         cooldown: 2,
     },
-    execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[] } => {
+    execute: (state: GameState, attacker: Actor, target?: Point, _activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[] } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
 
         if (!target) return { effects, messages };
-        if (!attacker || !attacker.position) {
-            console.error("Shield Bash: Attacker or position missing");
-            return { effects, messages };
-        }
+        if (!attacker || !attacker.position) return { effects, messages };
 
         // 1. Validation
-        let range = 1;
-        if (activeUpgrades.includes('SHIELD_RANGE')) range += 1;
-
         const dist = hexDistance(attacker.position, target);
-        if (dist > range) {
+        if (dist > 1) {
             messages.push('Target out of range!');
             return { effects, messages };
         }
 
-        // 2. Identify Targets (Single, Arc, or 360)
-        let targetsToHit: Point[] = [];
-        const is360 = activeUpgrades.includes('BASH_360');
-        const isArc = activeUpgrades.includes('ARC_BASH');
-        const hasWallSlam = activeUpgrades.includes('WALL_SLAM');
-
-        if (is360) {
-            targetsToHit = getNeighbors(attacker.position);
-        } else if (isArc) {
-            // Arc includes target and its two neighbors closest to player
-            targetsToHit = [target];
-            const neighbors = getNeighbors(target);
-            for (const n of neighbors) {
-                if (hexDistance(n, attacker.position) === 1 && targetsToHit.length < 3) {
-                    targetsToHit.push(n);
-                }
+        // 2. Identify Targets (3-hex Arc)
+        // Arc includes target and its two neighbors closest to player
+        const targetsToHit: Point[] = [target];
+        const neighbors = getNeighbors(target);
+        for (const n of neighbors) {
+            if (hexDistance(n, attacker.position) === 1 && targetsToHit.length < 3) {
+                targetsToHit.push(n);
             }
-        } else {
-            targetsToHit = [target];
         }
 
         let anyCollision = false;
 
         // 3. Process Bash for each target
-        // We use a helper to generate effects for a single push, handling cascades if needed
-        const resolvePush = (sourcePos: Point, targetPos: Point, recursiveDepth: number = 0): void => {
-            if (recursiveDepth > 3) return; // Prevent infinite loops
+        for (const t of targetsToHit) {
+            const enemy = getEnemyAt(state.enemies, t);
+            if (!enemy) continue;
 
-            const enemy = getEnemyAt(state.enemies, targetPos);
-            if (!enemy) return;
-
-            const directionIdx = getDirectionFromTo(sourcePos, targetPos);
-            if (directionIdx === -1) return; // Should not happen
+            const directionIdx = getDirectionFromTo(attacker.position, t);
+            if (directionIdx === -1) continue;
             const dirVec = hexDirection(directionIdx);
-            if (!dirVec) return;
-            const pushDest = hexAdd(targetPos, dirVec);
+            const pushDest = hexAdd(t, dirVec);
 
-            // Check what is at destination
+            // Check collision
             const blockedByWall = state.wallPositions.some(w => hexEquals(w, pushDest));
-            const blockingEnemy = getEnemyAt(state.enemies, pushDest); // Note: In compositional, we check against initial state unless we simulate updates
-            const lavaAtDest = state.lavaPositions.some(l => hexEquals(l, pushDest));
-            const isOutOfBounds = !isWalkable(pushDest, [], [], state.gridWidth, state.gridHeight); // Ignore walls/lava here, checked specifically above
+            const blockingEnemy = getEnemyAt(state.enemies, pushDest);
+            const isOutOfBounds = !isWalkable(pushDest, [], [], state.gridWidth, state.gridHeight);
 
             if (blockedByWall || (blockingEnemy && blockingEnemy.id !== enemy.id) || isOutOfBounds) {
-                // Collision!
                 anyCollision = true;
-                effects.push({ type: 'ApplyStatus', target: 'targetActor', status: 'stunned', duration: 1 });
+                effects.push({ type: 'ApplyStatus', target: t, status: 'stunned', duration: 1 });
                 messages.push(`Bashed ${enemy.subtype || 'enemy'} into obstacle!`);
-
-                // Wall Slam Upgrade: Cascade to the blocking enemy
-                if (blockingEnemy && hasWallSlam) {
-                    // Push the blocking enemy in the same direction
-                    // recursive call
-                    resolvePush(targetPos, pushDest, recursiveDepth + 1);
-                }
-            } else if (lavaAtDest) {
-                // Into Lava
+            } else if (state.lavaPositions.some(l => hexEquals(l, pushDest))) {
                 effects.push({ type: 'Displacement', target: 'targetActor', destination: pushDest });
-                // Note: EffectEngine treats displacement into dest, but then needs to check lava? 
-                // EffectEngine V1 doesn't auto-kill on displacement. 
-                // We must manually add LavaSink effect or rely on engine to check lava after move.
-                // The 'Juice' effect 'lavaSink' kills. 
                 effects.push({ type: 'Juice', effect: 'lavaSink', target: pushDest });
                 messages.push(`${enemy.subtype || 'Enemy'} fell into Lava!`);
             } else {
-                // Clear Displacement
                 effects.push({ type: 'Displacement', target: 'targetActor', destination: pushDest });
-                messages.push(`Pushed ${enemy.subtype || 'enemy'}!`);
+                // MRD says: Pushes targets 1 tile + Stuns.
+                effects.push({ type: 'ApplyStatus', target: t, status: 'stunned', duration: 1 });
+                messages.push(`Pushed and stunned ${enemy.subtype || 'enemy'}!`);
             }
-        };
-
-        // Note: With multiple targets (AoE), we need to check if they exist
-        for (const t of targetsToHit) {
-            resolvePush(attacker.position, t);
-            // Logic limitation: 'resolvePush' strictly uses 'state.enemies'. 
-            // If we push multiple enemies, we assume they don't block each other *intra-turn* 
-            // unless we track intermediate positions. 
-            // For AtomicEffects, we generate a batch of instructions. 
-            // If A pushes B into C, C might also be pushed by the same skill if it's 360 bash. 
-            // This simple parallel resolution is acceptable for now.
         }
 
-        if (anyCollision) {
+        if (anyCollision || targetsToHit.length > 0) {
             effects.push({ type: 'Juice', effect: 'shake' });
         }
 
-        // Cooldown Modifier
-        // While AtomicEffects handles state, cooldowns are usually set by engine based on skill def.
-        // But Shield Bash has dynamic cooldown modifiers (Upgrade -1, AoE +1).
-        // The Engine (logic.ts) updates cooldown *after* execution.
-        // We can't easily change the *resulting* cooldown from here unless we return a 'ModifyCooldown' effect.
-        // For now, logic.ts checks `compDef.baseVariables.cooldown`. 
-        // We might need to implement the dynamic cooldown logic in logic.ts or add a new Effect.
-
         return { effects, messages };
     },
-    upgrades: {
-        SHIELD_RANGE: { id: 'SHIELD_RANGE', name: 'Extended Bash', description: 'Range +1', modifyRange: 1 },
-        SHIELD_COOLDOWN: { id: 'SHIELD_COOLDOWN', name: 'Quick Recovery', description: 'Cooldown -1', modifyCooldown: -1 },
-        ARC_BASH: { id: 'ARC_BASH', name: 'Arc Bash', description: 'Hit 3 tiles in arc (+1 CD)' },
-        BASH_360: { id: 'BASH_360', name: '360 Bash', description: 'Hit all neighbors (+1 CD)' },
-        WALL_SLAM: { id: 'WALL_SLAM', name: 'Wall Slam', description: 'Chain reaction on blocks' },
-    },
+    upgrades: {},
     scenarios: [
         {
             id: 'bash_push',

@@ -13,6 +13,8 @@ import { BASIC_ATTACK } from './skills/basic_attack';
 import { AUTO_ATTACK } from './skills/auto_attack';
 import { SENTINEL_BLAST } from './skills/sentinel_blast';
 import { THEME_HAZARDS } from './skills/theme_hazard';
+import { SHIELD_THROW } from './skills/shield_throw';
+import { VAULT } from './skills/vault';
 import type { SkillDefinition } from './types';
 
 /**
@@ -22,6 +24,8 @@ export const COMPOSITIONAL_SKILLS: Record<string, SkillDefinition> = {
     GRAPPLE_HOOK,
     SPEAR_THROW,
     SHIELD_BASH,
+    SHIELD_THROW,
+    VAULT,
     JUMP,
     BULWARK_CHARGE,
     BASIC_ATTACK,

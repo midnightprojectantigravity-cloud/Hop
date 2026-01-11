@@ -120,3 +120,23 @@ export const checkStairs = (
 ): boolean => {
     return hexEquals(position, state.stairsPosition);
 };
+
+/**
+ * Checks if a position is on the grid perimeter (boundary).
+ */
+export const isPerimeter = (
+    position: Point,
+    width: number,
+    height: number
+): boolean => {
+    if (position.q === 0 || position.q === width - 1) return true;
+    if (position.r === 0 || position.r === height - 1) return true;
+
+    const sum = position.q + position.r;
+    const topLimit = Math.floor(width / 2);
+    const bottomLimit = (width - 1) + (height - 1) - topLimit;
+
+    if (sum === topLimit || sum === bottomLimit) return true;
+
+    return false;
+};

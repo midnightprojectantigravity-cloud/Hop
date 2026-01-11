@@ -19,26 +19,19 @@ export interface Loadout {
  * Default Loadouts for the "Strategic Hub"
  */
 export const DEFAULT_LOADOUTS: Record<string, Loadout> = {
-    SKISHER: {
-        id: 'SKISHER',
-        name: 'Skisher',
-        description: 'Standard spear and shield loadout. Balanced.',
+    VANGUARD: {
+        id: 'VANGUARD',
+        name: 'Vanguard (Hoplite)',
+        description: 'Direct damage, brawling, and area denial.',
         startingUpgrades: [],
         startingSkills: ['BASIC_ATTACK', 'AUTO_ATTACK', 'SPEAR_THROW', 'SHIELD_BASH', 'JUMP']
     },
-    VANGUARD: {
-        id: 'VANGUARD',
-        name: 'Vanguard',
-        description: 'Aggressive shield user. Starts with SHIELD_RANGE.',
-        startingUpgrades: ['SHIELD_RANGE'],
-        startingSkills: ['BASIC_ATTACK', 'AUTO_ATTACK', 'SHIELD_BASH', 'JUMP']
-    },
-    SNIPER: {
-        id: 'SNIPER',
-        name: 'Sniper',
-        description: 'Spear specialist. Starts with SPEAR_RANGE.',
-        startingUpgrades: ['SPEAR_RANGE'],
-        startingSkills: ['BASIC_ATTACK', 'AUTO_ATTACK', 'SPEAR_THROW', 'JUMP']
+    SKIRMISHER: {
+        id: 'SKIRMISHER',
+        name: 'Skirmisher (Enyo)',
+        description: 'Zero direct damage. Kinetic momentum and environmental lethality.',
+        startingUpgrades: [],
+        startingSkills: ['BASIC_ATTACK', 'GRAPPLE_HOOK', 'SHIELD_THROW', 'VAULT']
     }
 };
 
@@ -59,10 +52,12 @@ export const deserializeLoadout = (json: string): Loadout => {
 /**
  * Apply a loadout to a set of player stats.
  */
-export const applyLoadoutToPlayer = (loadout: Loadout): { upgrades: string[]; activeSkills: Skill[] } => {
+export const applyLoadoutToPlayer = (loadout: Loadout): { upgrades: string[]; activeSkills: Skill[]; archetype: 'VANGUARD' | 'SKIRMISHER' } => {
     const activeSkills = loadout.startingSkills.map(s => createSkill(s)).filter(Boolean) as Skill[];
+    const archetype = loadout.id === 'SKIRMISHER' ? 'SKIRMISHER' : 'VANGUARD';
     return {
         upgrades: [...loadout.startingUpgrades],
-        activeSkills
+        activeSkills,
+        archetype
     };
 };

@@ -82,7 +82,7 @@ export const AUTO_ATTACK: SkillDefinition = {
             if (!targetActor || targetActor.id === attacker.id) continue;
 
             // WORLD-CLASS LOGIC: Only target if different factions (prevents friendly fire)
-            const isEnemy = attacker.type !== targetActor.type;
+            const isEnemy = attacker.factionId !== targetActor.factionId;
             if (!isEnemy) continue;
 
             // PERSISTENCE CHECK: Target must have also been adjacent at turn start
@@ -101,8 +101,8 @@ export const AUTO_ATTACK: SkillDefinition = {
             // Apply damage using position-based targeting
             effects.push({ type: 'Damage', target: neighborPos, amount: damage });
 
-            const attackerName = attacker.type === 'player' ? 'You' : (attacker.subtype || 'Enemy');
-            const targetName = targetActor.type === 'player' ? 'you' : (targetActor.subtype || 'enemy');
+            const attackerName = attacker.factionId === 'player' ? 'You' : (attacker.subtype || 'Enemy');
+            const targetName = targetActor.factionId === 'player' ? 'you' : (targetActor.subtype || 'enemy');
             messages.push(`${attackerName} attacked ${targetName}!`);
 
             // Track kills
@@ -127,13 +127,13 @@ export const AUTO_ATTACK: SkillDefinition = {
                 if (!targetActor || targetActor.id === attacker.id) continue;
 
                 // WORLD-CLASS LOGIC: Only target if different factions (prevents friendly fire)
-                const isEnemy = attacker.type !== targetActor.type;
+                const isEnemy = attacker.factionId !== targetActor.factionId;
                 if (!isEnemy) continue;
 
                 effects.push({ type: 'Damage', target: neighborPos, amount: damage });
 
-                const attackerName = attacker.type === 'player' ? 'You' : (attacker.subtype || 'Enemy');
-                const targetName = targetActor.type === 'player' ? 'you' : (targetActor.subtype || 'enemy');
+                const attackerName = attacker.factionId === 'player' ? 'You' : (attacker.subtype || 'Enemy');
+                const targetName = targetActor.factionId === 'player' ? 'you' : (targetActor.subtype || 'enemy');
                 messages.push(`${attackerName} cleaved ${targetName}!`);
 
                 if (targetActor.hp <= damage) {
@@ -323,7 +323,8 @@ export const AUTO_ATTACK: SkillDefinition = {
 export const applyAutoAttack = (
     state: GameState,
     entity: Actor,
-    previousNeighbors: Point[]
+    previousNeighbors?: Point[],
+    attackerTurnStartPosition?: Point
 ): { state: GameState; kills: number; messages: string[] } => {
     // Check if entity has AUTO_ATTACK skill
     const hasAutoAttack = entity.activeSkills?.some(s => s.id === 'AUTO_ATTACK');
@@ -334,7 +335,21 @@ export const applyAutoAttack = (
     const skill = entity.activeSkills?.find(s => s.id === 'AUTO_ATTACK');
     const activeUpgrades = skill?.activeUpgrades || [];
 
-    const result = AUTO_ATTACK.execute(state, entity, undefined, activeUpgrades, { previousNeighbors });
+    // Collect all turn start positions from initiative queue
+    const allActorsTurnStartPositions = new Map<string, Point>();
+    if (state.initiativeQueue) {
+        for (const entry of state.initiativeQueue.entries) {
+            if (entry.turnStartPosition) {
+                allActorsTurnStartPositions.set(entry.actorId, entry.turnStartPosition);
+            }
+        }
+    }
+
+    const result = AUTO_ATTACK.execute(state, entity, undefined, activeUpgrades, {
+        previousNeighbors,
+        attackerTurnStartPosition,
+        allActorsTurnStartPositions
+    });
 
     // Apply effects using the common effect engine
     const newState = applyEffects(state, result.effects, { targetId: undefined });

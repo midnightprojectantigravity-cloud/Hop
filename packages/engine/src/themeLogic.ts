@@ -1,4 +1,4 @@
-import type { GameState, AtomicEffect } from './types';
+import type { GameState, AtomicEffect, Actor } from './types';
 import { hexEquals, getDirectionFromTo, hexAdd, hexDirection } from './hex';
 import { isWalkable, isOccupied } from './helpers';
 
@@ -35,13 +35,10 @@ export const slipperyInterceptor = (
     const slideDest = hexAdd(dest, slideDir);
 
     // Check if slide destination is valid
-    if (isWalkable(slideDest, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight) && !isOccupied(slideDest, state)) {
-        // Return two effects: the original move AND a follow-up displacement
-        // Actually, to make it feel like "one move", we could just change the destination,
-        // but for VFX (sliding), having two distinct displacements might be better.
-        // However, the interceptor pattern usually returns a modified effect or the same.
-        // If we want a cascade, we can recurse here.
+    const walkable = isWalkable(slideDest, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight);
+    const occupied = isOccupied(slideDest, state);
 
+    if (walkable && !occupied) {
         const nextSlide = {
             type: 'Displacement' as const,
             target: effect.target,
@@ -49,7 +46,6 @@ export const slipperyInterceptor = (
             source: dest
         };
 
-        // Recurse to handle chain sliding
         const recursiveResult = slipperyInterceptor(nextSlide, state, context);
 
         if (Array.isArray(recursiveResult)) {
@@ -79,7 +75,7 @@ export const voidInterceptor = (
 
     const damageEffect: AtomicEffect = {
         type: 'Damage',
-        target: effect.target === 'self' ? 'targetActor' : 'targetActor', // context will handle targetId
+        target: 'targetActor', // context will handle targetId
         amount: 1
     };
 
@@ -87,9 +83,6 @@ export const voidInterceptor = (
         type: 'Message',
         text: 'The Void consumes your soul!'
     };
-
-    // Note: Void tiles are intended to reduce MAX HP in the roadmap.
-    // For now we'll do standard damage or we could add a MaxHp reduction effect.
 
     return [effect, damageEffect, messageEffect];
 };

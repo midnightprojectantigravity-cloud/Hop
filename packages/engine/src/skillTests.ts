@@ -1,7 +1,8 @@
-import type { Action, GameState, Point, Entity } from './types';
+import type { Action, GameState, Point, Entity, Actor } from './types';
 import { COMPOSITIONAL_SKILLS } from './skillRegistry';
 import { gameReducer, generateInitialState } from './logic';
 import { ENEMY_STATS } from './constants';
+import { hexEquals } from './hex';
 
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
@@ -14,13 +15,16 @@ class ScenarioEngine {
         this.state = initialState;
     }
 
-    setPlayer(pos: Point, skillIds: string[]) {
+    setPlayer(pos: Point, skillIds: string[], archetype: 'VANGUARD' | 'SKIRMISHER' = 'VANGUARD') {
         this.state.player = {
             ...this.state.player,
             id: 'player',
             type: 'player',
-            position: pos,
-            previousPosition: pos,
+            factionId: 'player',
+            speed: 100,
+            archetype: archetype,
+            position: { ...pos },
+            previousPosition: { ...pos },
             hp: 3,
             maxHp: 3,
             activeSkills: skillIds.map(id => {
@@ -41,16 +45,18 @@ class ScenarioEngine {
     }
 
     spawnEnemy(type: string, pos: Point, id: string) {
-        const stats = ENEMY_STATS[type as keyof typeof ENEMY_STATS] || { hp: 1, maxHp: 1 };
+        const stats = (ENEMY_STATS as any)[type] || { hp: 1, maxHp: 1, speed: 50, weightClass: 'Standard' };
         this.state.enemies.push({
             id,
             type: 'enemy',
             subtype: type,
-            position: pos,
-            previousPosition: pos,
+            factionId: 'enemy',
+            speed: stats.speed || 50,
+            weightClass: stats.weightClass || 'Standard',
+            position: { ...pos },
+            previousPosition: { ...pos },
             hp: stats.hp,
-            maxHp: stats.maxHp
-            ,
+            maxHp: stats.maxHp,
             statusEffects: [],
             temporaryArmor: 0,
             activeSkills: []
@@ -71,25 +77,21 @@ class ScenarioEngine {
         }
     }
 
-    applyStatus(targetId: string, status: 'stunned') {
+    applyStatus(targetId: string, status: 'stunned', duration: number = 1) {
         const enemy = this.state.enemies.find(e => e.id === targetId);
         if (enemy) {
-            if (status === 'stunned') {
-                enemy.statusEffects = enemy.statusEffects || [];
-                enemy.statusEffects.push({ id: `${enemy.id}-stunned`, type: 'stunned', duration: 1 });
-            }
+            enemy.statusEffects = enemy.statusEffects || [];
+            enemy.statusEffects.push({ id: `${enemy.id}-stunned-${Date.now()}`, type: 'stunned', duration });
         } else if (this.state.player.id === targetId) {
-            if (status === 'stunned') {
-                this.state.player.statusEffects = this.state.player.statusEffects || [];
-                this.state.player.statusEffects.push({ id: `${this.state.player.id}-stunned`, type: 'stunned', duration: 1 });
-            }
+            this.state.player.statusEffects = this.state.player.statusEffects || [];
+            this.state.player.statusEffects.push({ id: `${this.state.player.id}-stunned-${Date.now()}`, type: 'stunned', duration });
         }
     }
 
     addUpgrade(skillId: string, upgradeId: string) {
         this.state.player.activeSkills = (this.state.player.activeSkills || []).map(s => {
             if (s.id === skillId) {
-                return { ...s, activeUpgrades: [...s.activeUpgrades, upgradeId] };
+                return { ...s, activeUpgrades: [...(s.activeUpgrades || []), upgradeId] };
             }
             return s;
         });
@@ -127,12 +129,42 @@ class ScenarioEngine {
 
 import * as fs from 'fs';
 
-const logFile = 'test_result.log';
+const logFile = 'skill_test_results.txt';
 fs.writeFileSync(logFile, ''); // Clear file
 
 function log(msg: string) {
     console.log(msg);
     fs.appendFileSync(logFile, msg + '\n');
+}
+
+function renderDiagnosticGrid(state: GameState, traces: any[] = []) {
+    const width = state.gridWidth;
+    const height = state.gridHeight;
+    const lines: string[] = [];
+
+    // P=Player, E=Enemy, #=Wall, L=Lava, *=Trace
+    for (let r = 0; r < height; r++) {
+        let line = ' '.repeat(r % 2 === 0 ? 0 : 2);
+        for (let q = 0; q < width; q++) {
+            const pos = { q, r, s: -q - r };
+            const isPlayer = hexEquals(state.player.position, pos);
+            const enemy = state.enemies.find(e => hexEquals(e.position, pos));
+            const isWall = state.wallPositions.some(w => hexEquals(w, pos));
+            const isLava = state.lavaPositions.some(l => hexEquals(l, pos));
+            const isTrace = traces.some(t => t.path.some((p: Point) => hexEquals(p, pos)));
+
+            let char = '.';
+            if (isPlayer) char = 'P';
+            else if (enemy) char = 'E';
+            else if (isWall) char = '#';
+            else if (isLava) char = 'L';
+            else if (isTrace) char = '*';
+
+            line += `[${char}]`;
+        }
+        lines.push(line);
+    }
+    return lines.join('\n');
 }
 
 async function runTests() {
@@ -141,8 +173,12 @@ async function runTests() {
     let failed = 0;
 
     for (const [skillId, definition] of Object.entries(COMPOSITIONAL_SKILLS)) {
-        // if (skillId !== 'SHIELD_BASH') continue; // This line was removed as per the instruction
         log(`Skill: ${definition.name} (${skillId})`);
+
+        if (!definition.scenarios || definition.scenarios.length === 0) {
+            log('  (No scenarios)');
+            continue;
+        }
 
         for (const scenario of definition.scenarios) {
             log(`  Scenario: ${scenario.title}`);
@@ -151,6 +187,12 @@ async function runTests() {
             initialState.enemies = [];
             initialState.lavaPositions = [];
             initialState.wallPositions = [];
+            initialState.slipperyPositions = [];
+            initialState.voidPositions = [];
+            initialState.shrinePosition = undefined;
+            initialState.shrineOptions = undefined;
+            initialState.stairsPosition = { q: 99, r: 99, s: -198 };
+            initialState.gameStatus = 'playing';
 
             const engine = new ScenarioEngine(initialState);
 
@@ -166,9 +208,17 @@ async function runTests() {
                     passed++;
                 } else {
                     log('    [FAIL]');
+                    if (scenario.rationale) {
+                        log(`      Rationale: ${scenario.rationale}`);
+                    }
                     log(`      Messages: ${JSON.stringify(engine.logs)}`);
                     log(`      Enemies: ${JSON.stringify(engine.state.enemies.map((e: Entity) => `${e.id}@${e.position.q},${e.position.r}`))}`);
                     log(`      Player: ${engine.state.player.position.q},${engine.state.player.position.r}`);
+
+                    const traces = engine.state.visualEvents
+                        ? engine.state.visualEvents.filter(ve => ve.type === 'kinetic_trace').map(ve => ve.payload)
+                        : [];
+                    log(`\nDiagnostic Grid:\n${renderDiagnosticGrid(engine.state, traces)}`);
                     failed++;
                 }
             } catch (err: any) {

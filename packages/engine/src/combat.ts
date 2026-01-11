@@ -42,7 +42,8 @@ export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point
       } else if (hexEquals(e.intentPosition, playerMovedTo)) {
         // Fallback to legacy damage if it was a basic attack intent
         curState = { ...curState, player: applyDamage(curState.player, 1) };
-        messages.push(`Hit by ${e.subtype}! (HP: ${curState.player.hp}/${curState.player.maxHp})`);
+        const name = e.subtype ? e.subtype.charAt(0).toUpperCase() + e.subtype.slice(1) : 'Enemy';
+        messages.push(`${name} hit you! (HP: ${curState.player.hp}/${curState.player.maxHp})`);
         enemyHandled = true;
       }
 
@@ -106,9 +107,11 @@ export const resolveSingleEnemyTurn = (
       id: bombId,
       type: 'enemy',
       subtype: 'bomb',
+      factionId: 'enemy',
       position: enemy.intentPosition,
       hp: 1,
       maxHp: 1,
+      speed: 10,
       actionCooldown: 2,
       statusEffects: [],
       temporaryArmor: 0,
@@ -159,7 +162,7 @@ export const resolveSingleEnemyTurn = (
   // 2. Auto Attack (Punch) - based on turn start position
   const prevNeighbors = getNeighbors(turnStartPosition);
   // Important: applyAutoAttack needs to know about the initiative context or we pass prevNeighbors
-  const autoAttackResult = applyAutoAttack(curState, nextEnemy, prevNeighbors);
+  const autoAttackResult = applyAutoAttack(curState, nextEnemy, prevNeighbors, turnStartPosition);
   curState = autoAttackResult.state;
   messages.push(...autoAttackResult.messages);
 

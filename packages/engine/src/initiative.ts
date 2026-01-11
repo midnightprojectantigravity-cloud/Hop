@@ -33,11 +33,15 @@ export const DEFAULT_INITIATIVE = {
  * Can be modified by status effects, equipment, etc.
  */
 export const getInitiativeScore = (actor: Actor): number => {
-    // Base initiative from actor type
-    const subtype = actor.subtype as keyof typeof DEFAULT_INITIATIVE;
-    let initiative = actor.type === 'player'
-        ? DEFAULT_INITIATIVE.player
-        : (DEFAULT_INITIATIVE[subtype] ?? 50);
+    // Base initiative from actor speed or default subtype
+    let initiative = actor.speed;
+
+    if (initiative === undefined) {
+        const subtype = actor.subtype as keyof typeof DEFAULT_INITIATIVE;
+        initiative = actor.type === 'player'
+            ? DEFAULT_INITIATIVE.player
+            : (DEFAULT_INITIATIVE[subtype] ?? 50);
+    }
 
     // Status effect modifiers
     const isStunned = actor.statusEffects?.some(s => s.type === 'stunned');

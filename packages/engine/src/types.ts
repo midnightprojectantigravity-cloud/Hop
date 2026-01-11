@@ -13,10 +13,21 @@ export interface Point {
     s: number;
 }
 
+export type WeightClass = 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
+
 // (Actor model introduced below; `Entity` is now an alias to `Actor`)
 
 // Skill slot types
 export type SkillSlot = 'offensive' | 'defensive' | 'utility' | 'passive';
+
+export interface MovementTrace {
+    actorId: string;
+    origin: Point;      // Start Hex
+    path: Point[];      // Every hex touched during the slide/fling
+    destination: Point; // Final landing hex
+    interruptedBy?: 'WALL' | 'ACTOR' | 'BOUNDARY' | 'LAVA';
+    wasLethal: boolean;
+}
 
 /** Status Effects: Buffs/Debuffs with logic hooks */
 export interface StatusEffect {
@@ -68,19 +79,20 @@ export interface InitiativeQueue {
 
 /** Atomic Effects: Discrete engine instructions */
 export type AtomicEffect =
-    | { type: 'Displacement'; target: 'self' | 'targetActor'; destination: Point; source?: Point }
+    | { type: 'Displacement'; target: 'self' | 'targetActor'; destination: Point; source?: Point; isFling?: boolean; stunDuration?: number }
     | { type: 'Damage'; target: 'targetActor' | 'area' | Point; amount: number }
     | { type: 'Heal'; target: 'targetActor'; amount: number }
-    | { type: 'ApplyStatus'; target: 'targetActor' | Point; status: 'stunned' | 'poisoned'; duration: number }
+    | { type: 'ApplyStatus'; target: 'targetActor' | Point; status: 'stunned' | 'poisoned' | 'armored' | 'hidden'; duration: number }
     | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
     | { type: 'PickupShield'; position?: Point }
     | { type: 'GrantSkill'; skillId: string }
     | { type: 'Message'; text: string }
-    | { type: 'Juice'; effect: 'shake' | 'flash' | 'lavaSink' | 'spearTrail' | 'freeze' | 'combat_text'; target?: Point; path?: Point[]; intensity?: 'low' | 'medium' | 'high'; direction?: Point; text?: string }
-    | { type: 'ModifyCooldown'; skillId: string; amount: number; setExact?: boolean };
+    | { type: 'Juice'; effect: 'shake' | 'flash' | 'lavaSink' | 'spearTrail' | 'freeze' | 'combat_text' | 'impact'; target?: Point; path?: Point[]; intensity?: 'low' | 'medium' | 'high'; direction?: Point; text?: string }
+    | { type: 'ModifyCooldown'; skillId: string; amount: number; setExact?: boolean }
+    | { type: 'UpdateComponent'; target: 'self' | 'targetActor'; key: string; value: any };
 
 export interface VisualEvent {
-    type: 'shake' | 'freeze' | 'combat_text' | 'vfx';
+    type: 'shake' | 'freeze' | 'combat_text' | 'vfx' | 'kinetic_trace';
     payload: any;
 }
 
@@ -97,6 +109,7 @@ export interface ScenarioV2 {
     id: string;              // Unique ID (e.g., "bash_into_lava")
     title: string;           // Tutorial Title
     description: string;     // Tutorial Instructions
+    rationale?: string;      // RATIONALE block for Narrative TDD
     setup: (engine: any) => void; // Functional setup (mutates state/engine)
     run: (engine: any) => void;   // The specific action to take
     verify: (state: GameState, logs: string[]) => boolean; // The behavioral assertion
@@ -154,6 +167,8 @@ export interface Actor {
 
     // Movement and combat variables
     movementSpeed?: number;
+    speed: number;           // Determines initiative / turn frequency
+    factionId: string;       // 'player' or 'enemy' for friendly fire logic
     facing?: number;
     isVisible?: boolean;
     actionCooldown?: number;
@@ -174,6 +189,12 @@ export interface Actor {
 
     // Skills
     activeSkills: Skill[];
+
+    // Weight class for hook/bash logic
+    weightClass?: WeightClass;
+
+    // Archetype for passive/core logic
+    archetype?: 'VANGUARD' | 'SKIRMISHER';
 }
 
 // Backwards-compatible alias: existing code that expects `Entity` keeps working.

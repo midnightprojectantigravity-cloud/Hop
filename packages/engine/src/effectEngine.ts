@@ -1,11 +1,5 @@
-/**
- * EFFECT ENGINE
- * Implements "Interceptors (Middleware)" pattern for modifying effects.
- * All state changes flow through applyAtomicEffect.
- * TODO: Support global effect interceptors (e.g. shrine buffs that affect all damage).
- */
-import type { GameState, AtomicEffect, Actor, Point } from './types';
-import { hexEquals } from './hex';
+import type { GameState, AtomicEffect, Actor, Point, MovementTrace } from './types';
+import { hexEquals, getHexLine } from './hex';
 import { applyDamage } from './actor';
 
 import { nextIdFromState } from './rng';
@@ -18,6 +12,24 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
     switch (effect.type) {
         case 'Displacement': {
+            const actorId = effect.target === 'self' ? nextState.player.id : (context.targetId || '');
+            const origin = effect.source || (effect.target === 'self' ? nextState.player.position : nextState.enemies.find(e => e.id === context.targetId)?.position);
+
+            if (origin) {
+                const path = getHexLine(origin, effect.destination);
+                const trace: MovementTrace = {
+                    actorId,
+                    origin,
+                    path,
+                    destination: effect.destination,
+                    wasLethal: nextState.lavaPositions.some(l => hexEquals(l, effect.destination))
+                };
+                nextState.visualEvents = [...(nextState.visualEvents || []), {
+                    type: 'kinetic_trace' as const,
+                    payload: trace
+                }];
+            }
+
             if (effect.target === 'self') {
                 nextState.player = { ...nextState.player, position: effect.destination, previousPosition: nextState.player.position };
             } else if (effect.target === 'targetActor' && context.targetId) {
@@ -94,7 +106,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'ApplyStatus': {
-            const addStatus = (actor: Actor, status: 'stunned' | 'poisoned', duration: number): Actor => {
+            const addStatus = (actor: Actor, status: 'stunned' | 'poisoned' | 'armored' | 'hidden', duration: number): Actor => {
                 const id = `${status}_${Date.now()}`;
                 return {
                     ...actor,
@@ -141,9 +153,11 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     id: `bomb-${res.id}`,
                     type: 'enemy',
                     subtype: 'bomb',
+                    factionId: 'enemy',
                     position: effect.position,
                     hp: 1,
                     maxHp: 1,
+                    speed: 10,
                     actionCooldown: 2,
                     statusEffects: [],
                     temporaryArmor: 0,
@@ -180,6 +194,34 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     nextState.dyingEntities = [...(nextState.dyingEntities || []), dying];
                     nextState.enemies = nextState.enemies.filter((e: Actor) => !hexEquals(e.position, targetPos));
                     nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'vaporize', position: targetPos } }];
+                }
+            }
+            break;
+        }
+
+        case 'UpdateComponent': {
+            const updateActor = (actor: Actor, key: string, value: any): Actor => {
+                return {
+                    ...actor,
+                    components: {
+                        ...(actor.components || {}),
+                        [key]: value
+                    }
+                };
+            };
+
+            if (effect.target === 'self') {
+                nextState.player = updateActor(nextState.player, effect.key, effect.value);
+            } else if (effect.target === 'targetActor' && context.targetId) {
+                if (context.targetId === nextState.player.id) {
+                    nextState.player = updateActor(nextState.player, effect.key, effect.value);
+                } else {
+                    nextState.enemies = nextState.enemies.map((e: Actor) => {
+                        if (e.id === context.targetId) {
+                            return updateActor(e, effect.key, effect.value);
+                        }
+                        return e;
+                    });
                 }
             }
             break;

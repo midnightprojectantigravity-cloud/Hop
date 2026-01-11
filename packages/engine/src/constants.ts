@@ -4,8 +4,8 @@
  * TODO: Move balance-heavy stats (ENEMY_STATS, INITIAL_PLAYER_STATS) to an external JSON for easier modding.
  */
 // Grid configuration for mobile portrait (9 wide × 11 tall)
-export const GRID_WIDTH = 7;   // Tiles wide
-export const GRID_HEIGHT = 9; // Tiles tall
+export const GRID_WIDTH = 9;   // Tiles wide
+export const GRID_HEIGHT = 11; // Tiles tall
 export const TILE_SIZE = 36;   // Pixel size for mobile-friendly rendering
 
 // Legacy constant for backwards compat (will be phased out)
@@ -14,6 +14,7 @@ export const GRID_RADIUS = 5;
 export const INITIAL_PLAYER_STATS = {
     hp: 3,
     maxHp: 3,
+    speed: 100,        // Player baseline speed
     energy: 100,
     temporaryArmor: 0, // From Shield passive
 };
@@ -57,18 +58,20 @@ export const DEFAULT_SKILLS = {
 
 // Enemy stats with simplified tiers
 export const ENEMY_STATS = {
-    // Melee enemies (Diamond shape in UI)
-    footman: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_ATTACK', 'AUTO_ATTACK'], actionCooldown: 2 },
-    shieldBearer: { hp: 2, maxHp: 2, range: 1, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_ATTACK', 'SHIELD_BASH'], actionCooldown: 2 },
-    sprinter: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_ATTACK'], actionCooldown: 1 },
+    // Melee enemies (Standard weight)
+    footman: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_ATTACK', 'AUTO_ATTACK'], actionCooldown: 2, weightClass: 'Standard', speed: 50 },
+    sprinter: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_ATTACK'], actionCooldown: 1, weightClass: 'Standard', speed: 70 },
 
-    // Ranged enemies (Triangle shape in UI)
-    archer: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 1, skills: ['SPEAR_THROW'], actionCooldown: 3 },
-    bomber: { hp: 1, maxHp: 1, range: 3, damage: 1, type: 'ranged', cost: 1, skills: [], actionCooldown: 2 },
-    warlock: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 2, skills: [], actionCooldown: 2 },
+    // Heavy enemies
+    shieldBearer: { hp: 2, maxHp: 2, range: 1, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_ATTACK', 'SHIELD_BASH'], actionCooldown: 2, weightClass: 'Heavy', speed: 40 },
+
+    // Ranged enemies (Standard weight)
+    archer: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 1, skills: ['SPEAR_THROW'], actionCooldown: 3, weightClass: 'Standard', speed: 60 },
+    bomber: { hp: 1, maxHp: 1, range: 3, damage: 1, type: 'ranged', cost: 1, skills: [], actionCooldown: 2, weightClass: 'Standard', speed: 30 },
+    warlock: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 2, skills: [], actionCooldown: 2, weightClass: 'Standard', speed: 55 },
 
     // Boss
-    sentinel: { hp: 20, maxHp: 20, range: 5, damage: 2, type: 'boss', cost: 0, skills: ['BASIC_ATTACK', 'SENTINEL_BLAST'], actionCooldown: 1 },
+    sentinel: { hp: 20, maxHp: 20, range: 5, damage: 2, type: 'boss', cost: 0, skills: ['BASIC_ATTACK', 'SENTINEL_BLAST'], actionCooldown: 1, weightClass: 'Heavy', speed: 200 },
 };
 
 // Hazard percentage (15-20% of map)
