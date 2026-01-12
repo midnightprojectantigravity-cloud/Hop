@@ -99,7 +99,7 @@ export const SHIELD_THROW: SkillDefinition = {
             run: (engine: any) => {
                 engine.useSkill('SHIELD_THROW', { q: 3, r: 5, s: -8 });
             },
-            verify: (state: GameState, logs: string[]) => {
+            verify: (state: GameState, _logs: string[]) => {
                 const enemy = state.enemies.find((e: Actor) => e.id === 'victim');
                 // Target at (3,5). Wall at (3,3). 
                 // Push from (3,5) -> (3,4). Next is (3,3) which is wall. Stop at (3,4).

@@ -25,7 +25,9 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
             <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
                 {orderedActors.map((actor: Actor, idx: number) => {
                     const isPlayer = actor.id === player.id;
-                    const isCurrent = idx === 0;
+                    const isCurrent = idx === initiativeQueue.currentIndex;
+                    const entry = initiativeQueue.entries.find(e => e.actorId === actor.id);
+                    const hasActed = entry?.hasActed;
 
                     return (
                         <div
@@ -37,6 +39,7 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
                                 w-10 h-10 rounded-xl flex items-center justify-center border-2 transition-all relative
                                 ${isPlayer ? 'bg-blue-500/20 border-blue-500/50' : 'bg-red-500/20 border-red-500/50'}
                                 ${isCurrent ? 'shadow-[0_0_15px_rgba(255,255,255,0.2)] border-white/80' : ''}
+                                ${hasActed ? 'grayscale' : ''}
                             `}>
                                 <span className="text-xl">
                                     {isPlayer ? '🔱' : getEnemyIcon(actor.subtype || '')}
@@ -44,6 +47,12 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
 
                                 {isCurrent && (
                                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full animate-ping"></div>
+                                )}
+
+                                {hasActed && !isCurrent && (
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#030712] text-[8px]">
+                                        ✓
+                                    </div>
                                 )}
                             </div>
 
@@ -55,7 +64,7 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
                                 ></div>
                             </div>
 
-                            <span className={`text-[8px] font-bold uppercase mt-1 ${isPlayer ? 'text-blue-300' : 'text-red-300'}`}>
+                            <span className={`text-[8px] font-bold uppercase mt-1 ${isPlayer ? 'text-blue-300' : 'text-red-300'} ${isCurrent ? 'text-white' : ''}`}>
                                 {isPlayer ? 'You' : (actor.subtype || 'Enemy')}
                             </span>
                         </div>

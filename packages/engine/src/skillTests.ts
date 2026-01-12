@@ -3,6 +3,7 @@ import { COMPOSITIONAL_SKILLS } from './skillRegistry';
 import { gameReducer, generateInitialState } from './logic';
 import { ENEMY_STATS } from './constants';
 import { hexEquals } from './hex';
+import { isPlayerTurn } from './initiative';
 
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
@@ -59,7 +60,17 @@ class ScenarioEngine {
             maxHp: stats.maxHp,
             statusEffects: [],
             temporaryArmor: 0,
-            activeSkills: []
+            activeSkills: [{
+                id: 'BASIC_ATTACK',
+                name: 'Basic Attack',
+                description: 'Melee strike',
+                slot: 'offensive',
+                cooldown: 0,
+                currentCooldown: 0,
+                range: 1,
+                upgrades: [],
+                activeUpgrades: []
+            }]
         });
     }
 
@@ -112,6 +123,19 @@ class ScenarioEngine {
         const newMessages = nextState.message.slice(oldLogLength);
         this.logs.push(...newMessages);
         this.state = nextState;
+
+        // Auto-advance turns in headless mode if it's not player's turn
+        // This mimics the UI useEffect loop
+        let safety = 0;
+        while (!isPlayerTurn(this.state) && this.state.gameStatus === 'playing' && safety < 100) {
+            const advAc: Action = { type: 'ADVANCE_TURN' };
+            const afterAdv = gameReducer(this.state, advAc);
+            // Capture messages from enemy turns
+            const advMessages = afterAdv.message.slice(this.state.message.length);
+            this.logs.push(...advMessages);
+            this.state = afterAdv;
+            safety++;
+        }
     }
 
     wait() {

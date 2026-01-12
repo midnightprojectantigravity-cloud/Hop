@@ -228,9 +228,17 @@ export const isActorTurn = (state: GameState, actorId: string): boolean => {
 
 /**
  * Check if it's the player's turn.
+ * It is the player's turn if the current actor is the player AND they have not acted yet this round.
+ * If the queue is not started (currentIndex -1), it's not yet the player's turn to perform actions - 
+ * the engine must advance to the player first.
  */
 export const isPlayerTurn = (state: GameState): boolean => {
-    return isActorTurn(state, state.player.id);
+    const queue = state.initiativeQueue;
+    if (!queue) return true;
+    if (queue.currentIndex < 0 || queue.currentIndex >= queue.entries.length) return false;
+
+    const entry = queue.entries[queue.currentIndex];
+    return entry.actorId === state.player.id && !entry.hasActed;
 };
 
 /**

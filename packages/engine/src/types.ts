@@ -218,7 +218,7 @@ export interface GameState {
     enemies: Entity[];
     gridWidth: number;
     gridHeight: number;
-    gameStatus: 'playing' | 'won' | 'lost' | 'choosing_upgrade';
+    gameStatus: 'hub' | 'playing' | 'won' | 'lost' | 'choosing_upgrade';
     message: string[];
     hasSpear: boolean;
     spearPosition?: Point;
@@ -286,7 +286,9 @@ export type Action =
     | { type: 'SHIELD_BASH'; payload: Point } // New: Shield Bash skill
     | { type: 'SELECT_UPGRADE'; payload: string }
     | { type: 'USE_SKILL'; payload: { skillId: string; target?: Point } }
-    | { type: 'LOAD_STATE'; payload: GameState };
+    | { type: 'ADVANCE_TURN' }
+    | { type: 'LOAD_STATE'; payload: GameState }
+    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string } };
 
 export interface Scenario {
     id: string;

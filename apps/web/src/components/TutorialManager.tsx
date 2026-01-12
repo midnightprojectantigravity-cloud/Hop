@@ -58,7 +58,9 @@ class ScenarioBuilder {
             enemyType: (stats as any).type || 'melee',
             statusEffects: [],
             temporaryArmor: 0,
-            activeSkills: []
+            activeSkills: [],
+            speed: (stats as any).speed || 50,
+            factionId: 'enemy'
         });
     }
 

@@ -1,6 +1,6 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance, hexEquals, getNeighbors } from '../hex';
-import { getEnemyAt, isWalkable } from '../helpers';
+import { getEnemyAt } from '../helpers';
 
 /**
  * Implementation of the Vault skill (Enyo Utility)

@@ -4,7 +4,7 @@
  * resolveEnemyActions and gameReducer are the primary entry points.
  * TODO: Migrate all remaining legacy skills (Spear/Shield/Jump) to the Compositional Framework.
  */
-import type { GameState, Action, Point, Entity, AtomicEffect } from './types';
+import type { GameState, Action, Entity, AtomicEffect } from './types';
 import { hexDistance, hexEquals, getNeighbors, getHexLine, getDirectionFromTo, hexDirection, hexAdd } from './hex';
 import { resolveTelegraphedAttacks } from './combat';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
@@ -35,6 +35,7 @@ import {
     endActorTurn,
     removeFromQueue,
     getTurnStartPosition,
+    isPlayerTurn,
 } from './initiative';
 import { resolveSingleEnemyTurn } from './combat';
 
@@ -43,9 +44,14 @@ import { resolveSingleEnemyTurn } from './combat';
  * Generate initial state with the new tactical arena generation
  */
 import { consumeRandom } from './rng';
-import { applyLoadoutToPlayer, type Loadout } from './loadout';
+import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS } from './loadout';
 
-// In generateInitialState signature
+export const generateHubState = (): GameState => ({
+    ...generateInitialState(),
+    gameStatus: 'hub',
+    message: ['Welcome to the Strategic Hub. Select your loadout.']
+});
+
 export const generateInitialState = (
     floor: number = 1,
     seed?: string,
@@ -138,68 +144,58 @@ export const generateInitialState = (
 };
 
 /**
- * Process the turns for all non-player actors in the initiative queue
- * until the queue is exhausted or we return to the player.
+ * Process exactly ONE actor's turn (non-player) from the initiative queue.
+ * Yields control back to the caller (UI) for potential delays.
  */
-const processRemainingTurns = (state: GameState): GameState => {
+export const processNextTurn = (state: GameState): GameState => {
     let curState = state;
     const messages: string[] = [];
     const dyingEntities: Entity[] = [];
 
-    // Safety loop to prevent infinite acting if logic is broken
-    let iterations = 0;
-    while (iterations < 100) {
-        iterations++;
+    // 1. Advance to next actor
+    const { queue: nextQueue, actorId } = advanceInitiative(curState);
+    curState = { ...curState, initiativeQueue: nextQueue };
 
-        // 1. Advance to next actor
-        const { queue: nextQueue, actorId } = advanceInitiative(curState);
-        curState = { ...curState, initiativeQueue: nextQueue };
+    if (!actorId) return curState;
 
-        if (!actorId) break;
+    // 2. If it's the player's turn, stop and wait for input
+    if (actorId === curState.player.id) {
+        // Start player turn (capture position)
+        curState = { ...curState, initiativeQueue: startActorTurn(curState, curState.player) };
+        return curState;
+    }
 
-        // 2. If it's the player's turn again, stop processing granularly
-        if (actorId === curState.player.id) {
-            // Player's turn starts now - wait for input
-            return {
-                ...curState,
-                message: [...curState.message, ...messages].slice(-50),
-                dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
-            };
-        }
+    // 3. Process exactly one enemy turn
+    const enemy = curState.enemies.find(e => e.id === actorId);
+    if (!enemy) {
+        // Unit died before its turn, recursively call to find next valid actor
+        curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
+        return processNextTurn(curState);
+    }
 
-        // 3. Find the actor
-        const enemy = curState.enemies.find(e => e.id === actorId);
-        if (!enemy) {
-            // Unit might have died before its turn (e.g. Cleave/Lava)
-            curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
-            continue;
-        }
+    // 4. Start turn
+    curState = { ...curState, initiativeQueue: startActorTurn(curState, enemy) };
+    const turnStartPos = getTurnStartPosition(curState, actorId)!;
 
-        // 4. Start turn (capture start position)
-        curState = { ...curState, initiativeQueue: startActorTurn(curState, enemy) };
-        const turnStartPos = getTurnStartPosition(curState, actorId)!;
+    // 5. Resolve Telegraphed Attacks
+    const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId);
+    curState = tele.state;
+    messages.push(...tele.messages);
 
-        // 5. Resolve Telegraphed Attacks (if any)
-        const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId);
-        curState = tele.state;
-        messages.push(...tele.messages);
+    // 6. Resolve individual turn (Movement, AI, Auto-Attack)
+    const updatedEnemy = curState.enemies.find(e => e.id === actorId);
+    if (!updatedEnemy) return curState;
 
-        // 6. Resolve individual turn (Movement, AI, Auto-Attack)
-        const updatedEnemy = curState.enemies.find(e => e.id === actorId);
-        if (!updatedEnemy) continue;
+    const turnResult = resolveSingleEnemyTurn(curState, updatedEnemy, turnStartPos);
+    curState = turnResult.state;
+    messages.push(...turnResult.messages);
 
-        const turnResult = resolveSingleEnemyTurn(curState, updatedEnemy, turnStartPos);
-        curState = turnResult.state;
-        messages.push(...turnResult.messages);
-        if (turnResult.isDead) {
-            dyingEntities.push(enemy);
-            curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
-        } else {
-            // 7. End turn
-            curState = { ...curState, initiativeQueue: endActorTurn(curState, actorId) };
-        }
-
-        if (curState.player.hp <= 0) break;
+    if (turnResult.isDead) {
+        dyingEntities.push(enemy);
+        curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
+    } else {
+        // 7. End turn
+        curState = { ...curState, initiativeQueue: endActorTurn(curState, actorId) };
     }
 
     return {
@@ -213,7 +209,9 @@ const processRemainingTurns = (state: GameState): GameState => {
  * Main entry point for turn cycle resolution.
  * Granularly resolves actors until player input IS required.
  */
-const resolveTurnCycle = (state: GameState): GameState => {
+// Main entry point for turn cycle resolution.
+// Granularly resolves actors until player input IS required.
+const resolveTurnCycle = (state: GameState, context?: { startNeighborIds?: string[] }): GameState => {
     let player = state.player;
     let enemies = state.enemies;
     const playerPos = state.player.position;
@@ -233,7 +231,7 @@ const resolveTurnCycle = (state: GameState): GameState => {
     const previousNeighbors = getNeighbors(playerStartPos);
 
     let intermediateState = { ...state, player: { ...player, position: playerPos }, enemies };
-    const autoAttackResult = applyAutoAttack(intermediateState, player, previousNeighbors, playerStartPos);
+    const autoAttackResult = applyAutoAttack(intermediateState, player, previousNeighbors, playerStartPos, context?.startNeighborIds);
     enemies = autoAttackResult.state.enemies;
     messages.push(...autoAttackResult.messages);
     const killsThisTurn = autoAttackResult.kills;
@@ -339,11 +337,17 @@ const resolveTurnCycle = (state: GameState): GameState => {
         } as any);
     }
 
-    // PHASE 3: Process the rest of the unit queue
-    return processRemainingTurns(curState);
+    // PHASE 3: Yield control. The UI will call processNextTurn until player's turn.
+    return curState;
 };
 
-const resolveEnemyActions = resolveTurnCycle;
+// DEPRECATED ALIAS: resolveEnemyActions is now handled via processNextTurn loop.
+// For compatibility with old tests/logic calling resolveEnemyActions directly:
+export const resolveEnemyActions = (state: GameState, context?: { startNeighborIds?: string[] }): GameState => {
+    // 0. Update AI positions for pathfinding
+    refreshOccupancyMask(state);
+    return resolveTurnCycle(state, context);
+};
 
 export const gameReducer = (state: GameState, action: Action): GameState => {
     if (state.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE' && action.type !== 'LOAD_STATE') return state;
@@ -380,13 +384,19 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
     // Standard start-of-player-turn setup
     let curState = {
         ...clearedState,
-        initiativeQueue: startActorTurn(clearedState, clearedState.player)
+        initiativeQueue: clearedState.initiativeQueue // Don't reset turn start on every action!
     };
 
     let intermediateState: GameState;
 
     // Wrapped logic to produce the next state
     const resolveGameState = (s: GameState, a: Action): GameState => {
+        // Guard: Prevent player actions if it's not currently the player's turn
+        const playerActions = ['MOVE', 'THROW_SPEAR', 'WAIT', 'USE_SKILL', 'JUMP', 'SHIELD_BASH', 'ATTACK', 'LEAP'];
+        if (playerActions.includes(a.type) && !isPlayerTurn(s)) {
+            return s;
+        }
+
         switch (a.type) {
             case 'SELECT_UPGRADE': {
                 if (!('payload' in a)) return s;
@@ -414,6 +424,11 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             case 'USE_SKILL': {
                 if (!('payload' in a)) return s;
                 const { skillId, target } = a.payload;
+
+                // PRE-ACTION SNAPSHOT for Auto-Attack Persistence
+                const startNeighborIds = getNeighbors(s.player.position)
+                    .map(n => getEnemyAt(s.enemies, n)?.id)
+                    .filter(id => !!id) as string[];
 
                 // Lunge handling (as upgrade of Spear Throw)
                 const isLunge = skillId === 'LUNGE';
@@ -445,8 +460,6 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                         )
                     };
 
-                    const playerMoveEffect = execution.effects.find(e => e.type === 'Displacement' && e.target === 'self') as { type: 'Displacement', destination: Point } | undefined;
-                    const playerMovedTo = playerMoveEffect ? playerMoveEffect.destination : newState.player.position;
 
                     const stateAfterSkill = {
                         ...newState,
@@ -456,7 +469,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     if (execution.consumesTurn === false) {
                         return stateAfterSkill;
                     }
-                    return resolveEnemyActions(stateAfterSkill);
+                    return resolveEnemyActions(stateAfterSkill, { startNeighborIds });
                 }
 
                 // 2. Legacy Skills (Fallback)
@@ -501,7 +514,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     kills: (s.kills || 0) + (result.kills || 0),
                     lastSpearPath: result.lastSpearPath,
                     isShaking: result.isShaking
-                });
+                }, { startNeighborIds });
             }
 
             case 'MOVE': {
@@ -597,12 +610,22 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     { type: 'Displacement' as const, target: 'self', destination: target, source: s.player.position }
                 ];
 
-                return resolveEnemyActions(applyEffects(s, moveEffects, { targetId: s.player.id }));
+                // Capture neighbors BEFORE move for Auto-Attack persistence
+                const startNeighborIds = getNeighbors(s.player.position)
+                    .map(n => getEnemyAt(s.enemies, n)?.id)
+                    .filter(id => !!id) as string[];
+
+                return resolveEnemyActions(applyEffects(s, moveEffects, { targetId: s.player.id }), { startNeighborIds });
             }
 
             case 'THROW_SPEAR': {
                 if (!('payload' in a)) return s;
                 const target = a.payload;
+
+                const startNeighborIds = getNeighbors(s.player.position)
+                    .map(n => getEnemyAt(s.enemies, n)?.id)
+                    .filter(id => !!id) as string[];
+
                 const result = executeSpearThrow(target, s);
                 if (result.messages[0].includes('not in hand')) return { ...s, message: [...s.message, result.messages[0]].slice(-50) };
 
@@ -615,11 +638,30 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     kills: (s.kills || 0) + (result.kills || 0),
                     lastSpearPath: result.lastSpearPath,
                     isShaking: result.isShaking
-                });
+                }, { startNeighborIds });
             }
 
             case 'WAIT': {
-                return resolveEnemyActions(s);
+                const startNeighborIds = getNeighbors(s.player.position)
+                    .map(n => getEnemyAt(s.enemies, n)?.id)
+                    .filter(id => !!id) as string[];
+                return resolveEnemyActions(s, { startNeighborIds });
+            }
+
+            case 'START_RUN': {
+                console.log('Reducer: START_RUN', a.payload);
+                const { loadoutId, seed } = a.payload;
+                const loadout = DEFAULT_LOADOUTS[loadoutId];
+                if (!loadout) {
+                    console.error('Reducer: Loadout not found!', loadoutId);
+                    return s;
+                }
+                // Generate a fresh state for Floor 1 with the chosen loadout
+                return generateInitialState(1, seed, undefined, undefined, loadout);
+            }
+
+            case 'ADVANCE_TURN': {
+                return processNextTurn(s);
             }
 
             default:

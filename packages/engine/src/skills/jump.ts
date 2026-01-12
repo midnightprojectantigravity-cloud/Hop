@@ -1,6 +1,6 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance, getNeighbors, hexEquals } from '../hex';
-import { getEnemyAt, isWalkable, isOccupied } from '../helpers';
+import { getEnemyAt } from '../helpers';
 
 /**
  * Implementation of the Jump skill using the Compositional Skill Framework.

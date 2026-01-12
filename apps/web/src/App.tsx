@@ -1,8 +1,3 @@
-/**
- * MAIN COMPOSITION ROOT (View Layer)
- * Manages UI state, React side-effects, and orchestrates the game loop via dispatch.
- * TODO: Implement "Infinite Undo" button in the UI using gameState.undoStack.
- */
 import { useReducer, useRef, useState, useEffect } from 'react';
 import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';
@@ -10,14 +5,17 @@ import { UpgradeOverlay } from './components/UpgradeOverlay';
 import { SkillTray } from './components/SkillTray';
 import { TutorialManager } from './components/TutorialManager';
 import ReplayManager from './components/ReplayManager';
-import { gameReducer, generateInitialState } from '@hop/engine/logic';
+import { gameReducer, generateInitialState, generateHubState } from '@hop/engine/logic';
 import type { Point, Action, GameState } from '@hop/engine/types';
 import type { ReplayRecord } from './components/ReplayManager';
 import { hexEquals } from '@hop/engine/hex';
 import { GRID_WIDTH, GRID_HEIGHT } from '@hop/engine/constants';
+import { isPlayerTurn } from '@hop/engine/initiative';
+import { ArchetypeSelector } from './components/ArchetypeSelector';
+import type { Loadout } from '@hop/engine/loadout';
 
 function App() {
-  const [gameState, dispatch] = useReducer(gameReducer, generateInitialState(), (initial) => {
+  const [gameState, dispatch] = useReducer(gameReducer, null, () => {
     const saved = localStorage.getItem('hop_save');
     if (saved) {
       try {
@@ -38,16 +36,33 @@ function App() {
         }
       } catch (e) { console.error("Failed to load save", e); }
     }
-    return initial;
+    return generateHubState();
   });
 
   useEffect(() => {
+    console.log('Game Status Changed:', gameState.gameStatus);
     if (gameState.gameStatus === 'playing' || gameState.gameStatus === 'choosing_upgrade') {
       // JSON.stringify cannot serialize BigInt; convert BigInt values to strings during save.
       const safeStringify = (obj: any) => JSON.stringify(obj, (_k, v) => typeof v === 'bigint' ? v.toString() : v);
       localStorage.setItem('hop_save', safeStringify(gameState));
     } else {
       localStorage.removeItem('hop_save');
+    }
+  }, [gameState]);
+
+  // Handle Enemy Turns with a delay
+  useEffect(() => {
+    if (gameState.gameStatus !== 'playing') return;
+
+    const playerTurn = isPlayerTurn(gameState);
+
+    // If it's not the player's turn, trigger an advance after a delay
+    if (!playerTurn) {
+      // console.log(`[Turn Management] Processing Turn for actor index: ${gameState.initiativeQueue?.currentIndex}`);
+      const timer = setTimeout(() => {
+        dispatch({ type: 'ADVANCE_TURN' });
+      }, 100); // Reduced delay for faster turns
+      return () => clearTimeout(timer);
     }
   }, [gameState]);
 
@@ -138,6 +153,11 @@ function App() {
     setSelectedSkillId(null);
   };
 
+  const handleSelectLoadout = (loadout: Loadout) => {
+    console.log('App: Handling Loadout Select:', loadout.id);
+    dispatch({ type: 'START_RUN', payload: { loadoutId: loadout.id } });
+  };
+
   return (
     <div className="flex w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
       {/* Left Sidebar: HUD & Tactical Log */}
@@ -148,14 +168,18 @@ function App() {
       {/* Center: The Map (Full Height) */}
       <main className="flex-1 relative flex items-center justify-center bg-[#020617] overflow-hidden">
         <div className="w-full h-full p-8 flex items-center justify-center">
-          <div className={`w-full h-full relative border border-white/5 bg-[#030712]/50 rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
-            <GameBoard
-              gameState={gameState}
-              onMove={handleTileClick}
-              selectedSkillId={selectedSkillId}
-              showMovementRange={showMovementRange}
-            />
-          </div>
+          {gameState.gameStatus === 'hub' ? (
+            <ArchetypeSelector onSelect={handleSelectLoadout} />
+          ) : (
+            <div className={`w-full h-full relative border border-white/5 bg-[#030712]/50 rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
+              <GameBoard
+                gameState={gameState}
+                onMove={handleTileClick}
+                selectedSkillId={selectedSkillId}
+                showMovementRange={showMovementRange}
+              />
+            </div>
+          )}
         </div>
       </main>
 

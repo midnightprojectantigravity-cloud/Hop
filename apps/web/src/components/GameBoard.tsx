@@ -136,7 +136,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                             hp: 1, maxHp: 1,
                             statusEffects: [],
                             temporaryArmor: 0,
-                            activeSkills: []
+                            activeSkills: [],
+                            speed: 0,
+                            factionId: 'player'
                         }} isSpear={true} />
                     )}
                     <Entity entity={gameState.player} />

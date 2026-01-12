@@ -1,4 +1,4 @@
-import type { GameState, AtomicEffect, Actor } from './types';
+import type { GameState, AtomicEffect } from './types';
 import { hexEquals, getDirectionFromTo, hexAdd, hexDirection } from './hex';
 import { isWalkable, isOccupied } from './helpers';
 

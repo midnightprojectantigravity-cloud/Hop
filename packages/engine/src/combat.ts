@@ -84,6 +84,16 @@ export const resolveSingleEnemyTurn = (
   let messages: string[] = [];
   let nextEnemy: Entity = enemy;
 
+  // Pre-calculate persistent IDs relative to turn START position for Auto-Attack
+  const startNeighbors = getNeighbors(turnStartPosition);
+  // Note: We use 'state' (start of this specific turn) to determine who was adjacent
+  const persistentTargetIds = startNeighbors
+    .map(p => {
+      if (hexEquals(p, state.player.position)) return state.player.id;
+      return state.enemies.find(e => hexEquals(e.position, p))?.id;
+    })
+    .filter(id => !!id) as string[];
+
   // 1. Process Bomb self-ticks
   if (enemy.subtype === 'bomb') {
     const timer = (enemy.actionCooldown ?? 1) - 1;
@@ -162,7 +172,7 @@ export const resolveSingleEnemyTurn = (
   // 2. Auto Attack (Punch) - based on turn start position
   const prevNeighbors = getNeighbors(turnStartPosition);
   // Important: applyAutoAttack needs to know about the initiative context or we pass prevNeighbors
-  const autoAttackResult = applyAutoAttack(curState, nextEnemy, prevNeighbors, turnStartPosition);
+  const autoAttackResult = applyAutoAttack(curState, nextEnemy, prevNeighbors, turnStartPosition, persistentTargetIds);
   curState = autoAttackResult.state;
   messages.push(...autoAttackResult.messages);
 
