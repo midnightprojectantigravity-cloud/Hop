@@ -18,6 +18,7 @@ import {
 } from './constants';
 import { isSpecialTile } from './helpers';
 import { createSkill } from './skills';
+import { type PhysicsComponent, type GameComponent } from './components';
 
 export interface DungeonResult {
     rooms: Room[];
@@ -185,6 +186,10 @@ export const generateEnemies = (
         const finalHp = stats.hp + hpScale;
         const finalMaxHp = stats.maxHp + hpScale;
 
+        const weightClass = (stats as any).weightClass || 'Standard';
+        const componentsSet = new Map<string, GameComponent>();
+        componentsSet.set('physics', { type: 'physics', weightClass } as PhysicsComponent);
+
         enemies.push({
             id: `enemy_${enemies.length}_${rng.next().toString(36).slice(2, 8)}`,
             type: 'enemy',
@@ -199,7 +204,8 @@ export const generateEnemies = (
             statusEffects: [],
             temporaryArmor: 0,
             activeSkills: (stats as any).skills?.map((s: string) => createSkill(s)).filter(Boolean) || [],
-            weightClass: (stats as any).weightClass || 'Standard',
+            weightClass: weightClass,
+            components: componentsSet,
         });
 
         remainingBudget -= stats.cost;

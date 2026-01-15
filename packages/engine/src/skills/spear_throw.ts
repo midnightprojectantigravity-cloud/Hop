@@ -17,11 +17,11 @@ export const SPEAR_THROW: SkillDefinition = {
         cooldown: 0,
         damage: 1,
     },
-    execute: (state: GameState, shooter: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[] } => {
+    execute: (state: GameState, shooter: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
 
-        if (!target) return { effects, messages };
+        if (!target) return { effects, messages, consumesTurn: false };
 
         const dist = hexDistance(shooter.position, target);
         let range = 3;
@@ -29,7 +29,7 @@ export const SPEAR_THROW: SkillDefinition = {
 
         if (dist > range) {
             messages.push('Out of range!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         const line = getHexLine(shooter.position, target);
@@ -44,7 +44,7 @@ export const SPEAR_THROW: SkillDefinition = {
             effects.push({ type: 'Damage', target: targetEnemy.position, amount: 99 });
             messages.push(`Spear killed ${targetEnemy.subtype || 'enemy'}!`);
         } else if (state.wallPositions.some(w => hexEquals(w, target))) {
-            return { effects: [], messages: ['Cannot throw into a wall!'] };
+            return { effects: [], messages: ['Cannot throw into a wall!'], consumesTurn: false };
         } else {
             messages.push('Spear thrown.');
         }

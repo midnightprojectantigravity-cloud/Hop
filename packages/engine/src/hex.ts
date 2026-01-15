@@ -98,3 +98,26 @@ export const getDirectionFromTo = (start: Point, end: Point): number => {
     const dr = Math.round(diff.r / dist);
     return DIRECTIONS.findIndex(d => d.q === dq && d.r === dr);
 };
+
+/**
+ * Returns tiles strictly between p1 and p2. 
+ * Essential for "Lava Interception" checks.
+ */
+export const getPathBetween = (p1: Point, p2: Point): Point[] => {
+    const results: Point[] = [];
+    const dist = hexDistance(p1, p2);
+    // Start at 1 and end before dist to exclude shooter and target hexes
+    for (let i = 1; i < dist; i++) {
+        const t = i / dist;
+        const q = p1.q + (p2.q - p1.q) * t;
+        const r = p1.r + (p2.r - p1.r) * t;
+        results.push(createHex(Math.round(q), Math.round(r)));
+    }
+    return results;
+};
+
+
+export function scaleVector(dirIdx: number, mag: number): Point {
+    const dir = hexDirection(dirIdx);
+    return { q: dir.q * mag, r: dir.r * mag, s: dir.s * mag };
+}

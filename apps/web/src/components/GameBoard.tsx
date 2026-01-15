@@ -5,6 +5,7 @@ import { HexTile } from './HexTile';
 import { Entity } from './Entity';
 import { TILE_SIZE } from '@hop/engine/constants';
 import { getSkillRange } from '@hop/engine/skills';
+import PreviewOverlay from './PreviewOverlay';
 
 interface GameBoardProps {
     gameState: GameState;
@@ -70,6 +71,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                 className="max-h-full max-w-full"
             >
                 <g>
+                    <PreviewOverlay gameState={gameState} selectedSkillId={selectedSkillId} showMovementRange={showMovementRange} />
                     {cells.map((hex) => {
                         const dist = hexDistance(hex, gameState.player.position);
                         const isWall = gameState.wallPositions?.some(wp => hexEquals(wp, hex));

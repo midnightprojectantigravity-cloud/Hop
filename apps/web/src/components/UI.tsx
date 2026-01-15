@@ -1,24 +1,20 @@
 import React from 'react';
 import type { GameState } from '@hop/engine/types';
+import { computeScore } from '@hop/engine';
 
 interface UIProps {
     gameState: GameState;
     onReset: () => void;
     onWait: () => void;
+    onExitToHub: () => void;
 }
 
-// Calculate score based on design doc formula
-const calculateScore = (state: GameState): number => {
-    const killScore = (state.kills || 0) * 10;
-    const envKillScore = (state.environmentalKills || 0) * 25;
-    const floorScore = state.floor * 100;
-    return killScore + envKillScore + floorScore;
-};
+// Use canonical engine score
 
 import { InitiativeDisplay } from './InitiativeQueue';
 
-export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait }) => {
-    const score = calculateScore(gameState);
+export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub }) => {
+    const score = computeScore(gameState);
 
     const messages = Array.isArray(gameState.message) ? gameState.message : [];
     const logRef = React.useRef<HTMLDivElement>(null);
@@ -94,6 +90,13 @@ export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait }) => {
                     >
                         <span className="text-sm font-bold text-red-400/80">Reset Chronology</span>
                         <span className="text-lg grayscale group-hover:grayscale-0 transition-all">🔄</span>
+                    </button>
+                    <button
+                        onClick={onExitToHub}
+                        className="w-full flex justify-between items-center px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group"
+                    >
+                        <span className="text-sm font-bold text-white/70">Return to Hub</span>
+                        <span className="text-lg grayscale group-hover:grayscale-0 transition-all">🏠</span>
                     </button>
                 </div>
             </div>

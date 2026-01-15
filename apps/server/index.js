@@ -2,7 +2,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateInitialState, gameReducer, fingerprintFromState } from '@hop/engine';
+import { generateInitialState, gameReducer, fingerprintFromState, safeParse } from '@hop/engine';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,7 +53,8 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
       try {
-        const payload = JSON.parse(body);
+        let payload;
+        try { payload = safeParse(body); } catch (e) { payload = JSON.parse(body); }
         // Basic validation: require seed and actions
         if (!payload || !payload.seed || !Array.isArray(payload.actions)) {
           res.writeHead(400, { ...headers, 'Content-Type': 'application/json' });

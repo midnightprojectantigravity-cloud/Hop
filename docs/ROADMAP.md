@@ -1,126 +1,106 @@
-# Hop - Development Roadmap
+# Prioritized Roadmap (10 concise steps)
 
-*Updated: January 9, 2026*
+1. Wire dedicated Hub screen into App.tsx (render Hub on hub state).
+* Status: Done — `Hub.tsx` added and App renders hub state.
+* Files: App.tsx, [apps/web/src/components/Hub.tsx].
 
-This document outlines the expansion plan for Hop, focusing on deterministic engine scaling, procedural generation, and high-fidelity arcade "Juice."
+2. Export engine scoring function; reconcile UI scoreboard to use it.
+* Status: Done — `computeScore` implemented and UI switched to use engine canonical score.
+* Files: logic.ts, UI.tsx, score.ts.
 
----
+3. Add ActionLog JSON export/import and Export button in ReplayManager.
+* Status: Done — safe serializer added and `ReplayManager` uses it for Export/Import.
+* Files: ReplayManager.tsx, serialize.ts.
 
-## 🟢 Phase 0: The "World-Class" Foundation (Completed)
+4. Capture and persist turnStart neighbor IDs in initiative queue to support AUTO_ATTACK.
+* Status: Done — `turnStartNeighborIds` captured at turn start and auto-attack now consumes identity IDs.
+* Files: initiative.ts, auto_attack.ts.
 
-Before expanding content, we finalized the core engine reliability to ensure leaderboard integrity.
+5. Add scenario tests for multi-system combos (grapple→lava, shield throw→push→lava).
+* Status: Partially done — scenarios exist and an integration test was added; some scenario failures surfaced and are tracked separately.
+* Files: packages/engine/src/skills/* (scenarios), src/__tests__/grapple_lava.test.ts.
 
-| Milestone | Description | Status |
-| --- | --- | --- |
-| **Monorepo Migration** | Decouple `@hop/engine` from the UI for server-side validation. | ✅ Done |
-| **Deterministic Command-Stream** | Ensure all state changes are driven by a serializable `ActionLog`. | ✅ Done |
-| **Multi-Condition TDD** | Implement stress-scenarios for `AUTO_ATTACK` (Persistence/Friendly Fire). | ✅ Done |
-| **Bitmask Occupancy** | Optimize grid lookups for AI MCTS simulations. | ✅ Done |
-| **Initiative Queue System** | Per-actor granular turns and persistence tracking. | ✅ Done |
-| **Theme Logic (Slippery/Void)** | Interceptor-based floor hazard system. | ✅ Done |
-| **Initiative Queue UI** | Visual representation of turn order in the sidebar. | ✅ Done |
+6. Migrate remaining legacy skills into compositional skill definitions.
+* Status: Deferred — skipping for now per direction. Target later in phase 2.
+* Files: packages/engine/src/skills/*.ts
 
----
+7. Fix Jump cooldown initialization and verify loadout skill cooldowns.
+* Files: skills.ts, loadout.ts.
 
-## Phase 0.5: Executable Documentation (Integration)
-Before moving to the "Void" theme, we must bridge the gap between Tutorial and Test.
+8. Implement Hub “Start Run” UX polish and selected-loadout highlight.
+* Files: [apps/web/src/components/Hub.tsx], ArchetypeSelector.tsx.
 
-- [ ] **Scenario Engine**: Build the `ScenarioLoader` that can ingest JSON board states.
-- [ ] **Tutorial Porting**: Convert existing onboarding steps into verified Scenarios.
-- [ ] **Balance Benchmarking**: Create a "DPS Stress Room" scenario that outputs damage-per-turn metrics for all skill loadouts to assist in Skill Power Assessment.
+9. Build server-side validator CLI to re-run ActionLog + seed in Node (no browser APIs).
+* Status: Done — added `validateReplay` CLI and updated server to accept safe-serialized payloads.
+* Files: packages/engine/scripts/validateReplay.ts, apps/server/index.js.
 
----
+11. Add RNG parity & tooling
+* Status: Done — parity checker CLI added to help verify PRNG across environments.
+* Files: packages/engine/scripts/checkRngParity.js
 
-## Phase 1: Expanded Enemy Types (Unified Actor System)
+10. Polish visual UX (movement bloom, threat ring, skill range overlays).
+* Files: GameBoard.tsx, SkillTray.tsx.
 
-| Type | HP | Behavior | Status |
-| --- | --- | --- | --- |
-| **Footman** | 2 | Melee, moves toward player; uses **Punch** passive | ✅ |
-| **Archer** | 1 | Ranged (axial) | ✅ |
-| **Shield Bearer** | 3 | Slow, blocks front via **Interceptor Middleware** | ✅ |
-| **Assassin** | 1 | Stealth Melee; ignores `AUTO_ATTACK` while hidden | ✅ |
-| **Golem** | 4 | Heavy Line Attack; moves every 2nd turn | ✅ |
+# Quick Wins (single-PR, 30–120 minutes)
 
-#### 👑 The Demon Lord (End-of-Run Boss)
+1. Hub wiring: render Hub on hub state (small App.tsx change).
+* Files: App.tsx.
+* Est: ~30–60 minutes.
 
-The Boss is built using the **Phase Transition** logic in the engine:
+2. Add Start Run button visibility & highlight selection (UI only).
+* Files: ArchetypeSelector.tsx, App.tsx.
+* Est: ~30–60 minutes.
 
-* **Phase 1 (100% HP)**: Ranged Fireballs (Telegraphed).
-* **Phase 2 (50% HP)**: Summons 2 Footmen; triggers **Enrage** interceptor (Double Damage).
-* **Phase 3 (25% HP)**: Melee rampage; moves 2x speed.
+3. Add JSON Export button to ReplayManager.
+* Status: Done — now uses engine `safeStringify` to preserve BigInt and non-JSON types.
+* Files: ReplayManager.tsx.
 
----
+# Risky / Complex items (estimates)
 
-## Phase 2: Procedural "Room-Based" Generation
+1. Full migration to compositional skills (remove skills.ts legacy): touching many files and tests.
+* Files: [packages/engine/src/skills.ts], [packages/engine/src/skillRegistry.ts], per-skill files.
+* Est: 3–7 days.
 
-We are moving away from simple random placement to a **Prefab-Room Graph** system (Diablo 2 style).
+2. Server-side validator + CI parity: BigInt/PRNG serialization and environment parity fixes.
+* Status: In progress — server accepts safe-serialized payloads; parity tooling added.
+* Files: packages/engine/scripts/checkRngParity.js, apps/server/index.js.
+* Est: 2–5 days.
 
-### Room Types (Prefabs)
+3. Multi-system integration coverage & fuzzing enlargement: design tests, fix failures, stabilize determinism.
+* Files: new tests under [packages/engine/src/tests/], extend [packages/engine/scripts/fuzzTest.ts].
+* Est: 2–4 days.
 
-* **Entrance**: Safe zone with 0 hazards.
-* **Ambush Room**: Triggers enemy spawns when player reaches the center.
-* **The Crucible**: High lava density with a guaranteed Shrine.
-* **Boss Arena**: Fixed 30-hex circular arena with pillars (Obstacles).
+# Core Refactoring
 
-### Theming System
+1. Extract ECS core: create packages/engine/src/ecs/* (Entity, Component, System) and migrate actor data into components; update types.ts, actor.ts, initiative.ts, logic.ts.
+* Files: types.ts, actor.ts, initiative.ts, logic.ts
 
-| Floors | Theme | Mechanic | Status |
-| --- | --- | --- | --- |
-| **1-4** | Catacombs | Standard Stone/Lava. | ✅ |
-| **5-7** | Frozen Depths | **Slippery Tiles**: Moving causes you to slide 2 hexes. | ✅ |
-| **8-10** | The Void | **Void Tiles**: Step here and lose 1 max HP (Permanent). | ✅ |
+2. Centralize geometry/math: move lowLevelLerp, roundToHex, path helpers into hex.ts and remove duplicates from skill files (e.g., grapple_hook.ts).
+* Files: hex.ts, grapple_hook.ts
 
----
+3. Finish compositional skills migration: convert legacy skills.ts behaviors into COMPOSITIONAL_SKILLS, add getValidTargets() to each SkillDefinition, then delete skills.ts.
+* Files: skills.ts, skillRegistry.ts, packages/engine/src/skills/
 
-## Phase 3: "The Juice" & Visual Events
+4. Harden engine API & contracts: expose computeScore(state), exportActionLog(state), getValidTargets(skillId,state,actor) in [packages/engine/src/index.ts], and use these from UI/validator.
+* Files: index.ts, UI.tsx
 
-The engine emits `VisualEvents` that the UI interprets to create a high-end arcade feel.
+5. Optimize spatial & RNG subsystems: profile and refactor refreshOccupancyMask for minimal BigInt ops; centralize RNG serialization (rngCounter/seed) for Node validator parity.
+* Files: spatial.ts, rng.ts
 
-* [x] **Impact Freeze**: 50ms-100ms game pause on a killing blow.
-* [x] **Screen Shake**: Linear (for punches) vs. Radial (for explosions).
-* [ ] **Dynamic Combat Text**: Critically-sized numbers that "pop" and fade.
-* [x] **Initiative Queue UI**: A visual sidebar or floating icons showing the current turn order.
-* [ ] **Turn Transition VFX**: Subtle highlights on the actor whose turn is resolving.
-* [ ] **Ghosting**: Leave a trail of blue transparent sprites when using `JUMP` or `BLINK`.
+6. Add integration harness & CI gates: add deterministic integration tests (multi-system scenarios) and a Node CLI validator that replays ActionLog + initialSeed. Gate merges on determinism tests.
+* Status: In progress — validator CLI and test harness exist; remaining work: stabilize failing scenarios and add CI jobs.
+* Files: packages/engine/scripts, packages/engine/src/__tests__/
 
----
+# Further Considerations
 
-## Phase 4: Progression & Meta Systems
+1. Expose small engine contracts: computeScore(state), getValidTargets(skillId, state, actor), and exportActionLog(state) in [packages/engine/src/index.ts] so UI and server share canonical logic.
+2. Keep Hub decoupled (headless engine only used to generate state); UI should be a thin client that calls engine helpers.
+3. Phase migration: implement compatibility adapters (small wrappers) so engine exposes stable interfaces while internals migrate; use feature flags per module.
+4. TDD-first: write scenario tests for each changed behavior (e.g., AUTO_ATTACK identity capture, Grapple→Lava) before changing logic.
+5. Performance verification: add microbenchmarks for occupancy updates and RNG consumption; measure before/after BigInt optimizations.
 
-### Deterministic Leaderboard
-
-* **Replay Verification**: The server runs the `ActionLog` through the `@hop/engine` package to confirm the final score.
-* **Daily Seed**: Every 24 hours, a global seed is generated so everyone plays the exact same map layout.
-
-### Character Archetypes
-
-Players choose a "Loadout" of 3 starting skills:
-
-* **The Hoplite**: Spear / Shield / Jump.
-* **The Wraith**: Dagger / Blink / Stealth.
-* **The Pyromancer**: Fireball / Flame-Dash / Fire-Aura.
-
----
-
-## Phase 5: Progression & Meta Systems (Updated)
-- **Verified Achievements**: Achievements like "Untouchable" are verified by the server re-running the `ActionLog` against the **Scenario Engine** to ensure no state-tampering occurred during the run.
-
----
-
-## Implementation Priority
-
-### High Priority (Next Sprint)
-
-1. 📦 **Scenario Engine**: Build the `ScenarioLoader` for JSON board states to enable tutorial porting and balance benchmarks.
-2. 🧠 **AI Upgrade**: Implement MCTS (Monte Carlo Tree Search) for enemies on Floors 7+ to increase tactical depth.
-3. Daily Seed System: Implement a global daily seed for competitive leaderboard play.
-
-### Completed ✅
-
-1. **Monorepo Migration**: Decoupled `@hop/engine` from UI/Server.
-2. **Unified Validator Server**: Server-side replay verification using shared engine.
-3. **Command-Stream Architecture**: Infinite undo and tiny replay files.
-4. **Unified Skill System**: Skills work identically for players and enemies.
-5. **Initiative Queue System**: Granular turns and deterministic turn ordering.
-6. **Theme Logic (Slippery/Void)**: Interceptor-based floor hazard system.
-7. **Initiative Queue UI**: Visual representation of turn order in the sidebar.
+- invalid target should not consume a turn, just show a toast - DONE
+- grapple hook and shield throw should have an axial range, no zig zag targeting - DONE
+- valid targets should be highlighted in the preview overlay (red border)
+- potential skill range for targets should be highlighted in the preview overlay (white border)
+- targets that are blocked by LOS should not be valid targets

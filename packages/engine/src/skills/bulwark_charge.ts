@@ -18,27 +18,27 @@ export const BULWARK_CHARGE: SkillDefinition = {
         cost: 0,
         cooldown: 3,
     },
-    execute: (state: GameState, player: Actor, target?: Point): { effects: AtomicEffect[]; messages: string[] } => {
+    execute: (state: GameState, player: Actor, target?: Point): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
-        if (!target) return { effects, messages };
+        if (!target) return { effects, messages, consumesTurn: false };
 
         // Must be adjacent
         const dist = hexDistance(player.position, target);
         if (dist !== 1) {
             messages.push('Target not adjacent!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         const first = getEnemyAt(state.enemies, target);
         if (!first) {
             messages.push('No target!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         // Build chain: starting at first, collect subsequent enemies in same direction
         const dirIdx = getDirectionFromTo(player.position, first.position);
-        if (dirIdx === -1) return { effects, messages };
+        if (dirIdx === -1) return { effects, messages, consumesTurn: false };
         const dirVec = hexDirection(dirIdx)!;
 
         const chain: Actor[] = [first];

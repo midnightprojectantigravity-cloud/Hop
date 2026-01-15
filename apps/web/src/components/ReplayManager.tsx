@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Action, GameState } from '@hop/engine/types';
 import { generateInitialState, gameReducer } from '@hop/engine/logic';
 import { createRng } from '@hop/engine/rng';
+import { safeStringify, safeParse } from '@hop/engine';
 import Modal from './Modal';
 
 export interface ReplayRecord {
@@ -171,7 +172,7 @@ export const ReplayManager: React.FC<{
   };
 
   const exportReplay = (r: ReplayRecord) => {
-    const content = JSON.stringify(r);
+    const content = safeStringify(r);
     const blob = new Blob([content], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -187,7 +188,12 @@ export const ReplayManager: React.FC<{
     if (!file) return;
     try {
       const txt = await file.text();
-      const parsed = JSON.parse(txt) as ReplayRecord;
+      let parsed: ReplayRecord;
+      try {
+        parsed = safeParse(txt) as ReplayRecord;
+      } catch (e) {
+        parsed = JSON.parse(txt) as ReplayRecord;
+      }
       const next = [parsed, ...list].slice(0, 100);
       setList(next);
       saveAll(next);
@@ -301,7 +307,7 @@ export const ReplayManager: React.FC<{
             </label>
             <button className="bg-indigo-700 px-2 py-1 rounded" onClick={() => {
               // export all as single JSON
-              const blob = new Blob([JSON.stringify(list)], { type: 'application/json' });
+              const blob = new Blob([safeStringify(list)], { type: 'application/json' });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;

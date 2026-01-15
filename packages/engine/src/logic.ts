@@ -4,11 +4,11 @@
  * resolveEnemyActions and gameReducer are the primary entry points.
  * TODO: Migrate all remaining legacy skills (Spear/Shield/Jump) to the Compositional Framework.
  */
-import type { GameState, Action, Entity, AtomicEffect } from './types';
-import { hexDistance, hexEquals, getNeighbors, getHexLine, getDirectionFromTo, hexDirection, hexAdd } from './hex';
+import type { GameState, Action, Entity } from './types';
+import { hexEquals, getNeighbors } from './hex';
 import { resolveTelegraphedAttacks } from './combat';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
-import { applyLavaDamage, checkShrine, checkStairs, getEnemyAt, isWalkable, isOccupied } from './helpers';
+import { applyLavaDamage, checkShrine, checkStairs, getEnemyAt } from './helpers';
 import { increaseMaxHp } from './actor';
 import { generateDungeon, generateEnemies, getFloorTheme } from './mapGeneration';
 import {
@@ -24,7 +24,7 @@ import {
     hasUpgrade,
 } from './skills';
 import { COMPOSITIONAL_SKILLS } from './skillRegistry';
-import { applyEffects, applyAtomicEffect } from './effectEngine';
+import { applyEffects } from './effectEngine';
 import { applyAutoAttack } from './skills/auto_attack';
 import { refreshOccupancyMask } from './spatial';
 import { createCommand, createDelta } from './commands';
@@ -35,9 +35,13 @@ import {
     endActorTurn,
     removeFromQueue,
     getTurnStartPosition,
+    getTurnStartNeighborIds,
     isPlayerTurn,
 } from './initiative';
 import { resolveSingleEnemyTurn } from './combat';
+import { resolveMove } from './systems/movement';
+import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './components';
+import { tickStatuses } from './systems/status';
 
 
 /**
@@ -46,11 +50,23 @@ import { resolveSingleEnemyTurn } from './combat';
 import { consumeRandom } from './rng';
 import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS } from './loadout';
 
-export const generateHubState = (): GameState => ({
-    ...generateInitialState(),
-    gameStatus: 'hub',
-    message: ['Welcome to the Strategic Hub. Select your loadout.']
-});
+export const generateHubState = (): GameState => {
+    const base = generateInitialState();
+    // In the Hub we don't want to expose a fully populated tactical state.
+    // Present an empty skill bar so the UI prompts the player to choose a loadout.
+    return {
+        ...base,
+        gameStatus: 'hub',
+        message: ['Welcome to the Strategic Hub. Select your loadout.'],
+        player: {
+            ...base.player,
+            activeSkills: [],
+        },
+        // hide pickup items until a run starts
+        hasSpear: false,
+        hasShield: false
+    };
+};
 
 export const generateInitialState = (
     floor: number = 1,
@@ -98,6 +114,10 @@ export const generateInitialState = (
             temporaryArmor: 0,
             activeSkills,
             archetype,
+            components: new Map<string, GameComponent>([
+                ['physics', { type: 'physics', weightClass: 'Standard' } as PhysicsComponent],
+                ['archetype', { type: 'archetype', archetype } as ArchetypeComponent]
+            ])
         },
         enemies: enemies.map(e => ({
             ...e,
@@ -211,7 +231,7 @@ export const processNextTurn = (state: GameState): GameState => {
  */
 // Main entry point for turn cycle resolution.
 // Granularly resolves actors until player input IS required.
-const resolveTurnCycle = (state: GameState, context?: { startNeighborIds?: string[] }): GameState => {
+const resolveTurnCycle = (state: GameState): GameState => {
     let player = state.player;
     let enemies = state.enemies;
     const playerPos = state.player.position;
@@ -231,7 +251,8 @@ const resolveTurnCycle = (state: GameState, context?: { startNeighborIds?: strin
     const previousNeighbors = getNeighbors(playerStartPos);
 
     let intermediateState = { ...state, player: { ...player, position: playerPos }, enemies };
-    const autoAttackResult = applyAutoAttack(intermediateState, player, previousNeighbors, playerStartPos, context?.startNeighborIds);
+    const persistentPlayerNeighborIds = getTurnStartNeighborIds(state, 'player') || undefined;
+    const autoAttackResult = applyAutoAttack(intermediateState, player, previousNeighbors, playerStartPos, persistentPlayerNeighborIds);
     enemies = autoAttackResult.state.enemies;
     messages.push(...autoAttackResult.messages);
     const killsThisTurn = autoAttackResult.kills;
@@ -265,6 +286,7 @@ const resolveTurnCycle = (state: GameState, context?: { startNeighborIds?: strin
     // 4. Update positions and turn state for player persistence in next turn
     player = { ...player, previousPosition: playerPos, position: playerPos };
     player = tickSkillCooldowns(player);
+    player = tickStatuses(player);
     player = applyPassiveSkills(player);
 
     let curState: GameState = {
@@ -343,14 +365,15 @@ const resolveTurnCycle = (state: GameState, context?: { startNeighborIds?: strin
 
 // DEPRECATED ALIAS: resolveEnemyActions is now handled via processNextTurn loop.
 // For compatibility with old tests/logic calling resolveEnemyActions directly:
-export const resolveEnemyActions = (state: GameState, context?: { startNeighborIds?: string[] }): GameState => {
+export const resolveEnemyActions = (state: GameState): GameState => {
     // 0. Update AI positions for pathfinding
     refreshOccupancyMask(state);
-    return resolveTurnCycle(state, context);
+    return resolveTurnCycle(state);
 };
 
 export const gameReducer = (state: GameState, action: Action): GameState => {
-    if (state.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE' && action.type !== 'LOAD_STATE') return state;
+    // Allow certain meta actions while in non-playing states (hub/won/lost)
+    if (state.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE' && action.type !== 'LOAD_STATE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN') return state;
 
     const clearedState: GameState = {
         ...state,
@@ -365,7 +388,12 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         case 'LOAD_STATE':
             return action.payload;
         case 'RESET': {
-            const newState = generateInitialState(1, action.payload?.seed || String(Date.now()));
+            // Meta-Persistence: Preserve the current archetype/loadout on reset
+            const currentArchetype = state.player.archetype;
+            const loadoutId = currentArchetype === 'SKIRMISHER' ? 'SKIRMISHER' : 'VANGUARD';
+            const loadout = DEFAULT_LOADOUTS[loadoutId];
+
+            const newState = generateInitialState(1, action.payload?.seed || String(Date.now()), undefined, undefined, loadout);
             return {
                 ...newState,
                 commandLog: [],
@@ -375,7 +403,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         }
     }
 
-    if (state.gameStatus !== 'playing' && action.type !== 'SELECT_UPGRADE') return state;
+    if (state.gameStatus !== 'playing' && action.type !== 'SELECT_UPGRADE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN') return state;
 
     // Command Pattern (Goal 2)
     const command = createCommand(action);
@@ -425,10 +453,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 if (!('payload' in a)) return s;
                 const { skillId, target } = a.payload;
 
-                // PRE-ACTION SNAPSHOT for Auto-Attack Persistence
-                const startNeighborIds = getNeighbors(s.player.position)
-                    .map(n => getEnemyAt(s.enemies, n)?.id)
-                    .filter(id => !!id) as string[];
+                // PRE-ACTION SNAPSHOT for Auto-Attack Persistence (captured in initiative entries now)
 
                 // Lunge handling (as upgrade of Spear Throw)
                 const isLunge = skillId === 'LUNGE';
@@ -453,23 +478,28 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
 
                     let newState = applyEffects(s, execution.effects, { targetId: targetEnemy?.id });
 
-                    newState.player = {
-                        ...newState.player,
-                        activeSkills: newState.player.activeSkills?.map((s: any) =>
-                            s.id === skillId ? { ...s, currentCooldown: compDef.baseVariables.cooldown } : s
-                        )
-                    };
-
-
                     const stateAfterSkill = {
                         ...newState,
                         message: [...newState.message, ...execution.messages].slice(-50)
                     };
 
+                    // If the execution does not consume a turn, do NOT apply cooldowns or advance enemy actions.
                     if (execution.consumesTurn === false) {
                         return stateAfterSkill;
                     }
-                    return resolveEnemyActions(stateAfterSkill, { startNeighborIds });
+
+                    // Apply skill cooldowns only when the skill actually consumed the player's action.
+                    const withCooldowns: GameState = {
+                        ...stateAfterSkill,
+                        player: {
+                            ...stateAfterSkill.player,
+                            activeSkills: stateAfterSkill.player.activeSkills?.map((s: any) =>
+                                s.id === skillId ? { ...s, currentCooldown: compDef.baseVariables.cooldown } : s
+                            )
+                        }
+                    };
+
+                    return resolveEnemyActions(withCooldowns);
                 }
 
                 // 2. Legacy Skills (Fallback)
@@ -514,117 +544,25 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     kills: (s.kills || 0) + (result.kills || 0),
                     lastSpearPath: result.lastSpearPath,
                     isShaking: result.isShaking
-                }, { startNeighborIds });
+                });
             }
 
             case 'MOVE': {
                 if (!('payload' in a)) return s;
                 const target = a.payload;
-                const dist = hexDistance(s.player.position, target);
+                const nextState = resolveMove(s, 'player', target);
 
-                const isSkirmisher = s.player.archetype === 'SKIRMISHER';
-                const maxDist = isSkirmisher ? 4 : 1;
-
-                if (dist < 1 || dist > maxDist) return s;
-
-                // For dashes (dist > 1), must be in a straight line
-                if (dist > 1) {
-                    const line = getHexLine(s.player.position, target);
-                    if (!hexEquals(line[line.length - 1], target)) return s;
-
-                    // Check if path is clear or if tackle is possible
-                    const path = line.slice(1); // Exclude start
-                    for (let i = 0; i < path.length; i++) {
-                        const pos = path[i];
-                        const enemy = getEnemyAt(s.enemies, pos);
-                        const isWall = s.wallPositions.some(w => hexEquals(w, pos));
-
-                        if (isWall) {
-                            // Blocked by wall
-                            return { ...s, message: [...s.message, "Blocked by wall!"].slice(-50) };
-                        }
-
-                        if (enemy) {
-                            if (isSkirmisher && s.hasShield) {
-                                // TACKLE!
-                                const dirIdx = getDirectionFromTo(s.player.position, target);
-                                const dirVec = hexDirection(dirIdx);
-
-                                // Push enemy 4 tiles
-                                let pushDest = pos;
-                                for (let j = 0; j < 4; j++) {
-                                    const next = hexAdd(pushDest, dirVec);
-                                    if (isWalkable(next, s.wallPositions, [], s.gridWidth, s.gridHeight)) {
-                                        pushDest = next;
-                                    } else {
-                                        break;
-                                    }
-                                }
-
-                                // Apply displacement to enemy
-                                let newState = s;
-                                newState = applyAtomicEffect(newState, { type: 'Displacement', target: 'targetActor', destination: pushDest }, { targetId: enemy.id });
-                                newState = applyAtomicEffect(newState, { type: 'ApplyStatus', target: pushDest, status: 'stunned', duration: 1 }, { targetId: enemy.id });
-                                newState.message.push(`Tackled ${enemy.subtype}!`);
-
-                                // Player stops at pos? Or continues? 
-                                // Usually tackle means you stop at the tile BEFORE or AT the enemy.
-                                // Let's say stop AT the enemy's old pos.
-                                if (i === path.length - 1) {
-                                    // Move to target
-                                    return resolveEnemyActions(applyEffects(newState, [{ type: 'Displacement', target: 'self', destination: pos }]));
-                                } else {
-                                    // Stop early due to hit
-                                    return resolveEnemyActions(applyEffects(newState, [{ type: 'Displacement', target: 'self', destination: pos }]));
-                                }
-                            } else {
-                                // Blocked!
-                                return { ...s, message: [...s.message, "Blocked by enemy!"].slice(-50) };
-                            }
-                        }
-                    }
+                // If blocked (same state or just a message added), don't advance turn
+                if (nextState === s || (nextState.message.length > s.message.length && nextState.player.position === s.player.position)) {
+                    return nextState;
                 }
 
-                // Standard single tile move or clear dash
-                if (!isWalkable(target, s.wallPositions, s.lavaPositions, s.gridWidth, s.gridHeight)) {
-                    return { ...s, message: [...s.message, "Blocked!"].slice(-50) };
-                }
-
-                if (isOccupied(target, s)) {
-                    const targetEnemy = getEnemyAt(s.enemies, target);
-                    if (targetEnemy && dist === 1) {
-                        const basicAttackDef = COMPOSITIONAL_SKILLS['BASIC_ATTACK'];
-                        const basicAttackSkill = s.player.activeSkills?.find(ss => ss.id === 'BASIC_ATTACK');
-
-                        if (basicAttackDef && basicAttackSkill) {
-                            const execution = basicAttackDef.execute(s, s.player, target, basicAttackSkill.activeUpgrades);
-                            let newState = applyEffects(s, execution.effects, { targetId: targetEnemy.id });
-                            newState.message = [...newState.message, ...execution.messages].slice(-50);
-                            return resolveEnemyActions(newState);
-                        }
-                    }
-                    return { ...clearedState, message: [...state.message, "Tile occupied!"].slice(-50) };
-                }
-
-                const moveEffects: AtomicEffect[] = [
-                    { type: 'Displacement' as const, target: 'self', destination: target, source: s.player.position }
-                ];
-
-                // Capture neighbors BEFORE move for Auto-Attack persistence
-                const startNeighborIds = getNeighbors(s.player.position)
-                    .map(n => getEnemyAt(s.enemies, n)?.id)
-                    .filter(id => !!id) as string[];
-
-                return resolveEnemyActions(applyEffects(s, moveEffects, { targetId: s.player.id }), { startNeighborIds });
+                return resolveEnemyActions(nextState);
             }
 
             case 'THROW_SPEAR': {
                 if (!('payload' in a)) return s;
                 const target = a.payload;
-
-                const startNeighborIds = getNeighbors(s.player.position)
-                    .map(n => getEnemyAt(s.enemies, n)?.id)
-                    .filter(id => !!id) as string[];
 
                 const result = executeSpearThrow(target, s);
                 if (result.messages[0].includes('not in hand')) return { ...s, message: [...s.message, result.messages[0]].slice(-50) };
@@ -638,14 +576,31 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     kills: (s.kills || 0) + (result.kills || 0),
                     lastSpearPath: result.lastSpearPath,
                     isShaking: result.isShaking
-                }, { startNeighborIds });
+                });
             }
 
             case 'WAIT': {
-                const startNeighborIds = getNeighbors(s.player.position)
-                    .map(n => getEnemyAt(s.enemies, n)?.id)
-                    .filter(id => !!id) as string[];
-                return resolveEnemyActions(s, { startNeighborIds });
+                return resolveEnemyActions(s);
+            }
+
+            case 'APPLY_LOADOUT': {
+                if (!('payload' in a)) return s;
+                const loadout = a.payload as Loadout;
+                const applied = applyLoadoutToPlayer(loadout);
+
+                return {
+                    ...s,
+                    player: {
+                        ...s.player,
+                        activeSkills: applied.activeSkills,
+                        archetype: applied.archetype,
+                    },
+                    upgrades: applied.upgrades,
+                    hasSpear: loadout.startingSkills.includes('SPEAR_THROW'),
+                    hasShield: loadout.startingSkills.includes('SHIELD_THROW') || s.hasShield,
+                    selectedLoadoutId: loadout.id,
+                    message: [...s.message, `${loadout.name} selected.`].slice(-50)
+                };
             }
 
             case 'START_RUN': {
@@ -662,6 +617,10 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
 
             case 'ADVANCE_TURN': {
                 return processNextTurn(s);
+            }
+
+            case 'EXIT_TO_HUB': {
+                return generateHubState();
             }
 
             default:

@@ -14,19 +14,19 @@ export const JUMP: SkillDefinition = {
     baseVariables: {
         range: 2,
         cost: 0,
-        cooldown: 1,
+        cooldown: 2,
     },
     execute: (state: GameState, attacker: Actor, target?: Point, _activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
 
-        if (!target) return { effects, messages };
-        if (!attacker || !attacker.position) return { effects, messages };
+        if (!target) return { effects, messages, consumesTurn: false };
+        if (!attacker || !attacker.position) return { effects, messages, consumesTurn: false };
 
         const dist = hexDistance(attacker.position, target);
         if (dist < 1 || dist > 2) {
             messages.push('Target out of range!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         const isWall = state.wallPositions.some(w => hexEquals(w, target));
@@ -35,7 +35,7 @@ export const JUMP: SkillDefinition = {
 
         if (isWall || isLava || isOccupiedByEnemy) {
             messages.push('Blocked!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         // Execute Jump

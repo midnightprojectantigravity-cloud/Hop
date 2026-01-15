@@ -1,3 +1,5 @@
+import type { GameComponent } from './components';
+
 /**
  * ARCHITECTURE OVERVIEW: "Gold Standard" Tech Stack
  * Logic: Immutable State + Command Pattern (see Command, StateDelta)
@@ -65,6 +67,8 @@ export interface InitiativeEntry {
     hasActed: boolean;
     /** Position at the START of this actor's individual turn */
     turnStartPosition?: Point;
+    /** Actor IDs that were neighbors at the START of this actor's turn */
+    turnStartNeighborIds?: string[];
 }
 
 /** Initiative Queue: Manages per-actor turn order within a round */
@@ -89,7 +93,7 @@ export type AtomicEffect =
     | { type: 'Message'; text: string }
     | { type: 'Juice'; effect: 'shake' | 'flash' | 'lavaSink' | 'spearTrail' | 'freeze' | 'combat_text' | 'impact'; target?: Point; path?: Point[]; intensity?: 'low' | 'medium' | 'high'; direction?: Point; text?: string }
     | { type: 'ModifyCooldown'; skillId: string; amount: number; setExact?: boolean }
-    | { type: 'UpdateComponent'; target: 'self' | 'targetActor'; key: string; value: any };
+    | { type: 'UpdateComponent'; target: 'self' | 'targetActor'; key: string; value: GameComponent };
 
 export interface VisualEvent {
     type: 'shake' | 'freeze' | 'combat_text' | 'vfx' | 'kinetic_trace';
@@ -134,6 +138,8 @@ export interface SkillDefinition {
         consumesTurn?: boolean;
         kills?: number;
     };
+    /** Optional helper for UI/tests: return valid target hexes for previews (Level 1/2) */
+    getValidTargets?: (state: GameState, origin: Point) => Point[];
     upgrades: Record<string, SkillModifier>;
     scenarios: ScenarioV2[];
 }
@@ -185,7 +191,7 @@ export interface Actor {
     temporaryArmor: number;
 
     // ECS-Lite: Components can be stored here as optional records
-    components?: Record<string, any>;
+    components?: Map<string, GameComponent>;
 
     // Skills
     activeSkills: Skill[];
@@ -262,6 +268,9 @@ export interface GameState {
         floor?: number;
     };
 
+    // Selected loadout id from the Hub (not persisted to a run unless START_RUN is called)
+    selectedLoadoutId?: string;
+
     // Score
     kills: number;
     environmentalKills: number;
@@ -288,7 +297,9 @@ export type Action =
     | { type: 'USE_SKILL'; payload: { skillId: string; target?: Point } }
     | { type: 'ADVANCE_TURN' }
     | { type: 'LOAD_STATE'; payload: GameState }
-    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string } };
+    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string } }
+    | { type: 'APPLY_LOADOUT'; payload: any }
+    | { type: 'EXIT_TO_HUB' };
 
 export interface Scenario {
     id: string;

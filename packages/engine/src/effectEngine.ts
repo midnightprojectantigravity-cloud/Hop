@@ -201,12 +201,11 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
         case 'UpdateComponent': {
             const updateActor = (actor: Actor, key: string, value: any): Actor => {
+                const newComponents = new Map(actor.components || []);
+                newComponents.set(key, value);
                 return {
                     ...actor,
-                    components: {
-                        ...(actor.components || {}),
-                        [key]: value
-                    }
+                    components: newComponents
                 };
             };
 

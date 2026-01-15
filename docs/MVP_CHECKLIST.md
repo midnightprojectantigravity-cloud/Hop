@@ -6,36 +6,23 @@ This is the complete **MVP_CHECKLIST.md**. It serves as the final "Golden Contra
 
 ## 1. Core Engine & Determinism (The Foundation)
 
-*The game must be a mathematically perfect simulation before it is a visual experience.*
-
-* [x] **Deterministic Action Log**: Every session generates a serializable `ActionLog` + `initialSeed`.
-* [x] **Zero-Mutation State**: All `GameState` transitions happen through pure reducers. `npm test` confirms state parity across 100+ turns.
-* [x] **PRNG Integrity**: All random events (AI tie-breaks, floor generation) strictly consume from the `rngCounter`.
-* [x] **Bitmask Occupancy**: Collision and spatial checks use `BigInt` bitmasks for  performance.
+* [x] **Deterministic Action Log**: command/action recording exists (commandLog/actionLog) — see logic.ts:628-637.
+* [x] **Zero-Mutation State**: gameReducer drives state transitions — see logic.ts:320-336.
+* [x] **PRNG Integrity**: rng consumption via consumeRandom — see rng.ts.
+* [x] **Bitmask Occupancy**: spatial mask refresh exists — see spatial.ts.
 
 ---
 
 ## 2. Gameplay Mechanics (The "10-Level Arcade")
 
-*A complete "Run" must be playable from start to finish with tactical depth.*
+* [ ] **Strategic Hub**: Hub UI wiring / dedicated Hub screen incomplete — check current Hub rendering in App.tsx and consider a dedicated [apps/web/src/components/Hub.tsx] screen.
+* [x] **Archetype Selection**: Loadouts and serialization exist (DEFAULT_LOADOUTS, applyLoadoutToPlayer) — see loadout.ts.
+* [x] **The Academy**:  Tutorial scenarios + replay gallery present — see TutorialManager.tsx and ReplayManager.tsx.
 
-* [x] **The 3-Slot Skill System**:
-Vanguard Archetype
-* **Offensive**: Spear Throw.
-* **Defensive**: Shield Bash (with Wall Slam stun logic).
-* **Utility**: Jump (Leap over hazards/actors, stun neighbors, 1 turn CD).
-
-Skirmisher Archetype
-* **Offensive**: Grapple Hook (Standard/Heavy branching).
-* **Defensive**: Shield Throw.
-* **Utility**: Vault (Leap over hazards/actors, stun neighbors every other time, no CD).
-
-
-* [ ] **Unified Actor Logic**: All 5 base enemies (Footman, Archer, Bomber, Shield Bearer, Assassin) use the same `SkillInstance` logic as the player.
-* [x] **Floor Escalation**: Enemy "Point Budget" increases from Floor 1 to 10.
-* [x] **Victory Condition**: Reaching the Floor 10 stairs or dying triggers the "Run Complete" / "Game Over" state and score calculation.
-
----
+* [x] **The 3-Slot Skill System**: implemented (compositional + legacy) — see skillRegistry.ts and SkillTray.tsx.
+* [ ] **Unified Actor Logic**: same skill behavior for all enemies — tests and refactor needed — file targets: initiative.ts and packages/engine/src/skills/**.
+* [ ] **ActionLog Export**: UI/API missing — add in ReplayManager.tsx and supporting helpers in index.ts.
+Hub & Meta
 
 ## 3. Architecture & Monorepo (The Plumbing)
 
@@ -51,23 +38,12 @@ Skirmisher Archetype
 
 ---
 
-## 4. The Strategic Hub (Meta Interface)
-
-*The Hub is the persistent entry point where the player makes high-level decisions before entering the tactical grid.*
-
-* [x] **Archetype Selection**: Choice of starting loadout (e.g., *Vanguard*, *Skirmisher*) which injects specific skills into the engine.
-* [x] **The Academy (Tutorials)**: A dedicated list of "Executable Scenarios" that teach mechanics (Spear, Bash, Jump) using the engine’s verification logic.
-* [x] **Replay Gallery**: A browser for saved `ActionLogs`. Selecting one re-runs the simulation in the Game Interface in "Watch Mode."
-* [x] **Global Persistence**: Choice of archetype, high-score history, and tutorial completion status saved to `localStorage`.
-
----
-
 ## 5. The Main Game Interface (Tactical Grid)
 
 *The gameplay view is a "thin client" focused entirely on tactical execution and visual feedback.*
 
-* [x] **Portrait Optimization**: A clean 9x11 grid layout optimized for mobile screens with zero UI clutter.
-* [x] **Action Input**: Simplified controls for Movement, Skipping Turns, and 3 specific Skill slots.
+* [x] **Thin-client GameBoard & inputs**: wired — see GameBoard.tsx and App.tsx.
+* [ ] **Hub UX revamp requested (separate screen, cleaner layout)**: UI change in [apps/web/src/components/Hub.tsx] (to add) and styles.
 
 ---
 
@@ -75,7 +51,7 @@ Skirmisher Archetype
 
 *The UI must communicate engine events with high-fidelity feedback.*
 
-* [x] **Visual Event Pipeline**: The engine emits `AtomicEffects` (Shake, Freeze, Text). The UI maps these to:
+* [x] **Visual Event Pipeline**: present (engine emits effects) — see effectEngine.ts and GameBoard mapping. The UI maps these to:
 * **Impact Freeze**: 50ms pause on enemy death.
 * **Radial Shake**: Triggered on Bomb explosions.
 * **Combat Text**: Pop-ups for "Stunned!", "Sunk!", and Damage numbers.
@@ -85,55 +61,43 @@ Skirmisher Archetype
 
 ---
 
-## 7. The Headless Engine (@hop/engine)
-
-*The "Brain" of the game must be a mathematically perfect, isolated simulation.*
-
-* [x] **Deterministic Command-Stream**: Every state change is driven by `(State, Action) => NewState`. No hidden side effects.
-* [x] **PRNG Integrity**: All entropy (enemy spawns, AI tie-breakers) is derived from the `initialSeed` and `rngCounter`.
-* [x] **Unified Actor System**: Both Player and Enemies use the same skill objects and "Weight Class" logic (Standard vs. Heavy).
-* [x] **Bitmask Performance**: Occupancy and spatial lookups use `BigInt` bitmasks to allow for high-speed AI simulations.
-
----
-
 ## 8. Verification & Scenario Testing
 
 *Quality is enforced through code, not manual play-testing.*
 
-* [x] **Tutorial-as-Test**: Every tutorial in the Hub must also exist as a test in `packages/engine/tests/scenarios`. If a mechanic changes, the test fails. Move all the test scenarios from the skill files to the scenarios folder.
-* [x] **Skill Scenarios**: Each skill (especially Grapple Hook) has at least 3 verified scenarios (Positive, Negative, Hazard Interaction).
+* [ ] **Tutorial-as-Test**: Every tutorial in the Hub must also exist as a test in `packages/engine/tests/scenarios`. If a mechanic changes, the test fails. Move all the test scenarios from the skill files to the scenarios folder.
+* [x] **Skill Scenarios**: embedded in skill defs (compositional scenarios) and unit tests exist — see [packages/engine/src/skills/**/scenarios] and [apps/web/src/tests].
 * [ ] **Multi-System Scenarios**: Verified tests for complex interactions (e.g., "Hook a target into a Bomb that pushes a Shield Bearer into Lava").
 * [x] **Behavioral Fuzzing**: The `fuzzTest.ts` script successfully completes 10,000 random turns without engine crashes or illegal state overlaps.
 * [ ] **ID Intersection**: All passive skills (Auto-Attack) must use Identity intersection (Start ID in End IDs) instead of previousPosition logic.
 
 ---
 
-## 9. Scoring & Validation (Leaderboard)
+## 9. Known Bug/Todo Highlights (from repo + feedback)
 
-*Anti-cheat and competitive integrity are baked into the engine.*
+* [x] **Basic Attack was preempting offensive slot**: fixed by marking BASIC_ATTACK passive at basic_attack.ts.
+* [x] **Hub selection flow needed APPLY_LOADOUT + selectedLoadout persistence**: addressed in logic.ts and App.tsx.
+* [x] **Auto-attack identity logic largely present in AUTO_ATTACK (uses ID intersection)**: see auto_attack.ts, but verify all entry points capture persistent IDs at turn start.
 
-* [x] **Score Formula Parity**: `Score = (Floor * 1000) + (HP * 100) - (Turns * 10)`. The logic must be identical on the Client and the `validator` app.
-* [ ] **ActionLog Export**: Ability to export a JSON string of a run that can be imported and replayed bit-for-bit on another device.
-* [ ] **Server-Side Re-run**: The `validator` successfully re-simulates a full 10-floor log and confirms the score matches.
-* [x] **Local Persistence**: `localStorage` saves the current run state and high scores.
 
----
+# Add on
 
-## 🛑 Blockers for Shipping (The "No-Go" List)
+## UI Preview system
+Focusing on Level 1 (Movement/Attack) and Level 2 (Skill Range/Targeting) is the right move because these form the "spatial vocabulary" of the player. If these aren't perfectly clear, the higher-level physics (Level 4) will just feel like chaos.
 
-*If any of these occur, the build is rejected.*
+Since we are working with a flat-top hex grid, the visual logic for these levels needs to handle the staggered column offsets correctly.
 
-1. **Determinism Break**: Does the same seed + action log ever produce a different result? (Must be **NO**).
-2. **UI Leak**: Does the `engine` package require `window`, `document`, or `React`? (Must be **NO**).
-3. **Friendly Fire**: Does `AUTO_ATTACK` (Punch) damage allied units? (Must be **NO**).
-4. **Invalid Move**: Can an actor ever occupy the same hex as another actor or a wall? (Must be **NO**).
-5. Can a player move onto a Lava tile without taking damage? (Must be **No**)
-6. Does the server validator require browser APIs (window/document)? (Must be **No**)
+* **Level 1**: Intent to Move & Opportunity
+* This is the baseline state. When the player clicks their character, you aren't just showing "where they can go," you are showing zones of influence.
+* The "Walkable" Bloom: Instead of just highlighting hexes, use a "flood-fill" (Dijkstra) up to the player's movement points. This needs to account for walls and other units.
+* The Passive Threat Ring: Subtly highlight the 1-tile ring around the player. This indicates their Auto-Attack range. If an enemy is in this ring, the highlight should change (e.g., a red inner border) to show they will be hit by the "Identity" attack.
 
----
+* **Level 2**: Skill Reach & Validity
+* This level triggers when a skill like SHIELD_THROW or GRAPPLE_HOOK is selected. It overlays the movement grid.
+* The Hard Range Border: A bold outline at dist === 4.
+* LoS Shadow-casting: This is where your getHexLine logic comes into play visually. Tiles behind a wall within the range should be "dimmed" or not highlighted at all.
+* Target Validity Markers: * Grapple Hook: Highlight units (Standard) and Walls/Pillars (Heavy) differently.
+* Shield Throw: Only highlight units.
 
-### Developer Final Instruction
-
-Focus on the **Scenario Tests** first. If you can prove the **Grapple Hook** flings an enemy into lava via a headless test, the UI implementation is just a matter of connecting the sprites. **The Hub is the home of your meta; the Grid is the home of your math.**
-
-> "World-Class" doesn't mean "Feature Complete." It means "Architecture Perfect." Prioritize the **Determinism** and **Scenario Tests** over adding a 6th enemy type. If the foundation is solid, content expansion is trivial.
+* **Implementation for the Headless Engine**
+* To support these levels in your automated testing framework, you'll want to expose a getValidTargets method in your skill definitions. This allows the UI to call the same logic the engine uses to validate a turn.

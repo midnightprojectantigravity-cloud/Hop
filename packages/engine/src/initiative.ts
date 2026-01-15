@@ -16,6 +16,8 @@
  */
 
 import type { Actor, Point, GameState, InitiativeEntry, InitiativeQueue } from './types';
+import { getNeighbors } from './hex';
+import { getActorAt } from './helpers';
 
 /** Default initiative values by actor type */
 export const DEFAULT_INITIATIVE = {
@@ -169,9 +171,13 @@ export const startActorTurn = (state: GameState, actor: Actor): InitiativeQueue 
 
     const updatedEntries = queue.entries.map(entry => {
         if (entry.actorId === actor.id) {
+            // Capture both position and identity-based neighbor IDs at turn start
+            const neighborPositions = getNeighbors(actor.position);
+            const neighborIds = neighborPositions.map(p => getActorAt(state, p)?.id).filter(Boolean) as string[];
             return {
                 ...entry,
                 turnStartPosition: { ...actor.position },
+                turnStartNeighborIds: neighborIds,
             };
         }
         return entry;
@@ -216,6 +222,14 @@ export const getTurnStartPosition = (state: GameState, actorId: string): Point |
 
     const entry = queue.entries.find(e => e.actorId === actorId);
     return entry?.turnStartPosition ?? null;
+};
+
+export const getTurnStartNeighborIds = (state: GameState, actorId: string): string[] | null => {
+    const queue = state.initiativeQueue;
+    if (!queue) return null;
+
+    const entry = queue.entries.find(e => e.actorId === actorId);
+    return entry?.turnStartNeighborIds ?? null;
 };
 
 /**

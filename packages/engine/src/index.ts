@@ -12,3 +12,5 @@ export * from './rng';
 export * from './skillRegistry';
 export * from './themeLogic';
 export * from './spatial';
+export * from './score';
+export * from './serialize';

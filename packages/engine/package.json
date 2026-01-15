@@ -10,7 +10,9 @@
     },
     "scripts": {
         "build": "tsc",
-        "test": "vitest run"
+            "test": "vitest run",
+            "validate-replay": "node ./scripts/validateReplay.js",
+            "check-rng-parity": "node ./scripts/checkRngParity.js"
     },
     "dependencies": {},
     "devDependencies": {

@@ -16,18 +16,18 @@ export const SHIELD_BASH: SkillDefinition = {
         cost: 0,
         cooldown: 2,
     },
-    execute: (state: GameState, attacker: Actor, target?: Point, _activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[] } => {
+    execute: (state: GameState, attacker: Actor, target?: Point, _activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
 
-        if (!target) return { effects, messages };
-        if (!attacker || !attacker.position) return { effects, messages };
+        if (!target) return { effects, messages, consumesTurn: false };
+        if (!attacker || !attacker.position) return { effects, messages, consumesTurn: false };
 
         // 1. Validation
         const dist = hexDistance(attacker.position, target);
         if (dist > 1) {
             messages.push('Target out of range!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         // 2. Identify Targets (3-hex Arc)

@@ -4,11 +4,13 @@ import { gameReducer, generateInitialState } from './logic';
 import { ENEMY_STATS } from './constants';
 import { hexEquals } from './hex';
 import { isPlayerTurn } from './initiative';
+import { SCENARIO_COLLECTIONS } from './scenarios';
+import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './components';
 
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
  */
-class ScenarioEngine {
+export class ScenarioEngine {
     state: GameState;
     logs: string[] = [];
 
@@ -41,7 +43,11 @@ class ScenarioEngine {
                     upgrades: Object.keys(def?.upgrades || {}),
                     activeUpgrades: []
                 } as any;
-            })
+            }),
+            components: new Map<string, GameComponent>([
+                ['physics', { type: 'physics', weightClass: 'Standard' } as PhysicsComponent],
+                ['archetype', { type: 'archetype', archetype } as ArchetypeComponent]
+            ])
         };
     }
 
@@ -70,7 +76,10 @@ class ScenarioEngine {
                 range: 1,
                 upgrades: [],
                 activeUpgrades: []
-            }]
+            }],
+            components: new Map<string, GameComponent>([
+                ['physics', { type: 'physics', weightClass: stats.weightClass || 'Standard' } as PhysicsComponent]
+            ])
         });
     }
 
@@ -109,12 +118,7 @@ class ScenarioEngine {
     }
 
     useSkill(skillId: string, target?: Point) {
-        const action: Action = { type: 'USE_SKILL', payload: { skillId, target } };
-        const oldLogLength = this.state.message.length;
-        const nextState = gameReducer(this.state, action);
-        const newMessages = nextState.message.slice(oldLogLength);
-        this.logs.push(...newMessages);
-        this.state = nextState;
+        this.dispatch({ type: 'USE_SKILL', payload: { skillId, target } });
     }
 
     dispatch(action: Action) {
@@ -148,6 +152,10 @@ class ScenarioEngine {
 
     move(pos: Point) {
         this.dispatch({ type: 'MOVE', payload: pos });
+    }
+
+    exitToHub() {
+        this.dispatch({ type: 'EXIT_TO_HUB' });
     }
 }
 
@@ -196,15 +204,16 @@ async function runTests() {
     let passed = 0;
     let failed = 0;
 
-    for (const [skillId, definition] of Object.entries(COMPOSITIONAL_SKILLS)) {
-        log(`Skill: ${definition.name} (${skillId})`);
+    for (const collection of SCENARIO_COLLECTIONS) {
+        log(`Collection: ${collection.name} (${collection.id})`);
+        log(`  ${collection.description}`);
 
-        if (!definition.scenarios || definition.scenarios.length === 0) {
+        if (!collection.scenarios || collection.scenarios.length === 0) {
             log('  (No scenarios)');
             continue;
         }
 
-        for (const scenario of definition.scenarios) {
+        for (const scenario of collection.scenarios) {
             log(`  Scenario: ${scenario.title}`);
 
             const initialState = generateInitialState(1, 'test-seed');
@@ -258,4 +267,7 @@ async function runTests() {
     process.exit(failed > 0 ? 1 : 0);
 }
 
-runTests();
+// Only run the skill test runner when explicitly requested via env var.
+if (typeof process !== 'undefined' && process.env.SKILL_TESTS_RUN === '1') {
+    runTests();
+}

@@ -16,7 +16,8 @@ export const BASIC_ATTACK: SkillDefinition = {
     id: 'BASIC_ATTACK',
     name: 'Basic Attack',
     description: 'Strike an adjacent enemy for 1 damage.',
-    slot: 'offensive',
+    // Basic attack is a passive/melee interaction (punch) and should not occupy the offensive slot
+    slot: 'passive',
     icon: '⚔️',
     baseVariables: {
         range: 1,
@@ -30,7 +31,7 @@ export const BASIC_ATTACK: SkillDefinition = {
 
         if (!target) {
             messages.push('Select a target!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         // Validate range
@@ -40,14 +41,14 @@ export const BASIC_ATTACK: SkillDefinition = {
 
         if (dist > range || dist < 1) {
             messages.push('Target out of range!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         // Find entity at target
         const targetActor = getActorAt(state, target);
         if (!targetActor || targetActor.id === attacker.id) {
             messages.push('No enemy at target!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         // Calculate damage

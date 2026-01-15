@@ -1,6 +1,7 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance, hexEquals, getNeighbors } from '../hex';
 import { getEnemyAt } from '../helpers';
+import { getComponent, type VaultComponent } from '../components';
 
 /**
  * Implementation of the Vault skill (Enyo Utility)
@@ -17,16 +18,16 @@ export const VAULT: SkillDefinition = {
         cost: 0,
         cooldown: 0,
     },
-    execute: (state: GameState, attacker: Actor, target?: Point, _activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[] } => {
+    execute: (state: GameState, attacker: Actor, target?: Point, _activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
 
-        if (!target) return { effects, messages };
+        if (!target) return { effects, messages, consumesTurn: false };
 
         const dist = hexDistance(attacker.position, target);
         if (dist < 1 || dist > 2) {
             messages.push('Out of range!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         const isWall = state.wallPositions.some(w => hexEquals(w, target));
@@ -35,14 +36,20 @@ export const VAULT: SkillDefinition = {
 
         if (isWall || isLava || isOccupiedByEnemy) {
             messages.push('Blocked!');
-            return { effects, messages };
+            return { effects, messages, consumesTurn: false };
         }
 
         // Vault counter logic
-        const vaultCounter = (attacker.components?.vaultCounter || 0) + 1;
+        const vaultComp = getComponent<VaultComponent>(attacker.components, 'vault');
+        const vaultCounter = (vaultComp?.counter || 0) + 1;
         const shouldStun = vaultCounter % 2 === 0;
 
-        effects.push({ type: 'UpdateComponent', target: 'self', key: 'vaultCounter', value: vaultCounter });
+        effects.push({
+            type: 'UpdateComponent',
+            target: 'self',
+            key: 'vault',
+            value: { type: 'vault', counter: vaultCounter } as VaultComponent
+        });
 
         // Use AtomicEffect to update component if the engine supports it, 
         // but currently we don't have UpdateComponent atomic effect.

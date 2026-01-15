@@ -11,7 +11,7 @@ import type { ReplayRecord } from './components/ReplayManager';
 import { hexEquals } from '@hop/engine/hex';
 import { GRID_WIDTH, GRID_HEIGHT } from '@hop/engine/constants';
 import { isPlayerTurn } from '@hop/engine/initiative';
-import { ArchetypeSelector } from './components/ArchetypeSelector';
+import { Hub } from './components/Hub';
 import type { Loadout } from '@hop/engine/loadout';
 
 function App() {
@@ -20,29 +20,22 @@ function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Migrate occupancyMask entries (BigInt) which were serialized to strings
         if (parsed && Array.isArray(parsed.occupancyMask)) {
           parsed.occupancyMask = parsed.occupancyMask.map((v: any) => typeof v === 'string' ? BigInt(v) : v);
         }
-        // Integrity Check: Discard save if grid dimensions changed in constants.ts
         const isCompatible = parsed.gridWidth === GRID_WIDTH && parsed.gridHeight === GRID_HEIGHT;
 
         if (isCompatible && (parsed.gameStatus === 'playing' || parsed.gameStatus === 'choosing_upgrade')) {
-          // Migration: ensure message is an array
-          if (!Array.isArray(parsed.message)) {
-            parsed.message = [];
-          }
+          if (!Array.isArray(parsed.message)) parsed.message = [];
           return parsed;
         }
-      } catch (e) { console.error("Failed to load save", e); }
+      } catch (e) { console.error('Failed to load save', e); }
     }
     return generateHubState();
   });
 
   useEffect(() => {
-    console.log('Game Status Changed:', gameState.gameStatus);
     if (gameState.gameStatus === 'playing' || gameState.gameStatus === 'choosing_upgrade') {
-      // JSON.stringify cannot serialize BigInt; convert BigInt values to strings during save.
       const safeStringify = (obj: any) => JSON.stringify(obj, (_k, v) => typeof v === 'bigint' ? v.toString() : v);
       localStorage.setItem('hop_save', safeStringify(gameState));
     } else {
@@ -50,18 +43,11 @@ function App() {
     }
   }, [gameState]);
 
-  // Handle Enemy Turns with a delay
   useEffect(() => {
     if (gameState.gameStatus !== 'playing') return;
-
     const playerTurn = isPlayerTurn(gameState);
-
-    // If it's not the player's turn, trigger an advance after a delay
     if (!playerTurn) {
-      // console.log(`[Turn Management] Processing Turn for actor index: ${gameState.initiativeQueue?.currentIndex}`);
-      const timer = setTimeout(() => {
-        dispatch({ type: 'ADVANCE_TURN' });
-      }, 100); // Reduced delay for faster turns
+      const timer = setTimeout(() => dispatch({ type: 'ADVANCE_TURN' }), 100);
       return () => clearTimeout(timer);
     }
   }, [gameState]);
@@ -74,102 +60,72 @@ function App() {
   const replayTimerRef = useRef<number | null>(null);
 
   const handleTileClick = (target: Point) => {
-    // 1. If a skill is selected, use it
     if (selectedSkillId) {
-      dispatch({
-        type: 'USE_SKILL',
-        payload: { skillId: selectedSkillId, target }
-      });
+      dispatch({ type: 'USE_SKILL', payload: { skillId: selectedSkillId, target } });
       setSelectedSkillId(null);
       return;
     }
-
-    // 2. If clicking the player, toggle movement range overlay
     if (hexEquals(target, gameState.player.position)) {
       setShowMovementRange(!showMovementRange);
       return;
     }
-
-    // 3. Otherwise, try to move
     dispatch({ type: 'MOVE', payload: target });
-    setShowMovementRange(false); // Hide range after moving
+    setShowMovementRange(false);
   };
 
-  const handleSelectUpgrade = (upgrade: string) => {
-    dispatch({ type: 'SELECT_UPGRADE', payload: upgrade });
-  };
-
-  const handleReset = () => {
-    dispatch({ type: 'RESET' });
-    setSelectedSkillId(null);
-  };
-
-  const handleWait = () => {
-    dispatch({ type: 'WAIT' });
-    setSelectedSkillId(null);
-  };
+  const handleSelectUpgrade = (upgrade: string) => dispatch({ type: 'SELECT_UPGRADE', payload: upgrade });
+  const handleReset = () => { dispatch({ type: 'RESET' }); setSelectedSkillId(null); };
+  const handleWait = () => { dispatch({ type: 'WAIT' }); setSelectedSkillId(null); };
 
   const startReplay = (r: ReplayRecord) => {
     if (!r) return;
     const seed = r.seed || r.id || String(Date.now());
     const init = generateInitialState(1, seed);
     dispatch({ type: 'LOAD_STATE', payload: init } as Action);
-
-    if (replayTimerRef.current) {
-      window.clearInterval(replayTimerRef.current);
-    }
-
+    if (replayTimerRef.current) window.clearInterval(replayTimerRef.current);
     replayIndexRef.current = 0;
     replayTimerRef.current = window.setInterval(() => {
       const idx = replayIndexRef.current;
-      if (idx >= r.actions.length) {
-        if (replayTimerRef.current) window.clearInterval(replayTimerRef.current);
-        return;
-      }
+      if (idx >= r.actions.length) { if (replayTimerRef.current) window.clearInterval(replayTimerRef.current); return; }
       const a = r.actions[idx];
       dispatch(a as Action);
       replayIndexRef.current = idx + 1;
     }, 300);
   };
 
-  const stopReplay = () => {
-    if (replayTimerRef.current) {
-      window.clearInterval(replayTimerRef.current);
-      replayTimerRef.current = null;
-    }
-  };
+  const stopReplay = () => { if (replayTimerRef.current) { window.clearInterval(replayTimerRef.current); replayTimerRef.current = null; } };
+  const stepReplay = (r: ReplayRecord) => { const idx = replayIndexRef.current; if (idx >= r.actions.length) return; const a = r.actions[idx]; dispatch(a as Action); replayIndexRef.current = idx + 1; };
 
-  const stepReplay = (r: ReplayRecord) => {
-    const idx = replayIndexRef.current;
-    if (idx >= r.actions.length) return;
-    const a = r.actions[idx];
-    dispatch(a as Action);
-    replayIndexRef.current = idx + 1;
-  };
+  const handleLoadScenario = (state: GameState, instructions: string) => { dispatch({ type: 'LOAD_STATE', payload: state }); setTutorialInstructions(instructions); setSelectedSkillId(null); };
 
-  const handleLoadScenario = (state: GameState, instructions: string) => {
-    dispatch({ type: 'LOAD_STATE', payload: state });
-    setTutorialInstructions(instructions);
-    setSelectedSkillId(null);
-  };
+  const handleSelectLoadout = (loadout: Loadout) => { dispatch({ type: 'APPLY_LOADOUT', payload: loadout }); };
 
-  const handleSelectLoadout = (loadout: Loadout) => {
-    console.log('App: Handling Loadout Select:', loadout.id);
-    dispatch({ type: 'START_RUN', payload: { loadoutId: loadout.id } });
+  const handleExitToHub = () => { dispatch({ type: 'EXIT_TO_HUB' }); setSelectedSkillId(null); };
+
+  const handleStartRun = () => {
+    const id = gameState.selectedLoadoutId;
+    if (!id) { console.warn('Start Run called without a selected loadout.'); return; }
+    dispatch({ type: 'START_RUN', payload: { loadoutId: id } });
   };
 
   return (
     <div className="flex w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
       {/* Left Sidebar: HUD & Tactical Log */}
       <aside className="w-80 border-r border-white/5 bg-[#030712] flex flex-col z-20 overflow-y-auto">
-        <UI gameState={gameState} onReset={handleReset} onWait={handleWait} />
+        <UI gameState={gameState} onReset={handleReset} onWait={handleWait} onExitToHub={handleExitToHub} />
       </aside>
 
       {/* Center: The Map (Full Height) */}
       <main className="flex-1 relative flex items-center justify-center bg-[#020617] overflow-hidden">
         <div className="w-full h-full p-8 flex items-center justify-center">
           {gameState.gameStatus === 'hub' ? (
-            <ArchetypeSelector onSelect={handleSelectLoadout} />
+            <Hub
+              gameState={gameState}
+              onSelectLoadout={(l) => handleSelectLoadout(l)}
+              onStartRun={handleStartRun}
+              onLoadScenario={handleLoadScenario}
+              onStartReplay={startReplay}
+            />
           ) : (
             <div className={`w-full h-full relative border border-white/5 bg-[#030712]/50 rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
               <GameBoard
@@ -194,6 +150,17 @@ function App() {
               onSelectSkill={setSelectedSkillId}
               hasSpear={gameState.hasSpear}
             />
+
+            {gameState.gameStatus === 'hub' && gameState.selectedLoadoutId && (
+              <div className="mt-4">
+                <button
+                  onClick={handleStartRun}
+                  className="w-full py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold uppercase text-sm"
+                >
+                  Start Run
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="pt-8 border-t border-white/5">

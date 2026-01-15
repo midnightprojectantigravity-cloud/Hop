@@ -8,9 +8,11 @@ import { hexEquals, hexDistance, getNeighbors } from './hex';
 import { computeEnemyAction } from './enemyAI';
 import { applyDamage } from './actor';
 import { applyAutoAttack } from './skills/auto_attack';
+import { getTurnStartNeighborIds } from './initiative';
 import { COMPOSITIONAL_SKILLS } from './skillRegistry';
 import { applyEffects } from './effectEngine';
 import { isStunned } from './helpers';
+import { tickStatuses, handleStunReset } from './systems/status';
 // RNG helpers available if needed in future (consumeRandom, nextIdFromState)
 
 export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point, targetActorId?: string): { state: GameState; messages: string[] } => {
@@ -84,15 +86,8 @@ export const resolveSingleEnemyTurn = (
   let messages: string[] = [];
   let nextEnemy: Entity = enemy;
 
-  // Pre-calculate persistent IDs relative to turn START position for Auto-Attack
-  const startNeighbors = getNeighbors(turnStartPosition);
-  // Note: We use 'state' (start of this specific turn) to determine who was adjacent
-  const persistentTargetIds = startNeighbors
-    .map(p => {
-      if (hexEquals(p, state.player.position)) return state.player.id;
-      return state.enemies.find(e => hexEquals(e.position, p))?.id;
-    })
-    .filter(id => !!id) as string[];
+  // Use identity-captured neighbor IDs (set at turn start) for Auto-Attack persistence
+  const persistentTargetIds = getTurnStartNeighborIds(state, enemy.id) || undefined;
 
   // 1. Process Bomb self-ticks
   if (enemy.subtype === 'bomb') {
@@ -107,9 +102,8 @@ export const resolveSingleEnemyTurn = (
     }
     nextEnemy = { ...enemy, actionCooldown: timer };
   } else if (isStunned(enemy)) {
-    // Tick down stun
-    const nextStatuses = enemy.statusEffects.map(s => s.type === 'stunned' ? { ...s, duration: s.duration - 1 } : s).filter(s => s.duration !== 0);
-    nextEnemy = { ...enemy, statusEffects: nextStatuses, intentPosition: undefined, intent: undefined };
+    // Tick down statuses and clear intent
+    nextEnemy = handleStunReset(tickStatuses(enemy));
   } else if (enemy.intent === 'Bombing' && enemy.intentPosition) {
     messages.push(`${enemy.subtype} placed a bomb.`);
     const bombId = `bomb_${enemy.id}_${state.turn}`;
