@@ -3,16 +3,12 @@ import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';
 import { UpgradeOverlay } from './components/UpgradeOverlay';
 import { SkillTray } from './components/SkillTray';
-import { TutorialManager } from './components/TutorialManager';
-import ReplayManager from './components/ReplayManager';
-import { gameReducer, generateInitialState, generateHubState } from '@hop/engine/logic';
-import type { Point, Action, GameState } from '@hop/engine/types';
+import { gameReducer, generateInitialState, generateHubState, hexEquals } from '@hop/engine';
+import type { Point, Action, GameState, Loadout } from '@hop/engine';
 import type { ReplayRecord } from './components/ReplayManager';
-import { hexEquals } from '@hop/engine/hex';
-import { GRID_WIDTH, GRID_HEIGHT } from '@hop/engine/constants';
-import { isPlayerTurn } from '@hop/engine/initiative';
+import { GRID_WIDTH, GRID_HEIGHT } from '@hop/engine';
+import { isPlayerTurn } from '@hop/engine';
 import { Hub } from './components/Hub';
-import type { Loadout } from '@hop/engine/loadout';
 
 function App() {
   const [gameState, dispatch] = useReducer(gameReducer, null, () => {
@@ -93,9 +89,6 @@ function App() {
     }, 300);
   };
 
-  const stopReplay = () => { if (replayTimerRef.current) { window.clearInterval(replayTimerRef.current); replayTimerRef.current = null; } };
-  const stepReplay = (r: ReplayRecord) => { const idx = replayIndexRef.current; if (idx >= r.actions.length) return; const a = r.actions[idx]; dispatch(a as Action); replayIndexRef.current = idx + 1; };
-
   const handleLoadScenario = (state: GameState, instructions: string) => { dispatch({ type: 'LOAD_STATE', payload: state }); setTutorialInstructions(instructions); setSelectedSkillId(null); };
 
   const handleSelectLoadout = (loadout: Loadout) => { dispatch({ type: 'APPLY_LOADOUT', payload: loadout }); };
@@ -108,6 +101,33 @@ function App() {
     dispatch({ type: 'START_RUN', payload: { loadoutId: id } });
   };
 
+  if (gameState.gameStatus === 'hub') {
+    return (
+      <div className="w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
+        <Hub
+          gameState={gameState}
+          onSelectLoadout={(l) => handleSelectLoadout(l)}
+          onStartRun={handleStartRun}
+          onLoadScenario={handleLoadScenario}
+          onStartReplay={startReplay}
+        />
+        {/* Hub instructions overlay */}
+        {tutorialInstructions && (
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-blue-900/90 border border-blue-500/30 p-4 rounded-xl backdrop-blur-md shadow-xl z-30 max-w-lg text-center animate-in fade-in slide-in-from-top-4">
+            <h4 className="text-blue-200 font-bold uppercase text-xs tracking-widest mb-1">Simulation Objective</h4>
+            <p className="text-white text-sm">{tutorialInstructions}</p>
+            <button
+              onClick={() => setTutorialInstructions(null)}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-blue-950 rounded-full border border-blue-500/50 flex items-center justify-center text-xs hover:bg-blue-800 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
       {/* Left Sidebar: HUD & Tactical Log */}
@@ -118,28 +138,18 @@ function App() {
       {/* Center: The Map (Full Height) */}
       <main className="flex-1 relative flex items-center justify-center bg-[#020617] overflow-hidden">
         <div className="w-full h-full p-8 flex items-center justify-center">
-          {gameState.gameStatus === 'hub' ? (
-            <Hub
+          <div className={`w-full h-full relative border border-white/5 bg-[#030712]/50 rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
+            <GameBoard
               gameState={gameState}
-              onSelectLoadout={(l) => handleSelectLoadout(l)}
-              onStartRun={handleStartRun}
-              onLoadScenario={handleLoadScenario}
-              onStartReplay={startReplay}
+              onMove={handleTileClick}
+              selectedSkillId={selectedSkillId}
+              showMovementRange={showMovementRange}
             />
-          ) : (
-            <div className={`w-full h-full relative border border-white/5 bg-[#030712]/50 rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
-              <GameBoard
-                gameState={gameState}
-                onMove={handleTileClick}
-                selectedSkillId={selectedSkillId}
-                showMovementRange={showMovementRange}
-              />
-            </div>
-          )}
+          </div>
         </div>
       </main>
 
-      {/* Right Sidebar: Skills & Replays */}
+      {/* Right Sidebar: Skills */}
       <aside className="w-80 border-l border-white/5 bg-[#030712] flex flex-col z-20 overflow-y-auto">
         <div className="p-6 flex flex-col gap-8 h-full">
           <div className="flex-1">
@@ -149,33 +159,14 @@ function App() {
               selectedSkillId={selectedSkillId}
               onSelectSkill={setSelectedSkillId}
               hasSpear={gameState.hasSpear}
-            />
-
-            {gameState.gameStatus === 'hub' && gameState.selectedLoadoutId && (
-              <div className="mt-4">
-                <button
-                  onClick={handleStartRun}
-                  className="w-full py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold uppercase text-sm"
-                >
-                  Start Run
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="pt-8 border-t border-white/5">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/30 mb-4">Historical Replay</h3>
-            <ReplayManager
               gameState={gameState}
-              onStartReplay={startReplay}
-              onStopReplay={stopReplay}
-              onStepReplay={stepReplay}
             />
           </div>
 
-          <div className="pt-8 border-t border-white/5">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/30 mb-4">Training Simulations</h3>
-            <TutorialManager onLoadScenario={handleLoadScenario} />
+          <div className="pt-8 border-t border-white/5 text-center">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-white/20">
+              Hop Engine v5.0
+            </div>
           </div>
         </div>
       </aside>

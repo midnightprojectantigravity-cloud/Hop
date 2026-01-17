@@ -1,18 +1,21 @@
 import React from 'react';
-import type { Skill, SkillSlot } from '@hop/engine/types';
+import type { Skill, SkillSlot, GameState } from '@hop/engine';
+import { getSkillDefinition } from '@hop/engine';
 
 interface SkillTrayProps {
     skills: Skill[];
     selectedSkillId: string | null;
     onSelectSkill: (skillId: string | null) => void;
     hasSpear: boolean;
+    gameState: GameState;
 }
 
 export const SkillTray: React.FC<SkillTrayProps> = ({
     skills,
     selectedSkillId,
     onSelectSkill,
-    hasSpear
+    hasSpear,
+    gameState
 }) => {
     // Organize skills by slot
     const slots: SkillSlot[] = ['offensive', 'defensive', 'utility'];
@@ -27,6 +30,11 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                 const isOnCooldown = skill.currentCooldown > 0;
                 const isSpearSlot = skill.id === 'SPEAR_THROW';
                 const cannotUse = (isOnCooldown && !isSpearSlot) || (isSpearSlot && !hasSpear);
+
+                const def = getSkillDefinition(skill.id);
+                const rawName = def?.name || skill.name;
+                const displayName = typeof rawName === 'function' ? rawName(gameState) : rawName;
+                const displayIcon = def?.icon || '🏷️';
 
                 return (
                     <button
@@ -43,10 +51,10 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                         `}
                     >
                         <span className="text-3xl">
-                            {skill.id === 'SPEAR_THROW' ? '🔱' : (skill.id === 'SHIELD_BASH' ? '🛡️' : '🏷️')}
+                            {displayIcon}
                         </span>
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-white/50">
-                            {skill.name}
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-white/50 text-center px-2">
+                            {displayName}
                         </span>
 
                         {isOnCooldown && !isSpearSlot && (

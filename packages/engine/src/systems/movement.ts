@@ -2,7 +2,9 @@ import type { GameState, Point, AtomicEffect } from '../types';
 import { hexDistance, hexEquals, getHexLine, getDirectionFromTo, hexDirection, hexAdd } from '../hex';
 import { getEnemyAt, isWalkable, isOccupied } from '../helpers';
 import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
-import { applyEffects, applyAtomicEffect } from '../effectEngine';
+import { applyEffects, applyAtomicEffect } from './effect-engine';
+import { prepareKineticSimulation, translate1DToHex } from './hex-bridge';
+import { resolveKineticDash } from './kinetic-kernel';
 
 /**
  * Movement System
@@ -96,3 +98,98 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
 
     return applyEffects(state, moveEffects, { targetId: actorId });
 };
+
+export interface KineticRequest {
+    sourceId: string;
+    target: Point;
+    momentum: number;
+}
+
+export interface KineticStep {
+    actorId: string;
+    hexPos: Point;
+    isLead: boolean;
+}
+
+export interface KineticResult {
+    steps: KineticStep[][];
+    effects: AtomicEffect[];
+    messages: string[];
+}
+
+/**
+ * processKineticRequest
+ * Orchestrates the translation of hex coordinates to the 1D kinetic kernel and back.
+ * Returns the final positions and collision data, including environmental hazards.
+ */
+export function processKineticRequest(state: GameState, request: KineticRequest): KineticResult {
+    const simulation = prepareKineticSimulation(request.sourceId, request.target, request.momentum, state);
+    const intention = resolveKineticDash(simulation.state);
+
+    const effects: AtomicEffect[] = [];
+    const messages: string[] = [];
+    const deadIds = new Set<string>();
+    let chainBroken = false;
+
+    const steps: KineticStep[][] = [];
+
+    for (let p = 0; p < intention.steps.length; p++) {
+        if (chainBroken) break;
+
+        const pulseState = intention.steps[p];
+        const leadId = intention.activeIdAtStep[p];
+        const pulseSteps: KineticStep[] = [];
+
+        // Sort front-to-back to ensure hazards hit the front unit first
+        const sortedEntities = [...pulseState].sort((a, b) => b.pos - a.pos);
+
+        for (const entity of sortedEntities) {
+            if (entity.type === 'I' || deadIds.has(entity.id)) continue;
+
+            const hexPos = translate1DToHex(simulation.origin, simulation.directionVector, entity.pos);
+            const isLead = entity.id === leadId;
+
+            // 1. Environmental Hazard Check
+            const onLava = state.lavaPositions.some(l => hexEquals(l, hexPos));
+            if (onLava) {
+                effects.push({ type: 'Damage', target: entity.id, amount: 999, reason: 'lava_sink' });
+                deadIds.add(entity.id);
+                messages.push(`${entity.id} sank into lava!`);
+
+                if (isLead) {
+                    chainBroken = true;
+                    messages.push(`The chain broke! Remaining momentum lost.`);
+                }
+                continue;
+            }
+
+            // 2. Add to pulse steps
+            pulseSteps.push({ actorId: entity.id, hexPos, isLead });
+
+            // 3. Generate Displacement Effect
+            effects.push({
+                type: 'Displacement',
+                target: entity.id === request.sourceId ? 'self' : entity.id,
+                destination: hexPos
+            });
+        }
+        steps.push(pulseSteps);
+    }
+
+    // 4. Collision/Impact Check (Kernel-level remaining momentum)
+    if (intention.remainingMomentum > 0) {
+        // Find the lead unit that hit the obstacle
+        const frontUnit = steps[steps.length - 1]?.find(s => s.isLead);
+        if (frontUnit) {
+            effects.push({
+                type: 'ApplyStatus',
+                target: frontUnit.hexPos,
+                status: 'stunned',
+                duration: 1
+            });
+            messages.push(`${frontUnit.actorId} hit an obstacle and was stunned!`);
+        }
+    }
+
+    return { steps, effects, messages };
+}

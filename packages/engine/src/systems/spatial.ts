@@ -4,59 +4,39 @@
  * Allows for constant-time lookups in high-frequency AI loops.
  * TODO: Implement "Multi-layer Masks" to separate walls, enemies, and hazards.
  */
-import type { GameState, Point } from './types';
-import { getNeighbors } from './hex';
-import { isHexInRectangularGrid } from './hex';
-import { isWalkable, isOccupied } from './helpers';
-
-/**
- * Initialize an empty occupancy mask for the grid.
- */
-export const createOccupancyMask = (_width: number, height: number): bigint[] => {
-    return Array(height).fill(0n);
-};
-
-/**
- * Set a position in the bitmask.
- */
-export const setOccupancy = (mask: bigint[], p: Point, value: boolean): bigint[] => {
-    const newMask = [...mask];
-    if (value) {
-        newMask[p.r] |= (1n << BigInt(p.q));
-    } else {
-        newMask[p.r] &= ~(1n << BigInt(p.q));
-    }
-    return newMask;
-};
-
-/**
- * Check if a position is occupied using the bitmask.
- */
-export const isOccupiedMask = (mask: bigint[], p: Point): boolean => {
-    if (p.r < 0 || p.r >= mask.length) return true;
-    return (mask[p.r] & (1n << BigInt(p.q))) !== 0n;
-};
+import type { GameState, Point } from '../types';
+import { getNeighbors, isHexInRectangularGrid, hexEquals } from '../hex';
+import { isWalkable, getActorAt } from '../helpers';
+import { createOccupancyMask, setOccupancy, isOccupiedMask } from './mask';
 
 /**
  * Refresh the entire occupancy mask from the current state.
+ * Strict Occupancy: Units, Player, and "Solid" items (Bombs) share the mask.
  */
 export const refreshOccupancyMask = (state: GameState): bigint[] => {
     let mask = createOccupancyMask(state.gridWidth, state.gridHeight);
 
-    // Add Walls
+    // 1. Add Environment (Walls are ALWAYS solid)
     state.wallPositions.forEach(p => {
         mask = setOccupancy(mask, p, true);
     });
 
-    // Add Player
+    // 2. Add Player
     mask = setOccupancy(mask, state.player.position, true);
 
-    // Add Enemies
+    // 3. Add Enemies & Solid Subtypes (Bombs)
     state.enemies.forEach(e => {
         mask = setOccupancy(mask, e.position, true);
     });
 
     return mask;
+};
+
+/**
+ * High-performance bitwise check for occupancy.
+ */
+export const isTileBlocked = (state: GameState, p: Point): boolean => {
+    return isOccupiedMask(state.occupancyMask, p);
 };
 
 /**
@@ -66,28 +46,38 @@ export const refreshOccupancyMask = (state: GameState): bigint[] => {
 export const getMovementRange = (state: GameState, origin: Point, movePoints: number): Point[] => {
     const visited = new Map<string, number>();
     const out: Point[] = [];
-
     const key = (p: Point) => `${p.q},${p.r},${p.s}`;
 
-    // Simple queue for BFS (since all costs are 1)
     const q: Array<{ p: Point; cost: number }> = [{ p: origin, cost: 0 }];
+    visited.set(key(origin), 0);
 
     while (q.length) {
         const cur = q.shift()!;
-        const k = key(cur.p);
-        if (visited.has(k) && visited.get(k)! <= cur.cost) continue;
-        visited.set(k, cur.cost);
 
-        if (cur.cost > 0) out.push(cur.p);
         if (cur.cost >= movePoints) continue;
 
         for (const n of getNeighbors(cur.p)) {
+            // 1. Boundary Check
             if (!isHexInRectangularGrid(n, state.gridWidth, state.gridHeight)) continue;
+
+            // 2. Wall/Lava Check (Environment)
             if (!isWalkable(n, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight)) continue;
-            if (isOccupied(n, state)) continue;
+
+            // 3. THE FIX: Occupancy Check
+            // We only care if SOMEONE ELSE is there. 
+            // If we check isOccupied(n) and 'n' is where we are moving, 
+            // it must be empty of OTHER actors.
+            const occupant = getActorAt(state, n);
+            if (occupant && !hexEquals(n, origin)) continue;
+
             const nk = key(n);
-            if (visited.has(nk) && visited.get(nk)! <= cur.cost + 1) continue;
-            q.push({ p: n, cost: cur.cost + 1 });
+            const newCost = cur.cost + 1;
+
+            if (!visited.has(nk) || visited.get(nk)! > newCost) {
+                visited.set(nk, newCost);
+                out.push(n);
+                q.push({ p: n, cost: newCost });
+            }
         }
     }
 

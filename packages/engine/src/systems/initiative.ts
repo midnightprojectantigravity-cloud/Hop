@@ -15,9 +15,9 @@
  * - Only hits targets that were adjacent at turn start AND are adjacent at turn end
  */
 
-import type { Actor, Point, GameState, InitiativeEntry, InitiativeQueue } from './types';
-import { getNeighbors } from './hex';
-import { getActorAt } from './helpers';
+import type { Actor, Point, GameState, InitiativeEntry, InitiativeQueue } from '../types';
+import { getNeighbors } from '../hex';
+import { getActorAt } from '../helpers';
 
 /** Default initiative values by actor type */
 export const DEFAULT_INITIATIVE = {

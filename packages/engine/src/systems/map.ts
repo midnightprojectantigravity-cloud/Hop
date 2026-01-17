@@ -4,8 +4,8 @@
  * Optimized for mobile portrait (diamond grid).
  * TODO: Implement "Hazard Generation" (e.g. dynamic spikes or traps) using the same RNG seed.
  */
-import type { Point, Room, FloorTheme, Entity } from './types';
-import { createHex, hexEquals, hexDistance, getDiamondGrid } from './hex';
+import type { Point, Room, FloorTheme, Entity } from '../types';
+import { createHex, hexEquals, hexDistance, getDiamondGrid } from '../hex';
 import { createRng } from './rng';
 import {
     ENEMY_STATS,
@@ -15,9 +15,9 @@ import {
     GRID_WIDTH,
     GRID_HEIGHT,
     HAZARD_PERCENTAGE
-} from './constants';
-import { isSpecialTile } from './helpers';
-import { createSkill } from './skills';
+} from '../constants';
+import { isSpecialTile } from '../helpers';
+import { createSkill } from './legacy-skills';
 import { type PhysicsComponent, type GameComponent } from './components';
 
 export interface DungeonResult {

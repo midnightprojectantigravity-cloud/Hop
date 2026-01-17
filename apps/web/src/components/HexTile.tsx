@@ -1,7 +1,5 @@
 import React from 'react';
-import { hexToPixel } from '@hop/engine/hex';
-import type { Point } from '@hop/engine/types';
-import { TILE_SIZE, COLORS } from '@hop/engine/constants';
+import { hexToPixel, type Point, TILE_SIZE, COLORS } from '@hop/engine';
 
 interface HexTileProps {
     hex: Point;

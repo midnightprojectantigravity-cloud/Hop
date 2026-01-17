@@ -3,17 +3,15 @@
  * Manages telegraphed attacks and enemy turn resolution.
  * TODO: Fully migrate telegraphed attacks to the SkillDefinition/COMPOSITIONAL_SKILLS system.
  */
-import type { GameState, Point, Entity, AtomicEffect } from './types';
-import { hexEquals, hexDistance, getNeighbors } from './hex';
-import { computeEnemyAction } from './enemyAI';
+import type { GameState, Point, Entity, AtomicEffect } from '../types';
+import { hexEquals, hexDistance, getNeighbors } from '../hex';
+import { computeEnemyAction } from './ai';
 import { applyDamage } from './actor';
-import { applyAutoAttack } from './skills/auto_attack';
+import { applyAutoAttack } from '../skills/auto_attack';
 import { getTurnStartNeighborIds } from './initiative';
-import { COMPOSITIONAL_SKILLS } from './skillRegistry';
-import { applyEffects } from './effectEngine';
-import { isStunned } from './helpers';
-import { tickStatuses, handleStunReset } from './systems/status';
-// RNG helpers available if needed in future (consumeRandom, nextIdFromState)
+import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
+import { applyEffects } from './effect-engine';
+import { isStunned, tickStatuses, handleStunReset } from './status';
 
 export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point, targetActorId?: string): { state: GameState; messages: string[] } => {
   let curState = state;
@@ -106,7 +104,7 @@ export const resolveSingleEnemyTurn = (
     nextEnemy = handleStunReset(tickStatuses(enemy));
   } else if (enemy.intent === 'Bombing' && enemy.intentPosition) {
     messages.push(`${enemy.subtype} placed a bomb.`);
-    const bombId = `bomb_${enemy.id}_${state.turn}`;
+    const bombId = `bomb_${enemy.id}_${state.turnNumber}`;
     const bomb: Entity = {
       id: bombId,
       type: 'enemy',

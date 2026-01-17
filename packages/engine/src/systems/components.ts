@@ -1,4 +1,4 @@
-import type { WeightClass } from './types';
+import type { WeightClass } from '../types';
 
 /**
  * Base Interface for all Components

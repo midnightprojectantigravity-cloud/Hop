@@ -4,8 +4,8 @@
  * Goal: Meta - Allows for pre-game character customization.
  * TODO: Implement "Cloud Save" by integrating with an external database/API.
  */
-import type { Skill } from './types';
-import { createSkill } from './skills';
+import type { Skill } from '../types';
+import { createSkill } from './legacy-skills';
 
 export interface Loadout {
     id: string;
@@ -24,14 +24,14 @@ export const DEFAULT_LOADOUTS: Record<string, Loadout> = {
         name: 'Vanguard (Hoplite)',
         description: 'Direct damage, brawling, and area denial.',
         startingUpgrades: [],
-        startingSkills: ['BASIC_ATTACK', 'AUTO_ATTACK', 'SPEAR_THROW', 'SHIELD_BASH', 'JUMP']
+        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK', 'SPEAR_THROW', 'SHIELD_BASH', 'JUMP']
     },
     SKIRMISHER: {
         id: 'SKIRMISHER',
         name: 'Skirmisher (Enyo)',
         description: 'Zero direct damage. Kinetic momentum and environmental lethality.',
         startingUpgrades: [],
-        startingSkills: ['BASIC_ATTACK', 'GRAPPLE_HOOK', 'SHIELD_THROW', 'VAULT']
+        startingSkills: ['DASH', 'GRAPPLE_HOOK', 'SHIELD_THROW', 'VAULT']
     }
 };
 

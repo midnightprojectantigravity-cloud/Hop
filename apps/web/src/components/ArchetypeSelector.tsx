@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { DEFAULT_LOADOUTS, type Loadout } from '@hop/engine/loadout';
+import { DEFAULT_LOADOUTS, type Loadout } from '@hop/engine';
 
 interface ArchetypeSelectorProps {
     onSelect: (loadout: Loadout) => void;

@@ -54,7 +54,7 @@ export const randomFromSeed = (seed: string | number, counter: number): number =
 };
 
 // Helpers to consume deterministic random values from a GameState
-import type { GameState } from './types';
+import type { GameState } from '../types';
 
 /**
  * Consume a deterministic random float based on the state's seed + counter.

@@ -1,0 +1,4 @@
+﻿src/skills/auto_attack.ts(4,30): error TS2307: Cannot find module '../effectEngine' or its corresponding type declarations.
+src/skills/basic_move.ts(4,34): error TS2307: Cannot find module '../spatial' or its corresponding type declarations.
+src/skills/basic_move.ts(30,49): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/types.ts(1,36): error TS2307: Cannot find module './components' or its corresponding type declarations.

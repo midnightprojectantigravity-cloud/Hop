@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { nextIdFromState } from '@hop/engine/rng';
-import type { GameState } from '@hop/engine/types';
+import { nextIdFromState } from '@hop/engine';
+import type { GameState } from '@hop/engine';
 
 describe('rng id generation from state', () => {
   it('generates deterministic ids and advances rngCounter', () => {
     const baseState: GameState = {
-      turn: 1,
+      turnNumber: 1,
       player: { id: 'p', type: 'player', position: { q: 0, r: 0, s: 0 }, hp: 1, maxHp: 1, statusEffects: [], temporaryArmor: 0, activeSkills: [], speed: 100, factionId: 'player' },
       enemies: [],
       gridWidth: 9,

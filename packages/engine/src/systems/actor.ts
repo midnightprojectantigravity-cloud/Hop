@@ -3,7 +3,7 @@
  * Pure functions for modifying Actor data.
  * TODO: Support component-based modifiers (e.g., actor.components.stats.strength).
  */
-import type { Entity } from './types';
+import type { Entity } from '../types';
 
 /** Apply damage to an actor and return a new actor object. Does not mutate input. */
 export const applyDamage = (actor: Entity, amount: number): Entity => {

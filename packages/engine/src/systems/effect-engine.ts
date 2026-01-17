@@ -1,5 +1,5 @@
-import type { GameState, AtomicEffect, Actor, Point, MovementTrace } from './types';
-import { hexEquals, getHexLine } from './hex';
+import type { GameState, AtomicEffect, Actor, Point, MovementTrace } from '../types';
+import { hexEquals, getHexLine } from '../hex';
 import { applyDamage } from './actor';
 
 import { nextIdFromState } from './rng';
@@ -12,13 +12,23 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
     switch (effect.type) {
         case 'Displacement': {
-            const actorId = effect.target === 'self' ? nextState.player.id : (context.targetId || '');
-            const origin = effect.source || (effect.target === 'self' ? nextState.player.position : nextState.enemies.find(e => e.id === context.targetId)?.position);
+            let targetActorId = '';
+            if (effect.target === 'self') targetActorId = nextState.player.id;
+            else if (effect.target === 'targetActor') targetActorId = context.targetId || '';
+            else targetActorId = effect.target; // Literal ID
+
+            if (!targetActorId) break;
+
+            const actor = (targetActorId === nextState.player.id)
+                ? nextState.player
+                : nextState.enemies.find(e => e.id === targetActorId);
+
+            const origin = effect.source || actor?.position;
 
             if (origin) {
                 const path = getHexLine(origin, effect.destination);
                 const trace: MovementTrace = {
-                    actorId,
+                    actorId: targetActorId,
                     origin,
                     path,
                     destination: effect.destination,
@@ -30,34 +40,40 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 }];
             }
 
-            if (effect.target === 'self') {
+            if (targetActorId === nextState.player.id) {
                 nextState.player = { ...nextState.player, position: effect.destination, previousPosition: nextState.player.position };
-            } else if (effect.target === 'targetActor' && context.targetId) {
-                if (context.targetId === nextState.player.id) {
-                    nextState.player = { ...nextState.player, position: effect.destination, previousPosition: nextState.player.position };
-                } else {
-                    nextState.enemies = nextState.enemies.map((e: Actor) => {
-                        if (e.id === context.targetId) {
-                            return { ...e, position: effect.destination, previousPosition: e.position };
-                        }
-                        return e;
-                    });
-                }
+            } else {
+                nextState.enemies = nextState.enemies.map((e: Actor) => {
+                    if (e.id === targetActorId) {
+                        return { ...e, position: effect.destination, previousPosition: e.position };
+                    }
+                    return e;
+                });
             }
             break;
         }
 
         case 'Damage': {
-            if (effect.target === 'targetActor' && context.targetId) {
-                if (context.targetId === nextState.player.id) {
+            let targetActorId = '';
+            let targetPos: Point | null = null;
+
+            if (typeof effect.target === 'string') {
+                if (effect.target === 'targetActor') targetActorId = context.targetId || '';
+                else if (effect.target !== 'area') targetActorId = effect.target; // Literal ID
+            } else {
+                targetPos = effect.target as Point;
+            }
+
+            if (targetActorId) {
+                if (targetActorId === nextState.player.id) {
                     nextState.player = applyDamage(nextState.player, effect.amount);
                 } else {
-                    const victim = nextState.enemies.find(e => e.id === context.targetId);
+                    const victim = nextState.enemies.find(e => e.id === targetActorId);
                     if (victim && victim.hp <= effect.amount) {
                         nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'freeze', payload: { duration: 80 } }];
                     }
                     nextState.enemies = nextState.enemies.map((e: Actor) => {
-                        if (e.id === context.targetId) {
+                        if (e.id === targetActorId) {
                             const updated = applyDamage(e, effect.amount);
                             if (updated.hp <= 0) nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
                             return updated;
@@ -67,10 +83,9 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 }
                 nextState.visualEvents = [...(nextState.visualEvents || []),
                 { type: 'shake', payload: { intensity: effect.amount > 1 ? 'medium' : 'low' } },
-                { type: 'combat_text', payload: { text: `-${effect.amount}`, targetId: context.targetId } }
+                { type: 'combat_text', payload: { text: `-${effect.amount}`, targetId: targetActorId } }
                 ];
-            } else if (typeof effect.target === 'object' && 'q' in effect.target) {
-                const targetPos = effect.target as Point;
+            } else if (targetPos) {
                 nextState.visualEvents = [...(nextState.visualEvents || []),
                 { type: 'combat_text', payload: { text: `-${effect.amount}`, position: targetPos } }
                 ];
@@ -106,30 +121,48 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'ApplyStatus': {
-            const addStatus = (actor: Actor, status: 'stunned' | 'poisoned' | 'armored' | 'hidden', duration: number): Actor => {
-                const id = `${status}_${Date.now()}`;
+            const addStatus = (actor: Actor, status: 'stunned' | 'poisoned' | 'armored' | 'hidden', duration: number, stateObj: GameState): { actor: Actor; nextState: GameState } => {
+                const res = nextIdFromState(stateObj, 4);
+                const id = `${status}_${res.id}`;
                 return {
-                    ...actor,
-                    statusEffects: [...actor.statusEffects, { id, type: status, duration }]
+                    actor: {
+                        ...actor,
+                        statusEffects: [...actor.statusEffects, { id, type: status, duration }]
+                    },
+                    nextState: { ...stateObj, rngCounter: res.nextState.rngCounter }
                 };
             };
 
-            if (effect.target === 'targetActor' && context.targetId) {
-                if (context.targetId === nextState.player.id) {
-                    nextState.player = addStatus(nextState.player, effect.status, effect.duration);
+            let targetActorId = '';
+            let targetPos: Point | null = null;
+            if (typeof effect.target === 'string') {
+                if (effect.target === 'targetActor') targetActorId = context.targetId || '';
+                else targetActorId = effect.target; // Literal ID
+            } else {
+                targetPos = effect.target as Point;
+            }
+
+            if (targetActorId) {
+                if (targetActorId === nextState.player.id) {
+                    const result = addStatus(nextState.player, effect.status, effect.duration, nextState);
+                    nextState.player = result.actor;
+                    nextState.rngCounter = result.nextState.rngCounter;
                 } else {
                     nextState.enemies = nextState.enemies.map((e: Actor) => {
-                        if (e.id === context.targetId) {
-                            return addStatus(e, effect.status, effect.duration);
+                        if (e.id === targetActorId) {
+                            const result = addStatus(e, effect.status, effect.duration, nextState);
+                            nextState.rngCounter = result.nextState.rngCounter;
+                            return result.actor;
                         }
                         return e;
                     });
                 }
-            } else if (typeof effect.target === 'object' && 'q' in effect.target) {
-                const targetPos = effect.target as Point;
+            } else if (targetPos) {
                 nextState.enemies = nextState.enemies.map((e: Actor) => {
                     if (hexEquals(e.position, targetPos)) {
-                        return addStatus(e, effect.status, effect.duration);
+                        const result = addStatus(e, effect.status, effect.duration, nextState);
+                        nextState.rngCounter = result.nextState.rngCounter;
+                        return result.actor;
                     }
                     return e;
                 });
@@ -241,12 +274,18 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             };
             break;
         }
+        case 'GameOver': {
+            nextState.gameStatus = 'lost';
+            break;
+        }
     }
 
     return nextState;
 };
 
-import { themeInterceptors } from './themeLogic';
+import { themeInterceptors } from './theme';
+
+import { checkVitals } from './vitals';
 
 /**
  * Apply a list of effects to the game state.
@@ -259,5 +298,13 @@ export const applyEffects = (state: GameState, effects: AtomicEffect[], context:
     }
 
     // 2. Resolve final effects
-    return interceptedEffects.reduce((s, eff) => applyAtomicEffect(s, eff, context), state);
+    let nextState = interceptedEffects.reduce((s, eff) => applyAtomicEffect(s, eff, context), state);
+
+    // 3. Post-Effect Vitals Check (Life & Death)
+    const vitalEffects = checkVitals(nextState);
+    if (vitalEffects.length > 0) {
+        nextState = vitalEffects.reduce((s, eff) => applyAtomicEffect(s, eff, {}), nextState);
+    }
+
+    return nextState;
 };

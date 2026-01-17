@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import type { Action, GameState } from '@hop/engine/types';
-import { generateInitialState, gameReducer } from '@hop/engine/logic';
-import { createRng } from '@hop/engine/rng';
-import { safeStringify, safeParse } from '@hop/engine';
+import type { Action, GameState } from '@hop/engine';
+import { generateInitialState, gameReducer, createRng, safeStringify, safeParse } from '@hop/engine';
 import Modal from './Modal';
 
 export interface ReplayRecord {
@@ -82,11 +80,11 @@ export const ReplayManager: React.FC<{
   const [remoteList, setRemoteList] = useState<LeaderboardEntry[] | null>(null);
 
   const saveCurrent = () => {
-  // Prefer existing run seeds; fall back to a deterministic '0' seed to avoid wall-clock randomness
-  const seed = gameState.initialSeed ?? gameState.rngSeed ?? '0';
-  const rng = createRng(`${seed}:${gameState.actionLog?.length ?? 0}`);
-  const id = rng.id(9);
-  const score = (gameState.player.hp || 0) + (gameState.floor || 0) * 100;
+    // Prefer existing run seeds; fall back to a deterministic '0' seed to avoid wall-clock randomness
+    const seed = gameState.initialSeed ?? gameState.rngSeed ?? '0';
+    const rng = createRng(`${seed}:${gameState.actionLog?.length ?? 0}`);
+    const id = rng.id(9);
+    const score = (gameState.player.hp || 0) + (gameState.floor || 0) * 100;
     const rec: ReplayRecord = {
       id,
       seed: gameState.initialSeed ?? gameState.rngSeed,
@@ -117,7 +115,7 @@ export const ReplayManager: React.FC<{
       const fingerprint = (st: GameState) => {
         const p = st.player;
         const enemies = st.enemies.map(e => ({ id: e.id, subtype: e.subtype, hp: e.hp, position: e.position }));
-        const obj = { player: { id: p.id, subtype: p.subtype, hp: p.hp, maxHp: p.maxHp, position: p.position }, enemies, floor: st.floor, turn: st.turn, upgrades: st.upgrades };
+        const obj = { player: { id: p.id, subtype: p.subtype, hp: p.hp, maxHp: p.maxHp, position: p.position }, enemies, floor: st.floor, turnNumber: st.turnNumber, upgrades: st.upgrades };
         return JSON.stringify(obj);
       };
 
@@ -155,7 +153,7 @@ export const ReplayManager: React.FC<{
       const fingerprint = (() => {
         const p = gameState.player;
         const enemies = gameState.enemies.map(e => ({ id: e.id, subtype: e.subtype, hp: e.hp, position: e.position }));
-        const obj = { player: { id: p.id, subtype: p.subtype, hp: p.hp, maxHp: p.maxHp, position: p.position }, enemies, floor: gameState.floor, turn: gameState.turn, upgrades: gameState.upgrades };
+        const obj = { player: { id: p.id, subtype: p.subtype, hp: p.hp, maxHp: p.maxHp, position: p.position }, enemies, floor: gameState.floor, turnNumber: gameState.turnNumber, upgrades: gameState.upgrades };
         return JSON.stringify(obj);
       })();
       const payload = { seed: completed.seed, actions: completed.actionLog, score: completed.score, floor: completed.floor, fingerprint };
@@ -208,8 +206,8 @@ export const ReplayManager: React.FC<{
       setShowNameModal(false);
       return;
     }
-  const rng = createRng(`${pendingSubmission.seed}:${pendingSubmission.actionLog?.length ?? 0}`);
-  const entry: LeaderboardEntry = { id: rng.id(9), name: name.slice(0, 20), score: pendingSubmission.score ?? 0, floor: pendingSubmission.floor ?? 0, date: new Date().toISOString(), seed: pendingSubmission.seed };
+    const rng = createRng(`${pendingSubmission.seed}:${pendingSubmission.actionLog?.length ?? 0}`);
+    const entry: LeaderboardEntry = { id: rng.id(9), name: name.slice(0, 20), score: pendingSubmission.score ?? 0, floor: pendingSubmission.floor ?? 0, date: new Date().toISOString(), seed: pendingSubmission.seed };
     const next = [entry, ...leaderboard].slice(0, 100) as LeaderboardEntry[];
     setLeaderboard(next);
     saveLeaderboard(next);

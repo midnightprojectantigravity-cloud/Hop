@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import { generateInitialState, gameReducer } from '@hop/engine/logic';
-import type { Point } from '@hop/engine/types';
+import { generateInitialState, gameReducer } from '@hop/engine';
+import type { Point } from '@hop/engine';
 
 const makeSkillStub = (id: string) => ({
   id,

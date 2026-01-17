@@ -3,9 +3,9 @@
  * Pure utility functions for grid and entity queries.
  * TODO: Prioritize bitmask checks (spatial.ts) in isOccupied/isWalkable for high-performance loops.
  */
-import type { GameState, Point, Entity } from './types';
+import type { GameState, Point, Entity, Actor } from './types';
 import { hexEquals, isHexInRectangularGrid } from './hex';
-import { applyDamage } from './actor';
+import { applyDamage } from './systems/actor';
 
 /**
  * Determines if a point is a special tile (player start, stairs, shrine, lava, or wall).
@@ -65,20 +65,21 @@ export const getActorAt = (state: GameState, position: Point): Entity | undefine
     return getEnemyAt(state.enemies, position);
 };
 
-/**
- * Checks if an actor is currently stunned.
- */
-export const isStunned = (actor: Entity): boolean => {
-    return (actor?.statusEffects?.some(s => s.type === 'stunned' && s.duration !== 0)) ?? false;
-};
+import { isOccupiedMask } from './systems/mask';
 
 /**
  * Checks if a position is occupied by another actor.
+ * Uses bitmask for performance (Strict Occupancy).
  */
 export const isOccupied = (
     position: Point,
     state: GameState
 ): boolean => {
+    // Spatial mask check is O(1)
+    if (state.occupancyMask) {
+        return isOccupiedMask(state.occupancyMask, position);
+    }
+    // Fallback for safety
     return !!getActorAt(state, position);
 };
 
@@ -139,4 +140,20 @@ export const isPerimeter = (
     if (sum === topLimit || sum === bottomLimit) return true;
 
     return false;
+};
+
+
+/**
+ * Checks if a point is within the grid bounds.
+ */
+export const isWithinBounds = (state: GameState, p: Point): boolean => {
+    return isHexInRectangularGrid(p, state.gridWidth, state.gridHeight);
+};
+
+/**
+ * Resolves an ID to an Actor object from the GameState.
+ */
+export const getActorById = (state: GameState, id: string, attacker: Actor): Actor | undefined => {
+    if (id === attacker.id || id === 'self') return attacker;
+    return state.enemies.find(e => e.id === id);
 };

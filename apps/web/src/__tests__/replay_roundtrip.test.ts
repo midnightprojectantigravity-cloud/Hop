@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { generateInitialState, gameReducer } from '@hop/engine/logic';
-import type { Action, Point } from '@hop/engine/types';
+import { generateInitialState, gameReducer } from '@hop/engine';
+import type { Action, Point } from '@hop/engine';
 
 /**
  * Stronger replay round-trip: run several 'WAIT' turns (which exercise enemy AI and RNG),
@@ -35,7 +35,7 @@ describe('replay round-trip (stress)', () => {
     expect(r.enemies.length).toEqual(finalState.enemies.length);
 
     // Compare enemy positions and hp
-  const mapById = (arr: Array<{ id: string; hp: number; position: Point }>) => Object.fromEntries(arr.map(e => [e.id, { hp: e.hp, pos: e.position }]));
+    const mapById = (arr: Array<{ id: string; hp: number; position: Point }>) => Object.fromEntries(arr.map(e => [e.id, { hp: e.hp, pos: e.position }]));
     expect(mapById(r.enemies)).toEqual(mapById(finalState.enemies));
   });
 });

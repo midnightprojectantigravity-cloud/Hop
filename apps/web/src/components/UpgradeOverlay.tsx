@@ -1,6 +1,5 @@
 import React from 'react';
-import { UPGRADE_DEFINITIONS } from '@hop/engine/skills';
-import type { GameState } from '@hop/engine/types';
+import { UPGRADE_DEFINITIONS, type GameState } from '@hop/engine';
 
 interface UpgradeOverlayProps {
     onSelect: (upgradeId: string) => void;

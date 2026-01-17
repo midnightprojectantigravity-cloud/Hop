@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
-import type { GameState, Point } from '@hop/engine/types';
-import { hexDistance, hexEquals, isTileInDiamond, hexToPixel } from '@hop/engine/hex';
+import type { GameState, Point } from '@hop/engine';
+import { hexDistance, hexEquals, isTileInDiamond, hexToPixel } from '@hop/engine';
 import { HexTile } from './HexTile';
 import { Entity } from './Entity';
-import { TILE_SIZE } from '@hop/engine/constants';
-import { getSkillRange } from '@hop/engine/skills';
+import { TILE_SIZE, getSkillRange } from '@hop/engine';
 import PreviewOverlay from './PreviewOverlay';
 
 interface GameBoardProps {
@@ -145,7 +144,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                     )}
                     <Entity entity={gameState.player} />
                     {gameState.enemies.map(e => <Entity key={e.id} entity={e} />)}
-                    {gameState.dyingEntities?.map(e => <Entity key={`dying-${e.id}-${gameState.turn}`} entity={e} isDying={true} />)}
+                    {gameState.dyingEntities?.map(e => <Entity key={`dying-${e.id}-${gameState.turnNumber}`} entity={e} isDying={true} />)}
                 </g>
             </svg>
         </div>

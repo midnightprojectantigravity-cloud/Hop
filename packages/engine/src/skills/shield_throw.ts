@@ -101,6 +101,8 @@ export const SHIELD_THROW: SkillDefinition = {
 
         if (!sunk) {
             effects.push({ type: 'Displacement', target: 'targetActor', destination: finalPos });
+            // Projectile Persistence: Spawn the shield at the impact site
+            effects.push({ type: 'SpawnItem', itemType: 'shield', position: finalPos });
             messages.push(`Threw shield! Stunned and pushed ${targetActor.subtype}.`);
         }
 

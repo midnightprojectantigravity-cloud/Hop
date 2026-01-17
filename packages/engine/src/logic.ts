@@ -6,11 +6,11 @@
  */
 import type { GameState, Action, Entity } from './types';
 import { hexEquals, getNeighbors } from './hex';
-import { resolveTelegraphedAttacks } from './combat';
+import { resolveTelegraphedAttacks, resolveSingleEnemyTurn } from './systems/combat';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
 import { applyLavaDamage, checkShrine, checkStairs, getEnemyAt } from './helpers';
-import { increaseMaxHp } from './actor';
-import { generateDungeon, generateEnemies, getFloorTheme } from './mapGeneration';
+import { increaseMaxHp } from './systems/actor';
+import { generateDungeon, generateEnemies, getFloorTheme } from './systems/map';
 import {
     tickSkillCooldowns,
     UPGRADE_DEFINITIONS,
@@ -22,12 +22,12 @@ import {
     executeLunge,
     applyPassiveSkills,
     hasUpgrade,
-} from './skills';
+} from './systems/legacy-skills';
 import { COMPOSITIONAL_SKILLS } from './skillRegistry';
-import { applyEffects } from './effectEngine';
+import { applyEffects } from './systems/effect-engine';
 import { applyAutoAttack } from './skills/auto_attack';
-import { refreshOccupancyMask } from './spatial';
-import { createCommand, createDelta } from './commands';
+import { refreshOccupancyMask } from './systems/spatial';
+import { createCommand, createDelta } from './systems/commands';
 import {
     buildInitiativeQueue,
     advanceInitiative,
@@ -37,18 +37,15 @@ import {
     getTurnStartPosition,
     getTurnStartNeighborIds,
     isPlayerTurn,
-} from './initiative';
-import { resolveSingleEnemyTurn } from './combat';
-import { resolveMove } from './systems/movement';
-import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './components';
+} from './systems/initiative';
+import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './systems/components';
 import { tickStatuses } from './systems/status';
-
 
 /**
  * Generate initial state with the new tactical arena generation
  */
-import { consumeRandom } from './rng';
-import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS } from './loadout';
+import { consumeRandom } from './systems/rng';
+import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS } from './systems/loadout';
 
 export const generateHubState = (): GameState => {
     const base = generateInitialState();
@@ -102,7 +99,7 @@ export const generateInitialState = (
     const playerPos = dungeon.playerSpawn;
 
     const initialState: GameState = {
-        turn: 1,
+        turnNumber: 1,
         player: {
             id: 'player',
             type: 'player',
@@ -550,14 +547,31 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             case 'MOVE': {
                 if (!('payload' in a)) return s;
                 const target = a.payload;
-                const nextState = resolveMove(s, 'player', target);
 
-                // If blocked (same state or just a message added), don't advance turn
-                if (nextState === s || (nextState.message.length > s.message.length && nextState.player.position === s.player.position)) {
-                    return nextState;
+                // 1. Check if there is an enemy at the target location
+                const targetEnemy = s.enemies.find(e => hexEquals(e.position, target));
+
+                if (targetEnemy) {
+                    // REDIRECT TO ATTACK: If an enemy is there, try to use the first offensive skill
+                    const attackSkillId = s.player.activeSkills?.find(sk =>
+                        sk.id === 'BASIC_ATTACK' || sk.id === 'SHIELD_BASH' || sk.id === 'SPEAR_THROW'
+                    )?.id;
+
+                    if (attackSkillId) {
+                        const skillAction: Action = { type: 'USE_SKILL', payload: { skillId: attackSkillId, target } };
+                        return gameReducer(s, skillAction);
+                    }
                 }
 
-                return resolveEnemyActions(nextState);
+                // 2. Standard Movement Logic (If no enemy or no attack skill found)
+                const moveSkillId = s.player.activeSkills?.find(sk => sk.id === 'BASIC_MOVE' || sk.id === 'DASH')?.id;
+
+                if (moveSkillId) {
+                    const skillAction: Action = { type: 'USE_SKILL', payload: { skillId: moveSkillId, target } };
+                    return gameReducer(s, skillAction);
+                }
+
+                return { ...s, message: [...s.message, "This unit is stationary."].slice(-50) };
             }
 
             case 'THROW_SPEAR': {
@@ -663,7 +677,7 @@ export const fingerprintFromState = (state: GameState): string => {
         },
         enemies,
         floor: state.floor,
-        turn: state.turn,
+        turnNumber: state.turnNumber,
         kills: state.kills,
         rngCounter: state.rngCounter
     };

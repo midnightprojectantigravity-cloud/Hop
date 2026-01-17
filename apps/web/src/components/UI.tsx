@@ -1,5 +1,5 @@
 import React from 'react';
-import type { GameState } from '@hop/engine/types';
+import type { GameState } from '@hop/engine';
 import { computeScore } from '@hop/engine';
 
 interface UIProps {

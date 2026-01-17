@@ -1,4 +1,4 @@
-import type { GameState, Actor, AtomicEffect, Point, Skill } from './types';
+import type { GameState, Actor, AtomicEffect, Point, Skill } from '../types';
 
 export interface EffectExecutionResult {
   state: GameState;
@@ -33,12 +33,22 @@ export function executeAtomicEffects(stateIn: GameState, actor: Actor, effects: 
   const messages: string[] = [];
   const logs: string[] = [];
 
-  const getActorBySpecifier = (spec: 'self' | 'targetActor') => {
+  const getActorBySpecifier = (spec: string): Actor | undefined => {
+    // 1. Handle Keywords
     if (spec === 'self') return actor;
     if (spec === 'targetActor') {
       if (!targetPoint) return undefined;
       return actorAt(state, targetPoint as Point) as Actor | undefined;
     }
+
+    // 2. Handle Direct ID Lookups (For Kinetic Collateral)
+    // Check enemies first (most common for collateral)
+    const enemy = state.enemies.find(e => e.id === spec);
+    if (enemy) return enemy;
+
+    // Check player (for specific self-ID references)
+    if (state.player.id === spec) return state.player;
+
     return undefined;
   };
 
@@ -150,14 +160,14 @@ export function executeAtomicEffects(stateIn: GameState, actor: Actor, effects: 
     }
 
     if (eff.type === 'Displacement') {
-      const targetActor = getActorBySpecifier(eff.target);
+      const targetActor = getActorBySpecifier(eff.target as string);
       if (!targetActor) {
         logs.push('displacement-no-target');
         continue;
       }
       const dest = eff.destination;
       const res = moveActorTo(targetActor, dest);
-        if (res.diedInLava) {
+      if (res.diedInLava) {
         messages.push(`
 ${targetActor.type === 'enemy' ? 'Enemy' : 'Player'} consumed by Lava.`.trim());
         logs.push(`died-by-lava:${targetActor.id}`);
@@ -165,11 +175,11 @@ ${targetActor.type === 'enemy' ? 'Enemy' : 'Player'} consumed by Lava.`.trim());
       }
       if (!res.moved && res.reason === 'wall') {
         // wall impact behavior: stun the target
-          if (targetActor.type === 'enemy') {
-            state.enemies = (state.enemies || []).map(e => e.id === targetActor.id ? ({ ...e, statusEffects: (e.statusEffects || []).concat([{ id: `${e.id}-stunned`, type: 'stunned', duration: 1 }]) }) : e);
-          } else {
-            state.player = { ...state.player, statusEffects: (state.player.statusEffects || []).concat([{ id: `${state.player.id}-stunned`, type: 'stunned', duration: 1 }]) } as any;
-          }
+        if (targetActor.type === 'enemy') {
+          state.enemies = (state.enemies || []).map(e => e.id === targetActor.id ? ({ ...e, statusEffects: (e.statusEffects || []).concat([{ id: `${e.id}-stunned`, type: 'stunned', duration: 1 }]) }) : e);
+        } else {
+          state.player = { ...state.player, statusEffects: (state.player.statusEffects || []).concat([{ id: `${state.player.id}-stunned`, type: 'stunned', duration: 1 }]) } as any;
+        }
         messages.push('Impact! Stunned.');
       }
       // occupied resolution is left to higher-level chain resolver for now

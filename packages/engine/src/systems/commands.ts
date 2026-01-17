@@ -4,7 +4,7 @@
  * Handles recording and undo functionality.
  * TODO: Implement "Compressed JSON Patches" for StateDelta to reduce memory footprint.
  */
-import type { GameState, Action, Command, StateDelta } from './types';
+import type { GameState, Action, Command, StateDelta } from '../types';
 
 /**
  * Create a new command from an action.
@@ -32,7 +32,7 @@ export const createDelta = (oldState: GameState, _newState: GameState): StateDel
             player: { ...oldState.player },
             enemies: [...oldState.enemies],
             // ... add other fields as needed
-            turn: oldState.turn,
+            turnNumber: oldState.turnNumber,
             gameStatus: oldState.gameStatus,
         }
     };

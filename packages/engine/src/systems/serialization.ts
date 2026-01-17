@@ -3,7 +3,7 @@
  * Handles BigInt and other non-JSON types by converting them to strings with markers,
  * and provides a companion parse function to restore them when importing.
  */
-import type { GameState } from './types';
+import type { GameState } from '../types';
 
 const BIGINT_MARKER = '__BIGINT__:';
 

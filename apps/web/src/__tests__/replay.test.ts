@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { generateInitialState, gameReducer } from '@hop/engine/logic';
-import type { Action } from '@hop/engine/types';
+import { generateInitialState, gameReducer } from '@hop/engine';
+import type { Action } from '@hop/engine';
 
 describe('replay round-trip', () => {
   it('replaying recorded actions reaches same final state', () => {

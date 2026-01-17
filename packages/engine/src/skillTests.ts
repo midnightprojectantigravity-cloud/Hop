@@ -3,9 +3,9 @@ import { COMPOSITIONAL_SKILLS } from './skillRegistry';
 import { gameReducer, generateInitialState } from './logic';
 import { ENEMY_STATS } from './constants';
 import { hexEquals } from './hex';
-import { isPlayerTurn } from './initiative';
+import { isPlayerTurn } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
-import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './components';
+import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './systems/components';
 
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
@@ -152,6 +152,10 @@ export class ScenarioEngine {
 
     move(pos: Point) {
         this.dispatch({ type: 'MOVE', payload: pos });
+    }
+
+    setTurn(turn: number) {
+        this.state.turnNumber = turn;
     }
 
     exitToHub() {

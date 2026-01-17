@@ -1,8 +1,5 @@
 import React from 'react';
-import { COMPOSITIONAL_SKILLS } from '@hop/engine/skillRegistry';
-import { generateInitialState } from '@hop/engine/logic';
-import type { GameState, Point, SkillDefinition, ScenarioV2 } from '@hop/engine/types';
-import { ENEMY_STATS } from '@hop/engine/constants';
+import { COMPOSITIONAL_SKILLS, generateInitialState, ENEMY_STATS, type GameState, type Point, type SkillDefinition, type ScenarioV2 } from '@hop/engine';
 
 interface TutorialManagerProps {
     onLoadScenario: (state: GameState, instructions: string) => void;
@@ -109,7 +106,9 @@ export const TutorialManager: React.FC<TutorialManagerProps> = ({ onLoadScenario
         <div className="flex flex-col gap-4">
             {skills.map((skill: SkillDefinition) => (
                 <div key={skill.id} className="flex flex-col gap-2">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-white/50">{skill.name}</h4>
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-white/50">
+                        {typeof skill.name === 'function' ? skill.name(generateInitialState(1, 'temp')) : skill.name}
+                    </h4>
                     <div className="flex flex-col gap-1">
                         {skill.scenarios.map(scenario => (
                             <button

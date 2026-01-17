@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createRng, randomFromSeed } from '@hop/engine/rng';
+import { createRng, randomFromSeed } from '@hop/engine';
 
 describe('RNG determinism', () => {
   it('createRng produces consistent sequence for same seed', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { applyDamage, resolveMeleeAttack } from '@hop/engine/actor';
-import type { Entity } from '@hop/engine/types';
+import { applyDamage, resolveMeleeAttack } from '@hop/engine';
+import type { Entity } from '@hop/engine';
 
 describe('Actor combat primitives', () => {
   it('applyDamage reduces hp but not below 0', () => {

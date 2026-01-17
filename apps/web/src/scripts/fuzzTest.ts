@@ -1,6 +1,4 @@
-import { generateInitialState, gameReducer } from '@hop/engine/logic';
-import type { GameState, Action, Point } from '@hop/engine/types';
-import { DEFAULT_LOADOUTS } from '@hop/engine/loadout';
+import { generateInitialState, gameReducer, DEFAULT_LOADOUTS, type GameState, type Action, type Point } from '@hop/engine';
 
 /**
  * Goal 4: Behavioral Fuzz Testing

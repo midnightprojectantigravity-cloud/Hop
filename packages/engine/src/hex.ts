@@ -88,15 +88,33 @@ export const getHexLine = (start: Point, end: Point): Point[] => {
     }
     return results;
 };
+
 export const getDirectionFromTo = (start: Point, end: Point): number => {
-    const diff = hexSubtract(end, start);
-    // Find the closest axial direction index (0-5)
-    // For non-neighbors, we divide by distance to normalize
     const dist = hexDistance(start, end);
     if (dist === 0) return -1;
-    const dq = Math.round(diff.q / dist);
-    const dr = Math.round(diff.r / dist);
-    return DIRECTIONS.findIndex(d => d.q === dq && d.r === dr);
+
+    const diff = hexSubtract(end, start);
+
+    // 1. Normalize without rounding
+    const dq = diff.q / dist;
+    const dr = diff.r / dist;
+    const ds = (0 - diff.q - diff.r) / dist; // Calculate s-component
+
+    // 2. Strict Check: Are these perfect axial steps?
+    const isStrictAxial =
+        Number.isInteger(dq) &&
+        Number.isInteger(dr) &&
+        Number.isInteger(ds);
+
+    if (!isStrictAxial) return -1;
+    console.log('Direction vector: ' + dq + ', ' + dr + ', ' + ds);
+
+    // 3. Match against your constants
+    return DIRECTIONS.findIndex(d =>
+        d.q === dq &&
+        d.r === dr &&
+        d.s === ds
+    );
 };
 
 /**

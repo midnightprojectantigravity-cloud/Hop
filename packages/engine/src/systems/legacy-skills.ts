@@ -4,11 +4,11 @@
  * NEW DEVELOPMENT should happen in src/game/skills/ as individual SkillDefinitions.
  * TODO: Fully evacuate this file and delete it.
  */
-import type { GameState, Entity, Point, Skill } from './types';
-import { hexDistance, hexEquals, getNeighbors, hexDirection, hexAdd, getHexLine } from './hex';
-import { isWalkable } from './helpers';
+import type { GameState, Entity, Point, Skill } from '../types';
+import { hexDistance, hexEquals, getNeighbors, hexDirection, hexAdd, getHexLine } from '../hex';
+import { isWalkable } from '../helpers';
 import { addStatus } from './actor';
-import { COMPOSITIONAL_SKILLS } from './skillRegistry';
+import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
 
 // ============================================================================
 // SKILL DEFINITIONS
@@ -663,4 +663,3 @@ export default {
     executeLunge,
     getShrineUpgradeOptions,
 };
-

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createHex, hexDistance, getNeighbors } from '@hop/engine/hex';
+import { createHex, hexDistance, getNeighbors } from '@hop/engine';
 
 describe('hex utilities', () => {
   it('distance between same hex is zero and neighbors distance 1', () => {

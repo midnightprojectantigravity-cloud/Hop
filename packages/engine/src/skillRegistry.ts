@@ -15,6 +15,8 @@ import { SENTINEL_BLAST } from './skills/sentinel_blast';
 import { THEME_HAZARDS } from './skills/theme_hazard';
 import { SHIELD_THROW } from './skills/shield_throw';
 import { VAULT } from './skills/vault';
+import { BASIC_MOVE } from './skills/basic_move';
+import { DASH } from './skills/dash';
 import type { SkillDefinition } from './types';
 
 /**
@@ -32,6 +34,8 @@ export const COMPOSITIONAL_SKILLS: Record<string, SkillDefinition> = {
     AUTO_ATTACK,
     SENTINEL_BLAST,
     THEME_HAZARDS,
+    BASIC_MOVE,
+    DASH,
 };
 
 /**

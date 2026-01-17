@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Actor as EntityType } from '@hop/engine/types';
-import { isStunned } from '@hop/engine/helpers';
-import { hexToPixel, getDirectionFromTo, hexEquals } from '@hop/engine/hex';
-import { TILE_SIZE } from '@hop/engine/constants';
+import type { Actor as EntityType } from '@hop/engine';
+import { isStunned, hexToPixel, getDirectionFromTo, hexEquals, TILE_SIZE } from '@hop/engine';
 
 interface EntityProps {
     entity: EntityType;

@@ -9,7 +9,7 @@ import { getActorAt, isWalkable, isPerimeter } from '../helpers';
 import { grappleHookScenarios } from '../scenarios/grapple_hook';
 import { toScenarioV2 } from '../scenarios/utils';
 
-import { getComponent, type PhysicsComponent } from '../components';
+import { getComponent, type PhysicsComponent } from '../systems/components';
 
 export const GRAPPLE_HOOK: SkillDefinition = {
     id: 'GRAPPLE_HOOK',

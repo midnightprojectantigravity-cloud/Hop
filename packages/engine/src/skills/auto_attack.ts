@@ -1,7 +1,7 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexEquals, getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
-import { applyEffects } from '../effectEngine';
+import { applyEffects } from '../systems/effect-engine';
 import { autoAttackScenarios } from '../scenarios/auto_attack';
 import { toScenarioV2 } from '../scenarios/utils';
 

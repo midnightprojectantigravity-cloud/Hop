@@ -1,7 +1,4 @@
-import { generateInitialState, gameReducer } from '@hop/engine/logic';
-import { COMPOSITIONAL_SKILLS } from '@hop/engine/skillRegistry';
-import { ENEMY_STATS } from '@hop/engine/constants';
-import type { Action, GameState, Point } from '@hop/engine/types';
+import { generateInitialState, gameReducer, COMPOSITIONAL_SKILLS, ENEMY_STATS, type Action, type GameState, type Point } from '@hop/engine';
 
 class TestEngine {
     state: GameState;

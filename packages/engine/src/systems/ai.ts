@@ -3,10 +3,10 @@
  * Uses Goal 3 (Spatial Hashing / Bitmasks) for high-performance move simulations.
  * TODO: Fully migrate specialized enemy logic (Bomber/Warlock) into the Compositional Skill Framework.
  */
-import type { Entity, Point, GameState } from './types';
-import { getNeighbors, hexDistance, hexEquals, hexAdd, hexDirection, isHexInRectangularGrid } from './hex';
+import type { Entity, Point, GameState } from '../types';
+import { getNeighbors, hexDistance, hexEquals, hexAdd, hexDirection, isHexInRectangularGrid } from '../hex';
 import { consumeRandom } from './rng';
-import { GRID_WIDTH, GRID_HEIGHT } from './constants';
+import { GRID_WIDTH, GRID_HEIGHT } from '../constants';
 
 /**
  * Get the direction from one hex to another (0-5)

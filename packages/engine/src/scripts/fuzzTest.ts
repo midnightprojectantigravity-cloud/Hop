@@ -1,6 +1,6 @@
 
 import { generateInitialState, gameReducer } from '../logic';
-import { isPlayerTurn } from '../initiative';
+import { isPlayerTurn } from '../systems/initiative';
 import type { GameState, Action, Point } from '../types';
 import { getNeighbors } from '../hex';
 import { GRID_WIDTH, GRID_HEIGHT } from '../constants';
@@ -58,7 +58,7 @@ const runFuzz = () => {
             } catch (e: any) {
                 console.error(`❌ CRASH detected at turn ${turnsProcessed}:`, e.message);
                 console.error('Last Action:', action);
-                console.error('State Fingerprint:', state.rngSeed, state.turn);
+                console.error('State Fingerprint:', state.rngSeed, state.turnNumber);
                 process.exit(1);
             }
 

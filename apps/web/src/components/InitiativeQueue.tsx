@@ -1,4 +1,4 @@
-import type { GameState, Actor, InitiativeEntry } from '@hop/engine/types';
+import type { GameState, Actor, InitiativeEntry } from '@hop/engine';
 
 interface InitiativeDisplayProps {
     gameState: GameState;

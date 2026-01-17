@@ -1,4 +1,4 @@
-import type { GameComponent } from './components';
+import type { GameComponent } from './systems/components';
 
 /**
  * ARCHITECTURE OVERVIEW: "Gold Standard" Tech Stack
@@ -83,17 +83,18 @@ export interface InitiativeQueue {
 
 /** Atomic Effects: Discrete engine instructions */
 export type AtomicEffect =
-    | { type: 'Displacement'; target: 'self' | 'targetActor'; destination: Point; source?: Point; isFling?: boolean; stunDuration?: number }
-    | { type: 'Damage'; target: 'targetActor' | 'area' | Point; amount: number }
+    | { type: 'Displacement'; target: 'self' | 'targetActor' | string; destination: Point; source?: Point; isFling?: boolean; stunDuration?: number }
+    | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string }
     | { type: 'Heal'; target: 'targetActor'; amount: number }
-    | { type: 'ApplyStatus'; target: 'targetActor' | Point; status: 'stunned' | 'poisoned' | 'armored' | 'hidden'; duration: number }
+    | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: 'stunned' | 'poisoned' | 'armored' | 'hidden'; duration: number }
     | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
     | { type: 'PickupShield'; position?: Point }
     | { type: 'GrantSkill'; skillId: string }
     | { type: 'Message'; text: string }
     | { type: 'Juice'; effect: 'shake' | 'flash' | 'lavaSink' | 'spearTrail' | 'freeze' | 'combat_text' | 'impact'; target?: Point; path?: Point[]; intensity?: 'low' | 'medium' | 'high'; direction?: Point; text?: string }
     | { type: 'ModifyCooldown'; skillId: string; amount: number; setExact?: boolean }
-    | { type: 'UpdateComponent'; target: 'self' | 'targetActor'; key: string; value: GameComponent };
+    | { type: 'UpdateComponent'; target: 'self' | 'targetActor'; key: string; value: GameComponent }
+    | { type: 'GameOver'; reason: 'PLAYER_DIED' | 'OUT_OF_TIME' };
 
 export interface VisualEvent {
     type: 'shake' | 'freeze' | 'combat_text' | 'vfx' | 'kinetic_trace';
@@ -121,8 +122,10 @@ export interface ScenarioV2 {
 
 export interface SkillDefinition {
     id: string;
-    name: string;
-    description: string;
+    /** Tactical name (supports State-Shifting skills) */
+    name: string | ((state: GameState) => string);
+    /** Tactical description (supports State-Shifting skills) */
+    description: string | ((state: GameState) => string);
     slot: SkillSlot;
     icon: string;
     baseVariables: {
@@ -147,8 +150,10 @@ export interface SkillDefinition {
 // Skill with cooldown tracking and upgrade system
 export interface Skill {
     id: string;
-    name: string;
-    description: string;
+    /** Tactical name (supports State-Shifting skills) */
+    name: string | ((state: GameState) => string);
+    /** Tactical description (supports State-Shifting skills) */
+    description: string | ((state: GameState) => string);
     slot: SkillSlot;
     cooldown: number;           // Max cooldown in turns
     currentCooldown: number;    // Turns remaining (0 = ready)
@@ -219,7 +224,7 @@ export interface Room {
 export type FloorTheme = 'catacombs' | 'inferno' | 'throne' | 'frozen' | 'void';
 
 export interface GameState {
-    turn: number;
+    turnNumber: number;
     player: Entity;
     enemies: Entity[];
     gridWidth: number;
