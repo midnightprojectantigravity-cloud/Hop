@@ -4,7 +4,7 @@
  * TODO: Fully migrate telegraphed attacks to the SkillDefinition/COMPOSITIONAL_SKILLS system.
  */
 import type { GameState, Point, Entity, AtomicEffect } from '../types';
-import { hexEquals, hexDistance, getNeighbors } from '../hex';
+import { hexEquals, getNeighbors } from '../hex';
 import { computeEnemyAction } from './ai';
 import { applyDamage } from './actor';
 import { applyAutoAttack } from '../skills/auto_attack';
@@ -92,10 +92,26 @@ export const resolveSingleEnemyTurn = (
     const timer = (enemy.actionCooldown ?? 1) - 1;
     if (timer <= 0) {
       messages.push("A bomb exploded!");
-      if (hexDistance(enemy.position, state.player.position) <= 1) {
+
+      // Damage all entities in 1-tile radius
+      const explosionCenter = enemy.position;
+      const affectedPoints = [explosionCenter, ...getNeighbors(explosionCenter)];
+
+      // Damage Player
+      if (affectedPoints.some(p => hexEquals(p, curState.player.position))) {
         curState = { ...curState, player: applyDamage(curState.player, 1) };
         messages.push(`You were caught in the explosion! (HP: ${curState.player.hp}/${curState.player.maxHp})`);
       }
+
+      // Damage Enemies
+      curState.enemies = curState.enemies.map(en => {
+        if (en.id !== enemy.id && affectedPoints.some(p => hexEquals(p, en.position))) {
+          messages.push(`${en.subtype} was hit by the explosion!`);
+          return applyDamage(en, 1);
+        }
+        return en;
+      }).filter(en => en.hp > 0);
+
       return { state: curState, messages, isDead: true };
     }
     nextEnemy = { ...enemy, actionCooldown: timer };

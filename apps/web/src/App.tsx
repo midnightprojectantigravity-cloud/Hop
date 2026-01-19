@@ -43,7 +43,7 @@ function App() {
     if (gameState.gameStatus !== 'playing') return;
     const playerTurn = isPlayerTurn(gameState);
     if (!playerTurn) {
-      const timer = setTimeout(() => dispatch({ type: 'ADVANCE_TURN' }), 100);
+      const timer = setTimeout(() => dispatch({ type: 'ADVANCE_TURN' }), 400);
       return () => clearTimeout(timer);
     }
   }, [gameState]);
@@ -51,6 +51,28 @@ function App() {
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [showMovementRange, setShowMovementRange] = useState(false);
   const [tutorialInstructions, setTutorialInstructions] = useState<string | null>(null);
+  const [floorIntro, setFloorIntro] = useState<{ floor: number; theme: string } | null>(null);
+
+  // Trigger floor intro on floor change
+  const lastFloorRef = useRef(gameState.floor);
+  useEffect(() => {
+    if (gameState.gameStatus === 'playing' && gameState.floor !== lastFloorRef.current) {
+      setFloorIntro({ floor: gameState.floor, theme: gameState.theme || 'Catacombs' });
+      lastFloorRef.current = gameState.floor;
+      const timer = setTimeout(() => setFloorIntro(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.floor, gameState.gameStatus, gameState.theme]);
+
+  // Also trigger intro on initial start
+  useEffect(() => {
+    if (gameState.gameStatus === 'playing' && gameState.floor === 1 && !lastFloorRef.current) {
+      setFloorIntro({ floor: 1, theme: gameState.theme || 'Catacombs' });
+      lastFloorRef.current = 1;
+      const timer = setTimeout(() => setFloorIntro(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.gameStatus]);
 
   const replayIndexRef = useRef(0);
   const replayTimerRef = useRef<number | null>(null);
@@ -188,6 +210,46 @@ function App() {
       {/* Overlays */}
       {gameState.gameStatus === 'choosing_upgrade' && (
         <UpgradeOverlay onSelect={handleSelectUpgrade} gameState={gameState} />
+      )}
+      {gameState.gameStatus === 'lost' && (
+        <div className="fixed inset-0 bg-red-950/90 backdrop-blur-xl flex flex-col items-center justify-center z-[200] transition-opacity duration-500">
+          <div className="text-8xl mb-8 animate-bounce">💀</div>
+          <h2 className="text-6xl font-black text-white mb-2 tracking-tighter italic uppercase">Identity Deleted</h2>
+          <p className="text-red-200/60 mb-12 text-xl font-medium tracking-widest uppercase">Simulation Terminated</p>
+          <button
+            onClick={handleReset}
+            className="px-12 py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.3)]"
+          >
+            Reinitialize Simulation
+          </button>
+        </div>
+      )}
+      {gameState.gameStatus === 'won' && (
+        <div className="fixed inset-0 bg-indigo-950/90 backdrop-blur-xl flex flex-col items-center justify-center z-[200] transition-opacity duration-500">
+          <div className="text-8xl mb-8 animate-bounce">🏆</div>
+          <h2 className="text-6xl font-black text-white mb-2 tracking-tighter italic uppercase">Arcade Mode Cleared</h2>
+          <p className="text-indigo-200/60 mb-2 text-xl font-medium tracking-widest uppercase">The Sentinel has fallen</p>
+          <p className="text-white/20 mb-12 text-sm font-bold uppercase tracking-[0.3em]">Score: {gameState.completedRun?.score || 0}</p>
+          <button
+            onClick={handleExitToHub}
+            className="px-12 py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.3)]"
+          >
+            Return to Command Center
+          </button>
+        </div>
+      )}
+
+      {/* Floor Intro Overlay */}
+      {floorIntro && (
+        <div className="fixed inset-0 flex items-center justify-center z-[150] pointer-events-none animate-in fade-in duration-700">
+          <div className="text-center">
+            <div className="text-indigo-500 font-black text-2xl uppercase tracking-[0.5em] mb-4 animate-in slide-in-from-bottom-8 duration-1000">Floor {floorIntro.floor}</div>
+            <h2 className="text-8xl font-black text-white uppercase tracking-tighter italic animate-in slide-in-from-top-12 duration-1000">{floorIntro.theme}</h2>
+            <div className="h-1 w-64 bg-white/20 mx-auto mt-8 rounded-full overflow-hidden">
+              <div className="h-full bg-indigo-500 animate-[progress_3s_linear]" />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -60,13 +60,37 @@ export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub 
                             <span className="text-2xl font-black text-blue-400 leading-none">{gameState.player.temporaryArmor || 0}</span>
                         </div>
                     </div>
+
+                    {/* Boss Health Bar */}
+                    {gameState.enemies.filter(e => e.subtype === 'sentinel').map(boss => (
+                        <div key={boss.id} className="pt-4 animate-in slide-in-from-right-8 duration-500">
+                            <div className="flex justify-between items-end mb-2">
+                                <span className="text-xs font-black text-red-500 uppercase tracking-tighter italic">Sentinel Directive</span>
+                                <span className="text-lg font-black">{boss.hp} <span className="text-white/20 text-xs">/ {boss.maxHp}</span></span>
+                            </div>
+                            <div className="h-4 w-full bg-red-950/30 rounded-md border border-red-500/20 overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all duration-300"
+                                    style={{ width: `${(boss.hp / boss.maxHp) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Stats Section */}
-                <div className="py-8 border-y border-white/5 space-y-4">
-                    <div className="flex justify-between items-center">
-                        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Floor</span>
-                        <span className="text-xl font-black">{gameState.floor}</span>
+                <div className="py-8 border-y border-white/5 space-y-6">
+                    <div className="flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Arcade Progress</span>
+                            <span className="text-xl font-black">{gameState.floor} <span className="text-white/20 text-sm">/ 10</span></span>
+                        </div>
+                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                            <div
+                                className="h-full bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all duration-1000 ease-out"
+                                style={{ width: `${(gameState.floor / 10) * 100}%` }}
+                            />
+                        </div>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Current Score</span>

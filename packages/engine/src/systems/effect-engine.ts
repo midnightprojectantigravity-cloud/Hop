@@ -69,6 +69,8 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     nextState.player = applyDamage(nextState.player, effect.amount);
                 } else {
                     const victim = nextState.enemies.find(e => e.id === targetActorId);
+                    const victimPos = targetActorId === nextState.player.id ? nextState.player.position : victim?.position;
+
                     if (victim && victim.hp <= effect.amount) {
                         nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'freeze', payload: { duration: 80 } }];
                     }
@@ -80,14 +82,17 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         }
                         return e;
                     }).filter((e: Actor) => e.hp > 0);
+
+                    nextState.visualEvents = [...(nextState.visualEvents || []),
+                    { type: 'shake', payload: { intensity: effect.amount > 1 ? 'medium' : 'low' } },
+                    { type: 'combat_text', payload: { text: `-${effect.amount}`, targetId: targetActorId, position: victimPos } },
+                    { type: 'vfx', payload: { type: 'impact', position: victimPos } }
+                    ];
                 }
-                nextState.visualEvents = [...(nextState.visualEvents || []),
-                { type: 'shake', payload: { intensity: effect.amount > 1 ? 'medium' : 'low' } },
-                { type: 'combat_text', payload: { text: `-${effect.amount}`, targetId: targetActorId } }
-                ];
             } else if (targetPos) {
                 nextState.visualEvents = [...(nextState.visualEvents || []),
-                { type: 'combat_text', payload: { text: `-${effect.amount}`, position: targetPos } }
+                { type: 'combat_text', payload: { text: `-${effect.amount}`, position: targetPos } },
+                { type: 'vfx', payload: { type: 'impact', position: targetPos } }
                 ];
                 if (hexEquals(nextState.player.position, targetPos)) {
                     nextState.player = applyDamage(nextState.player, effect.amount);
@@ -106,6 +111,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
         case 'Heal': {
             if (effect.target === 'targetActor' && context.targetId) {
+                const victim = context.targetId === nextState.player.id ? nextState.player : nextState.enemies.find(e => e.id === context.targetId);
                 if (context.targetId === nextState.player.id) {
                     nextState.player = { ...nextState.player, hp: Math.min(nextState.player.maxHp, nextState.player.hp + effect.amount) };
                 } else {
@@ -115,6 +121,11 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         }
                         return e;
                     });
+                }
+                if (victim) {
+                    nextState.visualEvents = [...(nextState.visualEvents || []),
+                    { type: 'combat_text', payload: { text: `+${effect.amount}`, position: victim.position } }
+                    ];
                 }
             }
             break;
@@ -142,12 +153,17 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 targetPos = effect.target as Point;
             }
 
+            let resolvedPos = targetPos;
+
             if (targetActorId) {
                 if (targetActorId === nextState.player.id) {
+                    resolvedPos = nextState.player.position;
                     const result = addStatus(nextState.player, effect.status, effect.duration, nextState);
                     nextState.player = result.actor;
                     nextState.rngCounter = result.nextState.rngCounter;
                 } else {
+                    const enemy = nextState.enemies.find(e => e.id === targetActorId);
+                    resolvedPos = enemy?.position || null;
                     nextState.enemies = nextState.enemies.map((e: Actor) => {
                         if (e.id === targetActorId) {
                             const result = addStatus(e, effect.status, effect.duration, nextState);
@@ -168,8 +184,8 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 });
             }
 
-            if (effect.status === 'stunned') {
-                nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'stun_stars', target: effect.target, targetId: context.targetId } }];
+            if (effect.status === 'stunned' && resolvedPos) {
+                nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'impact', position: resolvedPos } }];
             }
             break;
         }
@@ -218,15 +234,42 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'freeze', payload: { duration: 80 } }];
             }
             if (effect.effect === 'combat_text' && effect.text) {
-                nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'combat_text', payload: { text: effect.text, position: effect.target } }];
+                const targetPos = typeof effect.target === 'string'
+                    ? (effect.target === nextState.player.id ? nextState.player.position : nextState.enemies.find(e => e.id === effect.target)?.position)
+                    : effect.target;
+                nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'combat_text', payload: { text: effect.text, position: targetPos } }];
+            }
+            if (effect.effect === 'impact' && effect.target) {
+                const targetPos = typeof effect.target === 'string'
+                    ? (effect.target === nextState.player.id ? nextState.player.position : nextState.enemies.find(e => e.id === effect.target)?.position)
+                    : effect.target;
+                if (targetPos) {
+                    nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'impact', position: targetPos } }];
+                }
+            }
+            if (effect.effect === 'flash' && effect.target) {
+                const targetPos = typeof effect.target === 'string'
+                    ? (effect.target === nextState.player.id ? nextState.player.position : nextState.enemies.find(e => e.id === effect.target)?.position)
+                    : effect.target;
+                if (targetPos) {
+                    nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'flash', position: targetPos } }];
+                }
+            }
+            if (effect.effect === 'spearTrail' && effect.path) {
+                nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'spear_trail', path: effect.path } }];
             }
             if (effect.effect === 'lavaSink' && effect.target) {
-                const targetPos = effect.target as Point;
-                const dying = nextState.enemies.find((e: Actor) => hexEquals(e.position, targetPos));
-                if (dying) {
-                    nextState.dyingEntities = [...(nextState.dyingEntities || []), dying];
-                    nextState.enemies = nextState.enemies.filter((e: Actor) => !hexEquals(e.position, targetPos));
-                    nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'vaporize', position: targetPos } }];
+                const targetPos = typeof effect.target === 'string'
+                    ? (effect.target === nextState.player.id ? nextState.player.position : nextState.enemies.find(e => e.id === effect.target)?.position)
+                    : (effect.target as Point);
+
+                if (targetPos) {
+                    const dying = nextState.enemies.find((e: Actor) => hexEquals(e.position, targetPos));
+                    if (dying) {
+                        nextState.dyingEntities = [...(nextState.dyingEntities || []), dying];
+                        nextState.enemies = nextState.enemies.filter((e: Actor) => !hexEquals(e.position, targetPos));
+                        nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'vaporize', position: targetPos } }];
+                    }
                 }
             }
             break;

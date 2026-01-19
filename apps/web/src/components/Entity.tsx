@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Actor as EntityType } from '@hop/engine';
-import { isStunned, hexToPixel, getDirectionFromTo, hexEquals, TILE_SIZE } from '@hop/engine';
+import { isStunned, hexToPixel, getDirectionFromTo, hexEquals, TILE_SIZE, getHexLine } from '@hop/engine';
 
 interface EntityProps {
     entity: EntityType;
@@ -70,12 +70,56 @@ const renderIcon = (entity: EntityType, isPlayer: boolean, size = 24) => {
 };
 
 export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
-    const { x, y } = hexToPixel(entity.position, TILE_SIZE);
+    const [displayPos, setDisplayPos] = useState(entity.position);
+    const [animationPrevPos, setAnimationPrevPos] = useState<EntityType['position'] | undefined>(entity.previousPosition);
+    const animationInProgress = useRef(false);
+    const lastTargetPos = useRef(entity.position);
+
     const [isFlashing, setIsFlashing] = useState(false);
     const prevHp = useRef(entity.hp);
 
     const isPlayer = entity.type === 'player';
     const targetPixel = entity.intentPosition ? hexToPixel(entity.intentPosition, TILE_SIZE) : null;
+
+    // Sequential Animation Logic
+    useEffect(() => {
+        if (!hexEquals(entity.position, lastTargetPos.current)) {
+            // New position detected
+            lastTargetPos.current = entity.position;
+
+            if (entity.previousPosition && !hexEquals(entity.position, entity.previousPosition)) {
+                const path = getHexLine(entity.previousPosition, entity.position);
+                if (path.length > 2) { // Only animate sequences for multi-tile jumps/dashes
+                    animationInProgress.current = true;
+                    let step = 0;
+                    const stepDuration = 120; // ms per tile
+
+                    const interval = setInterval(() => {
+                        step++;
+                        if (step < path.length) {
+                            setAnimationPrevPos(path[step - 1]);
+                            setDisplayPos(path[step]);
+                        } else {
+                            clearInterval(interval);
+                            animationInProgress.current = false;
+                            setDisplayPos(entity.position);
+                            setAnimationPrevPos(entity.previousPosition);
+                        }
+                    }, stepDuration);
+
+                    return () => {
+                        clearInterval(interval);
+                        animationInProgress.current = false;
+                    };
+                }
+            }
+            // Fallback for 1-tile move or no previous position
+            setDisplayPos(entity.position);
+            setAnimationPrevPos(entity.previousPosition);
+        }
+    }, [entity.position]);
+
+    const { x, y } = hexToPixel(displayPos, TILE_SIZE);
 
     // Handle damage flash
     useEffect(() => {
@@ -87,17 +131,14 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
         prevHp.current = entity.hp;
     }, [entity.hp]);
 
-    // Calculate movement stretch
+    // Calculate movement stretch based on the animating previous position
     let stretchTransform = '';
-    if (entity.previousPosition && !hexEquals(entity.position, entity.previousPosition)) {
-        const dir = getDirectionFromTo(entity.previousPosition, entity.position);
+    const movePrev = animationPrevPos;
+    if (movePrev && !hexEquals(displayPos, movePrev)) {
+        const dir = getDirectionFromTo(movePrev, displayPos);
         if (dir !== -1) {
-            // Rotations for directions 0-5 (flat-top hexes)
-            // 0: +Q (0deg), 1: +Q-R (-60deg?), etc.
-            // Actually simpler to just rotate to the movement direction
             const angle = dir * 60;
-            // Stretch along the angle
-            stretchTransform = `rotate(${angle}) scale(1.2, 0.8) rotate(${-angle})`;
+            stretchTransform = `rotate(${angle}) scale(1.15, 0.85) rotate(${-angle})`;
         }
     }
 
@@ -133,7 +174,7 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
             {/* Main Entity Group - Handles smooth movement translation */}
             <g
                 style={{
-                    transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'transform 0.12s linear',
                     transform: `translate(${x}px, ${y}px)`
                 }}
                 className={isDying ? 'animate-lava-sink' : ''}

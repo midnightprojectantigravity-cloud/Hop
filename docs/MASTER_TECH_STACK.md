@@ -57,18 +57,18 @@ The out-of-combat experience must feel as robust as the tactical grid.
 
 * **Entity overlap**: By default, entities should not overlap unless explicitly allowed. At the moment, a bomb can be sent to a tile that becomes occupied by another entity within the same round, which is not the intended behavior.
 * **Skill issues**: 
-    * Vault skill should change its name to Stun Vault every other turn to show that it will behave differently.
-    * Skirmisher basic movement should be the dash (with or without shield), so we might want to make it a skill.
-    * Still need to enforce LOS for skill targeting. At the moment, enemies that are behind other enemies can be targeted.
+    * Vault skill should change its name to Stun Vault every other turn to show that it will behave differently. - IN PROGRESS, the skill needs to alternate between stun vault and vault.
+    * Still need to enforce LOS for skill targeting. At the moment, enemies that are behind other enemies can be targeted. - TODO
     * Bombs should damage every unit in a 1 tile radius.
     * Bombs timer doesn't seem to be working fine or they are not cleared up properly after they explode.
     * Picking up a spear becomes a bit awkward when we have both player and enemies with a spear.
     * Shield Throw should leave the shield on the ground on impact with another unit. It can then be picked up later just like the spear.
-    * Player should die when reaching 0 health. The UI should show the death animation and then the game should end.
+    * Player should die when reaching 0 health. The UI should show the death animation and then the game should end. - IN PROGRESS, the player is dying but no Game Over screen is shown.
 * Still need to clean up the preview overlay.
-* Still need to move the hub to full page instead of within the tactical grid frame. - DONE
 * Still need to create the splash screen and non combat UI and navigation.
 * Still need to create juice for the entities and skills and interactions.
-* Skirmisher should not have the basic attack skill.
 * Footman unit that cannot move is attacking from a distance. This should not be allowed.
+* Need to connect Grappling Hook and Shield Throw to the Kinetic Pulse.
+* Need to allow for free move when there are no enemies left.
+* Need to create the 10 level arcade mode.
 

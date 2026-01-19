@@ -1,5 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexDistance, getHexLine, hexEquals } from '../hex';
+import { hexDistance, getHexLine, hexEquals, isHexInRectangularGrid } from '../hex';
 import { getEnemyAt } from '../helpers';
 
 /**
@@ -34,25 +34,59 @@ export const SPEAR_THROW: SkillDefinition = {
 
         const line = getHexLine(shooter.position, target);
 
-        // Add visual trail
-        effects.push({ type: 'Juice', effect: 'spearTrail', path: line });
+        // Find the first obstacle (enemy or wall)
+        let hitPos = target;
+        let hitEnemy = undefined;
 
-        // Check for hits
-        const targetEnemy = getEnemyAt(state.enemies, target);
+        for (let i = 1; i < line.length; i++) {
+            const p = line[i];
+            const obstacle = getEnemyAt(state.enemies, p);
+            const isWall = state.wallPositions.some(w => hexEquals(w, p));
+            if (obstacle || isWall) {
+                hitPos = p;
+                hitEnemy = obstacle;
+                break;
+            }
+        }
 
-        if (targetEnemy) {
-            effects.push({ type: 'Damage', target: targetEnemy.position, amount: 99 });
-            messages.push(`Spear killed ${targetEnemy.subtype || 'enemy'}!`);
-        } else if (state.wallPositions.some(w => hexEquals(w, target))) {
-            return { effects: [], messages: ['Cannot throw into a wall!'], consumesTurn: false };
+        // Add visual trail to hit point
+        effects.push({ type: 'Juice', effect: 'spearTrail', path: getHexLine(shooter.position, hitPos) });
+
+        if (hitEnemy) {
+            effects.push({ type: 'Damage', target: hitEnemy.position, amount: 99 });
+            messages.push(`Spear killed ${hitEnemy.subtype || 'enemy'}!`);
+        } else if (state.wallPositions.some(w => hexEquals(w, hitPos))) {
+            messages.push('Spear hit a wall!');
         } else {
             messages.push('Spear thrown.');
         }
 
-        // Spawn Spear Item at target (Projectile stays on the ground)
-        effects.push({ type: 'SpawnItem', itemType: 'spear', position: target });
+        // Spawn Spear Item at hit position
+        effects.push({ type: 'SpawnItem', itemType: 'spear', position: hitPos });
 
         return { effects, messages };
+    },
+    getValidTargets: (state: GameState, origin: Point) => {
+        // Enforce straight line (axial) and range
+        const range = 3;
+        const valid: Point[] = [];
+        for (let d = 0; d < 6; d++) {
+            for (let i = 1; i <= range; i++) {
+                const p = {
+                    q: origin.q + i * [1, 1, 0, -1, -1, 0][d],
+                    r: origin.r + i * [0, -1, -1, 0, 1, 1][d],
+                    s: origin.s + i * [-1, 0, 1, 1, 0, -1][d]
+                };
+                if (!isHexInRectangularGrid(p, state.gridWidth, state.gridHeight)) break;
+
+                const isWall = state.wallPositions.some(w => hexEquals(w, p));
+                const enemy = getEnemyAt(state.enemies, p);
+
+                valid.push(p);
+                if (isWall || enemy) break; // Blocked
+            }
+        }
+        return valid;
     },
     upgrades: {
         SPEAR_RANGE: { id: 'SPEAR_RANGE', name: 'Extended Reach', description: 'Range +1', modifyRange: 1 },

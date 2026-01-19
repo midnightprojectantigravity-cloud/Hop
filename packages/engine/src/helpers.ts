@@ -119,7 +119,13 @@ export const checkStairs = (
     state: GameState,
     position: Point
 ): boolean => {
-    return hexEquals(position, state.stairsPosition);
+    if (!hexEquals(position, state.stairsPosition)) return false;
+
+    // Boss Lock: If the Sentinel is alive, you cannot leave the floor
+    const bossAlive = state.enemies.some(e => e.subtype === 'sentinel' && e.hp > 0);
+    if (bossAlive) return false;
+
+    return true;
 };
 
 /**

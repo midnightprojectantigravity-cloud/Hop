@@ -153,7 +153,7 @@ export const generateEnemies = (
 ): Entity[] => {
     const rng = createRng(seed + ':enemies');
     const budget = FLOOR_ENEMY_BUDGET[Math.min(floor, FLOOR_ENEMY_BUDGET.length - 1)];
-    const availableTypes = FLOOR_ENEMY_TYPES[Math.min(floor, 5)] || FLOOR_ENEMY_TYPES[5];
+    const availableTypes = FLOOR_ENEMY_TYPES[floor] || FLOOR_ENEMY_TYPES[Math.max(...Object.keys(FLOOR_ENEMY_TYPES).map(Number))];
 
     const enemies: Entity[] = [];
     let remainingBudget = budget;

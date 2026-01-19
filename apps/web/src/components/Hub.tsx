@@ -34,10 +34,10 @@ export const Hub: React.FC<HubProps> = ({ gameState, onSelectLoadout, onStartRun
           {gameState.selectedLoadoutId && (
             <button
               onClick={onStartRun}
-              className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black uppercase text-sm tracking-widest transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(79,70,229,0.3)] flex items-center gap-2"
+              className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black uppercase text-sm tracking-widest transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(79,70,229,0.3)] flex flex-col items-center justify-center leading-tight"
             >
-              Initialize Run
-              <span className="text-xs opacity-50">→</span>
+              <span>Initialize Arcade</span>
+              <span className="text-[9px] opacity-50 tracking-[0.2em]">10 Floors • Boss Defeat</span>
             </button>
           )}
         </div>

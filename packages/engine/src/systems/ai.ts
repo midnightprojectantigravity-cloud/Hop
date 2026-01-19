@@ -384,7 +384,8 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
                     const isInBounds = isHexInRectangularGrid(n, GRID_WIDTH, GRID_HEIGHT);
                     const isWall = state.wallPositions?.some((w: Point) => hexEquals(w, n));
                     const isLava = state.lavaPositions?.some((l: Point) => hexEquals(l, n));
-                    return isInBounds && !isWall && !isLava && !hexEquals(n, playerMovedTo);
+                    const isOccupiedByEnemy = state.enemies.some((e: Entity) => hexEquals(e.position, n));
+                    return isInBounds && !isWall && !isLava && !isOccupiedByEnemy && !hexEquals(n, playerMovedTo);
                 });
 
                 if (candidateTargets.length > 0) {
@@ -427,13 +428,14 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
 
             const { position, state: newState } = findBestMove(bt, playerMovedTo, state, state.occupiedCurrentTurn);
             const moved = !hexEquals(position, bt.position);
+            const nextDist = hexDistance(position, playerMovedTo);
 
             return {
                 entity: {
                     ...bt,
                     position,
-                    intent: moved ? 'Moving' : 'BASIC_ATTACK',
-                    intentPosition: moved ? undefined : { ...playerMovedTo }
+                    intent: moved ? 'Moving' : (nextDist === 1 ? 'BASIC_ATTACK' : 'Waiting'),
+                    intentPosition: (moved || nextDist > 1) ? undefined : { ...playerMovedTo }
                 },
                 nextState: newState,
                 message: moved ? `${bt.subtype} moves to (${position.q}, ${position.r})` : undefined

@@ -10,6 +10,7 @@ import { grappleHookScenarios } from '../scenarios/grapple_hook';
 import { toScenarioV2 } from '../scenarios/utils';
 
 import { getComponent, type PhysicsComponent } from '../systems/components';
+import { processKineticRequest } from '../systems/movement';
 
 export const GRAPPLE_HOOK: SkillDefinition = {
     id: 'GRAPPLE_HOOK',
@@ -96,34 +97,22 @@ export const GRAPPLE_HOOK: SkillDefinition = {
 
                 // 2. Fling direction is from the new player position back through the origin
                 const flingDirIdx = getDirectionFromTo(oneTileTowardTarget, shooterOrigin);
-                let finalFlingPos = shooterOrigin;
+                const flingTarget = hexAdd(shooterOrigin, scaleVector(flingDirIdx, 4));
 
-                // 3. The loop MUST check the shooterOrigin itself, as that's where the target starts its fling
-                for (let i = 0; i <= 4; i++) { // Start at 0 to check the swap-in tile (shooterOrigin)
-                    const stepPos = i === 0 ? shooterOrigin : hexAdd(shooterOrigin, scaleVector(flingDirIdx, i));
+                // 3. Trigger Kinetic Pulse for the flip/fling
+                const momentum = 4;
+                const result = processKineticRequest(state, {
+                    sourceId: targetActor.id, // The target becomes the source of the kinetic energy
+                    target: flingTarget,
+                    momentum,
+                    isPulse: true
+                });
 
-                    const isWall = state.wallPositions?.some(w => hexEquals(w, stepPos));
-                    const isOccupied = i > 0 && getActorAt(state, stepPos); // Don't collide with self at step 0
-
-                    if (isWall || isOccupied) {
-                        effects.push({ type: 'ApplyStatus', target: 'targetActor', status: 'stunned', duration: 1 });
-                        break;
-                    }
-
-                    finalFlingPos = stepPos;
-
-                    // FIX: This now correctly catches the lava at (4, 5) for target2
-                    if (state.lavaPositions?.some(l => hexEquals(l, stepPos))) {
-                        effects.push({ type: 'Displacement', target: 'targetActor', destination: finalFlingPos, isFling: true });
-                        effects.push({ type: 'Damage', target: finalFlingPos, amount: 999 });
-                        effects.push({ type: 'Juice', effect: 'lavaSink', target: finalFlingPos });
-                        messages.push(`${targetActor.subtype} was flung into lava!`);
-                        break;
-                    }
-                }
-
-                effects.push({ type: 'Displacement', target: 'targetActor', destination: finalFlingPos, isFling: true });
                 messages.push(`Flipped and flung ${targetActor.subtype}!`);
+                return {
+                    effects: [...effects, ...result.effects],
+                    messages: [...messages, ...result.messages]
+                };
             }
         }
         return { effects, messages };

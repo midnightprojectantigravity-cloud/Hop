@@ -34,6 +34,8 @@ export const BASIC_MOVE: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
+        const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
+
         effects.push({
             type: 'Displacement',
             target: 'self',
@@ -41,14 +43,20 @@ export const BASIC_MOVE: SkillDefinition = {
             source: attacker.position
         });
 
-        messages.push('Moved.');
+        messages.push(noEnemies ? 'Free Move.' : 'Moved.');
 
-        return { effects, messages };
+        return { effects, messages, consumesTurn: !noEnemies };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        // Find the actor at origin to get their speed
         const actor = getActorAt(state, origin) as Actor;
         if (!actor) return [];
+
+        const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
+        if (noEnemies) {
+            // Return all walkable tiles if no enemies (simple implementation: BFS with high range)
+            return getMovementRange(state, origin, 20);
+        }
+
         return getMovementRange(state, origin, Math.max(actor.speed || 1, 1));
     },
     upgrades: {},

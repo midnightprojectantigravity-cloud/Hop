@@ -71,7 +71,7 @@ export const ENEMY_STATS = {
     warlock: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 2, skills: [], actionCooldown: 2, weightClass: 'Standard', speed: 55 },
 
     // Boss
-    sentinel: { hp: 20, maxHp: 20, range: 5, damage: 2, type: 'boss', cost: 0, skills: ['BASIC_ATTACK', 'SENTINEL_BLAST'], actionCooldown: 1, weightClass: 'Heavy', speed: 200 },
+    sentinel: { hp: 30, maxHp: 30, range: 4, damage: 2, type: 'boss', cost: 25, skills: ['BASIC_ATTACK', 'SENTINEL_BLAST'], actionCooldown: 1, weightClass: 'Heavy', speed: 120 },
 };
 
 // Hazard percentage (15-20% of map)

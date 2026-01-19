@@ -257,6 +257,70 @@ body::after {
 }
 
 /* ============================================
+   JUICE: IMPACT ANIMATION
+   ============================================ */
+@keyframes impact {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+    stroke-width: 10px;
+  }
+
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+    stroke-width: 0px;
+  }
+}
+
+.animate-impact {
+  animation: impact 0.3s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: COMBAT TEXT FLOAT
+   ============================================ */
+@keyframes floatUp {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+}
+
+.animate-float-up {
+  animation: floatUp 0.8s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: FLASH ANIMATION
+   ============================================ */
+@keyframes flash {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.animate-flash {
+  animation: flash 0.2s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: SPEAR TRAIL ANIMATION
+   ============================================ */
+@keyframes spearTrail {
+  0% { stroke-dashoffset: 100%; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+.animate-spear-trail {
+  stroke-dasharray: 100%;
+  animation: spearTrail 0.4s ease-out forwards;
+}
+
+/* ============================================
    UTILITIES
    ============================================ */
 .custom-scrollbar::-webkit-scrollbar {

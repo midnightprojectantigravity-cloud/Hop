@@ -209,7 +209,11 @@ export const processNextTurn = (state: GameState): GameState => {
 
     if (turnResult.isDead) {
         dyingEntities.push(enemy);
-        curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
+        curState = {
+            ...curState,
+            enemies: curState.enemies.filter(e => e.id !== actorId),
+            initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId)
+        };
     } else {
         // 7. End turn
         curState = { ...curState, initiativeQueue: endActorTurn(curState, actorId) };

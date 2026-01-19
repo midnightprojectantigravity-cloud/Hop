@@ -91,7 +91,7 @@ export type AtomicEffect =
     | { type: 'PickupShield'; position?: Point }
     | { type: 'GrantSkill'; skillId: string }
     | { type: 'Message'; text: string }
-    | { type: 'Juice'; effect: 'shake' | 'flash' | 'lavaSink' | 'spearTrail' | 'freeze' | 'combat_text' | 'impact'; target?: Point; path?: Point[]; intensity?: 'low' | 'medium' | 'high'; direction?: Point; text?: string }
+    | { type: 'Juice'; effect: 'shake' | 'flash' | 'lavaSink' | 'spearTrail' | 'freeze' | 'combat_text' | 'impact'; target?: Point | string; path?: Point[]; intensity?: 'low' | 'medium' | 'high'; direction?: Point; text?: string }
     | { type: 'ModifyCooldown'; skillId: string; amount: number; setExact?: boolean }
     | { type: 'UpdateComponent'; target: 'self' | 'targetActor'; key: string; value: GameComponent }
     | { type: 'GameOver'; reason: 'PLAYER_DIED' | 'OUT_OF_TIME' };

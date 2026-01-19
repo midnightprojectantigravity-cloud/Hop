@@ -29,7 +29,10 @@ export const DASH: SkillDefinition = {
         const dist = hexDistance(attacker.position, target);
         const dirIdx = getDirectionFromTo(attacker.position, target);
 
-        if (dist < 1 || dist > 4) {
+        const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
+        const maxDist = noEnemies ? 20 : 4;
+
+        if (dist < 1 || dist > maxDist) {
             return { effects, messages: ['Out of range!'], consumesTurn: false };
         }
         if (dirIdx === -1) {
@@ -48,7 +51,7 @@ export const DASH: SkillDefinition = {
         if (!targetActor) {
             effects.push({ type: 'Displacement', target: 'self', destination: target });
             effects.push({ type: 'Juice', effect: 'impact', target: target, intensity: 'low' });
-            return { effects, messages: ['Dashed!'] };
+            return { effects, messages: [noEnemies ? 'Free Dash!' : 'Dashed!'], consumesTurn: !noEnemies };
         }
 
         if (!state.hasShield) {
@@ -75,8 +78,11 @@ export const DASH: SkillDefinition = {
     },
 
     getValidTargets: (state: GameState, origin: Point) => {
+        const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
+        const range = noEnemies ? 20 : 4;
+
         return getReachableHexes(state, origin, {
-            range: 4,
+            range,
             axialOnly: true,
             stopAtObstacles: true
         });

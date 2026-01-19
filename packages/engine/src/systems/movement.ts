@@ -4,7 +4,7 @@ import { getEnemyAt, isWalkable, isOccupied } from '../helpers';
 import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
 import { applyEffects, applyAtomicEffect } from './effect-engine';
 import { prepareKineticSimulation, translate1DToHex } from './hex-bridge';
-import { resolveKineticDash } from './kinetic-kernel';
+import { resolveKineticDash, resolveKineticPulse } from './kinetic-kernel';
 
 /**
  * Movement System
@@ -58,6 +58,8 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
                     let newState = state;
                     newState = applyAtomicEffect(newState, { type: 'Displacement', target: 'targetActor', destination: pushDest }, { targetId: enemy.id });
                     newState = applyAtomicEffect(newState, { type: 'ApplyStatus', target: pushDest, status: 'stunned', duration: 1 }, { targetId: enemy.id });
+                    newState = applyAtomicEffect(newState, { type: 'Juice', effect: 'shake', intensity: 'medium' });
+                    newState = applyAtomicEffect(newState, { type: 'Juice', effect: 'impact', target: pos }); // Impact at original enemy pos
                     newState.message.push(`Tackled ${enemy.subtype}!`);
 
                     // Player stops at enemy's old position
@@ -103,6 +105,8 @@ export interface KineticRequest {
     sourceId: string;
     target: Point;
     momentum: number;
+    isPulse?: boolean; // If true, uses resolveKineticPulse (no shooter teleport)
+    skipSourceDisplacement?: boolean;
 }
 
 export interface KineticStep {
@@ -124,7 +128,9 @@ export interface KineticResult {
  */
 export function processKineticRequest(state: GameState, request: KineticRequest): KineticResult {
     const simulation = prepareKineticSimulation(request.sourceId, request.target, request.momentum, state);
-    const intention = resolveKineticDash(simulation.state);
+    const intention = request.isPulse
+        ? resolveKineticPulse(simulation.state)
+        : resolveKineticDash(simulation.state);
 
     const effects: AtomicEffect[] = [];
     const messages: string[] = [];
@@ -167,6 +173,8 @@ export function processKineticRequest(state: GameState, request: KineticRequest)
             pulseSteps.push({ actorId: entity.id, hexPos, isLead });
 
             // 3. Generate Displacement Effect
+            if (entity.id === request.sourceId && request.skipSourceDisplacement) continue;
+
             effects.push({
                 type: 'Displacement',
                 target: entity.id === request.sourceId ? 'self' : entity.id,

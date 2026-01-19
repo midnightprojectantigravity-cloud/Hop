@@ -27,13 +27,22 @@ export interface KineticIntention {
 
 
 /**
+ * resolveKineticPulse
+ * Generic entry point for any kinetic interaction.
+ */
+export function resolveKineticPulse(state: BoardState): KineticIntention {
+    return processPulse(state, state.momentum, [], []);
+}
+
+/**
  * resolveKineticDash
+ * Specific logic for the Dash + Slam (Hoplite style)
  */
 export function resolveKineticDash(state: BoardState): KineticIntention {
     const entities = state.entities.map(e => ({ ...e }));
     const shooter = entities.find(e => e.type === 'S');
 
-    if (!shooter) return { finalState: entities, steps: [], activeIdAtStep: [], remainingMomentum: 0 };
+    if (!shooter) return resolveKineticPulse({ ...state, entities });
 
     const movables = entities.filter(e => e.type === 'M').sort((a, b) => a.pos - b.pos);
     const firstM = movables.find(m => m.pos > shooter.pos);
@@ -41,7 +50,7 @@ export function resolveKineticDash(state: BoardState): KineticIntention {
         shooter.pos = firstM.pos - 1;
     }
 
-    return processPulse({ ...state, entities }, state.momentum, [], []);
+    return resolveKineticPulse({ ...state, entities });
 }
 
 function processPulse(

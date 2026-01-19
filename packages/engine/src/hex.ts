@@ -11,6 +11,7 @@ export const hexEquals = (a: Point, b: Point): boolean => a.q === b.q && a.r ===
 export const hexAdd = (a: Point, b: Point): Point => createHex(a.q + b.q, a.r + b.r);
 
 export const hexSubtract = (a: Point, b: Point): Point => createHex(a.q - b.q, a.r - b.r);
+export const hexNegate = (a: Point): Point => createHex(-a.q, -a.r);
 
 export const hexDistance = (a: Point, b: Point): number => {
     return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.s - b.s)) / 2;

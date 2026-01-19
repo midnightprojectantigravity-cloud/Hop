@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import type { GameState, Point } from '@hop/engine';
 import { hexDistance, hexEquals, isTileInDiamond, hexToPixel } from '@hop/engine';
 import { HexTile } from './HexTile';
 import { Entity } from './Entity';
 import { TILE_SIZE, getSkillRange } from '@hop/engine';
 import PreviewOverlay from './PreviewOverlay';
+import { JuiceManager } from './JuiceManager';
 
 interface GameBoardProps {
     gameState: GameState;
@@ -14,7 +15,9 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selectedSkillId, showMovementRange }) => {
-    // 1. Filter cells based on dynamic diamond geometry
+    const [isShaking, setIsShaking] = useState(false);
+
+    // Filter cells based on dynamic diamond geometry
     const cells = useMemo(() => {
         let hexes = gameState.rooms?.[0]?.hexes;
 
@@ -33,7 +36,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         );
     }, [gameState.rooms, gameState.gridWidth, gameState.gridHeight]);
 
-    // 2. Dynamically calculate the Bounding Box of the actual hexes to maximize size
+    // Handle board shake
+    useEffect(() => {
+        const shakeEvent = gameState.visualEvents?.find(e => e.type === 'shake');
+        if (shakeEvent) {
+            setIsShaking(true);
+            const timer = setTimeout(() => setIsShaking(false), 200);
+            return () => clearTimeout(timer);
+        }
+    }, [gameState.visualEvents]);
+
+    // Dynamically calculate the Bounding Box of the actual hexes to maximize size
     const bounds = useMemo(() => {
         if (cells.length === 0) return { minX: 0, minY: 0, width: 100, height: 100 };
 
@@ -60,7 +73,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
     const selectedSkillRange = selectedSkillId ? getSkillRange(gameState.player, selectedSkillId) : 0;
 
     return (
-        <div className="w-full h-full flex justify-center items-center overflow-hidden">
+        <div className={`w-full h-full flex justify-center items-center overflow-hidden transition-transform duration-75 ${isShaking ? 'animate-shake' : ''}`}>
             <svg
                 width="100%"
                 height="100%"
@@ -145,6 +158,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                     <Entity entity={gameState.player} />
                     {gameState.enemies.map(e => <Entity key={e.id} entity={e} />)}
                     {gameState.dyingEntities?.map(e => <Entity key={`dying-${e.id}-${gameState.turnNumber}`} entity={e} isDying={true} />)}
+
+                    {/* Juice Effects Layer (Top-most) */}
+                    <JuiceManager visualEvents={gameState.visualEvents || []} />
                 </g>
             </svg>
         </div>

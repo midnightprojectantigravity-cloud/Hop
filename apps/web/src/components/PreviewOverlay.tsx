@@ -13,6 +13,22 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
 
     const movementTiles = useMemo(() => {
         if (!showMovementRange) return [] as Point[];
+        const isSkirmisher = gameState.player.archetype === 'SKIRMISHER';
+        if (isSkirmisher) {
+            // Skirmisher basic move IS the dash range
+            const range = 4;
+            const valid: Point[] = [];
+            for (let d = 0; d < 6; d++) {
+                for (let i = 1; i <= range; i++) {
+                    const p = hexAdd(playerPos, scaleVector(d, i));
+                    if (!isHexInRectangularGrid(p, gameState.gridWidth, gameState.gridHeight)) break;
+                    const isWall = gameState.wallPositions?.some(w => hexEquals(w, p));
+                    if (isWall) break;
+                    valid.push(p);
+                }
+            }
+            return valid;
+        }
         const movePoints = (gameState.player.movementSpeed ?? 1);
         return getMovementRange(gameState, playerPos, movePoints);
     }, [gameState, showMovementRange, playerPos]);
@@ -48,7 +64,10 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
                 // LoS check for interior (between origin and p)
                 const line = getHexLine(playerPos, p);
                 const interior = line.slice(1, -1);
-                const interiorBlocked = interior.some(iP => gameState.wallPositions?.some(w => hexEquals(w, iP)));
+                const interiorBlocked = interior.some(iP =>
+                    gameState.wallPositions?.some(w => hexEquals(w, iP)) ||
+                    gameState.enemies.some(e => hexEquals(e.position, iP))
+                );
 
                 // Determine if this tile is a valid target according to the skill
                 let isValidTarget = false;
@@ -62,7 +81,7 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
 
                 results.push({ p, isEnemy, isWall, blocked: interiorBlocked, isValidTarget, isMaxRange: i === range });
 
-                if (isWall) break; // stop ray at wall
+                if (isWall || isEnemy) break; // stop ray at wall or enemy
             }
         }
 
