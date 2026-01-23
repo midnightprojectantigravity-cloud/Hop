@@ -35,12 +35,16 @@ export interface MovementTrace {
 export interface StatusEffect {
     id: string;
     type: 'stunned' | 'poisoned' | 'armored' | 'hidden';
+
     duration: number; // -1 for permanent
     stacks?: number;
-    // Interceptor hooks
+
+    // The "When" logic
+    tickWindow: 'START_OF_TURN' | 'END_OF_TURN';
+
+    // The "What" logic - Interceptor hooks
     onIncomingDamage?: (damage: number) => number;
-    onTurnStart?: (actor: Actor, state: GameState) => AtomicEffect[];
-    onTurnEnd?: (actor: Actor, state: GameState) => AtomicEffect[];
+    onTick?: (actor: Actor, state: GameState) => AtomicEffect[];
 }
 
 /** Effect Middleware: Intercepts and modifies AtomicEffects before resolution */
@@ -83,15 +87,51 @@ export interface InitiativeQueue {
 
 /** Atomic Effects: Discrete engine instructions */
 export type AtomicEffect =
-    | { type: 'Displacement'; target: 'self' | 'targetActor' | string; destination: Point; source?: Point; isFling?: boolean; stunDuration?: number }
+    | {
+        type: 'Displacement';
+        target: 'self' | 'targetActor' | string;
+        destination: Point;
+        source?: Point;
+        isFling?: boolean;
+        stunDuration?: number;
+        path?: Point[];  // Optional: Full path for smooth tile-by-tile animation
+        animationDuration?: number;  // Optional: Suggested duration in ms (e.g., 150ms per tile)
+    }
     | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string }
     | { type: 'Heal'; target: 'targetActor'; amount: number }
     | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: 'stunned' | 'poisoned' | 'armored' | 'hidden'; duration: number }
     | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
     | { type: 'PickupShield'; position?: Point }
     | { type: 'GrantSkill'; skillId: string }
+    | { type: 'LavaSink'; target: string }
+    | { type: 'Impact'; target: string; damage: number; direction?: Point }
     | { type: 'Message'; text: string }
-    | { type: 'Juice'; effect: 'shake' | 'flash' | 'lavaSink' | 'spearTrail' | 'freeze' | 'combat_text' | 'impact'; target?: Point | string; path?: Point[]; intensity?: 'low' | 'medium' | 'high'; direction?: Point; text?: string }
+    | {
+        type: 'Juice';
+        effect:
+        // Legacy effects (keep for backward compatibility)
+        | 'shake' | 'flash' | 'freeze' | 'combat_text' | 'impact'
+        // Environmental reactions
+        | 'lavaSink' | 'lavaRipple' | 'wallCrack' | 'iceShatter' | 'voidConsume'
+        // Projectile/Path effects
+        | 'spearTrail' | 'shieldArc' | 'hookCable' | 'dashBlur'
+        // Momentum & Weight
+        | 'momentumTrail' | 'heavyImpact' | 'lightImpact' | 'kineticWave'
+        // Anticipation & Telegraphs
+        | 'anticipation' | 'chargeUp' | 'aimingLaser' | 'trajectory'
+        // Skill Signatures
+        | 'grappleHookWinch' | 'shieldSpin' | 'spearWhistle' | 'vaultLeap'
+        // Status & Feedback
+        | 'stunBurst' | 'poisonCloud' | 'armorGleam' | 'hiddenFade';
+        target?: Point | string;
+        path?: Point[];
+        intensity?: 'low' | 'medium' | 'high' | 'extreme';
+        direction?: Point;
+        text?: string;
+        duration?: number; // For sustained effects like cable tension
+        color?: string; // Hex color for themed effects
+        metadata?: Record<string, any>; // Extensible payload for frontend
+    }
     | { type: 'ModifyCooldown'; skillId: string; amount: number; setExact?: boolean }
     | { type: 'UpdateComponent'; target: 'self' | 'targetActor'; key: string; value: GameComponent }
     | { type: 'GameOver'; reason: 'PLAYER_DIED' | 'OUT_OF_TIME' };
@@ -133,6 +173,7 @@ export interface SkillDefinition {
         cost: number;
         cooldown: number;
         damage?: number;
+        momentum?: number;
     };
     /** Core Logic: Functional execution returning a list of effects */
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades?: string[], context?: Record<string, any>) => {
@@ -144,7 +185,7 @@ export interface SkillDefinition {
     /** Optional helper for UI/tests: return valid target hexes for previews (Level 1/2) */
     getValidTargets?: (state: GameState, origin: Point) => Point[];
     upgrades: Record<string, SkillModifier>;
-    scenarios: ScenarioV2[];
+    scenarios?: ScenarioV2[];
 }
 
 // Skill with cooldown tracking and upgrade system

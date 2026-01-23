@@ -2,8 +2,8 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexEquals, getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
-import { autoAttackScenarios } from '../scenarios/auto_attack';
-import { toScenarioV2 } from '../scenarios/utils';
+
+import { getSkillScenarios } from '../scenarios';
 
 /**
  * Auto Attack - A passive skill that triggers at the end of the entity's turn.
@@ -67,9 +67,11 @@ export const AUTO_ATTACK: SkillDefinition = {
         // Using IDs avoids "The Great Swap" bug and temporal coupling with previousPosition.
         const persistentTargetIds = context?.persistentTargetIds || [];
 
-        // If no persistent IDs are provided, we cannot guarantee correct auto-attack behavior.
-        // We choose to do nothing rather than guess incorrectly with previousPosition.
-        if (persistentTargetIds.length === 0) {
+        // If no persistent IDs are provided, we attempt to use legacy previousNeighbors.
+        // This keeps scenarios and initialization states working.
+        const previousNeighbors = context?.previousNeighbors || [];
+
+        if (persistentTargetIds.length === 0 && previousNeighbors.length === 0) {
             return { effects, messages, kills: 0 };
         }
 
@@ -80,8 +82,12 @@ export const AUTO_ATTACK: SkillDefinition = {
             // 1. Check Faction
             if (attacker.factionId === targetActor.factionId) continue;
 
-            // 2. Check Persistence (ID Intersection)
-            if (persistentTargetIds.includes(targetActor.id)) {
+            // 2. Check Persistence (ID Intersection or Spatial Fallback)
+            const isPersistent = persistentTargetIds.length > 0
+                ? persistentTargetIds.includes(targetActor.id)
+                : previousNeighbors.some(p => hexEquals(p, neighborPos));
+
+            if (isPersistent) {
                 // HIT!
                 effects.push({ type: 'Damage', target: neighborPos, amount: damage });
 
@@ -139,7 +145,7 @@ export const AUTO_ATTACK: SkillDefinition = {
             description: 'When auto-attack triggers, hit ALL adjacent enemies'
         },
     },
-    scenarios: autoAttackScenarios.scenarios.map(toScenarioV2),
+    scenarios: getSkillScenarios('AUTO_ATTACK')
 };
 
 /**

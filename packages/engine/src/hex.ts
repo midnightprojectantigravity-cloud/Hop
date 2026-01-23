@@ -18,24 +18,101 @@ export const hexDistance = (a: Point, b: Point): number => {
 };
 
 export const hexToPixel = (hex: Point, size: number): { x: number; y: number } => {
-    // Flat-top hex projection
-    // Each column (q) is shifted vertically by 0.5 hex height (sqrt(3)/2 * size)
-    // x = size * 3/2 * q
-    // y = size * sqrt(3) * (r + q/2)
     const x = size * (3 / 2 * hex.q);
     const y = size * Math.sqrt(3) * (hex.r + hex.q / 2);
     return { x, y };
 };
 
-// Directions for neighbors (axial)
+export interface Cube { q: number; r: number; s: number; }
+
+export const axialToCube = (hex: Point): Cube => ({ q: hex.q, r: hex.r, s: hex.s ?? -hex.q - hex.r });
+
+export const cubeToAxial = (cube: Cube): Point => createHex(cube.q, cube.r);
+
+export const cubeRound = (frac: Cube): Cube => {
+    let q = Math.round(frac.q);
+    let r = Math.round(frac.r);
+    let s = Math.round(frac.s);
+
+    const qDiff = Math.abs(q - frac.q);
+    const rDiff = Math.abs(r - frac.r);
+    const sDiff = Math.abs(s - frac.s);
+
+    if (qDiff > rDiff && qDiff > sDiff) {
+        q = -r - s;
+    } else if (rDiff > sDiff) {
+        r = -q - s;
+    } else {
+        s = -q - r;
+    }
+
+    return { q, r, s };
+};
+
 export const DIRECTIONS = [
     createHex(1, 0), createHex(1, -1), createHex(0, -1),
     createHex(-1, 0), createHex(-1, 1), createHex(0, 1)
 ];
 
-export const getNeighbors = (hex: Point): Point[] => {
-    return DIRECTIONS.map(d => hexAdd(hex, d));
+export const getNeighbors = (hex: Point): Point[] => DIRECTIONS.map(d => hexAdd(hex, d));
+
+export const hexDirection = (dir: number): Point => DIRECTIONS[((dir % 6) + 6) % 6];
+
+export const hexLerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/**
+ * Precise line drawing using cube interpolation.
+ * Essential for straight-line skill validation (Grapple, Spear).
+ */
+export const getHexLine = (start: Point, end: Point): Point[] => {
+    const dist = hexDistance(start, end);
+    const results: Point[] = [];
+    const a = axialToCube(start);
+    const b = axialToCube(end);
+
+    for (let i = 0; i <= dist; i++) {
+        const t = dist === 0 ? 0 : i / dist;
+        const currentCube = {
+            q: hexLerp(a.q + 1e-6, b.q + 1e-6, t),
+            r: hexLerp(a.r + 1e-6, b.r + 1e-6, t),
+            s: hexLerp(a.s + 1e-6, b.s + 1e-6, t)
+        };
+        results.push(cubeToAxial(cubeRound(currentCube)));
+    }
+    return results;
 };
+
+/**
+ * Returns tiles strictly between p1 and p2. 
+ * Re-implemented using the precise getHexLine to ensure hazard detection sync.
+ */
+export const getPathBetween = (p1: Point, p2: Point): Point[] => {
+    const line = getHexLine(p1, p2);
+    if (line.length <= 2) return [];
+    return line.slice(1, -1);
+};
+
+export const getDirectionFromTo = (start: Point, end: Point): number => {
+    const dist = hexDistance(start, end);
+    if (dist === 0) return -1;
+    const diff = hexSubtract(end, start);
+
+    // Normalize and check for strict axial alignment
+    const dq = diff.q / dist;
+    const dr = diff.r / dist;
+    const ds = (0 - diff.q - diff.r) / dist;
+
+    return DIRECTIONS.findIndex(d =>
+        Math.abs(d.q - dq) < 0.01 &&
+        Math.abs(d.r - dr) < 0.01 &&
+        Math.abs(d.s - ds) < 0.01
+    );
+};
+
+export function scaleVector(dirIdx: number, mag: number): Point {
+    const dir = hexDirection(dirIdx);
+    return { q: dir.q * mag, r: dir.r * mag, s: -(dir.q * mag) - (dir.r * mag) };
+}
 
 /**
  * Dynamic Coordinate Mask for "Stretched Diamond" geometry.
@@ -75,68 +152,3 @@ export const getDiamondGrid = (width: number, height: number): Point[] => {
 export const isHexInRectangularGrid = (hex: Point, width: number, height: number): boolean => {
     return isTileInDiamond(hex.q, hex.r, width, height);
 };
-
-export const hexDirection = (dir: number): Point => DIRECTIONS[dir % 6];
-
-export const getHexLine = (start: Point, end: Point): Point[] => {
-    const dist = hexDistance(start, end);
-    const results: Point[] = [];
-    for (let i = 0; i <= dist; i++) {
-        const t = dist === 0 ? 0 : i / dist;
-        const q = start.q + (end.q - start.q) * t;
-        const r = start.r + (end.r - start.r) * t;
-        results.push(createHex(Math.round(q), Math.round(r)));
-    }
-    return results;
-};
-
-export const getDirectionFromTo = (start: Point, end: Point): number => {
-    const dist = hexDistance(start, end);
-    if (dist === 0) return -1;
-
-    const diff = hexSubtract(end, start);
-
-    // 1. Normalize without rounding
-    const dq = diff.q / dist;
-    const dr = diff.r / dist;
-    const ds = (0 - diff.q - diff.r) / dist; // Calculate s-component
-
-    // 2. Strict Check: Are these perfect axial steps?
-    const isStrictAxial =
-        Number.isInteger(dq) &&
-        Number.isInteger(dr) &&
-        Number.isInteger(ds);
-
-    if (!isStrictAxial) return -1;
-    console.log('Direction vector: ' + dq + ', ' + dr + ', ' + ds);
-
-    // 3. Match against your constants
-    return DIRECTIONS.findIndex(d =>
-        d.q === dq &&
-        d.r === dr &&
-        d.s === ds
-    );
-};
-
-/**
- * Returns tiles strictly between p1 and p2. 
- * Essential for "Lava Interception" checks.
- */
-export const getPathBetween = (p1: Point, p2: Point): Point[] => {
-    const results: Point[] = [];
-    const dist = hexDistance(p1, p2);
-    // Start at 1 and end before dist to exclude shooter and target hexes
-    for (let i = 1; i < dist; i++) {
-        const t = i / dist;
-        const q = p1.q + (p2.q - p1.q) * t;
-        const r = p1.r + (p2.r - p1.r) * t;
-        results.push(createHex(Math.round(q), Math.round(r)));
-    }
-    return results;
-};
-
-
-export function scaleVector(dirIdx: number, mag: number): Point {
-    const dir = hexDirection(dirIdx);
-    return { q: dir.q * mag, r: dir.r * mag, s: dir.s * mag };
-}

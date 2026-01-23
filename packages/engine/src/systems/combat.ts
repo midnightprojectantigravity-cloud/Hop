@@ -7,6 +7,7 @@ import type { GameState, Point, Entity, AtomicEffect } from '../types';
 import { hexEquals, getNeighbors } from '../hex';
 import { computeEnemyAction } from './ai';
 import { applyDamage } from './actor';
+import { getActorAt } from '../helpers';
 import { applyAutoAttack } from '../skills/auto_attack';
 import { getTurnStartNeighborIds } from './initiative';
 import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
@@ -119,23 +120,28 @@ export const resolveSingleEnemyTurn = (
     // Tick down statuses and clear intent
     nextEnemy = handleStunReset(tickStatuses(enemy));
   } else if (enemy.intent === 'Bombing' && enemy.intentPosition) {
-    messages.push(`${enemy.subtype} placed a bomb.`);
-    const bombId = `bomb_${enemy.id}_${state.turnNumber}`;
-    const bomb: Entity = {
-      id: bombId,
-      type: 'enemy',
-      subtype: 'bomb',
-      factionId: 'enemy',
-      position: enemy.intentPosition,
-      hp: 1,
-      maxHp: 1,
-      speed: 10,
-      actionCooldown: 2,
-      statusEffects: [],
-      temporaryArmor: 0,
-      activeSkills: [],
-    };
-    curState = { ...curState, enemies: [...curState.enemies, bomb] };
+    const occupied = getActorAt(curState, enemy.intentPosition);
+    if (!occupied) {
+      messages.push(`${enemy.subtype} placed a bomb.`);
+      const bombId = `bomb_${enemy.id}_${state.turnNumber}`;
+      const bomb: Entity = {
+        id: bombId,
+        type: 'enemy',
+        subtype: 'bomb',
+        factionId: 'enemy',
+        position: enemy.intentPosition,
+        hp: 1,
+        maxHp: 1,
+        speed: 10,
+        actionCooldown: 2,
+        statusEffects: [],
+        temporaryArmor: 0,
+        activeSkills: [],
+      };
+      curState = { ...curState, enemies: [...curState.enemies, bomb] };
+    } else {
+      messages.push(`${enemy.subtype} failed to place bomb (blocked).`);
+    }
     nextEnemy = { ...enemy, intent: undefined, intentPosition: undefined };
   } else if (enemy.intent === 'Casting' && enemy.intentPosition) {
     nextEnemy = { ...enemy, intent: undefined, intentPosition: undefined };

@@ -2,6 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
 import { getMovementRange } from '../systems/spatial';
+import { getSkillScenarios } from '../scenarios';
 
 /**
  * BASIC_MOVE Skill
@@ -43,9 +44,11 @@ export const BASIC_MOVE: SkillDefinition = {
             source: attacker.position
         });
 
-        messages.push(noEnemies ? 'Free Move.' : 'Moved.');
+        if (!noEnemies) {
+            messages.push('Moved.');
+        }
 
-        return { effects, messages, consumesTurn: !noEnemies };
+        return { effects, messages, consumesTurn: true };
     },
     getValidTargets: (state: GameState, origin: Point) => {
         const actor = getActorAt(state, origin) as Actor;
@@ -60,5 +63,5 @@ export const BASIC_MOVE: SkillDefinition = {
         return getMovementRange(state, origin, Math.max(actor.speed || 1, 1));
     },
     upgrades: {},
-    scenarios: []
+    scenarios: getSkillScenarios('BASIC_MOVE')
 };

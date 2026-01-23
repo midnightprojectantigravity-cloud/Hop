@@ -56,6 +56,13 @@ export const DEFAULT_SKILLS = {
     },
 };
 
+export const STATUS_REGISTRY: Record<string, { tickWindow: 'START_OF_TURN' | 'END_OF_TURN' }> = {
+    stunned: { tickWindow: 'START_OF_TURN' },
+    poisoned: { tickWindow: 'START_OF_TURN' },
+    armored: { tickWindow: 'END_OF_TURN' },
+    hidden: { tickWindow: 'END_OF_TURN' },
+};
+
 // Enemy stats with simplified tiers
 export const ENEMY_STATS = {
     // Melee enemies (Standard weight)

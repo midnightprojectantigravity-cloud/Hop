@@ -10,7 +10,7 @@ export * from './systems/combat';
 export * from './systems/ai';
 export * from './systems/actor';
 export * from './systems/effect-engine';
-export * from './systems/effects';
+// 
 export * from './systems/initiative';
 export * from './systems/map';
 export * from './systems/rng';
@@ -31,3 +31,6 @@ export * from './systems/status';
 // Kinetic Pulse System
 export * from './systems/kinetic-kernel';
 export * from './systems/hex-bridge';
+
+// Tile Effects System (Observer-Based)
+export * from './systems/tile-effects';

@@ -1,6 +1,7 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexDistance, hexEquals, getNeighbors } from '../hex';
+import { hexDistance, hexEquals, getNeighbors, getHexLine } from '../hex';
 import { getEnemyAt } from '../helpers';
+import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
 
 /**
  * Implementation of the Vault skill (Enyo Utility)
@@ -41,11 +42,22 @@ export const VAULT: SkillDefinition = {
         }
 
         // State-Shifting Logic: Identity toggle based on turn parity
-        // Turn 1 (Odd): Stun Vault
-        // Turn 2 (Even): Vault
         const isStunTurn = state.turnNumber % 2 !== 0;
 
-        effects.push({ type: 'Displacement', target: 'self', destination: target });
+        // JUICE: Anticipation - Cyan trajectory arc
+        effects.push(...SKILL_JUICE_SIGNATURES.VAULT.anticipation(attacker.position, target));
+
+        // JUICE: Execution - Vault leap animation
+        const vaultPath = getHexLine(attacker.position, target);
+        effects.push(...SKILL_JUICE_SIGNATURES.VAULT.execution(vaultPath));
+
+        effects.push({
+            type: 'Displacement',
+            target: 'self',
+            destination: target,
+            path: vaultPath,
+            animationDuration: 250  // Slower, acrobatic leap
+        });
 
         if (isStunTurn) {
             messages.push('Stun Vault executed!');
@@ -56,9 +68,15 @@ export const VAULT: SkillDefinition = {
                     effects.push({ type: 'ApplyStatus', target: n, status: 'stunned', duration: 1 });
                 }
             }
-            effects.push({ type: 'Juice', effect: 'shake' });
+
+            // JUICE: Impact - Heavy (stun landing)
+            effects.push(...SKILL_JUICE_SIGNATURES.VAULT.impact(target, true));
+
             messages.push('Slam landing! Neighbors stunned.');
         } else {
+            // JUICE: Impact - Light (normal landing)
+            effects.push(...SKILL_JUICE_SIGNATURES.VAULT.impact(target, false));
+
             messages.push('Vaulted!');
         }
 

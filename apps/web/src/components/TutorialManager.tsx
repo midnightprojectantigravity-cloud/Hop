@@ -1,5 +1,5 @@
 import React from 'react';
-import { COMPOSITIONAL_SKILLS, generateInitialState, ENEMY_STATS, type GameState, type Point, type SkillDefinition, type ScenarioV2 } from '@hop/engine';
+import { COMPOSITIONAL_SKILLS, generateInitialState, ENEMY_STATS, addStatus, buildInitiativeQueue, type GameState, type Point, type SkillDefinition, type ScenarioV2 } from '@hop/engine';
 
 interface TutorialManagerProps {
     onLoadScenario: (state: GameState, instructions: string) => void;
@@ -83,11 +83,10 @@ class ScenarioBuilder {
     useSkill() { }
     applyStatus(targetId: string, status: string) {
         // We can support applying initial status
-        const enemy = this.state.enemies.find(e => e.id === targetId);
-        if (enemy) {
+        const idx = this.state.enemies.findIndex(e => e.id === targetId);
+        if (idx !== -1) {
             if (status === 'stunned') {
-                enemy.statusEffects = enemy.statusEffects || [];
-                enemy.statusEffects.push({ id: `${enemy.id}-stunned`, type: 'stunned', duration: 1 });
+                this.state.enemies[idx] = addStatus(this.state.enemies[idx], 'stunned', 1);
             }
         }
     }
@@ -99,6 +98,8 @@ export const TutorialManager: React.FC<TutorialManagerProps> = ({ onLoadScenario
     const handleScenarioClick = (scenario: ScenarioV2) => {
         const builder = new ScenarioBuilder();
         scenario.setup(builder);
+        // Force initiative queue rebuild so spawned enemies are included in the turn cycle
+        builder.state.initiativeQueue = buildInitiativeQueue(builder.state);
         onLoadScenario(builder.state, scenario.description);
     };
 
@@ -110,7 +111,7 @@ export const TutorialManager: React.FC<TutorialManagerProps> = ({ onLoadScenario
                         {typeof skill.name === 'function' ? skill.name(generateInitialState(1, 'temp')) : skill.name}
                     </h4>
                     <div className="flex flex-col gap-1">
-                        {skill.scenarios.map(scenario => (
+                        {skill.scenarios?.map(scenario => (
                             <button
                                 key={scenario.id}
                                 onClick={() => handleScenarioClick(scenario)}

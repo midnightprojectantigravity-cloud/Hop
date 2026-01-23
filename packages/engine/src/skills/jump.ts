@@ -1,6 +1,7 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance, getNeighbors, hexEquals } from '../hex';
 import { getEnemyAt } from '../helpers';
+import { getSkillScenarios } from '../scenarios';
 
 /**
  * Implementation of the Jump skill using the Compositional Skill Framework.
@@ -56,49 +57,5 @@ export const JUMP: SkillDefinition = {
         return { effects, messages };
     },
     upgrades: {},
-    scenarios: [
-        {
-            id: 'jump_basic',
-            title: 'Basic Jump',
-            description: 'Jump to a tile.',
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['JUMP']);
-            },
-            run: (engine: any) => {
-                engine.useSkill('JUMP', { q: 3, r: 4, s: -7 });
-            },
-            verify: (state: GameState, logs: string[]) => {
-                return hexEquals(state.player.position, { q: 3, r: 4, s: -7 }) && logs.some(l => l.includes('Jumped'));
-            }
-        },
-        {
-            id: 'jump_stunning_landing',
-            title: 'Stunning Landing Test',
-            description: 'Jump into a group of enemies and ensure neighbors are stunned.',
-            setup: (engine: any) => {
-                // Player starts at distance 2
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['JUMP']);
-                engine.addUpgrade('JUMP', 'STUNNING_LANDING');
-
-                // Target hex will be (0, 2, -2). 
-                // We place enemies in the neighbors of that target hex.
-                engine.spawnEnemy('shieldBearer', { q: 3, r: 7, s: -10 }, 'neighbor_1');
-                engine.spawnEnemy('shieldBearer', { q: 4, r: 7, s: -11 }, 'neighbor_2');
-                // This enemy is too far away to be stunned
-                engine.spawnEnemy('shieldBearer', { q: 3, r: 5, s: -8 }, 'distant_enemy');
-            },
-            run: (engine: any) => {
-                // Jump to the center of the neighbors
-                engine.useSkill('JUMP', { q: 3, r: 8, s: -11 });
-            },
-            verify: (state: GameState, logs: string[]) => {
-                // Stuns are cleared at end of enemy turn, so check logs instead
-                const n1Stunned = logs.filter(l => l.includes('stunned by landing')).length >= 2;
-                const distantNotStunned = !logs.some(l => l.includes('distant_enemy') && l.includes('stunned'));
-                const playerAtTarget = state.player.position.r === 8;
-
-                return n1Stunned && distantNotStunned && playerAtTarget;
-            }
-        }
-    ]
+    scenarios: getSkillScenarios('JUMP')
 };

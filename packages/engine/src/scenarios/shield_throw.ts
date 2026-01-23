@@ -30,7 +30,17 @@ export const shieldThrowScenarios: ScenarioCollection = {
 
             verify: (state: GameState) => {
                 const enemy = state.enemies.find(e => e.id === 'victim');
-                return enemy?.position.r === 1; // 5 - 4 = 1
+
+                const checks = [
+                    enemy?.position.r === 1, // 5 - 4 = 1
+                ];
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Shield Throw Failed:', checks);
+                    console.log('Enemy Pos:', enemy?.position);
+                }
+
+                return Object.values(checks).every(v => v === true);
             }
         },
 
@@ -47,14 +57,30 @@ export const shieldThrowScenarios: ScenarioCollection = {
             setup: (engine: any) => {
                 engine.setPlayer({ q: 3, r: 6, s: -9 }, ['SHIELD_THROW']);
                 engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'victim');
-                engine.spawnEnemy('footman', { q: 3, r: 3, s: -6 }, 'obstacle');
+                engine.spawnEnemy('shieldbearer', { q: 3, r: 3, s: -6 }, 'obstacle');
             },
 
             run: (engine: any) => engine.useSkill('SHIELD_THROW', { q: 3, r: 5, s: -8 }),
 
             verify: (state: GameState) => {
-                const enemy = state.enemies.find(e => e.id === 'victim');
-                return enemy?.position.r === 4; // Should stop at r:4, before the unit at r:3
+                const victim = state.enemies.find(e => e.id === 'victim');
+                const obstacle = state.enemies.find(e => e.id === 'obstacle');
+
+                // Kinetic Pulse supports Chain Reaction: Victim pushes Obstacle!
+                const checks = {
+                    victimPushed: (victim?.position.r ?? 5) === 3,
+                    obstaclePushed: (obstacle?.position.r ?? 3) === 2,
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Shield Throw Failed:', checks);
+                    console.log('Victim Pushed:', checks.victimPushed);
+                    console.log('Victim Pos:', victim?.position);
+                    console.log('Obstacle Pushed:', checks.obstaclePushed);
+                    console.log('Obstacle Pos:', obstacle?.position);
+                }
+
+                return Object.values(checks).every(v => v === true);
             }
         },
 

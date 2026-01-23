@@ -2,6 +2,8 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
 
+import { getSkillScenarios } from '../scenarios';
+
 /**
  * COMPOSITIONAL SKILL FRAMEWORK
  * Standardized skill definition following Goal 1.
@@ -85,96 +87,5 @@ export const BASIC_ATTACK: SkillDefinition = {
             description: 'Heal 1 HP on kill'
         },
     },
-    scenarios: [
-        {
-            id: 'basic_attack_kill',
-            title: 'Basic Attack Kill',
-            description: 'Attack and kill an adjacent enemy.',
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['BASIC_ATTACK']);
-                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'victim');
-            },
-            run: (engine: any) => {
-                engine.useSkill('BASIC_ATTACK', { q: 3, r: 5, s: -8 });
-            },
-            verify: (state: GameState, logs: string[]) => {
-                const enemyDead = !state.enemies.find(e => e.id === 'victim') ||
-                    (state.enemies.find(e => e.id === 'victim')?.hp ?? 0) <= 0;
-                const hitMessage = logs.some(l => l.includes('attacked'));
-                return enemyDead && hitMessage;
-            }
-        },
-        {
-            id: 'basic_attack_out_of_range',
-            title: 'Basic Attack Out of Range',
-            description: 'Cannot attack enemy that is too far.',
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['BASIC_ATTACK']);
-                engine.spawnEnemy('footman', { q: 3, r: 4, s: -7 }, 'distant');
-            },
-            run: (engine: any) => {
-                engine.useSkill('BASIC_ATTACK', { q: 3, r: 4, s: -7 });
-            },
-            verify: (state: GameState, logs: string[]) => {
-                const enemy = state.enemies.find(e => e.id === 'distant');
-                const enemyAlive = enemy && enemy.hp === 1;
-                const rangeMessage = logs.some(l => l.includes('out of range'));
-                return !!enemyAlive && rangeMessage;
-            }
-        },
-        {
-            id: 'basic_attack_via_move',
-            title: 'Basic Attack via Move',
-            description: 'Triggers when moving into an occupied tile.',
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['BASIC_ATTACK']);
-                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'victim');
-            },
-            run: (engine: any) => {
-                // Click on the enemy hex while in "move" mode
-                engine.move({ q: 3, r: 5, s: -8 });
-            },
-            verify: (state: GameState, logs: string[]) => {
-                const enemyDead = !state.enemies.find(e => e.id === 'victim');
-                const hitMessage = logs.some(l => l.includes('attacked'));
-                return enemyDead && hitMessage;
-            }
-        },
-        {
-            id: 'enemy_basic_attack',
-            title: 'Enemy Basic Attack',
-            description: 'Verify enemies use BASIC_ATTACK skill.',
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, []);
-                // Spawn enemy with BASIC_ATTACK intent
-                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'attacker');
-                // Force intent
-                const attacker = engine.state.enemies.find((e: any) => e.id === 'attacker');
-                attacker.intent = 'BASIC_ATTACK';
-                attacker.intentPosition = { q: 3, r: 6, s: -9 };
-                // Ensure enemy has the skill
-                if (!attacker.activeSkills) attacker.activeSkills = [];
-                attacker.activeSkills.push({
-                    id: 'BASIC_ATTACK',
-                    name: 'Basic Attack',
-                    description: 'Melee attack',
-                    slot: 'offensive',
-                    cooldown: 0,
-                    currentCooldown: 0,
-                    range: 1,
-                    activeUpgrades: []
-                });
-            },
-            run: (engine: any) => {
-                // Wait for the enemy to resolve its telegraphed attack
-                engine.wait();
-            },
-            verify: (state: GameState, logs: string[]) => {
-                // Player should have taken 1 damage (HP 3 -> 2)
-                const playerDamaged = state.player.hp === 2;
-                const hitMessage = logs.some(l => l.includes('attacked you')); // BASIC_ATTACK message
-                return playerDamaged && hitMessage;
-            }
-        }
-    ]
+    scenarios: getSkillScenarios('BASIC_ATTACK')
 };

@@ -36,7 +36,8 @@ describe('Compositional Skill Scenarios', () => {
     const next = gameReducer(state, { type: 'USE_SKILL', payload: { skillId: 'GRAPPLE_HOOK', target: enemyPos } });
 
     const enemyGone = next.enemies.length === 0;
-    const msgOk = next.message.some(m => typeof m === 'string' && m.includes('Enemy consumed by Lava'));
+    const msgOk = next.message.some(m => typeof m === 'string' && m.includes('pulled into lava'));
+    if (!msgOk) console.log('Lava Hook Fail Messages:', next.message);
     expect(enemyGone).toBe(true);
     expect(msgOk).toBe(true);
   });
@@ -53,10 +54,10 @@ describe('Compositional Skill Scenarios', () => {
     state.player.activeSkills = [makeSkillStub('GRAPPLE_HOOK') as any];
     state.hasShield = false;
 
-    // Place shield item on ground at (4,5)
-    state.shieldPosition = { q: 4, r: 5, s: -9 } as Point;
+    // Place shield item on ground at (4,6) (Distance 4 from 4,10)
+    state.shieldPosition = { q: 4, r: 6, s: -10 } as Point;
 
-    const target = { q: 4, r: 5, s: -9 } as Point;
+    const target = { q: 4, r: 6, s: -10 } as Point;
     const next = gameReducer(state, { type: 'USE_SKILL', payload: { skillId: 'GRAPPLE_HOOK', target } });
 
     // Player should have picked up shield and gained BULWARK_CHARGE
@@ -64,6 +65,7 @@ describe('Compositional Skill Scenarios', () => {
     const noShieldOnGround = typeof next.shieldPosition === 'undefined';
     const hasBulwark = next.player.activeSkills?.some(s => s.id === 'BULWARK_CHARGE');
     const pickedMsg = next.message.some(m => typeof m === 'string' && m.includes('Picked up your shield'));
+    if (!pickedMsg) console.log('Shield Hook Fail Messages:', next.message);
 
     expect(hasShield).toBe(true);
     expect(noShieldOnGround).toBe(true);

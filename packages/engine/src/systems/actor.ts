@@ -1,11 +1,11 @@
 /**
  * ACTOR SYSTEM (ECS-Lite)
  * Pure functions for modifying Actor data.
- * TODO: Support component-based modifiers (e.g., actor.components.stats.strength).
  */
-import type { Entity } from '../types';
+import type { Entity, StatusEffect } from '../types';
+import { STATUS_REGISTRY } from '../constants';
 
-/** Apply damage to an actor and return a new actor object. Does not mutate input. */
+/** Apply damage with Armor Absorption logic */
 export const applyDamage = (actor: Entity, amount: number): Entity => {
   let remainingDamage = amount;
   let newArmor = actor.temporaryArmor || 0;
@@ -21,44 +21,77 @@ export const applyDamage = (actor: Entity, amount: number): Entity => {
   return { ...actor, hp: newHp, temporaryArmor: newArmor };
 };
 
-/** Heal an actor by amount up to maxHp. Returns new actor. */
+/**
+ * Add/Refresh a status effect - Crucial for Skill Power Assessment.
+ * Ensures the tickWindow is explicitly set to avoid engine logic gaps.
+ */
+export const addStatus = (
+  actor: Entity,
+  type: 'stunned' | 'poisoned' | 'armored' | 'hidden',
+  duration: number,
+  stacks?: number
+): Entity => {
+  const metadata = STATUS_REGISTRY[type];
+  const tickWindow = metadata?.tickWindow || 'END_OF_TURN';
+  const id = type.toUpperCase();
+  const existing = actor.statusEffects.find(s => s.id === id);
+
+  if (existing) {
+    return {
+      ...actor,
+      statusEffects: actor.statusEffects.map(s =>
+        s.id === id
+          ? { ...s, duration: Math.max(s.duration, duration), tickWindow, stacks: stacks || s.stacks }
+          : s
+      )
+    };
+  }
+
+  const newStatus: StatusEffect = {
+    id,
+    type,
+    duration,
+    tickWindow,
+    stacks: stacks || 1,
+    // onTick is omitted here; typically handled by a StatusRegistry or 
+    // assigned during the ApplyStatus AtomicEffect resolution.
+  };
+
+  return {
+    ...actor,
+    statusEffects: [...actor.statusEffects, newStatus]
+  };
+};
+
+/** Resolve Melee Attack - Updated for dynamic damage values */
+export const resolveMeleeAttack = (attacker: Entity, target: Entity, damage: number = 1): { attacker: Entity; target: Entity; messages: string[] } => {
+  const newTarget = applyDamage(target, damage);
+  const targetName = target.subtype || target.type || 'target';
+  const attackerName = attacker.subtype || attacker.type || 'attacker';
+
+  const messages = [`${attackerName} attacked ${targetName}!`];
+  return { attacker: { ...attacker }, target: newTarget, messages };
+};
+
+/** Heal an actor by amount up to maxHp. */
 export const applyHeal = (actor: Entity, amount: number): Entity => {
   return { ...actor, hp: Math.min(actor.maxHp, actor.hp + amount) };
 };
 
-/** Increase actor max HP (and optionally heal by same amount). */
+/** Increase actor max HP (and optionally heal). */
 export const increaseMaxHp = (actor: Entity, amount: number, heal: boolean = true): Entity => {
   const newMax = actor.maxHp + amount;
   const newHp = heal ? Math.min(newMax, actor.hp + amount) : actor.hp;
   return { ...actor, maxHp: newMax, hp: newHp };
 };
 
-/** Add a status effect to an actor. */
-export const addStatus = (actor: Entity, type: 'stunned' | 'poisoned' | 'armored' | 'hidden', duration: number): Entity => {
-  const id = `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
-  return {
-    ...actor,
-    statusEffects: [...actor.statusEffects, { id, type, duration }]
-  };
-};
-
 /** Remove a specific status type from an actor. */
-export const removeStatus = (actor: Entity, type: string): Entity => {
+export const removeStatus = (actor: Entity, statusId: string): Entity => {
+  const targetId = statusId.toUpperCase();
   return {
     ...actor,
-    statusEffects: actor.statusEffects.filter(s => s.type !== type)
+    statusEffects: actor.statusEffects.filter(s => s.id !== targetId)
   };
 };
 
-/**
- * Resolve a simple melee attack: attacker deals 1 damage to target.
- * Returns { attacker, target, messages }
- */
-export const resolveMeleeAttack = (attacker: Entity, target: Entity): { attacker: Entity; target: Entity; messages: string[] } => {
-  // For now attacks deal flat 1 damage (configurable later)
-  const newTarget = applyDamage(target, 1);
-  const messages = [`${attacker.subtype || attacker.type} hits ${target.subtype || target.type}!`];
-  return { attacker: { ...attacker }, target: newTarget, messages };
-};
-
-export default { applyDamage, applyHeal, increaseMaxHp, resolveMeleeAttack };
+export default { applyDamage, applyHeal, increaseMaxHp, resolveMeleeAttack, addStatus, removeStatus };

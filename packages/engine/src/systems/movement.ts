@@ -5,6 +5,7 @@ import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
 import { applyEffects, applyAtomicEffect } from './effect-engine';
 import { prepareKineticSimulation, translate1DToHex } from './hex-bridge';
 import { resolveKineticDash, resolveKineticPulse } from './kinetic-kernel';
+import { processTilePass, processTileEnter } from './tile-effects';
 
 /**
  * Movement System
@@ -98,7 +99,20 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
         { type: 'Displacement' as const, target: actorId === 'player' ? 'self' : 'targetActor', destination: target, source: actor.position }
     ];
 
-    return applyEffects(state, moveEffects, { targetId: actorId });
+    let newState = applyEffects(state, moveEffects, { targetId: actorId });
+
+    // 6. Process onEnter tile effects
+    // This ensures tiles react when units land on them (walking, dashing, etc.)
+    const updatedActor = actorId === 'player' ? newState.player : newState.enemies.find(e => e.id === actorId);
+    if (updatedActor) {
+        const enterResult = processTileEnter(target, updatedActor, newState);
+        if (enterResult.effects.length > 0 || enterResult.messages.length > 0) {
+            newState = applyEffects(newState, enterResult.effects, { targetId: actorId });
+            newState.message = [...newState.message, ...enterResult.messages].slice(-50);
+        }
+    }
+
+    return newState;
 };
 
 export interface KineticRequest {
@@ -125,6 +139,11 @@ export interface KineticResult {
  * processKineticRequest
  * Orchestrates the translation of hex coordinates to the 1D kinetic kernel and back.
  * Returns the final positions and collision data, including environmental hazards.
+ * 
+ * NOW USES TILE EFFECTS SYSTEM:
+ * - Processes onPass hooks for each tile during movement
+ * - Tiles can modify momentum and trigger effects
+ * - Supports interruption of movement chains
  */
 export function processKineticRequest(state: GameState, request: KineticRequest): KineticResult {
     const simulation = prepareKineticSimulation(request.sourceId, request.target, request.momentum, state);
@@ -136,6 +155,7 @@ export function processKineticRequest(state: GameState, request: KineticRequest)
     const messages: string[] = [];
     const deadIds = new Set<string>();
     let chainBroken = false;
+    let currentMomentum = request.momentum;
 
     const steps: KineticStep[][] = [];
 
@@ -150,18 +170,34 @@ export function processKineticRequest(state: GameState, request: KineticRequest)
         const sortedEntities = [...pulseState].sort((a, b) => b.pos - a.pos);
 
         for (const entity of sortedEntities) {
-            if (entity.type === 'I' || deadIds.has(entity.id)) continue;
+            if (entity.type === 'I' || entity.type === 'L' || deadIds.has(entity.id)) continue;
 
             const hexPos = translate1DToHex(simulation.origin, simulation.directionVector, entity.pos);
             const isLead = entity.id === leadId;
 
-            // 1. Environmental Hazard Check
-            const onLava = state.lavaPositions.some(l => hexEquals(l, hexPos));
-            if (onLava) {
-                effects.push({ type: 'Damage', target: entity.id, amount: 999, reason: 'lava_sink' });
-                deadIds.add(entity.id);
-                messages.push(`${entity.id} sank into lava!`);
+            // Get the actor from state
+            const actor = entity.id === state.player.id
+                ? state.player
+                : state.enemies.find(e => e.id === entity.id);
 
+            if (!actor) continue;
+
+            // TILE EFFECTS: Process onPass for this tile
+            // This is where the magic happens - tiles observe and react to units
+            const tileResult = processTilePass(hexPos, actor, state, currentMomentum);
+
+            // Accumulate effects and messages from tile
+            effects.push(...tileResult.effects);
+            messages.push(...tileResult.messages);
+
+            // Update momentum if tile modified it
+            if (tileResult.newMomentum !== undefined) {
+                currentMomentum = tileResult.newMomentum;
+            }
+
+            // Check if tile interrupted the chain
+            if (tileResult.interrupt) {
+                deadIds.add(entity.id);
                 if (isLead) {
                     chainBroken = true;
                     messages.push(`The chain broke! Remaining momentum lost.`);

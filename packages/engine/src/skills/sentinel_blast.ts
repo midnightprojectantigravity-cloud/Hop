@@ -1,5 +1,6 @@
 import type { SkillDefinition, Point, GameState, AtomicEffect, Actor } from '../types';
 import { getNeighbors } from '../hex';
+import { getSkillScenarios } from '../scenarios';
 
 /**
  * SENTINEL_BLAST
@@ -38,5 +39,5 @@ export const SENTINEL_BLAST: SkillDefinition = {
         };
     },
     upgrades: {},
-    scenarios: []
+    scenarios: getSkillScenarios('SENTINEL_BLAST')
 };

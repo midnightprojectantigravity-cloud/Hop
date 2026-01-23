@@ -6,6 +6,7 @@ import { hexEquals } from './hex';
 import { isPlayerTurn } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
 import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './systems/components';
+import { addStatus } from './systems/actor';
 
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
@@ -98,13 +99,11 @@ export class ScenarioEngine {
     }
 
     applyStatus(targetId: string, status: 'stunned', duration: number = 1) {
-        const enemy = this.state.enemies.find(e => e.id === targetId);
-        if (enemy) {
-            enemy.statusEffects = enemy.statusEffects || [];
-            enemy.statusEffects.push({ id: `${enemy.id}-stunned-${Date.now()}`, type: 'stunned', duration });
+        const enemyIndex = this.state.enemies.findIndex(e => e.id === targetId);
+        if (enemyIndex !== -1) {
+            this.state.enemies[enemyIndex] = addStatus(this.state.enemies[enemyIndex], status, duration);
         } else if (this.state.player.id === targetId) {
-            this.state.player.statusEffects = this.state.player.statusEffects || [];
-            this.state.player.statusEffects.push({ id: `${this.state.player.id}-stunned-${Date.now()}`, type: 'stunned', duration });
+            this.state.player = addStatus(this.state.player, status, duration);
         }
     }
 

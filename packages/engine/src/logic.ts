@@ -4,11 +4,11 @@
  * resolveEnemyActions and gameReducer are the primary entry points.
  * TODO: Migrate all remaining legacy skills (Spear/Shield/Jump) to the Compositional Framework.
  */
-import type { GameState, Action, Entity } from './types';
+import type { GameState, Action, Entity, AtomicEffect } from './types';
 import { hexEquals, getNeighbors } from './hex';
 import { resolveTelegraphedAttacks, resolveSingleEnemyTurn } from './systems/combat';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
-import { applyLavaDamage, checkShrine, checkStairs, getEnemyAt } from './helpers';
+import { applyLavaDamage, applyVoidDamage, checkShrine, checkStairs, getEnemyAt } from './helpers';
 import { increaseMaxHp } from './systems/actor';
 import { generateDungeon, generateEnemies, getFloorTheme } from './systems/map';
 import {
@@ -161,12 +161,35 @@ export const generateInitialState = (
 };
 
 /**
+ * HELPER: Interceptor for Status Hooks
+ * Dispatches effects based on the specific turn window.
+ */
+const executeStatusWindow = (state: GameState, actorId: string, window: 'START_OF_TURN' | 'END_OF_TURN'): { state: GameState, messages: string[] } => {
+    const actor = actorId === 'player' ? state.player : state.enemies.find(e => e.id === actorId);
+    if (!actor) return { state, messages: [] };
+    const effects: AtomicEffect[] = [];
+    const messages: string[] = [];
+    actor.statusEffects.forEach(status => {
+        // Only trigger if the status defines this window
+        if (status.tickWindow === window && status.onTick) {
+            const result = status.onTick(actor, state);
+            if (result) {
+                effects.push(...result);
+            }
+        }
+    });
+
+    const newState = applyEffects(state, effects, { sourceId: actorId });
+    return { state: newState, messages };
+};
+
+/**
  * Process exactly ONE actor's turn (non-player) from the initiative queue.
  * Yields control back to the caller (UI) for potential delays.
  */
 export const processNextTurn = (state: GameState): GameState => {
     let curState = state;
-    const messages: string[] = [];
+    let messages: string[] = [];
     const dyingEntities: Entity[] = [];
 
     // 1. Advance to next actor
@@ -175,49 +198,70 @@ export const processNextTurn = (state: GameState): GameState => {
 
     if (!actorId) return curState;
 
-    // 2. If it's the player's turn, stop and wait for input
+    // 2. Player Turn Initiation
     if (actorId === curState.player.id) {
-        // Start player turn (capture position)
         curState = { ...curState, initiativeQueue: startActorTurn(curState, curState.player) };
         return curState;
     }
 
-    // 3. Process exactly one enemy turn
+    // 3. Enemy Validation
     const enemy = curState.enemies.find(e => e.id === actorId);
     if (!enemy) {
-        // Unit died before its turn, recursively call to find next valid actor
         curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
         return processNextTurn(curState);
     }
 
-    // 4. Start turn
+    // 4. START OF TURN WINDOW
     curState = { ...curState, initiativeQueue: startActorTurn(curState, enemy) };
     const turnStartPos = getTurnStartPosition(curState, actorId)!;
 
-    // 5. Resolve Telegraphed Attacks
-    const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId);
-    curState = tele.state;
-    messages.push(...tele.messages);
+    const sotResult = executeStatusWindow(curState, actorId, 'START_OF_TURN');
+    curState = sotResult.state;
+    messages.push(...sotResult.messages);
 
-    // 6. Resolve individual turn (Movement, AI, Auto-Attack)
-    const updatedEnemy = curState.enemies.find(e => e.id === actorId);
-    if (!updatedEnemy) return curState;
+    // Re-fetch enemy after SOT effects (like Poison)
+    let activeEnemy = curState.enemies.find(e => e.id === actorId);
+    if (!activeEnemy) return curState; // Died to Poison/Lava at start of turn
 
-    const turnResult = resolveSingleEnemyTurn(curState, updatedEnemy, turnStartPos);
-    curState = turnResult.state;
-    messages.push(...turnResult.messages);
-
-    if (turnResult.isDead) {
-        dyingEntities.push(enemy);
-        curState = {
-            ...curState,
-            enemies: curState.enemies.filter(e => e.id !== actorId),
-            initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId)
-        };
+    // 5. ACTION PHASE (Skip if Stunned)
+    const isStunned = activeEnemy.statusEffects.some(s => s.type === 'stunned');
+    if (isStunned) {
+        messages.push(`${activeEnemy.subtype || activeEnemy.type} is stunned and skips their turn!`);
     } else {
-        // 7. End turn
-        curState = { ...curState, initiativeQueue: endActorTurn(curState, actorId) };
+        // Resolve Telegraphed Attacks
+        const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId);
+        curState = tele.state;
+        messages.push(...tele.messages);
+
+        // Resolve AI Movement/Skills
+        const updatedEnemy = curState.enemies.find(e => e.id === actorId);
+        if (updatedEnemy) {
+            const turnResult = resolveSingleEnemyTurn(curState, updatedEnemy, turnStartPos);
+            curState = turnResult.state;
+            messages.push(...turnResult.messages);
+
+            if (turnResult.isDead) {
+                return {
+                    ...curState,
+                    enemies: curState.enemies.filter(e => e.id !== actorId),
+                    initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId),
+                    message: [...curState.message, ...messages].slice(-50)
+                };
+            }
+        }
     }
+
+    // 6. END OF TURN WINDOW (Status Decay & EOT Effects)
+    const eotResult = executeStatusWindow(curState, actorId, 'END_OF_TURN');
+    curState = eotResult.state;
+    messages.push(...eotResult.messages);
+
+    // Final cleanup: decrement durations and remove expired
+    curState = {
+        ...curState,
+        enemies: curState.enemies.map(e => e.id === actorId ? tickStatuses(e) : e),
+        initiativeQueue: endActorTurn(curState, actorId)
+    };
 
     return {
         ...curState,
@@ -230,81 +274,62 @@ export const processNextTurn = (state: GameState): GameState => {
  * Main entry point for turn cycle resolution.
  * Granularly resolves actors until player input IS required.
  */
-// Main entry point for turn cycle resolution.
-// Granularly resolves actors until player input IS required.
 const resolveTurnCycle = (state: GameState): GameState => {
-    let player = state.player;
-    let enemies = state.enemies;
+    let curState = state;
     const playerPos = state.player.position;
     const messages: string[] = [];
 
-    // PHASE 1: Finalize Player Turn
-    // (Player action was already applied by the caller to 'state')
+    // 1. START OF TURN (Player) - Happens before player action in next call, 
+    // but for the "Wrap Up", we process the current turn's EOT logic.
 
-    // 1. Resolve Lava Damage for Player
-    const lavaRes = applyLavaDamage(state, playerPos, player);
-    player = lavaRes.entity;
+    // 2. Resolution of movement-based passives/pickups
+    const lavaRes = applyLavaDamage(curState, playerPos, curState.player);
     messages.push(...lavaRes.messages);
+    curState = { ...curState, player: lavaRes.entity as any };
 
-    // 2. Auto Attack (Punch Passive) for Player
-    // Use the granular turn start position from initiative queue if available
-    const playerStartPos = getTurnStartPosition(state, 'player') || state.player.previousPosition || state.player.position;
-    const previousNeighbors = getNeighbors(playerStartPos);
+    const voidRes = applyVoidDamage(curState, playerPos, curState.player);
+    messages.push(...voidRes.messages);
+    curState = { ...curState, player: voidRes.entity as any };
 
-    let intermediateState = { ...state, player: { ...player, position: playerPos }, enemies };
-    const persistentPlayerNeighborIds = getTurnStartNeighborIds(state, 'player') || undefined;
-    const autoAttackResult = applyAutoAttack(intermediateState, player, previousNeighbors, playerStartPos, persistentPlayerNeighborIds);
-    enemies = autoAttackResult.state.enemies;
+    // Auto Attack
+    const playerStartPos = getTurnStartPosition(curState, 'player') || curState.player.previousPosition || curState.player.position;
+    const persistentNeighborIds = getTurnStartNeighborIds(curState, 'player') ?? undefined;
+    const autoAttackResult = applyAutoAttack(
+        curState,
+        curState.player,
+        getNeighbors(playerStartPos),
+        playerStartPos,
+        persistentNeighborIds // Now guaranteed to be string[] | undefined
+    );
+    curState = autoAttackResult.state;
     messages.push(...autoAttackResult.messages);
-    const killsThisTurn = autoAttackResult.kills;
-    const totalKills = (state.kills || 0) + killsThisTurn;
 
-    // 3. Item Pickups
-    let hasSpear = state.hasSpear;
-    let spearPos = state.spearPosition;
-    if (spearPos && hexEquals(playerPos, spearPos)) {
-        hasSpear = true; spearPos = undefined;
+    // Item Pickups (Spear/Shield)
+    if (curState.spearPosition && hexEquals(playerPos, curState.spearPosition)) {
+        curState.hasSpear = true;
+        curState.spearPosition = undefined;
         messages.push('Picked up your spear.');
-        if (player.activeSkills?.some(s => s.id === 'SPEAR_THROW' && s.activeUpgrades.includes('CLEAVE'))) {
-            const adj = getNeighbors(playerPos);
-            enemies = enemies.map(e => {
-                if (adj.some(a => hexEquals(a, e.position))) {
-                    messages.push(`Cleave hit ${e.subtype}!`);
-                    return { ...e, hp: e.hp - 1 };
-                }
-                return e;
-            }).filter(e => e.hp > 0);
-        }
     }
 
-    let hasShield = state.hasShield;
-    let shieldPos = state.shieldPosition;
-    if (shieldPos && hexEquals(playerPos, shieldPos)) {
-        hasShield = true; shieldPos = undefined;
-        messages.push('Picked up your shield.');
-    }
+    // 3. END OF TURN WINDOW (Player Hooks)
+    const eotResult = executeStatusWindow(curState, 'player', 'END_OF_TURN');
+    curState = eotResult.state;
+    messages.push(...eotResult.messages);
 
-    // 4. Update positions and turn state for player persistence in next turn
-    player = { ...player, previousPosition: playerPos, position: playerPos };
-    player = tickSkillCooldowns(player);
+    // 4. Decay and Initiative End
+    let player = tickSkillCooldowns(curState.player);
     player = tickStatuses(player);
     player = applyPassiveSkills(player);
 
-    let curState: GameState = {
-        ...state,
+    curState = {
+        ...curState,
         player,
-        enemies,
-        hasSpear,
-        spearPosition: spearPos,
-        hasShield,
-        shieldPosition: shieldPos,
-        message: [...state.message, ...messages].slice(-50),
-        kills: totalKills,
-        gameStatus: player.hp <= 0 ? 'lost' : 'playing',
+        message: [...curState.message, ...messages].slice(-50),
+        kills: curState.kills + autoAttackResult.kills,
+        turnNumber: curState.turnNumber + 1,
+        turnsSpent: curState.turnsSpent + 1,
+        initiativeQueue: endActorTurn(curState, 'player')
     };
-
-    // Mark player turn as acting done
-    curState = { ...curState, initiativeQueue: endActorTurn(curState, 'player') };
 
     // PHASE 2: Check for world-state transitions (Stairs/Shrine)
     if (checkShrine(curState, playerPos)) {

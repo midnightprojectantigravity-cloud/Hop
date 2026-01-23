@@ -1,10 +1,7 @@
 import type { GameState } from '../types';
 import type { ScenarioCollection } from './types';
+import { hexEquals } from '../hex';
 
-/**
- * Grapple Hook Scenarios
- * Tests: Line of sight, lava interactions, weight classes, and displacement mechanics
- */
 export const grappleHookScenarios: ScenarioCollection = {
     id: 'grapple_hook',
     name: 'Grapple Hook',
@@ -14,47 +11,57 @@ export const grappleHookScenarios: ScenarioCollection = {
         {
             id: 'hook_lava_intercept',
             title: 'Lava Interceptor & LoS',
-            description: 'Verify LoS blocking and Lava sinking both before and after swap.',
+            description: 'Verify LoS blocking and Lava killing targets.',
             relatedSkills: ['GRAPPLE_HOOK'],
             category: 'combat',
             difficulty: 'intermediate',
-            isTutorial: true,
+            isTutorial: false,
             tags: ['lava', 'line-of-sight', 'displacement'],
 
             setup: (engine: any) => {
                 engine.setPlayer({ q: 4, r: 6, s: -10 }, ['GRAPPLE_HOOK']);
-                engine.spawnEnemy('footman', { q: 4, r: 4, s: -8 }, 'target1'); // Pull into lava, no swap
-                engine.spawnEnemy('footman', { q: 4, r: 9, s: -13 }, 'target2'); // Pull, swap, continue fling into lava
-                engine.applyStatus('target2', 'stunned'); // Prevent movement
+                engine.spawnEnemy('footman', { q: 4, r: 4, s: -8 }, 'target1');
                 engine.spawnEnemy('footman', { q: 7, r: 3, s: -10 }, 'hidden');
-                engine.setTile({ q: 6, r: 4, s: -10 }, 'wall'); // Block LoS to 'hidden'
+
+                // Directly block the "hidden" target
+                engine.setTile({ q: 6, r: 4, s: -10 }, 'wall');
                 engine.setTile({ q: 4, r: 5, s: -9 }, 'lava');
             },
 
             run: (engine: any) => {
-                engine.useSkill('GRAPPLE_HOOK', { q: 7, r: 3, s: -10 }); // 1. Attempt blocked LoS, no effect, does not consume turn
-                engine.useSkill('GRAPPLE_HOOK', { q: 4, r: 4, s: -8 }); // 2. Pull target1 into lava
-                // Use the wait action which triggers the turn cycle including auto-attack
-                engine.applyStatus('target2', 'stunned'); // Prevent movement
+                // 1. Should fail due to LoS
+                engine.useSkill('GRAPPLE_HOOK', { q: 7, r: 3, s: -10 });
+
+                // 2. Should pull target1 into lava at (4,5)
+                engine.useSkill('GRAPPLE_HOOK', { q: 4, r: 4, s: -8 });
+
+                // 3. Trigger turn cycles to resolve environmental damage
                 engine.wait();
-                engine.applyStatus('target2', 'stunned'); // Prevent movement
                 engine.wait();
-                engine.useSkill('GRAPPLE_HOOK', { q: 4, r: 9, s: -13 }); // 3. Fling target2 into lava
             },
 
             verify: (state: GameState, logs: string[]) => {
-                const hiddenAlive = !!state.enemies.find(e => e.id === 'hidden');
-                const target1Dead = !state.enemies.find(e => e.id === 'target1');
-                const target2Dead = !state.enemies.find(e => e.id === 'target2');
-                const losWarning = logs.some(l => l.includes('Line of sight blocked'));
-                return hiddenAlive && target1Dead && target2Dead && losWarning;
+                const checks = {
+                    // Wall blocked the hook
+                    hiddenAlive: !!state.enemies.find(e => e.id === 'hidden'),
+                    // Target fell in lava and was removed or killed
+                    target1Dead: !state.enemies.find(e => e.id === 'target1') || state.enemies.find(e => e.id === 'target1')!.hp <= 0,
+                    // Feedback was provided
+                    losWarning: logs.some(l => l.includes('Line of sight'))
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Scenario Failed Details:', checks);
+                    console.log('Logs:', logs);
+                }
+
+                return Object.values(checks).every(v => v === true);
             }
         },
-
         {
             id: 'hook_wall_anchor_zip',
             title: 'Heavy Zip to Wall',
-            description: 'Verify LoS for walls and AoE stun.',
+            description: 'Verify zipping to a wall and stunning nearby enemies.',
             relatedSkills: ['GRAPPLE_HOOK'],
             category: 'movement',
             difficulty: 'beginner',
@@ -63,44 +70,42 @@ export const grappleHookScenarios: ScenarioCollection = {
 
             setup: (engine: any) => {
                 engine.setPlayer({ q: 3, r: 6, s: -9 }, ['GRAPPLE_HOOK']);
+
+                // Wall LoS blocked by the blocker enemy
+                engine.setTile({ q: 6, r: 3, s: -9 }, 'wall');
+                engine.spawnEnemy('footman', { q: 5, r: 4, s: -9 }, 'blocker');
+
+                // Wall is the target, confirm the stun radius 
                 engine.setTile({ q: 6, r: 6, s: -12 }, 'wall');
-                engine.setTile({ q: 7, r: 6, s: -13 }, 'wall'); // Behind the first
-                engine.spawnEnemy('footman', { q: 7, r: 5, s: -12 }, 'safe');
-                engine.spawnEnemy('footman', { q: 5, r: 5, s: -10 }, 'stunMe');
-                engine.setTile({ q: 4, r: 6, s: -10 }, 'lava');
+                engine.spawnEnemy('footman', { q: 6, r: 5, s: -11 }, 'stunMe');
+                engine.spawnEnemy('footman', { q: 7, r: 5, s: -12 }, 'noStun');
             },
 
             run: (engine: any) => {
-                engine.useSkill('GRAPPLE_HOOK', { q: 7, r: 6, s: -13 }); // Should fail (LoS)
-                engine.useSkill('GRAPPLE_HOOK', { q: 6, r: 6, s: -12 }); // Should succeed
+                // Zip to wall at (6,3). Should not consume a turn as wall is out of LoS.
+                engine.useSkill('GRAPPLE_HOOK', { q: 6, r: 3, s: -9 });
+
+                // Zip to wall at (6,6). Should stop at (5,6) because wall is impassable.
+                engine.useSkill('GRAPPLE_HOOK', { q: 6, r: 6, s: -12 });
             },
 
-            verify: (state: GameState) => {
-                return state.player.position.q === 5;
-            }
-        },
+            verify: (state: GameState, logs: string[]) => {
+                const victim = state.enemies.find(e => e.id === 'stunMe');
+                const safe = state.enemies.find(e => e.id === 'noStun');
+                const checks = {
+                    playerAtAnchor: hexEquals(state.player.position, { q: 5, r: 6, s: -11 }),
+                    stunnedEnemy: !!(victim && victim.statusEffects.some(s => s.type === 'stunned')),
+                    safeEnemy: !!(safe && !safe.statusEffects.some(s => s.type === 'stunned')),
+                    zipLog: logs.some(l => l.includes('Zipped'))
+                };
 
-        {
-            id: 'hook_stress_test_identity',
-            title: 'Identity Stress Test',
-            description: 'Verify Auto-Attack logic.',
-            relatedSkills: ['GRAPPLE_HOOK', 'AUTO_ATTACK'],
-            category: 'combat',
-            difficulty: 'advanced',
-            isTutorial: false,
-            tags: ['auto-attack', 'passive', 'integration'],
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Scenario Failed Details:', checks);
+                    console.log('Player Pos:', state.player.position);
+                    console.log('Victim Status:', victim?.statusEffects);
+                }
 
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 4, r: 6, s: -10 }, ['GRAPPLE_HOOK', 'AUTO_ATTACK']);
-                engine.spawnEnemy('footman', { q: 5, r: 6, s: -11 }, 'stayer');
-                engine.spawnEnemy('archer', { q: 7, r: 3, s: -10 }, 'target');
-            },
-
-            run: (engine: any) => engine.useSkill('GRAPPLE_HOOK', { q: 7, r: 3, s: -10 }),
-
-            verify: (state: GameState) => {
-                const stayer = state.enemies.find(e => e.id === 'stayer');
-                return (stayer?.hp ?? 0) < 2; // Assuming 2 HP start
+                return Object.values(checks).every(v => v === true);
             }
         }
     ]

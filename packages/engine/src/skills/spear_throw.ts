@@ -1,6 +1,8 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance, getHexLine, hexEquals, isHexInRectangularGrid } from '../hex';
 import { getEnemyAt } from '../helpers';
+import { getSkillScenarios } from '../scenarios';
+import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
 
 /**
  * Implementation of the Spear Throw skill using the Compositional Skill Framework.
@@ -23,6 +25,11 @@ export const SPEAR_THROW: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
+        if (!state.hasSpear) {
+            messages.push('Spear not in hand!');
+            return { effects, messages, consumesTurn: false };
+        }
+
         const dist = hexDistance(shooter.position, target);
         let range = 3;
         if (activeUpgrades.includes('SPEAR_RANGE')) range += 1;
@@ -31,6 +38,9 @@ export const SPEAR_THROW: SkillDefinition = {
             messages.push('Out of range!');
             return { effects, messages, consumesTurn: false };
         }
+
+        // JUICE: Anticipation - Red aiming laser
+        effects.push(...SKILL_JUICE_SIGNATURES.SPEAR_THROW.anticipation(shooter.position, target));
 
         const line = getHexLine(shooter.position, target);
 
@@ -49,15 +59,21 @@ export const SPEAR_THROW: SkillDefinition = {
             }
         }
 
-        // Add visual trail to hit point
-        effects.push({ type: 'Juice', effect: 'spearTrail', path: getHexLine(shooter.position, hitPos) });
+        // JUICE: Execution - Spear trail + whistle
+        effects.push(...SKILL_JUICE_SIGNATURES.SPEAR_THROW.execution(getHexLine(shooter.position, hitPos)));
 
         if (hitEnemy) {
+            // JUICE: Impact - Heavy (kill)
+            effects.push(...SKILL_JUICE_SIGNATURES.SPEAR_THROW.impact(hitPos, true));
+
             effects.push({ type: 'Damage', target: hitEnemy.position, amount: 99 });
             messages.push(`Spear killed ${hitEnemy.subtype || 'enemy'}!`);
         } else if (state.wallPositions.some(w => hexEquals(w, hitPos))) {
             messages.push('Spear hit a wall!');
         } else {
+            // JUICE: Impact - Light (miss)
+            effects.push(...SKILL_JUICE_SIGNATURES.SPEAR_THROW.impact(hitPos, false));
+
             messages.push('Spear thrown.');
         }
 
@@ -91,39 +107,5 @@ export const SPEAR_THROW: SkillDefinition = {
     upgrades: {
         SPEAR_RANGE: { id: 'SPEAR_RANGE', name: 'Extended Reach', description: 'Range +1', modifyRange: 1 },
     },
-    scenarios: [
-        {
-            id: 'spear_kill',
-            title: 'Spear Kill',
-            description: 'Throw spear to kill an enemy.',
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['SPEAR_THROW']);
-                engine.spawnEnemy('footman', { q: 3, r: 4, s: -7 }, 'target');
-            },
-            run: (engine: any) => {
-                engine.useSkill('SPEAR_THROW', { q: 3, r: 4, s: -7 });
-            },
-            verify: (state: GameState, logs: string[]) => {
-                const enemyGone = !state.enemies.find(e => e.id === 'target');
-                const messageOk = logs.some(l => l.includes('Spear killed'));
-                return enemyGone && messageOk;
-            }
-        },
-        {
-            id: 'spear_miss_spawn',
-            title: 'Spear Miss & Spawn',
-            description: 'Throw spear at empty tile, spawning the item.',
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['SPEAR_THROW']);
-            },
-            run: (engine: any) => {
-                engine.useSkill('SPEAR_THROW', { q: 3, r: 4, s: -7 });
-            },
-            verify: (state: GameState) => {
-                const hasItem = hexEquals(state.spearPosition!, { q: 3, r: 4, s: -7 });
-                const notHasSpear = state.hasSpear === false;
-                return hasItem && notHasSpear;
-            }
-        }
-    ]
+    scenarios: getSkillScenarios('SPEAR_THROW')
 };

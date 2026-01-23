@@ -1,22 +1,21 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import {
     hexDistance, hexAdd, hexEquals,
-    isHexInRectangularGrid, scaleVector
+    isHexInRectangularGrid, scaleVector, getHexLine, getDirectionFromTo, hexDirection
 } from '../hex';
-import { getActorAt } from '../helpers';
-import { processKineticRequest } from '../systems/movement';
-import { shieldThrowScenarios } from '../scenarios/shield_throw';
-import { toScenarioV2 } from '../scenarios/utils';
-
+import { getActorAt, isPerimeter } from '../helpers';
+import { getSkillScenarios } from '../scenarios';
+import { processKineticPulse } from '../systems/kinetic-kernel';
+import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../systems/juice-manifest';
 
 /**
- * Implementation of the Shield Throw skill (Enyo Secondary)
- * Features: Range 4, Stun, 4-tile Push, Wall Slam, and Lava Hazards.
+ * Implementation of the Shield Throw skill.
+ * Features: Range 4, Stun, 4-momentum Push via Kinetic Pulse.
  */
 export const SHIELD_THROW: SkillDefinition = {
     id: 'SHIELD_THROW',
     name: 'Shield Throw',
-    description: 'Stun and push an enemy 4 tiles. Stops and stuns on wall/unit collision. Sinks in lava.',
+    description: 'Throw your shield to strike and push enemies. Triggers a kinetic pulse on impact.',
     slot: 'defensive',
     icon: '🛡️',
     baseVariables: { range: 4, cost: 1, cooldown: 3 },
@@ -27,56 +26,78 @@ export const SHIELD_THROW: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
-        // 1. Range Check
-        const dist = hexDistance(attacker.position, target);
-        if (dist > 4) {
-            messages.push('Out of range!');
+        if (!state.hasShield) {
+            messages.push('Shield not in hand!');
             return { effects, messages, consumesTurn: false };
         }
 
-        // AXIAL CHECK: exact equality on one coordinate (flat-top axial)
-        const isAxial = attacker.position.q === target.q || attacker.position.r === target.r || attacker.position.s === target.s;
-        if (!isAxial) {
-            messages.push('Invalid target: Shield must be thrown in a straight line');
-            return { effects, messages, consumesTurn: false };
+        // JUICE: Anticipation - Trajectory arc
+        effects.push(...SKILL_JUICE_SIGNATURES.SHIELD_THROW.anticipation(attacker.position, target));
+
+        // 1. Line of Sight / Travel Check
+        const line = getHexLine(attacker.position, target);
+        // Ensure unencumbered travel to target (no walls/perimeter)
+        for (const point of line.slice(1, -1)) {
+            const isWall = state.wallPositions?.some(w => hexEquals(w, point)) ||
+                isPerimeter(point, state.gridWidth, state.gridHeight);
+            if (isWall) {
+                messages.push('Shield hit a wall mid-flight!');
+                effects.push({ type: 'SpawnItem', itemType: 'shield', position: point });
+                return { effects, messages, consumesTurn: true };
+            }
         }
 
         const targetActor = getActorAt(state, target);
         if (!targetActor) {
-            messages.push('No target found!');
-            return { effects, messages, consumesTurn: false };
+            messages.push('Shield missed: No target at location.');
+            effects.push({ type: 'SpawnItem', itemType: 'shield', position: target });
+            return { effects, messages, consumesTurn: true };
         }
 
-        // 2. PHYSICS RESOLUTION RELAY
+        // JUICE: Execution - Shield arc + spin
+        effects.push(...SKILL_JUICE_SIGNATURES.SHIELD_THROW.execution(line));
+
+        // 2. Physics Resolution (Kinetic Pulse)
         const momentum = 4;
-        const result = processKineticRequest(state, {
-            sourceId: attacker.id,
-            target,
-            momentum,
-            isPulse: true,
-            skipSourceDisplacement: true
+        const dirIdx = getDirectionFromTo(attacker.position, target);
+        const direction = hexDirection(dirIdx);
+
+        // Stun the primary target on impact
+        effects.push({ type: 'ApplyStatus', target: targetActor.id, status: 'stunned', duration: 1 });
+
+        // JUICE: Impact - Heavy impact + shake + freeze
+        effects.push(...SKILL_JUICE_SIGNATURES.SHIELD_THROW.impact(target, direction));
+
+        // Generate Kinetic Pulse effects starting at the impact hex
+        const pulseEffects = processKineticPulse(state, {
+            origin: target,
+            direction: direction,
+            momentum: momentum
         });
 
-        // The shield should end up where the "lead" unit (the one the player threw it at) ends up,
-        // or where the pulse stops.
+        // Determine final landing spot for the shield (it follows the lead unit)
+        const targetDisps = pulseEffects.filter(e => e.type === 'Displacement' && e.target === targetActor.id);
+        const lastDisp = targetDisps[targetDisps.length - 1];
+        const finalPos = (lastDisp && 'destination' in lastDisp) ? lastDisp.destination : target;
 
-        // Find final position of the targetActor
-        const targetDisplacement = result.effects.find(e =>
-            e.type === 'Displacement' &&
-            (e.target === targetActor.id || (e.target === 'targetActor'))
-        );
+        // JUICE: Resolution - Kinetic wave + momentum trails
+        const kineticPath = getHexLine(target, finalPos);
+        if (kineticPath.length > 1) {
+            effects.push(...SKILL_JUICE_SIGNATURES.SHIELD_THROW.resolution(kineticPath));
+        }
 
-        const finalPos = targetDisplacement && 'destination' in targetDisplacement ? targetDisplacement.destination : target;
-
-        // Projectile Persistence: Spawn the shield at the impact site
+        // Projectile Persistence & Drain
         effects.push({ type: 'SpawnItem', itemType: 'shield', position: finalPos });
-        messages.push(`Threw shield! Kinetic Pulse triggered.`);
+
+        messages.push(`Direct hit! Shield triggered kinetic pulse.`);
 
         return {
-            effects: [...effects, ...result.effects],
-            messages: [...messages, ...result.messages]
+            effects: [...effects, ...pulseEffects],
+            messages,
+            consumesTurn: true
         };
     },
+
     getValidTargets: (state: GameState, origin: Point) => {
         const range = 4;
         const valid: Point[] = [];
@@ -84,15 +105,22 @@ export const SHIELD_THROW: SkillDefinition = {
             for (let i = 1; i <= range; i++) {
                 const p = hexAdd(origin, scaleVector(d, i));
                 if (!isHexInRectangularGrid(p, state.gridWidth, state.gridHeight)) break;
-                const isWall = state.wallPositions?.some(w => hexEquals(w, p));
+
+                const isWall = state.wallPositions?.some(w => hexEquals(w, p)) ||
+                    isPerimeter(p, state.gridWidth, state.gridHeight);
+
                 const actor = getActorAt(state, p);
-                if (actor) valid.push(p);
-                if (isWall || actor) break; // Blocked by wall or unit
+                // Can target any hex with an actor (except self)
+                if (actor && actor.id !== state.player.id) {
+                    valid.push(p);
+                }
+
+                // Path is blocked by walls or other actors
+                if (isWall || actor) break;
             }
         }
         return valid;
     },
     upgrades: {},
-
-    scenarios: shieldThrowScenarios.scenarios.map(toScenarioV2)
-}
+    scenarios: getSkillScenarios('SHIELD_THROW')
+};

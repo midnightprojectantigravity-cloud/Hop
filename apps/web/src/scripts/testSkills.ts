@@ -1,4 +1,4 @@
-import { generateInitialState, gameReducer, COMPOSITIONAL_SKILLS, ENEMY_STATS, type Action, type GameState, type Point } from '@hop/engine';
+import { generateInitialState, gameReducer, COMPOSITIONAL_SKILLS, ENEMY_STATS, addStatus, type Action, type GameState, type Point } from '@hop/engine';
 
 class TestEngine {
     state: GameState;
@@ -69,10 +69,9 @@ class TestEngine {
     }
 
     applyStatus(targetId: string, status: string) {
-        const e = this.state.enemies.find(en => en.id === targetId);
-        if (e && status === 'stunned') {
-            e.statusEffects = e.statusEffects || [];
-            e.statusEffects.push({ id: `${e.id}-stunned`, type: 'stunned', duration: 1 });
+        const idx = this.state.enemies.findIndex(en => en.id === targetId);
+        if (idx !== -1 && (status === 'stunned' || status === 'poisoned' || status === 'armored' || status === 'hidden')) {
+            this.state.enemies[idx] = addStatus(this.state.enemies[idx], status, 1);
         }
     }
 
@@ -102,7 +101,7 @@ async function runTests() {
     let failed = 0;
 
     for (const skill of Object.values(COMPOSITIONAL_SKILLS)) {
-        for (const scenario of skill.scenarios) {
+        for (const scenario of (skill.scenarios || [])) {
             process.stdout.write(`  [${skill.name}] ${scenario.title}... `);
             try {
                 const engine = new TestEngine();

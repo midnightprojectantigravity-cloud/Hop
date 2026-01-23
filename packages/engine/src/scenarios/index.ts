@@ -4,6 +4,16 @@ import { grappleHookScenarios } from './grapple_hook';
 import { shieldThrowScenarios } from './shield_throw';
 import { autoAttackScenarios } from './auto_attack';
 import { integrationScenarios } from './integration';
+import { basicAttackScenarios } from './basic_attack';
+import { spearThrowScenarios } from './spear_throw';
+import { dashScenarios } from './dash';
+import { jumpScenarios } from './jump';
+import { shieldBashScenarios } from './shield_bash';
+import { bulwarkChargeScenarios } from './bulwark_charge';
+import { vaultScenarios } from './vault';
+import { hazardScenarios } from './hazards';
+import { basicMoveScenarios } from './basic_move';
+import { sentinelBlastScenarios } from './sentinel_blast';
 
 /**
  * Central registry for all test scenarios
@@ -16,6 +26,16 @@ export const SCENARIO_COLLECTIONS: ScenarioCollection[] = [
     shieldThrowScenarios,
     autoAttackScenarios,
     integrationScenarios,
+    basicAttackScenarios,
+    spearThrowScenarios,
+    dashScenarios,
+    jumpScenarios,
+    shieldBashScenarios,
+    bulwarkChargeScenarios,
+    vaultScenarios,
+    hazardScenarios,
+    basicMoveScenarios,
+    sentinelBlastScenarios,
 ];
 
 // Flat list of all scenarios for easy iteration

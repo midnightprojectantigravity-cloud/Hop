@@ -1,6 +1,6 @@
 import type { GameState } from '../types';
 import type { ScenarioCollection } from './types';
-import { AUTO_ATTACK } from '../skills/auto_attack';
+
 
 /**
  * Auto Attack Scenarios
@@ -13,165 +13,133 @@ export const autoAttackScenarios: ScenarioCollection = {
 
     scenarios: [
         {
-            id: 'auto_attack_punch',
-            title: 'Auto Attack Punch',
-            description: 'Enemy that was adjacent and stays adjacent gets punched.',
-            relatedSkills: ['AUTO_ATTACK'],
-            category: 'combat',
-            difficulty: 'beginner',
-            isTutorial: true,
-            tags: ['passive', 'auto-attack', 'basic'],
-
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['AUTO_ATTACK']);
-                // shieldBearer has 2 HP so survives the punch
-                engine.spawnEnemy('shieldBearer', { q: 3, r: 5, s: -8 }, 'adjacent');
-                // Set previous position to current (simulating start of turn)
-                engine.state.player.previousPosition = { q: 3, r: 6, s: -9 };
-            },
-
-            run: (engine: any) => {
-                // Use the wait action which triggers the turn cycle including auto-attack
-                engine.wait();
-            },
-
-            verify: (state: GameState, logs: string[]) => {
-                const enemy = state.enemies.find(e => e.id === 'adjacent');
-                // Should have taken 1 damage (2 HP -> 1 HP)
-                const tookDamage = !!(enemy && enemy.hp === 1);
-                const punchMessage = logs.some(l => l.includes('attacked'));
-                return tookDamage && punchMessage;
-            }
-        },
-
-        {
-            id: 'enemy_auto_attack',
-            title: 'Enemy Auto Attack',
-            description: 'Verify enemies use AUTO_ATTACK passive.',
-            relatedSkills: ['AUTO_ATTACK'],
-            category: 'combat',
-            difficulty: 'intermediate',
-            isTutorial: false,
-            tags: ['passive', 'enemy-ai', 'auto-attack'],
-
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, []);
-                // Spawn enemy with AUTO_ATTACK
-                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'puncher');
-                const puncher = engine.state.enemies.find((e: any) => e.id === 'puncher');
-                if (!puncher.activeSkills) puncher.activeSkills = [];
-                puncher.activeSkills.push({
-                    id: 'AUTO_ATTACK',
-                    name: 'Auto Attack',
-                    description: 'Passive strike',
-                    slot: 'passive',
-                    cooldown: 0,
-                    currentCooldown: 0,
-                    range: 1,
-                    upgrades: [],
-                    activeUpgrades: []
-                });
-
-                // Set previous positions to simulate staying adjacent
-                puncher.previousPosition = { q: 3, r: 5, s: -8 };
-                engine.state.player.previousPosition = { q: 3, r: 6, s: -9 };
-            },
-
-            run: (engine: any) => {
-                // Wait triggers end-of-turn passives
-                engine.wait();
-            },
-
-            verify: (state: GameState, logs: string[]) => {
-                // Player should have taken 1 damage
-                const playerDamaged = state.player.hp === 2;
-                const punchMessage = logs.some(l => l.includes('attacked'));
-                return playerDamaged && punchMessage;
-            }
-        },
-
-        {
-            id: 'auto_attack_no_punch_new_neighbor',
-            title: 'No Auto Attack on New Neighbor',
-            description: 'Enemy that just became adjacent does NOT get punched by AUTO_ATTACK skill logic.',
-            relatedSkills: ['AUTO_ATTACK'],
+            id: 'auto_attack_persistence_stress_test',
+            title: 'Persistence: Three-Point Validation',
+            description: 'Verifies that Auto-Attack only hits units that were adjacent at BOTH start and end.',
+            relatedSkills: ['AUTO_ATTACK', 'BASIC_MOVE'],
             category: 'combat',
             difficulty: 'advanced',
             isTutorial: false,
-            tags: ['passive', 'turn-memory', 'edge-case'],
+            tags: ['passive', 'spatial-memory', 'edge-case'],
 
             setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['AUTO_ATTACK']);
-                // Enemy spawns adjacent but player "just moved here"
-                engine.spawnEnemy('shieldBearer', { q: 3, r: 5, s: -8 }, 'new_neighbor');
-                // Set previous position to somewhere else (simulating player moved in)
-                engine.state.player.previousPosition = { q: 3, r: 7, s: -10 };
-            },
+                // Player starts at (4,5)
+                engine.setPlayer({ q: 4, r: 5, s: -9 }, ['AUTO_ATTACK', 'BASIC_MOVE']);
 
-            run: (engine: any) => {
-                // Directly call this module's execute function 
-                // to test AUTO_ATTACK logic in isolation
-                const prevNeighbors = [
-                    { q: 3, r: 8, s: -11 }, // Not the enemy position
-                    { q: 2, r: 7, s: -9 },
-                ];
-                const result = AUTO_ATTACK.execute(
-                    engine.state,
-                    engine.state.player,
-                    undefined,
-                    [],
-                    {
-                        previousNeighbors: prevNeighbors,
-                        persistentTargetIds: [] // Simulating that NO one was adjacent at start
-                    }
-                );
-                // Store result messages for verification
-                engine.state.message = [...engine.state.message, ...result.messages];
-            },
+                // FOE 1 (Persistent): At (5,5). Neighbor to start (4,5) and end (4,6).
+                engine.spawnEnemy('footman', { q: 5, r: 5, s: -10 }, 'persistent_foe');
 
-            verify: (_state: GameState, logs: string[]) => {
-                const noPunchFromAutoAttack = !logs.some(l => l.includes('attacked shieldBearer'));
-                return noPunchFromAutoAttack;
-            }
-        },
+                // FOE 2 (New): At (4,7). NOT neighbor to start (4,5), but is to end (4,6).
+                engine.spawnEnemy('footman', { q: 4, r: 7, s: -11 }, 'new_neighbor');
 
-        {
-            id: 'auto_attack_multi_unit_stress',
-            title: 'Symmetry & Persistence Stress Test',
-            description: 'Validates friendly fire, persistence, and spatial boundaries.',
-            relatedSkills: ['AUTO_ATTACK'],
-            category: 'combat',
-            difficulty: 'advanced',
-            isTutorial: false,
-            tags: ['passive', 'stress-test', 'friendly-fire', 'persistence'],
+                // FOE 3 (Moving Away): At (5,4). Neighbor to start (4,5), but NOT to end (4,6).
+                engine.spawnEnemy('footman', { q: 5, r: 4, s: -9 }, 'former_neighbor');
 
-            setup: (engine: any) => {
-                // 1. Setup Player at valid center (4,5)
-                engine.setPlayer({ q: 4, r: 5, s: -9 }, ['AUTO_ATTACK']);
+                // Mock the Identity Phase memory
                 engine.state.player.previousPosition = { q: 4, r: 5, s: -9 };
-
-                // 2. Setup Persistent Enemy (5,5) - Neighbor to (4,5) and (4,6)
-                engine.spawnEnemy('shieldBearer', { q: 5, r: 5, s: -10 }, 'persistent_foe');
-                const e1 = engine.getEnemy('persistent_foe');
-                e1.previousPosition = { q: 5, r: 5, s: -10 };
-
-                // 3. Setup New Enemy (4,7) - Neighbor to (4,6) but NOT (4,5)
-                engine.spawnEnemy('footman', { q: 4, r: 7, s: -11 }, 'new_foe');
             },
-
             run: (engine: any) => {
-                // Player moves to 4,6
-                // Persistent Foe (5,5) is neighbor to (4,5) and (4,6). HIT.
-                // New Foe (4,7) is neighbor to (4,6) but not (4,5). MISS.
+                // Player moves to (4, 6)
                 engine.move({ q: 4, r: 6, s: -10 });
             },
+            verify: (state: GameState, logs: string[]) => {
+                const pFoe = state.enemies.find(e => e.id === 'persistent_foe');
+                const nFoe = state.enemies.find(e => e.id === 'new_neighbor');
+                const fFoe = state.enemies.find(e => e.id === 'former_neighbor');
 
-            verify: (state: GameState, _logs: string[]) => {
-                const e1 = state.enemies.find(e => e.id === 'persistent_foe');
-                const e2 = state.enemies.find(e => e.id === 'new_foe');
-                const hitPersistent = !!(e1 && e1.hp < e1.maxHp);
-                const missedNew = !!(e2 && e2.hp === e2.maxHp);
-                return hitPersistent && missedNew;
+                const checks = {
+
+                    // 1. HIT: Persistent foe took damage and is now dead
+                    persistentDead: !pFoe || pFoe.hp < pFoe.maxHp,
+
+                    // 2. SAFE: New neighbor ignored (wasn't there at start)
+                    ignoredNew: nFoe && nFoe.hp === nFoe.maxHp,
+
+                    // 3. SAFE: Former neighbor ignored (is too far now)
+                    ignoredFormer: fFoe && fFoe.hp === fFoe.maxHp,
+
+                    // 4. LOGS: Check for correct feedback
+                    logFound: logs.some(l => l.includes('attacked footman')),
+
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Scenario Failed Details:', checks);
+                    console.log('Current Player Pos:', state.player.position);
+                    console.log('Logs found:', logs);
+                }
+
+                /**
+                 * WHY THIS VERIFICATION:
+                 * This "Triple Check" ensures the skill logic correctly intersects 
+                 * the set of START neighbors and END neighbors.
+                 */
+
+                return Object.values(checks).every(v => v === true);
+            }
+        },
+        {
+            id: 'enemy_auto_attack_no_friendly_fire',
+            title: 'Enemy Auto-Attack: Team Alignment',
+            description: 'Ensures enemy passives only target the player and not their own allies.',
+            relatedSkills: ['AUTO_ATTACK'],
+            category: 'combat',
+            difficulty: 'advanced',
+            isTutorial: false,
+            tags: ['passive', 'alignment', 'friendly-fire'],
+
+            setup: (engine: any) => {
+                // 1. Setup Player at (3,6)
+                engine.setPlayer({ q: 3, r: 6, s: -9 }, []);
+
+                // 2. Setup Enemy Attacker at (3,5) with AUTO_ATTACK
+                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'enemy_attacker');
+                const attacker = engine.state.enemies.find((e: any) => e.id === 'enemy_attacker');
+                if (attacker) {
+                    attacker.activeSkills = [{ id: 'AUTO_ATTACK', range: 1 }];
+                    attacker.previousPosition = { q: 3, r: 5, s: -8 };
+                }
+
+                // 3. Setup another Enemy (Ally to Attacker) at (2,6)
+                // Both (3,6) [Player] and (2,6) [Enemy Ally] are neighbors to (3,5)
+                engine.spawnEnemy('shieldBearer', { q: 2, r: 6, s: -8 }, 'enemy_ally');
+
+                // Mock spatial memory for the enemy
+                attacker.previousPosition = { q: 3, r: 5, s: -8 };
+                engine.state.player.previousPosition = { q: 3, r: 6, s: -9 };
+            },
+            run: (engine: any) => {
+                // Enemy stands still (Wait) to trigger the persistence check
+                engine.wait();
+            },
+            verify: (state: GameState, logs: string[]) => {
+                const playerHp = state.player.hp;
+                const enemyAlly = state.enemies.find(e => e.id === 'enemy_ally');
+
+                const checks = {
+
+                    // VERIFICATION: Target Discrimination
+                    // Player should be hit, but the Enemy Ally must be safe.
+                    playerHit: playerHp < 3, // Assuming 3 is starting HP
+                    allySafe: enemyAlly && enemyAlly.hp === enemyAlly.maxHp,
+
+                    // VERIFICATION: Logs
+                    hitPlayerLog: logs.some(l => l.includes('attacked you')),
+                    hitAllyLog: !logs.some(l => l.includes('attacked enemy_ally'))
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Scenario Failed Details:', checks);
+                    console.log('Current Player Pos:', state.player.position);
+                    console.log('Logs found:', logs);
+                }
+
+                /**
+                 * WHY THIS VERIFICATION:
+                 * This proves the skill's target selection logic includes an 
+                 * alignment filter (Target != Attacker.alignment).
+                 */
+                return Object.values(checks).every(v => v === true);
             }
         }
     ]

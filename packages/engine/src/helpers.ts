@@ -103,6 +103,27 @@ export const applyLavaDamage = (
 };
 
 /**
+ * Apply void damage to a given position. Returns the new Entity and any messages.
+ */
+export const applyVoidDamage = (
+    state: GameState,
+    position: Point,
+    entityIn?: Entity
+): { entity: Entity; messages: string[] } => {
+    const messages: string[] = [];
+    let entity = entityIn ?? state.player;
+    // Check if position is in voidPositions
+    if (state.voidPositions && state.voidPositions.some(vp => hexEquals(vp, position))) {
+        // Void is instant death for enemies, heavy damage for player (or same as lava?)
+        // Scenario says "Void consumes"
+        const damage = entity.type === 'player' ? 1 : 99;
+        entity = applyDamage(entity, damage);
+        messages.push(`${entity.type === 'player' ? 'Void consumes you' : 'Void consumes ' + entity.subtype}!`);
+    }
+    return { entity, messages };
+};
+
+/**
  * Check if the player is on a shrine.
  */
 export const checkShrine = (

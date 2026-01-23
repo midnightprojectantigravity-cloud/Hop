@@ -1,6 +1,7 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance, hexEquals, getNeighbors, getDirectionFromTo, hexAdd, hexDirection } from '../hex';
 import { getEnemyAt, isWalkable } from '../helpers';
+import { getSkillScenarios } from '../scenarios';
 
 /**
  * Implementation of the Shield Bash skill using the Compositional Skill Framework.
@@ -80,47 +81,5 @@ export const SHIELD_BASH: SkillDefinition = {
         return { effects, messages };
     },
     upgrades: {},
-    scenarios: [
-        {
-            id: 'bash_push',
-            title: 'Shield Push',
-            description: 'Push an enemy 1 tile.',
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['SHIELD_BASH']);
-                engine.setTile({ q: 3, r: 4, s: -7 }, 'lava');
-                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'victim'); // North
-            },
-            run: (engine: any) => {
-                engine.useSkill('SHIELD_BASH', { q: 3, r: 5, s: -8 });
-            },
-            verify: (state: GameState, logs: string[]) => {
-                const enemyGone = state.enemies.length === 0;
-                const messageOk = logs.some(l => l.includes('fell into Lava!'));
-                return enemyGone && messageOk;
-            }
-        },
-        {
-            id: 'bash_wall_stun',
-            title: 'Wall Slam Stun',
-            description: 'Bash enemy into wall causes stun.',
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['SHIELD_BASH']);
-                // Use ShieldBearer (HP 2) to survive the Player's passive Punch response (1 dmg)
-                engine.spawnEnemy('shieldBearer', { q: 3, r: 5, s: -8 }, 'victim');
-                engine.setTile({ q: 3, r: 4, s: -7 }, 'wall');
-            },
-            run: (engine: any) => {
-                engine.useSkill('SHIELD_BASH', { q: 3, r: 5, s: -8 });
-            },
-            verify: (state: GameState, logs: string[]) => {
-                const enemy = state.enemies.find(e => e.id === 'victim');
-                if (!enemy) return false;
-                // Should stay in original position (blocked) and be stunned
-                const inPlace = hexEquals(enemy.position, { q: 3, r: 5, s: -8 });
-                // Stun might be cleared by turn end, so check log for confirmation
-                const logConfirm = logs.some(l => l.includes('into obstacle'));
-                return inPlace && logConfirm;
-            }
-        }
-    ]
+    scenarios: getSkillScenarios('SHIELD_BASH')
 };

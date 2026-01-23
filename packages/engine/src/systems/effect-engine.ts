@@ -1,6 +1,7 @@
-import type { GameState, AtomicEffect, Actor, Point, MovementTrace } from '../types';
+import type { GameState, AtomicEffect, Actor, Point, MovementTrace, StatusEffect } from '../types';
 import { hexEquals, getHexLine } from '../hex';
 import { applyDamage } from './actor';
+import { STATUS_REGISTRY } from '../constants';
 
 import { nextIdFromState } from './rng';
 
@@ -132,13 +133,27 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'ApplyStatus': {
-            const addStatus = (actor: Actor, status: 'stunned' | 'poisoned' | 'armored' | 'hidden', duration: number, stateObj: GameState): { actor: Actor; nextState: GameState } => {
+            const getStatusWindow = (type: string) =>
+                STATUS_REGISTRY[type as keyof typeof STATUS_REGISTRY]?.tickWindow || 'END_OF_TURN';
+
+            const addStatusWithMetadata = (actor: Actor, statusType: any, duration: number, stateObj: GameState): { actor: Actor; nextState: GameState } => {
                 const res = nextIdFromState(stateObj, 4);
-                const id = `${status}_${res.id}`;
+                const id = `${statusType.toUpperCase()}_${res.id}`;
+
+                // Retrieve the window from our registry
+                const tickWindow = getStatusWindow(statusType);
+
+                const newStatus: StatusEffect = {
+                    id,
+                    type: statusType,
+                    duration,
+                    tickWindow // <--- This is where it gets set!
+                };
+
                 return {
                     actor: {
                         ...actor,
-                        statusEffects: [...actor.statusEffects, { id, type: status, duration }]
+                        statusEffects: [...actor.statusEffects, newStatus]
                     },
                     nextState: { ...stateObj, rngCounter: res.nextState.rngCounter }
                 };
@@ -158,30 +173,20 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             if (targetActorId) {
                 if (targetActorId === nextState.player.id) {
                     resolvedPos = nextState.player.position;
-                    const result = addStatus(nextState.player, effect.status, effect.duration, nextState);
+                    const result = addStatusWithMetadata(nextState.player, effect.status, effect.duration, nextState);
                     nextState.player = result.actor;
                     nextState.rngCounter = result.nextState.rngCounter;
                 } else {
-                    const enemy = nextState.enemies.find(e => e.id === targetActorId);
-                    resolvedPos = enemy?.position || null;
+                    // ... (Mapping over enemies logic) ...
                     nextState.enemies = nextState.enemies.map((e: Actor) => {
                         if (e.id === targetActorId) {
-                            const result = addStatus(e, effect.status, effect.duration, nextState);
+                            const result = addStatusWithMetadata(e, effect.status, effect.duration, nextState);
                             nextState.rngCounter = result.nextState.rngCounter;
                             return result.actor;
                         }
                         return e;
                     });
                 }
-            } else if (targetPos) {
-                nextState.enemies = nextState.enemies.map((e: Actor) => {
-                    if (hexEquals(e.position, targetPos)) {
-                        const result = addStatus(e, effect.status, effect.duration, nextState);
-                        nextState.rngCounter = result.nextState.rngCounter;
-                        return result.actor;
-                    }
-                    return e;
-                });
             }
 
             if (effect.status === 'stunned' && resolvedPos) {
@@ -190,10 +195,42 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             break;
         }
 
+        case 'PickupShield': {
+            // Validate if shield is actually there (optional, but good for safety)
+            const pickupPos = effect.position || nextState.shieldPosition;
+            if (pickupPos && nextState.shieldPosition && hexEquals(nextState.shieldPosition, pickupPos)) {
+                nextState.hasShield = true;
+                nextState.shieldPosition = undefined;
+
+                // Grant BULWARK_CHARGE
+                const bulwarkSkill: any = {
+                    id: 'BULWARK_CHARGE',
+                    name: 'Bulwark Charge',
+                    description: 'Shield Bash.',
+                    slot: 'utility',
+                    cooldown: 3,
+                    currentCooldown: 0,
+                    range: 1,
+                    upgrades: [],
+                    activeUpgrades: []
+                };
+
+                if (!nextState.player.activeSkills.some(s => s.id === 'BULWARK_CHARGE')) {
+                    nextState.player = {
+                        ...nextState.player,
+                        activeSkills: [...nextState.player.activeSkills, bulwarkSkill]
+                    };
+                }
+            }
+            break;
+        }
+
         case 'SpawnItem': {
             if (effect.itemType === 'spear') {
                 nextState.spearPosition = effect.position;
-                nextState.hasSpear = false;
+                if (context.sourceId === nextState.player.id) {
+                    nextState.hasSpear = false;
+                }
             } else if (effect.itemType === 'bomb') {
                 const res = nextIdFromState(nextState, 6);
                 nextState.rngCounter = res.nextState.rngCounter;
@@ -216,6 +253,43 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             } else if (effect.itemType === 'shield') {
                 nextState.shieldPosition = effect.position;
                 nextState.hasShield = false;
+            }
+            break;
+        }
+
+        case 'LavaSink': {
+            const targetId = effect.target;
+            const actor = targetId === nextState.player.id ? nextState.player : nextState.enemies.find(e => e.id === targetId);
+            if (actor) {
+                if (targetId === nextState.player.id) {
+                    nextState.player = applyDamage(nextState.player, 99);
+                } else {
+                    nextState.enemies = nextState.enemies.filter(e => e.id !== targetId);
+                    nextState.dyingEntities = [...(nextState.dyingEntities || []), actor];
+                }
+                nextState.visualEvents = [...(nextState.visualEvents || []),
+                { type: 'vfx', payload: { type: 'vaporize', position: actor.position } }
+                ];
+            }
+            break;
+        }
+
+        case 'Impact': {
+            const targetId = effect.target;
+            const actor = targetId === nextState.player.id ? nextState.player : nextState.enemies.find(e => e.id === targetId);
+            if (actor) {
+                nextState.visualEvents = [...(nextState.visualEvents || []),
+                { type: 'shake', payload: { intensity: 'medium', direction: effect.direction } },
+                { type: 'vfx', payload: { type: 'impact', position: actor.position } },
+                { type: 'combat_text', payload: { text: `Impact!`, position: actor.position } }
+                ];
+                if (effect.damage > 0) {
+                    if (targetId === nextState.player.id) {
+                        nextState.player = applyDamage(nextState.player, effect.damage);
+                    } else {
+                        nextState.enemies = nextState.enemies.map(e => e.id === targetId ? applyDamage(e, effect.damage) : e);
+                    }
+                }
             }
             break;
         }
