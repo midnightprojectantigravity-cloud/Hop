@@ -3,7 +3,7 @@ import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';
 import { UpgradeOverlay } from './components/UpgradeOverlay';
 import { SkillTray } from './components/SkillTray';
-import { gameReducer, generateInitialState, generateHubState, hexEquals, migratePositionArraysToTiles } from '@hop/engine';
+import { gameReducer, generateInitialState, generateHubState, hexEquals, migratePositionArraysToTiles, pointToKey } from '@hop/engine';
 import type { Point, Action, GameState } from '@hop/engine';
 import type { ReplayRecord } from './components/ReplayManager';
 import { GRID_WIDTH, GRID_HEIGHT } from '@hop/engine';
@@ -39,6 +39,34 @@ function App() {
     }
     return generateHubState();
   });
+
+  // Add this inside the App component, below your useReducer line
+  useEffect(() => {
+    (window as any).state = gameState;
+    (window as any).QUERY = {
+      // Direct tile lookup
+      tile: (q: number, r: number) => {
+        const p: Point = { q, r, s: -q - r };
+        const key = pointToKey(p);
+        console.log(`Checking Map for Key: "${key}"`);
+        return gameState.tiles.get(key);
+      },
+      // NEW: Find where the player is according to the engine
+      whereAmI: () => {
+        const p = gameState.player.position;
+        const key = pointToKey(p);
+        const tile = gameState.tiles.get(key);
+        return {
+          coords: p,
+          key: key,
+          tileExists: !!tile,
+          tileData: tile
+        };
+      },
+      // NEW: See all keys currently in the map to spot patterns
+      dumpKeys: () => Array.from(gameState.tiles.keys())
+    };
+  }, [gameState]);
 
   useEffect(() => {
     if (gameState.gameStatus === 'playing' || gameState.gameStatus === 'choosing_upgrade') {

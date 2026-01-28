@@ -7,7 +7,7 @@ import { isPlayerTurn } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
 import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './systems/components';
 import { addStatus } from './systems/actor';
-import { migratePositionArraysToTiles } from './systems/tile-migration';
+import { migratePositionArraysToTiles, pointToKey } from './systems/tile-migration';
 
 
 /**
@@ -87,6 +87,9 @@ export class ScenarioEngine {
     }
 
     setTile(pos: Point, type: 'lava' | 'wall' | 'floor' | 'slippery' | 'void') {
+        const key = pointToKey(pos);
+
+        // 1. Maintain Legacy Arrays (Back-compat)
         if (type === 'lava') {
             this.state.lavaPositions.push(pos);
         } else if (type === 'wall') {
@@ -97,11 +100,44 @@ export class ScenarioEngine {
         } else if (type === 'void') {
             this.state.voidPositions = this.state.voidPositions || [];
             this.state.voidPositions.push(pos);
-        } else if (type === 'floor') {
-            // Just ensure it's not in other arrays
-            // For now, migration handles "not in array = stone"
         }
-        this.syncTiles();
+
+        // 2. Populate MODULAR TILE MAP (UnifiedTileService Truth)
+        if (!this.state.tiles) {
+            this.state.tiles = new Map();
+        }
+
+        // Ensure it's a Map (migration might have made it one, but safe check)
+        if (this.state.tiles instanceof Map) {
+            const newTile = {
+                baseId: type.toUpperCase(),
+                position: pos,
+                traits: new Set<any>(), // any to avoid import cycles with TileTrait if strict
+                effects: []
+            };
+
+            if (type === 'wall') {
+                newTile.traits.add('BLOCKS_MOVEMENT');
+                newTile.traits.add('BLOCKS_LOS');
+                newTile.traits.add('ANCHOR');
+            }
+            if (type === 'lava') {
+                newTile.traits.add('DAMAGING');
+                newTile.traits.add('HAZARDOUS'); // Key for Lava Sink
+                newTile.traits.add('LIQUID');
+                newTile.baseId = 'LAVA';
+            }
+            if (type === 'void') {
+                newTile.traits.add('HAZARDOUS');
+                newTile.baseId = 'VOID';
+            }
+            if (type === 'slippery') {
+                newTile.traits.add('SLIPPERY');
+                newTile.baseId = 'ICE';
+            }
+
+            this.state.tiles.set(key, newTile as any);
+        }
     }
 
     syncTiles() {

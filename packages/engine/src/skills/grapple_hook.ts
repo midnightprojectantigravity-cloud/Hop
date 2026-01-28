@@ -1,15 +1,15 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point, WeightClass } from '../types';
 import {
-    hexDistance, hexAdd, hexSubtract, hexEquals,
+    hexDistance, hexAdd, hexSubtract,
     hexDirection, scaleVector, getHexLine, getNeighbors
 } from '../hex';
-import { getActorAt, isPerimeter } from '../helpers';
+import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
 import { pullToward, swap, kineticFling } from '../systems/displacement-system';
 import { getSkillScenarios } from '../scenarios';
 import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../systems/juice-manifest';
 import { TileResolver } from '../systems/tile-effects';
-import { pointToKey } from '../systems/tile-migration';
+import { UnifiedTileService } from '../systems/unified-tile-service';
 
 import { validateLineOfSight, validateAxialDirection } from '../systems/validation';
 import { getAxialTargetsWithOptions } from '../systems/navigation';
@@ -49,9 +49,9 @@ export const GRAPPLE_HOOK: SkillDefinition = {
 
         const actualTargetPos = target;
         const targetActor = getActorAt(state, actualTargetPos);
-        const isWallTile = state.wallPositions?.some(w => hexEquals(w, actualTargetPos)) ||
-            isPerimeter(actualTargetPos, state.gridWidth, state.gridHeight);
+        const tileTraits = UnifiedTileService.getTraitsAt(state, actualTargetPos);
 
+        const isWallTile = tileTraits.has('BLOCKS_MOVEMENT') || tileTraits.has('ANCHOR');
         const weightClass: WeightClass = isWallTile ? 'Heavy' : (targetActor as any)?.weightClass || 'Standard';
 
         // --- CASE A: ZIP TO HEAVY/WALL ---
@@ -64,7 +64,7 @@ export const GRAPPLE_HOOK: SkillDefinition = {
             effects.push({ type: 'Displacement', target: shooter.id, destination });
 
             // Trigger tile-enter effects (e.g. Lava Sink)
-            const tile = state.tiles.get(pointToKey(destination));
+            const tile = UnifiedTileService.getTileAt(state, destination);
             if (tile) {
                 const enterResult = TileResolver.processEntry(shooter, tile, state);
                 effects.push(...enterResult.effects);

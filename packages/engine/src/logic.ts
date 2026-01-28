@@ -40,10 +40,8 @@ import {
     getTurnStartNeighborIds,
     isPlayerTurn,
 } from './systems/initiative';
-import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './systems/components';
 import { tickStatuses } from './systems/status';
-import { createInitialTileGrid, pointToKey } from './systems/tile-migration';
-import { BASE_TILES } from './systems/tile-registry';
+import { createInitialTileGrid } from './systems/tile-migration';
 
 
 /**
@@ -103,25 +101,26 @@ export const generateInitialState = (
     const archetype = (preservePlayer as any)?.archetype || loadoutApplied.archetype;
 
     // Use the fixed playerSpawn from dungeon generation
-    const playerPos = dungeon.playerSpawn;
+    // const playerPos = dungeon.playerSpawn; // (Directly used below)
 
-    const initialState: GameState = {
+    // Unified Tile Service: Ensure tiles Map is populated
+    const tiles = createInitialTileGrid([]);
+
+    // We construct the state first, and then migrate legacy arrays to tiles if needed
+    const tempState: GameState = {
         turnNumber: 1,
         player: {
+            ...playerStats,
             id: 'player',
             type: 'player',
             factionId: 'player',
-            position: playerPos,
-            previousPosition: playerPos,
-            ...playerStats,
+            position: dungeon.playerSpawn,
+            previousPosition: dungeon.playerSpawn,
             statusEffects: [],
             temporaryArmor: 0,
             activeSkills,
-            archetype,
-            components: new Map<string, GameComponent>([
-                ['physics', { type: 'physics', weightClass: 'Standard' } as PhysicsComponent],
-                ['archetype', { type: 'archetype', archetype } as ArchetypeComponent]
-            ])
+            components: new Map(),
+            archetype: archetype
         },
         enemies: enemies.map(e => ({
             ...e,
@@ -135,61 +134,57 @@ export const generateInitialState = (
         message: floor === 1
             ? ['Welcome to the arena. Survive.']
             : [...(preservePlayer as any)?.message || [], `Floor ${floor} - ${theme.charAt(0).toUpperCase() + theme.slice(1)}. Be careful.`].slice(-50),
+
         hasSpear: true,
-        rngSeed: actualSeed,
-        initialSeed: initialSeed ?? (floor === 1 ? actualSeed : undefined),
-        rngCounter: 0,
         stairsPosition: dungeon.stairsPosition,
+        occupancyMask: [], // Will be refreshed below
+        // Legacy Arrays (Source)
         lavaPositions: dungeon.lavaPositions,
         wallPositions: dungeon.wallPositions,
-        occupancyMask: [], // Will be refreshed below
+        // Empty defaults
+        slipperyPositions: [],
+        voidPositions: [],
+        firePositions: [],
+        corpsePositions: [],
+        trapPositions: [],
+
         shrinePosition: dungeon.shrinePosition,
         shrineOptions: undefined,
         hasShield: true,
-        floor: floor,
+        floor,
+        upgrades,
         rooms: dungeon.rooms,
         theme,
-        upgrades,
+
+        // Command & Replay
         commandLog: [],
         undoStack: [],
+        rngSeed: actualSeed,
+        initialSeed: initialSeed ?? (floor === 1 ? actualSeed : undefined),
+        rngCounter: 0,
         actionLog: [],
+
+        // Score
         kills: preservePlayer ? (preservePlayer as any).kills || 0 : 0,
         environmentalKills: preservePlayer ? (preservePlayer as any).environmentalKills || 0 : 0,
         turnsSpent: preservePlayer ? (preservePlayer as any).turnsSpent || 0 : 0,
+
+        // Juice
         dyingEntities: [],
         visualEvents: [],
+
+        // Core Systems
         initiativeQueue: undefined, // Initialized below
-        tiles: new Map(), // Initialized below
+        tiles: tiles, // Will be populated via migration below
     };
 
-    // Initialize the new Tile System
-    initialState.tiles = createInitialTileGrid(dungeon.allHexes);
+    // CRITICAL: Sync the legacy arrays to the Tile Map so UnifiedTileService works
+    tempState.tiles = migratePositionArraysToTiles(tempState);
 
-    // Fill with hazards from generation
-    dungeon.lavaPositions.forEach(p => {
-        const key = pointToKey(p);
-        initialState.tiles.set(key, {
-            baseId: 'LAVA',
-            position: p,
-            traits: new Set(BASE_TILES.LAVA.defaultTraits),
-            effects: []
-        });
-    });
-    dungeon.wallPositions.forEach(p => {
-        const key = pointToKey(p);
-        initialState.tiles.set(key, {
-            baseId: 'WALL',
-            position: p,
-            traits: new Set(BASE_TILES.WALL.defaultTraits),
-            effects: []
-        });
-    });
+    tempState.initiativeQueue = buildInitiativeQueue(tempState);
+    tempState.occupancyMask = refreshOccupancyMask(tempState);
 
-    initialState.initiativeQueue = buildInitiativeQueue(initialState);
-
-    initialState.occupancyMask = refreshOccupancyMask(initialState);
-
-    return initialState;
+    return tempState;
 };
 
 /**

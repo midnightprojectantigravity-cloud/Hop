@@ -1,5 +1,6 @@
 import React from 'react';
-import { COMPOSITIONAL_SKILLS, generateInitialState, ENEMY_STATS, addStatus, buildInitiativeQueue, type GameState, type Point, type SkillDefinition, type ScenarioV2 } from '@hop/engine';
+import { COMPOSITIONAL_SKILLS, generateInitialState, ENEMY_STATS, addStatus, buildInitiativeQueue, type GameState, type Point, type SkillDefinition, type ScenarioV2, pointToKey } from '@hop/engine';
+import { BASE_TILES } from '@hop/engine/systems/tile-registry';
 
 interface TutorialManagerProps {
     onLoadScenario: (state: GameState, instructions: string) => void;
@@ -61,12 +62,22 @@ class ScenarioBuilder {
         });
     }
 
-    setTile(pos: Point, type: 'lava' | 'wall' | 'floor') {
-        if (type === 'lava') {
-            this.state.lavaPositions.push(pos);
-        } else if (type === 'wall') {
-            this.state.wallPositions.push(pos);
-        }
+    // Inside your Engine class/logic
+    setTile(point: Point, type: string) {
+        const typeUpper = type.toUpperCase();
+        const key = pointToKey(point);
+
+        // 1. Sync Legacy Arrays (The "Visuals")
+        if (typeUpper === 'LAVA') this.state.lavaPositions.push(point);
+        if (typeUpper === 'WALL') this.state.wallPositions.push(point);
+
+        // 2. Update the Source of Truth (The "Brain")
+        this.state.tiles.set(key, {
+            baseId: typeUpper,
+            position: point,
+            traits: new Set(BASE_TILES[typeUpper]?.defaultTraits || []),
+            effects: []
+        });
     }
 
     addUpgrade(skillId: string, upgradeId: string) {

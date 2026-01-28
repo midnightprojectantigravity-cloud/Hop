@@ -22,6 +22,8 @@ describe('Skill Scenarios Integration', () => {
                     initialState.shrinePosition = undefined;
                     initialState.stairsPosition = { q: 99, r: 99, s: -198 };
                     initialState.gameStatus = 'playing';
+                    // Unified Tile Service: Clear the pre-generated dungeon map to ensure test isolation
+                    if (initialState.tiles) initialState.tiles.clear();
 
                     const engine = new ScenarioEngine(initialState);
 

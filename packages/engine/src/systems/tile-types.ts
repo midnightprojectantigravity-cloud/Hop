@@ -11,7 +11,10 @@ export type TileTrait =
     | 'CLIMBABLE'     // Can be climbed
     | 'FLAMMABLE'     // Can catch fire
     | 'SLIPPERY'      // Preserves momentum
-    | 'HAZARDOUS';    // Dangerous terrain
+    | 'HAZARDOUS'     // Dangerous terrain
+    | 'BLOCKS_MOVEMENT'
+    | 'ANCHOR'        // Can be grappled
+    | 'DAMAGING';     // Causes damage (Fire, etc)
 
 /**
  * Tile Effect - Temporary condition with duration

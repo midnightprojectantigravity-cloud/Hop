@@ -43,3 +43,16 @@ Thanks for wanting to contribute! This document explains the repository layout, 
 - Open a branch for focused changes.
 - Include a scenario test for any new feature or bug fix.
 - Verify that `npm test` passes in the root directory.
+
+## The Golden Rules of the Grid
+
+To prevent "Split-Brain" state bugs, all contributors must follow these rules:
+
+1. **Single Source of Truth**: The `state.tiles` Map is the ONLY source of truth for the world. 
+   - ❌ NEVER create standalone arrays like `lavaPositions` or `wallPositions`.
+   - ✅ ALWAYS use `setTile()` to modify the world and `state.tiles.get(key)` to read it.
+2. **Unified Keying**: NEVER manually stringify coordinates.
+   - ❌ `const key = "${q},${r}"` 
+   - ✅ `const key = HexCoord.toKey(q, r)`
+3. **The Movement Hook**: Any logic that moves an entity (Skills, Pushes, etc.) MUST call `resolveEnvironment(entity)`. 
+   - If you skip this, environmental effects like "Lava Sinking" will fail to trigger.

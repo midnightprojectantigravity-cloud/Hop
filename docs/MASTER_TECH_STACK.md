@@ -31,8 +31,7 @@ We use a formalized **ECS-Lite** structure to separate data from logic.
 * **Entities (Actors)**: Thin data containers identified by a persistent ID.
 * **Components**: Strictly typed data blocks (e.g., `PhysicsComponent`, `HealthComponent`) stored in a `Map`.
 * **Systems**: Pure functions in `src/systems/` that process components (e.g., `movement.ts`, `combat.ts`). - IN PROGRESS, still need to move more files to the folder.
-* **Spatial Bitmasks**: High-speed occupancy lookups use **BigInt bitmasks** to represent the **Flat-Top Hex Grid**.
-
+* **Spatial Data**: Occupancy lookups use **BigInt bitmasks** for speed, but the physical world properties (Lava, Walls, Snare) are managed by the **Unified Tile Map**.
 ---
 
 ## 3. Tile Effects System (Observer-Based)
@@ -138,6 +137,10 @@ The out-of-combat experience must feel as robust as the tactical grid.
 * **Fuzz Testing**: A headless script performs 10,000+ random actions to ensure no illegal states occur.
 * **Server Validator**: A Node.js CLI to verify `ActionLog` authenticity before leaderboard submission. - TO DO
 
+### Quality Gates
+A PR is not ready for review if:
+* `npx knip` reports unused exports or files in the new logic.
+
 ---
 
 ## 10. Definition of Done (MVP Checklist)
@@ -209,3 +212,9 @@ The out-of-combat experience must feel as robust as the tactical grid.
     * Level 8 (Increasing difficulty): High density of low-HP enemies. Tests AoE skills and "Chain Stuns."
     * Level 9 (Increasing difficulty): High density of low-HP enemies. Tests AoE skills and "Chain Stuns."
     * Level 10 (The Sentinel): A boss-type enemy with high HP and "Projected Attacks".
+
+## 12. Common Pitfalls & Debt Prevention
+
+* **Refactoring Ghosts**: If you move a system to `src/systems/`, delete the original file immediately. Do not leave "Legacy" versions in the root.
+* **Shadow States**: Ensure the UI (`apps/web`) never calculates its own version of a unit's position. If the UI disagrees with the `packages/engine`, the UI is wrong—fix the render loop, don't "tweak" the engine data to fit the view.
+* **Default Exports**: Use **Named Exports** for all engine utilities to ensure better IDE support and prevent duplicate export bugs.
