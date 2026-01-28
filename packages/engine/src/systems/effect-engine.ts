@@ -1,9 +1,14 @@
 import type { GameState, AtomicEffect, Actor, Point, MovementTrace, StatusEffect } from '../types';
-import { hexEquals, getHexLine } from '../hex';
+import { hexEquals, getHexLine, getDirectionFromTo } from '../hex';
 import { applyDamage } from './actor';
 import { STATUS_REGISTRY } from '../constants';
 
 import { nextIdFromState } from './rng';
+import { addToQueue } from './initiative';
+import { TileResolver } from './tile-effects';
+import { pointToKey } from './tile-migration';
+import { BASE_TILES } from './tile-registry';
+
 
 /**
  * Apply a single atomic effect to the game state.
@@ -78,7 +83,10 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     nextState.enemies = nextState.enemies.map((e: Actor) => {
                         if (e.id === targetActorId) {
                             const updated = applyDamage(e, effect.amount);
-                            if (updated.hp <= 0) nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
+                            if (updated.hp <= 0) {
+                                nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
+                                nextState.corpsePositions = [...(nextState.corpsePositions || []), e.position];
+                            }
                             return updated;
                         }
                         return e;
@@ -89,6 +97,33 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     { type: 'combat_text', payload: { text: `-${effect.amount}`, targetId: targetActorId, position: victimPos } },
                     { type: 'vfx', payload: { type: 'impact', position: victimPos } }
                     ];
+
+                    // Stealth Decay: Taking damage reduces stealth
+                    if (victim && (victim.stealthCounter || 0) > 0) {
+                        nextState.enemies = nextState.enemies.map(e =>
+                            e.id === targetActorId ? { ...e, stealthCounter: Math.max(0, (e.stealthCounter || 0) - 1) } : e
+                        );
+                    }
+                    if (targetActorId === nextState.player.id && (nextState.player.stealthCounter || 0) > 0) {
+                        nextState.player = { ...nextState.player, stealthCounter: Math.max(0, (nextState.player.stealthCounter || 0) - 1) };
+                    }
+
+                    // Hunter Passive (Player): Swift Roll away from attacker
+                    if (targetActorId === nextState.player.id && nextState.player.archetype === 'HUNTER' && (effect as any).source) {
+                        const rollDirIdx = getDirectionFromTo((effect as any).source, nextState.player.position);
+                        if (rollDirIdx !== -1) {
+                            nextState.visualEvents.push({ type: 'combat_text', payload: { position: nextState.player.position, text: 'Auto-Roll!' } });
+                            nextState.message = [...(nextState.message || []), `You roll away!`];
+                        }
+                    }
+
+                    // Hunter Passive (Enemy): Swift Roll away from attacker
+                    if (victim && victim.archetype === 'HUNTER' && (effect as any).source) {
+                        const rollDirIdx = getDirectionFromTo((effect as any).source, victim.position);
+                        if (rollDirIdx !== -1) {
+                            nextState.message = [...(nextState.message || []), `${victim.subtype || victim.id} rolls away!`];
+                        }
+                    }
                 }
             } else if (targetPos) {
                 nextState.visualEvents = [...(nextState.visualEvents || []),
@@ -97,11 +132,17 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 ];
                 if (hexEquals(nextState.player.position, targetPos)) {
                     nextState.player = applyDamage(nextState.player, effect.amount);
+                    if (nextState.player.hp <= 0) {
+                        nextState.corpsePositions = [...(nextState.corpsePositions || []), nextState.player.position];
+                    }
                 }
                 nextState.enemies = nextState.enemies.map((e: Actor) => {
                     if (hexEquals(e.position, targetPos)) {
                         const updated = applyDamage(e, effect.amount);
-                        if (updated.hp <= 0) nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
+                        if (updated.hp <= 0) {
+                            nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
+                            nextState.corpsePositions = [...(nextState.corpsePositions || []), e.position];
+                        }
                         return updated;
                     }
                     return e;
@@ -147,7 +188,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     id,
                     type: statusType,
                     duration,
-                    tickWindow // <--- This is where it gets set!
+                    tickWindow
                 };
 
                 return {
@@ -177,7 +218,6 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     nextState.player = result.actor;
                     nextState.rngCounter = result.nextState.rngCounter;
                 } else {
-                    // ... (Mapping over enemies logic) ...
                     nextState.enemies = nextState.enemies.map((e: Actor) => {
                         if (e.id === targetActorId) {
                             const result = addStatusWithMetadata(e, effect.status, effect.duration, nextState);
@@ -196,13 +236,11 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'PickupShield': {
-            // Validate if shield is actually there (optional, but good for safety)
             const pickupPos = effect.position || nextState.shieldPosition;
             if (pickupPos && nextState.shieldPosition && hexEquals(nextState.shieldPosition, pickupPos)) {
                 nextState.hasShield = true;
                 nextState.shieldPosition = undefined;
 
-                // Grant BULWARK_CHARGE
                 const bulwarkSkill: any = {
                     id: 'BULWARK_CHARGE',
                     name: 'Bulwark Charge',
@@ -391,6 +429,59 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             };
             break;
         }
+        case 'SpawnCorpse': {
+            nextState.corpsePositions = [...(nextState.corpsePositions || []), effect.position];
+            break;
+        }
+        case 'RemoveCorpse': {
+            nextState.corpsePositions = (nextState.corpsePositions || []).filter(cp => !hexEquals(cp, effect.position));
+            break;
+        }
+        case 'SpawnActor': {
+            nextState.enemies = [...nextState.enemies, effect.actor];
+            if (nextState.initiativeQueue) {
+                nextState.initiativeQueue = addToQueue(nextState.initiativeQueue, effect.actor);
+            }
+            break;
+        }
+        case 'PlaceFire': {
+            const key = pointToKey(effect.position);
+            let tile = nextState.tiles.get(key);
+            if (!tile) {
+                tile = {
+                    baseId: 'STONE',
+                    position: effect.position,
+                    traits: new Set(BASE_TILES.STONE.defaultTraits),
+                    effects: []
+                };
+                nextState.tiles.set(key, tile);
+            }
+
+            const result = TileResolver.applyEffect(tile, 'FIRE', effect.duration, 1, nextState, context.sourceId);
+            if (result.messages.length > 0) {
+                nextState.message = [...nextState.message, ...result.messages].slice(-50);
+            }
+            break;
+        }
+
+        case 'PlaceTrap': {
+            nextState.trapPositions = [...(nextState.trapPositions || []), { pos: effect.position, ownerId: effect.ownerId }];
+            break;
+        }
+        case 'RemoveTrap': {
+            nextState.trapPositions = (nextState.trapPositions || []).filter(tp => !hexEquals(tp.pos, effect.position));
+            break;
+        }
+        case 'SetStealth': {
+            const updateStealth = (actor: Actor) => ({ ...actor, stealthCounter: (actor.stealthCounter || 0) + effect.amount });
+
+            if (effect.target === 'self') {
+                nextState.player = updateStealth(nextState.player);
+            } else {
+                nextState.enemies = nextState.enemies.map(e => e.id === effect.target ? updateStealth(e) : e);
+            }
+            break;
+        }
         case 'GameOver': {
             nextState.gameStatus = 'lost';
             break;
@@ -400,24 +491,19 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
     return nextState;
 };
 
-import { themeInterceptors } from './theme';
-
 import { checkVitals } from './vitals';
 
 /**
  * Apply a list of effects to the game state.
  */
 export const applyEffects = (state: GameState, effects: AtomicEffect[], context: { targetId?: string; sourceId?: string } = {}): GameState => {
-    // 1. Pass all effects through the theme interceptor pipeline
-    const interceptedEffects: AtomicEffect[] = [];
-    for (const eff of effects) {
-        interceptedEffects.push(...themeInterceptors(eff, state, context));
-    }
+    // Legacy themeInterceptors decommissioned. 
+    // Hazard logic is now unified in TileResolver and executed during Displacement or turn ends.
 
-    // 2. Resolve final effects
-    let nextState = interceptedEffects.reduce((s, eff) => applyAtomicEffect(s, eff, context), state);
+    // Resolve final effects
+    let nextState = effects.reduce((s, eff) => applyAtomicEffect(s, eff, context), state);
 
-    // 3. Post-Effect Vitals Check (Life & Death)
+    // Post-Effect Vitals Check (Life & Death)
     const vitalEffects = checkVitals(nextState);
     if (vitalEffects.length > 0) {
         nextState = vitalEffects.reduce((s, eff) => applyAtomicEffect(s, eff, {}), nextState);

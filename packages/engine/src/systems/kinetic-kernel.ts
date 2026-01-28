@@ -1,7 +1,7 @@
 // src/systems/kinetic-kernel.ts
 
-import { getHexLine, hexAdd, hexEquals, isHexInRectangularGrid, scaleVector } from "../hex";
-import { AtomicEffect, GameState, Point } from "../types";
+import { getHexLine, hexAdd, hexEquals, isHexInRectangularGrid } from "../hex";
+import type { AtomicEffect, GameState, Point } from "../types";
 import { JuiceHelpers, ENVIRONMENTAL_JUICE } from "./juice-manifest";
 
 /**
@@ -88,7 +88,7 @@ export function processKineticPulse(state: GameState, request: KineticPulseReque
                 if (isLava(state, nextHex)) {
                     effects.push({ type: 'LavaSink', target: leadUnit.id });
                     // JUICE: Lava ripple
-                    effects.push(...ENVIRONMENTAL_JUICE.lavaSink(nextHex, leadUnit.id));
+                    effects.push(...ENVIRONMENTAL_JUICE.lavaSink(nextHex));
                     break;
                 }
             }
@@ -174,7 +174,7 @@ export function processKineticPulse(state: GameState, request: KineticPulseReque
                     target: unit.id
                 });
                 // JUICE: Lava ripple
-                effects.push(...ENVIRONMENTAL_JUICE.lavaSink(destinationHex, unit.id));
+                effects.push(...ENVIRONMENTAL_JUICE.lavaSink(destinationHex));
                 unitsOnLine.splice(i, 1);
             }
         }

@@ -9,6 +9,7 @@ function createMockState(overrides: Partial<GameState> = {}): GameState {
         gridHeight: 10,
         wallPositions: [],
         lavaPositions: [],
+        tiles: new Map(),
         player: { id: 'player', type: 'player', position: { q: 0, r: 0, s: 0 }, hp: 10, maxHp: 10, speed: 1, factionId: 'player', statusEffects: [], temporaryArmor: 0, activeSkills: [] },
         enemies: [],
         turnNumber: 0,

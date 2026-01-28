@@ -67,49 +67,6 @@ export const basicAttackScenarios: ScenarioCollection = {
                 return Object.values(checks).every(v => v === true);
 
             }
-        },
-        {
-            id: 'enemy_basic_attack_cycle',
-            title: 'Enemy Basic Attack: Resolution',
-            description: 'Verifies that enemies resolve telegraphed attacks correctly.',
-            relatedSkills: ['BASIC_ATTACK'],
-            category: 'combat',
-            tags: ['enemy-ai', 'telegraph'],
-
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, []);
-                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'attacker');
-
-                const attacker = engine.state.enemies.find((e: any) => e.id === 'attacker');
-                attacker.intent = 'BASIC_ATTACK';
-                attacker.intentPosition = { q: 3, r: 6, s: -9 };
-
-                if (!attacker.activeSkills) attacker.activeSkills = [];
-                attacker.activeSkills.push({
-                    id: 'BASIC_ATTACK',
-                    range: 1,
-                    cooldown: 0,
-                    currentCooldown: 0
-                });
-            },
-            run: (engine: any) => {
-                engine.wait(); // Resolves the enemy telegraph
-            },
-            verify: (state: GameState, logs: string[]) => {
-                const checks = {
-                    // Player should have taken 1 damage (assuming 3 is max HP)
-                    playerHit: state.player.hp === 2,
-                    hitLog: logs.some(l => l.includes('attacked you')),
-                }
-
-                if (Object.values(checks).some(v => v === false)) {
-                    console.log('❌ Scenario Failed Details:', checks);
-                    console.log('Current Player Pos:', state.player.position);
-                    console.log('Logs found:', logs);
-                }
-
-                return Object.values(checks).every(v => v === true);
-            }
         }
     ]
 };

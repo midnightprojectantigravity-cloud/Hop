@@ -17,6 +17,18 @@ import { SHIELD_THROW } from './skills/shield_throw';
 import { VAULT } from './skills/vault';
 import { BASIC_MOVE } from './skills/basic_move';
 import { DASH } from './skills/dash';
+import { FIREBALL } from './skills/fireball';
+import { FIREWALL } from './skills/firewall';
+import { FIREWALK } from './skills/firewalk';
+import { CORPSE_EXPLOSION } from './skills/corpse_explosion';
+import { RAISE_DEAD } from './skills/raise_dead';
+import { SOUL_SWAP } from './skills/soul_swap';
+import { MULTI_SHOOT } from './skills/multi_shoot';
+import { SET_TRAP } from './skills/set_trap';
+import { SWIFT_ROLL } from './skills/swift_roll';
+import { SNEAK_ATTACK } from './skills/sneak_attack';
+import { SMOKE_SCREEN } from './skills/smoke_screen';
+import { SHADOW_STEP } from './skills/shadow_step';
 import type { SkillDefinition } from './types';
 
 /**
@@ -36,6 +48,18 @@ export const COMPOSITIONAL_SKILLS: Record<string, SkillDefinition> = {
     THEME_HAZARDS,
     BASIC_MOVE,
     DASH,
+    FIREBALL,
+    FIREWALL,
+    FIREWALK,
+    CORPSE_EXPLOSION,
+    RAISE_DEAD,
+    SOUL_SWAP,
+    MULTI_SHOOT,
+    SET_TRAP,
+    SWIFT_ROLL,
+    SNEAK_ATTACK,
+    SMOKE_SCREEN,
+    SHADOW_STEP,
 };
 
 /**

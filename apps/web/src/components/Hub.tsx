@@ -66,7 +66,7 @@ export const Hub: React.FC<HubProps> = ({ gameState, onSelectLoadout, onStartRun
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               </div>
               <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 overflow-hidden">
-                <ReplayManager gameState={gameState} onStartReplay={onStartReplay} onStopReplay={() => { }} onStepReplay={() => { }} />
+                <ReplayManager gameState={gameState} onStartReplay={onStartReplay} />
               </div>
             </section>
 

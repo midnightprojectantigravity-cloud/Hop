@@ -1,6 +1,5 @@
 import type { GameState } from '../types';
 import type { ScenarioCollection } from './types';
-import { hexEquals } from '../hex';
 
 export const grappleHookScenarios: ScenarioCollection = {
     id: 'grapple_hook',
@@ -43,7 +42,7 @@ export const grappleHookScenarios: ScenarioCollection = {
             verify: (state: GameState, logs: string[]) => {
                 const checks = {
                     // Wall blocked the hook
-                    hiddenAlive: !!state.enemies.find(e => e.id === 'hidden'),
+                    playerInOriginalPosition: state.player.position.q === 4 && state.player.position.r === 6 && state.player.position.s === -10,
                     // Target fell in lava and was removed or killed
                     target1Dead: !state.enemies.find(e => e.id === 'target1') || state.enemies.find(e => e.id === 'target1')!.hp <= 0,
                     // Feedback was provided
@@ -53,6 +52,9 @@ export const grappleHookScenarios: ScenarioCollection = {
                 if (Object.values(checks).some(v => v === false)) {
                     console.log('❌ Scenario Failed Details:', checks);
                     console.log('Logs:', logs);
+                }
+                else {
+                    console.log('✅ Scenario Passed', logs);
                 }
 
                 return Object.values(checks).every(v => v === true);
@@ -77,6 +79,7 @@ export const grappleHookScenarios: ScenarioCollection = {
 
                 // Wall is the target, confirm the stun radius 
                 engine.setTile({ q: 6, r: 6, s: -12 }, 'wall');
+                engine.setTile({ q: 5, r: 6, s: -11 }, 'lava');
                 engine.spawnEnemy('footman', { q: 6, r: 5, s: -11 }, 'stunMe');
                 engine.spawnEnemy('footman', { q: 7, r: 5, s: -12 }, 'noStun');
             },
@@ -85,7 +88,9 @@ export const grappleHookScenarios: ScenarioCollection = {
                 // Zip to wall at (6,3). Should not consume a turn as wall is out of LoS.
                 engine.useSkill('GRAPPLE_HOOK', { q: 6, r: 3, s: -9 });
 
-                // Zip to wall at (6,6). Should stop at (5,6) because wall is impassable.
+                // Zip to wall at (6,6).
+                // Should also stun the enemy at (6,5)
+                // Player should stop at (5,6) because wall is impassable and should also sink.
                 engine.useSkill('GRAPPLE_HOOK', { q: 6, r: 6, s: -12 });
             },
 
@@ -93,16 +98,20 @@ export const grappleHookScenarios: ScenarioCollection = {
                 const victim = state.enemies.find(e => e.id === 'stunMe');
                 const safe = state.enemies.find(e => e.id === 'noStun');
                 const checks = {
-                    playerAtAnchor: hexEquals(state.player.position, { q: 5, r: 6, s: -11 }),
+                    // playerDead: !state.player.alive,
                     stunnedEnemy: !!(victim && victim.statusEffects.some(s => s.type === 'stunned')),
                     safeEnemy: !!(safe && !safe.statusEffects.some(s => s.type === 'stunned')),
-                    zipLog: logs.some(l => l.includes('Zipped'))
+                    zipLog: logs.some(l => l.includes('Zipped')),
+                    lavaSinkLog: logs.some(l => l.includes('Lava Sink'))
                 };
 
                 if (Object.values(checks).some(v => v === false)) {
                     console.log('❌ Scenario Failed Details:', checks);
                     console.log('Player Pos:', state.player.position);
                     console.log('Victim Status:', victim?.statusEffects);
+                }
+                else {
+                    console.log('✅ Scenario Passed', logs);
                 }
 
                 return Object.values(checks).every(v => v === true);

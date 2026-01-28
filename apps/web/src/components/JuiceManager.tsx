@@ -4,7 +4,7 @@ import { hexToPixel, TILE_SIZE } from '@hop/engine';
 
 export interface JuiceEffect {
     id: string;
-    type: 'impact' | 'combat_text' | 'flash' | 'spear_trail';
+    type: 'impact' | 'combat_text' | 'flash' | 'spear_trail' | 'vaporize' | 'lava_ripple' | 'explosion_ring';
     position: Point;
     payload?: any;
     startTime: number;
@@ -12,11 +12,17 @@ export interface JuiceEffect {
 
 interface JuiceManagerProps {
     visualEvents: { type: string; payload: any }[];
+    onBusyStateChange?: (busy: boolean) => void;
 }
 
-export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents }) => {
+export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, onBusyStateChange }) => {
     const [effects, setEffects] = useState<JuiceEffect[]>([]);
     const eventHash = useRef<string>('');
+
+    // Notify parent of busy state
+    useEffect(() => {
+        onBusyStateChange?.(effects.length > 0);
+    }, [effects.length, onBusyStateChange]);
 
     // Process new events
     useEffect(() => {
@@ -65,6 +71,33 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents }) => {
                         startTime: now
                     });
                 }
+            } else if (ev.type === 'vfx' && ev.payload?.type === 'vaporize') {
+                if (ev.payload.position) {
+                    newEffects.push({
+                        id,
+                        type: 'vaporize',
+                        position: ev.payload.position,
+                        startTime: now
+                    });
+                }
+            } else if (ev.type === 'vfx' && ev.payload?.type === 'lava_ripple') {
+                if (ev.payload.position) {
+                    newEffects.push({
+                        id,
+                        type: 'lava_ripple',
+                        position: ev.payload.position,
+                        startTime: now
+                    });
+                }
+            } else if (ev.type === 'vfx' && ev.payload?.type === 'explosion_ring') {
+                if (ev.payload.position) {
+                    newEffects.push({
+                        id,
+                        type: 'explosion_ring',
+                        position: ev.payload.position,
+                        startTime: now
+                    });
+                }
             }
         });
 
@@ -83,6 +116,9 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents }) => {
                 if (e.type === 'combat_text') return age < 1000;
                 if (e.type === 'flash') return age < 300;
                 if (e.type === 'spear_trail') return age < 500;
+                if (e.type === 'vaporize') return age < 600;
+                if (e.type === 'lava_ripple') return age < 800;
+                if (e.type === 'explosion_ring') return age < 1000;
                 return age < 2000;
             }));
         }, 100);
@@ -112,9 +148,6 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents }) => {
 
                 if (effect.type === 'combat_text') {
                     const color = effect.payload.text.startsWith('-') ? '#fb7185' : '#86efac';
-
-                    // Note: If no position is provided, it's harder to render text correctly in SVG space 
-                    // without knowing where the actor is. We'll assume the caller provides position.
 
                     return (
                         <g key={effect.id} transform={`translate(${x}, ${y - 10})`}>
@@ -170,8 +203,62 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents }) => {
                     );
                 }
 
+                if (effect.type === 'vaporize') {
+                    return (
+                        <g key={effect.id}>
+                            <circle
+                                cx={x}
+                                cy={y}
+                                r={TILE_SIZE * 0.6}
+                                fill="#f97316"
+                                className="animate-vaporize"
+                                opacity="0.8"
+                            />
+                            <circle
+                                cx={x}
+                                cy={y}
+                                r={TILE_SIZE * 1.2}
+                                fill="none"
+                                stroke="#f97316"
+                                strokeWidth="2"
+                                className="animate-ping"
+                            />
+                        </g>
+                    );
+                }
+
+                if (effect.type === 'lava_ripple') {
+                    return (
+                        <circle
+                            key={effect.id}
+                            cx={x}
+                            cy={y}
+                            r={TILE_SIZE * 0.8}
+                            fill="none"
+                            stroke="#ea580c"
+                            strokeWidth="3"
+                            className="animate-ping"
+                        />
+                    );
+                }
+
+                if (effect.type === 'explosion_ring') {
+                    return (
+                        <circle
+                            key={effect.id}
+                            cx={x}
+                            cy={y}
+                            r={TILE_SIZE * 2.5}
+                            fill="rgba(255, 120, 0, 0.2)"
+                            stroke="#ffaa00"
+                            strokeWidth="4"
+                            className="animate-explosion-ring"
+                        />
+                    );
+                }
+
                 return null;
             })}
         </g>
     );
-};
+}

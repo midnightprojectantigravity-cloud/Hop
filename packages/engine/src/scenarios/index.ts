@@ -14,6 +14,7 @@ import { vaultScenarios } from './vault';
 import { hazardScenarios } from './hazards';
 import { basicMoveScenarios } from './basic_move';
 import { sentinelBlastScenarios } from './sentinel_blast';
+import { fireballScenarios } from './fireball';
 
 /**
  * Central registry for all test scenarios
@@ -36,6 +37,7 @@ export const SCENARIO_COLLECTIONS: ScenarioCollection[] = [
     hazardScenarios,
     basicMoveScenarios,
     sentinelBlastScenarios,
+    fireballScenarios,
 ];
 
 // Flat list of all scenarios for easy iteration

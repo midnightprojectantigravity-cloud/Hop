@@ -1,403 +1,212 @@
-import type { GameState, Point, AtomicEffect, Actor } from '../types';
-import { hexEquals } from '../hex';
+import type { GameState, Actor } from '../types';
+import type { Tile, TileHookResult, TileHookContext, TileEffectState } from './tile-types';
+import { TILE_EFFECTS } from './tile-registry';
 
 /**
  * TILE EFFECTS SYSTEM
  * 
- * Architecture: Observer-Based Tile Logic
- * 
- * Instead of actions triggering effects on tiles, tiles observe units and trigger
- * effects when units interact with them. This ensures consistent behavior regardless
- * of how a unit arrives at a tile (walking, pushing, dashing, grappling, etc.).
- * 
- * Key Concepts:
- * - onPass: Triggered when a unit moves THROUGH a tile (mid-movement)
- * - onEnter: Triggered when a unit's movement TERMINATES on a tile
- * - Momentum Modification: Tiles can affect kinetic momentum during movement
+ * Centralized Resolver that handles the lifecycle of tiles and their effects.
  */
 
-/**
- * Context provided to tile effect handlers
- */
-export interface TileEffectContext {
-    /** The actor interacting with the tile */
-    actor: Actor;
-    /** Current game state */
-    state: GameState;
-    /** Current momentum (for kinetic movements) */
-    momentum?: number;
-    /** Whether this is the final destination */
-    isFinalDestination: boolean;
-    /** The source of the movement (for tracking) */
-    source?: Point;
-}
-
-/**
- * Result from a tile effect handler
- */
-export interface TileEffectResult {
-    /** Effects to apply immediately */
-    effects: AtomicEffect[];
-    /** Messages to display */
-    messages: string[];
-    /** Modified momentum (if applicable) */
-    newMomentum?: number;
-    /** Whether to interrupt the movement chain */
-    interrupt?: boolean;
-}
-
-/**
- * Tile Effect Definition
- * 
- * Tiles are now "active observers" that monitor units passing through or landing on them.
- */
-export interface TileEffect {
-    /** Unique identifier for this effect type */
-    id: string;
-    /** Display name */
-    name: string;
-    /** Description of the effect */
-    description: string;
-
+export class TileResolver {
     /**
-     * Triggered when a unit moves THROUGH this tile (not stopping)
-     * Use this for:
-     * - Momentum modification (friction, slipperiness)
-     * - Damage during transit
-     * - Status application during movement
+     * Merge multiple TileHookResults into one
      */
-    onPass?: (context: TileEffectContext) => TileEffectResult;
-
-    /**
-     * Triggered when a unit's movement TERMINATES on this tile
-     * Use this for:
-     * - Landing damage
-     * - Status application on arrival
-     * - Tile state changes
-     */
-    onEnter?: (context: TileEffectContext) => TileEffectResult;
-
-    /**
-     * Optional: Check if this effect applies to a given position
-     * Useful for dynamic effects or conditional application
-     */
-    appliesTo?: (position: Point, state: GameState) => boolean;
-}
-
-/**
- * Registry of all tile effects in the game
- */
-export const TILE_EFFECT_REGISTRY: Record<string, TileEffect> = {};
-
-/**
- * Register a tile effect
- */
-export function registerTileEffect(effect: TileEffect): void {
-    TILE_EFFECT_REGISTRY[effect.id] = effect;
-}
-
-/**
- * Get all tile effects that apply to a given position
- */
-export function getTileEffectsAt(position: Point, state: GameState): TileEffect[] {
-    const effects: TileEffect[] = [];
-
-    for (const effect of Object.values(TILE_EFFECT_REGISTRY)) {
-        if (!effect.appliesTo || effect.appliesTo(position, state)) {
-            effects.push(effect);
+    private static mergeResults(target: TileHookResult, source: TileHookResult): void {
+        target.effects.push(...source.effects);
+        target.messages.push(...source.messages);
+        if (source.newMomentum !== undefined) {
+            target.newMomentum = source.newMomentum;
+        }
+        if (source.interrupt) {
+            target.interrupt = true;
+        }
+        if (source.modifyTile) {
+            target.modifyTile = { ...target.modifyTile, ...source.modifyTile };
         }
     }
 
-    return effects;
-}
+    /**
+     * Process tile entry (unit lands on tile)
+     */
+    static processEntry(actor: Actor, tile: Tile, state: GameState): TileHookResult {
+        const combinedResult: TileHookResult = {
+            effects: [],
+            messages: [],
+            interrupt: false
+        };
 
-/**
- * Process tile effects when a unit passes through a tile
- */
-export function processTilePass(
-    position: Point,
-    actor: Actor,
-    state: GameState,
-    momentum?: number
-): TileEffectResult {
-    const tileEffects = getTileEffectsAt(position, state);
-
-    const combinedResult: TileEffectResult = {
-        effects: [],
-        messages: [],
-        newMomentum: momentum,
-        interrupt: false
-    };
-
-    for (const effect of tileEffects) {
-        if (!effect.onPass) continue;
-
-        const result = effect.onPass({
-            actor,
-            state,
-            momentum: combinedResult.newMomentum,
-            isFinalDestination: false,
-            source: actor.previousPosition
-        });
-
-        // Accumulate effects and messages
-        combinedResult.effects.push(...result.effects);
-        combinedResult.messages.push(...result.messages);
-
-        // Update momentum if modified
-        if (result.newMomentum !== undefined) {
-            combinedResult.newMomentum = result.newMomentum;
-        }
-
-        // Check for interruption
-        if (result.interrupt) {
-            combinedResult.interrupt = true;
-            break; // Stop processing further effects if interrupted
-        }
-    }
-
-    return combinedResult;
-}
-
-/**
- * Process tile effects when a unit enters (lands on) a tile
- */
-export function processTileEnter(
-    position: Point,
-    actor: Actor,
-    state: GameState
-): TileEffectResult {
-    const tileEffects = getTileEffectsAt(position, state);
-
-    const combinedResult: TileEffectResult = {
-        effects: [],
-        messages: [],
-        interrupt: false
-    };
-
-    for (const effect of tileEffects) {
-        if (!effect.onEnter) continue;
-
-        const result = effect.onEnter({
+        const context: TileHookContext = {
+            tile,
             actor,
             state,
             isFinalDestination: true,
             source: actor.previousPosition
-        });
-
-        // Accumulate effects and messages
-        combinedResult.effects.push(...result.effects);
-        combinedResult.messages.push(...result.messages);
-
-        // Check for interruption
-        if (result.interrupt) {
-            combinedResult.interrupt = true;
-            break;
-        }
-    }
-
-    return combinedResult;
-}
-
-// ============================================================================
-// BUILT-IN TILE EFFECTS
-// ============================================================================
-
-/**
- * LAVA SINK
- * 
- * The classic hazard. Units that pass through or land on lava take massive damage.
- * Lava also reduces momentum, creating a "viscosity" effect.
- */
-export const LAVA_SINK_EFFECT: TileEffect = {
-    id: 'lava_sink',
-    name: 'Lava Sink',
-    description: 'Molten lava that damages and slows units',
-
-    appliesTo: (position: Point, state: GameState) => {
-        return state.lavaPositions.some(lp => hexEquals(lp, position));
-    },
-
-    onPass: (context: TileEffectContext) => {
-        const { actor, momentum } = context;
-
-        return {
-            effects: [
-                { type: 'Damage', target: actor.id, amount: 5, reason: 'lava_pass' },
-                { type: 'Juice', effect: 'combat_text', target: actor.position, text: 'Sizzle!' }
-            ],
-            messages: [`${actor.id} passes through lava!`],
-            // Lava reduces momentum by 2 (friction/viscosity)
-            newMomentum: momentum !== undefined ? Math.max(0, momentum - 2) : undefined
         };
-    },
 
-    onEnter: (context: TileEffectContext) => {
-        const { actor } = context;
-        const isPlayer = actor.type === 'player';
-
-        return {
-            effects: [
-                { type: 'Damage', target: actor.id, amount: 999, reason: 'lava_sink' },
-                { type: 'ApplyStatus', target: actor.id, status: 'stunned', duration: 1 },
-                { type: 'Juice', effect: 'lavaSink', target: actor.position }
-            ],
-            messages: [`${isPlayer ? 'You sink' : actor.subtype + ' sinks'} into the lava!`],
-            interrupt: true // Movement chain breaks when landing in lava
-        };
-    }
-};
-
-/**
- * ICE (SLIPPERY)
- * 
- * Ice tiles don't reduce momentum - they preserve it!
- * Units slide further than intended.
- */
-export const ICE_EFFECT: TileEffect = {
-    id: 'ice',
-    name: 'Ice',
-    description: 'Slippery ice that preserves momentum',
-
-    appliesTo: (position: Point, state: GameState) => {
-        return state.slipperyPositions?.some(sp => hexEquals(sp, position)) || false;
-    },
-
-    onPass: (context: TileEffectContext) => {
-        const { actor, momentum } = context;
-
-        return {
-            effects: [
-                { type: 'Juice', effect: 'combat_text', target: actor.position, text: 'Slide!' }
-            ],
-            messages: [],
-            // Ice doesn't reduce momentum at all (no friction)
-            newMomentum: momentum
-        };
-    },
-
-    onEnter: (context: TileEffectContext) => {
-        const { actor, source, state } = context;
-        const effects: AtomicEffect[] = [
-            { type: 'Juice', effect: 'flash', target: actor.position }
-        ];
-
-        // Calculate slide direction from source to current position
-        if (source) {
-            const dq = actor.position.q - source.q;
-            const dr = actor.position.r - source.r;
-            const ds = actor.position.s - source.s;
-
-            // Slide one more hex in the same direction
-            const slideDestination = {
-                q: actor.position.q + dq,
-                r: actor.position.r + dr,
-                s: actor.position.s + ds
-            };
-
-            // Check if slide destination is walkable
-            const isWall = state.wallPositions.some(w =>
-                w.q === slideDestination.q && w.r === slideDestination.r && w.s === slideDestination.s
-            );
-            const isLava = state.lavaPositions.some(l =>
-                l.q === slideDestination.q && l.r === slideDestination.r && l.s === slideDestination.s
-            );
-            const inBounds = slideDestination.q >= 0 && slideDestination.q < state.gridWidth &&
-                slideDestination.r >= 0 && slideDestination.r < state.gridHeight;
-
-            if (inBounds && !isWall && !isLava) {
-                effects.push({
-                    type: 'Displacement',
-                    target: actor.id,
-                    destination: slideDestination
+        // 1. Process Base Traits
+        if (tile.traits.has('HAZARDOUS')) {
+            const isPlayer = actor.id === 'player';
+            if (tile.baseId === 'LAVA') {
+                this.mergeResults(combinedResult, {
+                    effects: [
+                        { type: 'Damage', target: actor.id, amount: isPlayer ? 1 : 99, reason: 'lava_sink' },
+                        { type: 'Juice', effect: 'lavaSink', target: actor.position }
+                    ],
+                    messages: [`Lava Sink! You were engulfed by lava!`], // Keyword for Scenario
+                    interrupt: true
+                });
+            } else if (tile.baseId === 'VOID') {
+                this.mergeResults(combinedResult, {
+                    effects: [
+                        { type: 'Damage', target: actor.id, amount: isPlayer ? 1 : 99, reason: 'void_sink' },
+                        { type: 'Juice', effect: 'lavaSink', target: actor.position }
+                    ],
+                    messages: [`Void consumes your soul!`], // Keyword for Scenario
+                    interrupt: true
                 });
             }
         }
 
-        return {
-            effects,
-            messages: [`${actor.id} slides on ice!`]
-        };
+        // 2. Process Active Effects
+        for (const effectState of tile.effects) {
+            const effectDef = TILE_EFFECTS[effectState.id];
+            if (!effectDef?.onEnter) continue;
+
+            const result = effectDef.onEnter(context);
+            this.mergeResults(combinedResult, result);
+            if (combinedResult.interrupt) break;
+        }
+
+        // Final Robust Message Filter (Safety)
+        if (combinedResult.messages.length === 0 && combinedResult.effects.some(e => e.type === 'LavaSink')) {
+            combinedResult.messages.push('Lava Sink! You were engulfed by lava!');
+        }
+
+        return combinedResult;
     }
-};
 
-/**
- * VOID
- * 
- * The void consumes all who enter.
- */
-export const VOID_EFFECT: TileEffect = {
-    id: 'void',
-    name: 'Void',
-    description: 'The endless void consumes all',
-
-    appliesTo: (position: Point, state: GameState) => {
-        return state.voidPositions?.some(vp => hexEquals(vp, position)) || false;
-    },
-
-    onPass: (context: TileEffectContext) => {
-        const { actor } = context;
-
-        return {
-            effects: [
-                { type: 'Damage', target: actor.id, amount: 10, reason: 'void_pass' }
-            ],
-            messages: [`${actor.id} grazes the void!`],
-            newMomentum: context.momentum !== undefined ? Math.max(0, context.momentum - 3) : undefined
+    /**
+     * Process tile transition (unit passes through)
+     */
+    static processTransition(actor: Actor, tile: Tile, state: GameState, momentum?: number): TileHookResult {
+        const combinedResult: TileHookResult = {
+            effects: [],
+            messages: [],
+            newMomentum: momentum,
+            interrupt: false
         };
-    },
 
-    onEnter: (context: TileEffectContext) => {
-        const { actor } = context;
-        const isPlayer = actor.type === 'player';
-        const damage = isPlayer ? 1 : 999; // Players take 1 damage, enemies die
-
-        return {
-            effects: [
-                { type: 'Damage', target: actor.id, amount: damage, reason: 'void_consume' },
-                { type: 'Juice', effect: 'flash', target: actor.position }
-            ],
-            messages: [`${isPlayer ? 'Void consumes you' : 'Void consumes ' + actor.subtype}!`],
-            interrupt: !isPlayer // Only interrupt for enemies
+        const context: TileHookContext = {
+            tile,
+            actor,
+            state,
+            momentum,
+            isFinalDestination: false,
+            source: actor.previousPosition
         };
+
+        // 1. Process Base Traits
+        if (tile.traits.has('SLIPPERY')) {
+            combinedResult.newMomentum = momentum;
+        } else if (tile.traits.has('LIQUID')) {
+            if (momentum !== undefined) {
+                combinedResult.newMomentum = Math.max(0, momentum - 1);
+            }
+        }
+
+        // 2. Process Active Effects
+        for (const effectState of tile.effects) {
+            const effectDef = TILE_EFFECTS[effectState.id];
+            if (!effectDef?.onPass) continue;
+
+            const result = effectDef.onPass(context);
+            this.mergeResults(combinedResult, result);
+            if (combinedResult.interrupt) break;
+        }
+
+        return combinedResult;
     }
-};
 
-/**
- * SNARE TRAP
- * 
- * Snares stop all momentum and stun the unit.
- */
-export const SNARE_TRAP_EFFECT: TileEffect = {
-    id: 'snare_trap',
-    name: 'Snare Trap',
-    description: 'A trap that stops movement and stuns',
-
-    // Note: Snares would need to be tracked in GameState
-    // For now, this is a template
-    appliesTo: (position: Point, state: GameState) => {
-        // TODO: Add snarePositions to GameState
-        return false;
-    },
-
-    onPass: (context: TileEffectContext) => {
-        const { actor } = context;
-
-        return {
-            effects: [
-                { type: 'ApplyStatus', target: actor.id, status: 'stunned', duration: 1 },
-                { type: 'Juice', effect: 'shake', intensity: 'medium' },
-                { type: 'Juice', effect: 'combat_text', target: actor.position, text: 'SNAP!' }
-            ],
-            messages: [`${actor.id} triggered a snare trap!`],
-            newMomentum: 0, // Snare stops all momentum
-            interrupt: true
+    /**
+     * Process tile stay (turn ends while on tile)
+     */
+    static processStay(actor: Actor, tile: Tile, state: GameState): TileHookResult {
+        const combinedResult: TileHookResult = {
+            effects: [],
+            messages: []
         };
-    }
-};
 
-// Register all built-in effects
-registerTileEffect(LAVA_SINK_EFFECT);
-registerTileEffect(ICE_EFFECT);
-registerTileEffect(VOID_EFFECT);
-registerTileEffect(SNARE_TRAP_EFFECT);
+        const context: TileHookContext = {
+            tile,
+            actor,
+            state,
+            isFinalDestination: false
+        };
+
+        // Traits
+        if (tile.baseId === 'LAVA' && !actor.statusEffects.some(s => s.type === 'fire_immunity')) {
+            const isPlayer = actor.id === 'player';
+            this.mergeResults(combinedResult, {
+                effects: [{ type: 'Damage', target: actor.id, amount: isPlayer ? 1 : 99, reason: 'lava_tick' }],
+                messages: [`Lava Sink! You were engulfed by lava!`] // Standard message
+            });
+        }
+
+        for (const effectState of tile.effects) {
+            const effectDef = TILE_EFFECTS[effectState.id];
+            if (!effectDef?.onStay) continue;
+
+            const result = effectDef.onStay(context);
+            this.mergeResults(combinedResult, result);
+        }
+
+        return combinedResult;
+    }
+
+    /**
+     * Apply an effect to a tile, handling interactions
+     */
+    static applyEffect(tile: Tile, effectId: string, duration: number, potency: number, state: GameState, sourceId?: string): TileHookResult {
+        const effectDef = TILE_EFFECTS[effectId];
+        if (!effectDef) return { effects: [], messages: [] };
+
+        const combinedResult: TileHookResult = {
+            effects: [],
+            messages: []
+        };
+
+        for (const existing of tile.effects) {
+            const interaction = effectDef.interactsWith?.[existing.id];
+            if (interaction) {
+                const result = interaction({ tile, state, potency, sourceId });
+                this.mergeResults(combinedResult, result);
+                return combinedResult;
+            }
+        }
+
+        if (effectDef.onApply) {
+            const result = effectDef.onApply({ tile, state, potency, sourceId });
+            this.mergeResults(combinedResult, result);
+        }
+
+        if (!combinedResult.modifyTile?.effects) {
+            tile.effects.push({ id: effectId, duration, potency, sourceId });
+        } else if (combinedResult.modifyTile) {
+            tile.effects = combinedResult.modifyTile.effects as TileEffectState[];
+        }
+
+        return combinedResult;
+    }
+
+    /**
+     * Utility to get movement cost for AI
+     */
+    static getMovementCost(tile: Tile): number {
+        let cost = 1;
+        if (tile.traits.has('HAZARDOUS')) cost += 5;
+        if (tile.traits.has('LIQUID')) cost += 1;
+        if (tile.effects.some(e => e.id === 'FIRE')) cost += 2;
+        return cost;
+    }
+}

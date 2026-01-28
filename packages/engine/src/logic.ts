@@ -8,7 +8,7 @@ import type { GameState, Action, Entity, AtomicEffect } from './types';
 import { hexEquals, getNeighbors } from './hex';
 import { resolveTelegraphedAttacks, resolveSingleEnemyTurn } from './systems/combat';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
-import { applyLavaDamage, applyVoidDamage, checkShrine, checkStairs, getEnemyAt } from './helpers';
+import { checkShrine, checkStairs, getEnemyAt, applyFireDamage } from './helpers';
 import { increaseMaxHp } from './systems/actor';
 import { generateDungeon, generateEnemies, getFloorTheme } from './systems/map';
 import {
@@ -25,6 +25,8 @@ import {
 } from './systems/legacy-skills';
 import { COMPOSITIONAL_SKILLS } from './skillRegistry';
 import { applyEffects } from './systems/effect-engine';
+import { migratePositionArraysToTiles } from './systems/tile-migration';
+
 import { applyAutoAttack } from './skills/auto_attack';
 import { refreshOccupancyMask } from './systems/spatial';
 import { createCommand, createDelta } from './systems/commands';
@@ -40,12 +42,17 @@ import {
 } from './systems/initiative';
 import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './systems/components';
 import { tickStatuses } from './systems/status';
+import { createInitialTileGrid, pointToKey } from './systems/tile-migration';
+import { BASE_TILES } from './systems/tile-registry';
+
 
 /**
  * Generate initial state with the new tactical arena generation
  */
 import { consumeRandom } from './systems/rng';
 import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS } from './systems/loadout';
+import { tickTileEffects } from './systems/tile-tick';
+
 
 export const generateHubState = (): GameState => {
     const base = generateInitialState();
@@ -152,9 +159,34 @@ export const generateInitialState = (
         dyingEntities: [],
         visualEvents: [],
         initiativeQueue: undefined, // Initialized below
+        tiles: new Map(), // Initialized below
     };
 
+    // Initialize the new Tile System
+    initialState.tiles = createInitialTileGrid(dungeon.allHexes);
+
+    // Fill with hazards from generation
+    dungeon.lavaPositions.forEach(p => {
+        const key = pointToKey(p);
+        initialState.tiles.set(key, {
+            baseId: 'LAVA',
+            position: p,
+            traits: new Set(BASE_TILES.LAVA.defaultTraits),
+            effects: []
+        });
+    });
+    dungeon.wallPositions.forEach(p => {
+        const key = pointToKey(p);
+        initialState.tiles.set(key, {
+            baseId: 'WALL',
+            position: p,
+            traits: new Set(BASE_TILES.WALL.defaultTraits),
+            effects: []
+        });
+    });
+
     initialState.initiativeQueue = buildInitiativeQueue(initialState);
+
     initialState.occupancyMask = refreshOccupancyMask(initialState);
 
     return initialState;
@@ -219,9 +251,21 @@ export const processNextTurn = (state: GameState): GameState => {
     curState = sotResult.state;
     messages.push(...sotResult.messages);
 
-    // Re-fetch enemy after SOT effects (like Poison)
+    // Re-fetch enemy after SOT effects
     let activeEnemy = curState.enemies.find(e => e.id === actorId);
-    if (!activeEnemy) return curState; // Died to Poison/Lava at start of turn
+    if (!activeEnemy) return curState;
+
+    // Fire Damage Tick (Start of Turn)
+    const fireRes = applyFireDamage(curState, activeEnemy.position, activeEnemy);
+    if (fireRes.messages.length > 0) {
+        messages.push(...fireRes.messages);
+        curState = {
+            ...curState,
+            enemies: curState.enemies.map(e => e.id === actorId ? fireRes.entity : e)
+        };
+        activeEnemy = fireRes.entity as Entity;
+    }
+    if (activeEnemy.hp <= 0) return curState;
 
     // 5. ACTION PHASE (Skip if Stunned)
     const isStunned = activeEnemy.statusEffects.some(s => s.type === 'stunned');
@@ -282,16 +326,8 @@ const resolveTurnCycle = (state: GameState): GameState => {
     // 1. START OF TURN (Player) - Happens before player action in next call, 
     // but for the "Wrap Up", we process the current turn's EOT logic.
 
-    // 2. Resolution of movement-based passives/pickups
-    const lavaRes = applyLavaDamage(curState, playerPos, curState.player);
-    messages.push(...lavaRes.messages);
-    curState = { ...curState, player: lavaRes.entity as any };
+    // 2. Auto Attack
 
-    const voidRes = applyVoidDamage(curState, playerPos, curState.player);
-    messages.push(...voidRes.messages);
-    curState = { ...curState, player: voidRes.entity as any };
-
-    // Auto Attack
     const playerStartPos = getTurnStartPosition(curState, 'player') || curState.player.previousPosition || curState.player.position;
     const persistentNeighborIds = getTurnStartNeighborIds(curState, 'player') ?? undefined;
     const autoAttackResult = applyAutoAttack(
@@ -316,15 +352,23 @@ const resolveTurnCycle = (state: GameState): GameState => {
     curState = eotResult.state;
     messages.push(...eotResult.messages);
 
-    // 4. Decay and Initiative End
+    // 4. Tile Tick & Effects (onStay)
+    const tileTickResult = tickTileEffects(curState);
+    curState = tileTickResult.state;
+    messages.push(...tileTickResult.messages);
+
+    // 5. Decay and Initiative End
     let player = tickSkillCooldowns(curState.player);
+
     player = tickStatuses(player);
     player = applyPassiveSkills(player);
 
+    // 6. Final State Update
     curState = {
         ...curState,
         player,
         message: [...curState.message, ...messages].slice(-50),
+
         kills: curState.kills + autoAttackResult.kills,
         turnNumber: curState.turnNumber + 1,
         turnsSpent: curState.turnsSpent + 1,
@@ -347,8 +391,10 @@ const resolveTurnCycle = (state: GameState): GameState => {
         return {
             ...curState,
             rngCounter: rngState.rngCounter,
-            gameStatus: 'choosing_upgrade',
-            shrineOptions: picked.length > 0 ? picked : ['EXTRA_HP'],
+            pendingStatus: {
+                status: 'choosing_upgrade',
+                shrineOptions: picked.length > 0 ? picked : ['EXTRA_HP']
+            },
             message: [...curState.message, 'A holy shrine! Choose an upgrade.'].slice(-50)
         };
     }
@@ -362,27 +408,27 @@ const resolveTurnCycle = (state: GameState): GameState => {
             const score = (state.floor * 1000) + speedBonus - damagePenalty;
             return {
                 ...curState,
-                gameStatus: 'won',
-                message: [...curState.message, `Arcade Cleared! Final Score: ${score}`].slice(-50),
-                completedRun: {
-                    seed: baseSeed,
-                    actionLog: state.actionLog,
-                    score,
-                    floor: state.floor
-                }
+                pendingStatus: {
+                    status: 'won',
+                    completedRun: {
+                        seed: baseSeed,
+                        actionLog: state.actionLog,
+                        score,
+                        floor: state.floor
+                    }
+                },
+                message: [...curState.message, `Arcade Cleared! Final Score: ${score}`].slice(-50)
             };
         }
-        const baseSeed = state.initialSeed ?? state.rngSeed ?? '0';
-        const nextSeed = `${baseSeed}:${state.floor + 1}`;
-        const nextHp = Math.min(player.maxHp, player.hp + 1);
-        return generateInitialState(state.floor + 1, nextSeed, baseSeed, {
-            hp: nextHp,
-            maxHp: player.maxHp,
-            upgrades: state.upgrades,
-            activeSkills: player.activeSkills,
-            kills: curState.kills,
-            environmentalKills: state.environmentalKills,
-        } as any);
+
+        // Standard next floor
+        return {
+            ...curState,
+            pendingStatus: {
+                status: 'playing', // Special case: this will trigger a full state regeneration
+            },
+            message: [...curState.message, 'Descending to the next level...'].slice(-50)
+        };
     }
 
     // PHASE 3: Yield control. The UI will call processNextTurn until player's turn.
@@ -411,8 +457,18 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
     };
 
     switch (action.type) {
-        case 'LOAD_STATE':
-            return action.payload;
+        case 'LOAD_STATE': {
+            const loaded = action.payload;
+            // Legacy Migration
+            if (!loaded.tiles || (loaded.tiles instanceof Map === false && !Array.isArray(loaded.tiles))) {
+                console.log('[Logic] Migrating loaded state to Tile System...');
+                loaded.tiles = migratePositionArraysToTiles(loaded);
+            } else if (Array.isArray(loaded.tiles)) {
+                // If serialization saved it as array entries, convert back to Map
+                loaded.tiles = new Map(loaded.tiles);
+            }
+            return loaded;
+        }
         case 'RESET': {
             // Meta-Persistence: Preserve the current archetype/loadout on reset
             const currentArchetype = state.player.archetype;
@@ -508,6 +564,14 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                         ...newState,
                         message: [...newState.message, ...execution.messages].slice(-50)
                     };
+
+                    // Stealth Decay: Offensive actions reduce stealth
+                    if ((stateAfterSkill.player.stealthCounter || 0) > 0) {
+                        stateAfterSkill.player = {
+                            ...stateAfterSkill.player,
+                            stealthCounter: Math.max(0, stateAfterSkill.player.stealthCounter! - 1)
+                        };
+                    }
 
                     // If the execution does not consume a turn, do NOT apply cooldowns or advance enemy actions.
                     if (execution.consumesTurn === false) {
@@ -660,6 +724,31 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
 
             case 'ADVANCE_TURN': {
                 return processNextTurn(s);
+            }
+
+            case 'RESOLVE_PENDING': {
+                if (!s.pendingStatus) return s;
+                const { status, shrineOptions, completedRun } = s.pendingStatus;
+
+                if (status === 'playing' && s.gameStatus === 'playing') {
+                    // This is a floor transition
+                    const baseSeed = s.initialSeed ?? s.rngSeed ?? '0';
+                    const nextSeed = `${baseSeed}:${s.floor + 1}`;
+                    const nextHp = Math.min(s.player.maxHp, s.player.hp + 1);
+                    return generateInitialState(s.floor + 1, nextSeed, baseSeed, {
+                        ...s.player,
+                        hp: nextHp,
+                        upgrades: s.upgrades,
+                    });
+                }
+
+                return {
+                    ...s,
+                    gameStatus: status,
+                    shrineOptions: shrineOptions || s.shrineOptions,
+                    completedRun: completedRun || (s as any).completedRun,
+                    pendingStatus: undefined
+                };
             }
 
             case 'EXIT_TO_HUB': {

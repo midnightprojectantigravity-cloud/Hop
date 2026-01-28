@@ -1,5 +1,5 @@
-import { AtomicEffect, GameState, Point, Actor } from '../types';
-import { hexSubtract, hexDistance, hexDirection, hexAdd, getDirectionFromTo } from '../hex';
+import type { AtomicEffect, GameState, Point, Actor } from '../types';
+import { hexDistance, hexDirection, getDirectionFromTo } from '../hex';
 import { processKineticPulse } from './kinetic-kernel';
 
 /**

@@ -13,6 +13,7 @@ import { getTurnStartNeighborIds } from './initiative';
 import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
 import { applyEffects } from './effect-engine';
 import { isStunned, tickStatuses, handleStunReset } from './status';
+import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from './juice-manifest';
 
 export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point, targetActorId?: string): { state: GameState; messages: string[] } => {
   let curState = state;
@@ -32,14 +33,31 @@ export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point
       const activeSkill = e.activeSkills?.find(s => s.id === e.intent);
 
       if (skillDef && activeSkill) {
-        // Execute skill AT THE INTENDED POSITION
-        // We pass curState which has the player at playerMovedTo
-        const result = skillDef.execute(curState, e, e.intentPosition, activeSkill.activeUpgrades);
+        // FLEXIBLE INTENT: Reassess if player is still a valid target
+        const validTargets = skillDef.getValidTargets ? skillDef.getValidTargets(curState, e.position) : [];
+        const isPlayerStillValid = validTargets.some(p => hexEquals(p, curState.player.position));
+
+        let targetPos = e.intentPosition;
+        if (isPlayerStillValid) {
+          // If player moved but is still in range/LoS, track them!
+          targetPos = curState.player.position;
+        } else {
+          // If player is no longer valid, we should NOT execute this telegraphed attack.
+          // Clearing intent lets the AI reassess during resolveSingleEnemyTurn.
+          const idx = nextEnemies.findIndex(ne => ne.id === e.id);
+          if (idx !== -1) {
+            nextEnemies[idx] = { ...nextEnemies[idx], intent: undefined, intentPosition: undefined };
+          }
+          return; // Skip execution
+        }
+
+        // Execute skill AT THE REASSESSED POSITION
+        const result = skillDef.execute(curState, e, targetPos, activeSkill.activeUpgrades);
         curState = applyEffects(curState, result.effects, { targetId: curState.player.id });
         messages.push(...result.messages);
         enemyHandled = true;
       } else if (e.subtype === 'bomber') {
-        // Bomber logic is handled in resolveSingleEnemyTurn / computeNextEnemies
+        // ... (No changes here)
       } else if (hexEquals(e.intentPosition, playerMovedTo)) {
         // Fallback to legacy damage if it was a basic attack intent
         curState = { ...curState, player: applyDamage(curState.player, 1) };
@@ -97,6 +115,10 @@ export const resolveSingleEnemyTurn = (
       // Damage all entities in 1-tile radius
       const explosionCenter = enemy.position;
       const affectedPoints = [explosionCenter, ...getNeighbors(explosionCenter)];
+
+      // JUICE: Explosion Effects
+      curState = applyEffects(curState, SKILL_JUICE_SIGNATURES.BOMB.impact(explosionCenter));
+      curState = applyEffects(curState, SKILL_JUICE_SIGNATURES.BOMB.resolution(affectedPoints));
 
       // Damage Player
       if (affectedPoints.some(p => hexEquals(p, curState.player.position))) {
@@ -192,6 +214,9 @@ export const resolveSingleEnemyTurn = (
 
   // 3. Lava Check
   const { enemy: afterLava, messages: lavaMsgs } = applyLavaToEnemy(nextEnemy, curState);
+  if (lavaMsgs.length > 0) {
+    curState = applyEffects(curState, [JuiceHelpers.lavaRipple(nextEnemy.position)]);
+  }
   messages.push(...lavaMsgs);
 
   const isDead = afterLava.hp <= 0;

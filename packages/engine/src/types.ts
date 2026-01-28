@@ -34,7 +34,7 @@ export interface MovementTrace {
 /** Status Effects: Buffs/Debuffs with logic hooks */
 export interface StatusEffect {
     id: string;
-    type: 'stunned' | 'poisoned' | 'armored' | 'hidden';
+    type: 'stunned' | 'poisoned' | 'armored' | 'hidden' | 'rooted' | 'fire_immunity';
 
     duration: number; // -1 for permanent
     stacks?: number;
@@ -97,9 +97,9 @@ export type AtomicEffect =
         path?: Point[];  // Optional: Full path for smooth tile-by-tile animation
         animationDuration?: number;  // Optional: Suggested duration in ms (e.g., 150ms per tile)
     }
-    | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string }
+    | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string; source?: Point }
     | { type: 'Heal'; target: 'targetActor'; amount: number }
-    | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: 'stunned' | 'poisoned' | 'armored' | 'hidden'; duration: number }
+    | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: 'stunned' | 'poisoned' | 'armored' | 'hidden' | 'rooted' | 'fire_immunity'; duration: number }
     | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
     | { type: 'PickupShield'; position?: Point }
     | { type: 'GrantSkill'; skillId: string }
@@ -112,7 +112,7 @@ export type AtomicEffect =
         // Legacy effects (keep for backward compatibility)
         | 'shake' | 'flash' | 'freeze' | 'combat_text' | 'impact'
         // Environmental reactions
-        | 'lavaSink' | 'lavaRipple' | 'wallCrack' | 'iceShatter' | 'voidConsume'
+        | 'lavaSink' | 'lavaRipple' | 'wallCrack' | 'iceShatter' | 'voidConsume' | 'explosion_ring'
         // Projectile/Path effects
         | 'spearTrail' | 'shieldArc' | 'hookCable' | 'dashBlur'
         // Momentum & Weight
@@ -134,6 +134,13 @@ export type AtomicEffect =
     }
     | { type: 'ModifyCooldown'; skillId: string; amount: number; setExact?: boolean }
     | { type: 'UpdateComponent'; target: 'self' | 'targetActor'; key: string; value: GameComponent }
+    | { type: 'SpawnCorpse'; position: Point }
+    | { type: 'RemoveCorpse'; position: Point }
+    | { type: 'SpawnActor', actor: Actor }
+    | { type: 'PlaceFire'; position: Point; duration: number }
+    | { type: 'PlaceTrap'; position: Point; ownerId: string }
+    | { type: 'RemoveTrap'; position: Point }
+    | { type: 'SetStealth'; target: 'self' | 'targetActor' | string; amount: number }
     | { type: 'GameOver'; reason: 'PLAYER_DIED' | 'OUT_OF_TIME' };
 
 export interface VisualEvent {
@@ -246,7 +253,10 @@ export interface Actor {
     weightClass?: WeightClass;
 
     // Archetype for passive/core logic
-    archetype?: 'VANGUARD' | 'SKIRMISHER';
+    archetype?: 'VANGUARD' | 'SKIRMISHER' | 'FIREMAGE' | 'NECROMANCER' | 'HUNTER' | 'ASSASSIN';
+
+    // Stealth system
+    stealthCounter?: number;
 }
 
 // Backwards-compatible alias: existing code that expects `Entity` keeps working.
@@ -275,10 +285,24 @@ export interface GameState {
     hasSpear: boolean;
     spearPosition?: Point;
     stairsPosition: Point;
+    /** @deprecated Use tiles Map instead */
     lavaPositions: Point[];
+    /** @deprecated Use tiles Map instead */
     wallPositions: Point[];
+    /** @deprecated Use tiles Map instead */
     slipperyPositions?: Point[];
+    /** @deprecated Use tiles Map instead */
     voidPositions?: Point[];
+    /** @deprecated Use tiles Map instead */
+    firePositions?: { pos: Point, duration: number }[];
+    /** @deprecated Use tiles Map instead */
+    corpsePositions?: Point[];
+    /** @deprecated Use tiles Map instead */
+    trapPositions?: { pos: Point, ownerId: string }[];
+
+    /** The World-Class Data-Driven Tile Grid */
+    tiles: Map<string, import('./systems/tile-types').Tile>;
+
 
     // Spatial Hashing / Bitmasks (Goal 3)
     occupancyMask: bigint[];
@@ -328,6 +352,11 @@ export interface GameState {
     occupiedCurrentTurn?: Point[];
     visualEvents: VisualEvent[];
     turnsSpent: number;
+    pendingStatus?: {
+        status: 'hub' | 'playing' | 'won' | 'lost' | 'choosing_upgrade';
+        shrineOptions?: string[];
+        completedRun?: any;
+    };
 }
 
 export type Action =
@@ -345,7 +374,8 @@ export type Action =
     | { type: 'LOAD_STATE'; payload: GameState }
     | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string } }
     | { type: 'APPLY_LOADOUT'; payload: any }
-    | { type: 'EXIT_TO_HUB' };
+    | { type: 'EXIT_TO_HUB' }
+    | { type: 'RESOLVE_PENDING' };
 
 export interface Scenario {
     id: string;

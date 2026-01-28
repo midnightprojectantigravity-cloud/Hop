@@ -21,17 +21,45 @@ export interface Loadout {
 export const DEFAULT_LOADOUTS: Record<string, Loadout> = {
     VANGUARD: {
         id: 'VANGUARD',
-        name: 'Vanguard (Hoplite)',
+        name: 'Vanguard',
         description: 'Direct damage, brawling, and area denial.',
         startingUpgrades: [],
         startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK', 'SPEAR_THROW', 'SHIELD_BASH', 'JUMP']
     },
     SKIRMISHER: {
         id: 'SKIRMISHER',
-        name: 'Skirmisher (Enyo)',
+        name: 'Skirmisher',
         description: 'Zero direct damage. Kinetic momentum and environmental lethality.',
         startingUpgrades: [],
         startingSkills: ['DASH', 'GRAPPLE_HOOK', 'SHIELD_THROW', 'VAULT']
+    },
+    FIREMAGE: {
+        id: 'FIREMAGE',
+        name: 'Fire Mage',
+        description: 'Area control with fire and high-damage spells.',
+        startingUpgrades: [],
+        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'FIREBALL', 'FIREWALL', 'FIREWALK']
+    },
+    NECROMANCER: {
+        id: 'NECROMANCER',
+        name: 'Necromancer',
+        description: 'Utilize death and reanimation.',
+        startingUpgrades: [],
+        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'CORPSE_EXPLOSION', 'RAISE_DEAD', 'SOUL_SWAP']
+    },
+    HUNTER: {
+        id: 'HUNTER',
+        name: 'Hunter',
+        description: 'Ranged precision and traps.',
+        startingUpgrades: [],
+        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'MULTI_SHOOT', 'SET_TRAP', 'SWIFT_ROLL']
+    },
+    ASSASSIN: {
+        id: 'ASSASSIN',
+        name: 'Assassin',
+        description: 'Stealth and high burst damage.',
+        startingUpgrades: [],
+        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'SNEAK_ATTACK', 'SMOKE_SCREEN', 'SHADOW_STEP']
     }
 };
 
@@ -52,9 +80,9 @@ export const deserializeLoadout = (json: string): Loadout => {
 /**
  * Apply a loadout to a set of player stats.
  */
-export const applyLoadoutToPlayer = (loadout: Loadout): { upgrades: string[]; activeSkills: Skill[]; archetype: 'VANGUARD' | 'SKIRMISHER' } => {
+export const applyLoadoutToPlayer = (loadout: Loadout): { upgrades: string[]; activeSkills: Skill[]; archetype: any } => {
     const activeSkills = loadout.startingSkills.map(s => createSkill(s)).filter(Boolean) as Skill[];
-    const archetype = loadout.id === 'SKIRMISHER' ? 'SKIRMISHER' : 'VANGUARD';
+    const archetype = loadout.id;
     return {
         upgrades: [...loadout.startingUpgrades],
         activeSkills,

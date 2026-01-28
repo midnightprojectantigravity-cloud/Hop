@@ -8,7 +8,6 @@ import { getSkillScenarios } from '../scenarios';
 /**
  * Auto Attack - A passive skill that triggers at the end of the entity's turn.
  * Hits all neighbors that were already neighbors at the beginning of the turn.
- * This is the "Punch" passive from classic Hoplite.
  * Can be attached to any entity (player or enemy).
  */
 export const AUTO_ATTACK: SkillDefinition = {

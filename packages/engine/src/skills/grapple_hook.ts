@@ -1,14 +1,18 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point, WeightClass } from '../types';
 import {
     hexDistance, hexAdd, hexSubtract, hexEquals,
-    getDirectionFromTo, hexDirection, scaleVector, getHexLine, getNeighbors
+    hexDirection, scaleVector, getHexLine, getNeighbors
 } from '../hex';
-import { getAxialTargets } from './targeting';
 import { getActorAt, isPerimeter } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
 import { pullToward, swap, kineticFling } from '../systems/displacement-system';
 import { getSkillScenarios } from '../scenarios';
 import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../systems/juice-manifest';
+import { TileResolver } from '../systems/tile-effects';
+import { pointToKey } from '../systems/tile-migration';
+
+import { validateLineOfSight, validateAxialDirection } from '../systems/validation';
+import { getAxialTargetsWithOptions } from '../systems/navigation';
 
 export const GRAPPLE_HOOK: SkillDefinition = {
     id: 'GRAPPLE_HOOK',
@@ -25,38 +29,25 @@ export const GRAPPLE_HOOK: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
-        const fullLine = getHexLine(shooter.position, target);
-        let actualTargetPos = target;
-        let blockedBy: 'wall' | 'actor' | null = null;
-        const dirIdx = getDirectionFromTo(shooter.position, target);
-        const dir = hexDirection(dirIdx);
+        const { directionIndex } = validateAxialDirection(shooter.position, target);
+        const dir = hexDirection(directionIndex);
 
         // JUICE: Anticipation - Aiming laser
         effects.push(...SKILL_JUICE_SIGNATURES.GRAPPLE_HOOK.anticipation(shooter.position, target));
 
-        for (const point of fullLine.slice(1)) {
-            const hitWall = state.wallPositions?.some(w => hexEquals(w, point)) ||
-                isPerimeter(point, state.gridWidth, state.gridHeight);
+        // Use validation system for line of sight
+        const { isValid, blockedBy } = validateLineOfSight(state, shooter.position, target, {
+            stopAtWalls: true,
+            stopAtActors: true,
+            excludeActorId: shooter.id
+        });
 
-            if (hitWall) {
-                actualTargetPos = point;
-                if (!hexEquals(target, point)) blockedBy = 'wall';
-                break;
-            }
-
-            const actor = getActorAt(state, point);
-            if (actor && actor.id !== shooter.id) {
-                actualTargetPos = point;
-                if (!hexEquals(target, point)) blockedBy = 'actor';
-                break;
-            }
-        }
-
-        if (blockedBy) {
+        if (!isValid) {
             messages.push(`Line of sight blocked by ${blockedBy}!`);
             return { effects, messages, consumesTurn: false };
         }
 
+        const actualTargetPos = target;
         const targetActor = getActorAt(state, actualTargetPos);
         const isWallTile = state.wallPositions?.some(w => hexEquals(w, actualTargetPos)) ||
             isPerimeter(actualTargetPos, state.gridWidth, state.gridHeight);
@@ -71,6 +62,15 @@ export const GRAPPLE_HOOK: SkillDefinition = {
             effects.push(...SKILL_JUICE_SIGNATURES.GRAPPLE_HOOK.execution(getHexLine(shooter.position, destination)));
 
             effects.push({ type: 'Displacement', target: shooter.id, destination });
+
+            // Trigger tile-enter effects (e.g. Lava Sink)
+            const tile = state.tiles.get(pointToKey(destination));
+            if (tile) {
+                const enterResult = TileResolver.processEntry(shooter, tile, state);
+                effects.push(...enterResult.effects);
+                messages.push(...enterResult.messages);
+            }
+
 
             const neighbors = getNeighbors(destination);
             for (const n of neighbors) {
@@ -94,11 +94,11 @@ export const GRAPPLE_HOOK: SkillDefinition = {
         // --- CASE B: THE COMBO FLOW ---
         else if (targetActor) {
             const distance = hexDistance(shooter.position, actualTargetPos);
-            const towardShooterVec = hexDirection((dirIdx + 3) % 6);
+            const towardShooterVec = hexDirection((directionIndex + 3) % 6);
             const shooterOriginalPos = shooter.position;
 
             // JUICE: Execution - Hook cable
-            effects.push(...SKILL_JUICE_SIGNATURES.GRAPPLE_HOOK.execution(fullLine));
+            effects.push(...SKILL_JUICE_SIGNATURES.GRAPPLE_HOOK.execution(getHexLine(shooter.position, target)));
 
             // --- PHASE 1: THE PULL ---
             const pullEffects = pullToward(state, shooter, actualTargetPos, distance - 1);
@@ -131,7 +131,7 @@ export const GRAPPLE_HOOK: SkillDefinition = {
             const flingEffects = kineticFling(tempState2, shooterOriginalPos, towardShooterVec, momentum);
 
             // JUICE: Resolution - Momentum trails + kinetic wave
-            const flingPath = getHexLine(shooterOriginalPos, hexAdd(shooterOriginalPos, scaleVector(dirIdx, momentum + 2)));
+            const flingPath = getHexLine(shooterOriginalPos, hexAdd(shooterOriginalPos, scaleVector(directionIndex, momentum + 2)));
             effects.push(...SKILL_JUICE_SIGNATURES.GRAPPLE_HOOK.resolution(flingPath, momentum));
 
             return {
@@ -145,7 +145,11 @@ export const GRAPPLE_HOOK: SkillDefinition = {
         }
     },
 
-    getValidTargets: (state: GameState, origin: Point) => getAxialTargets(state, origin, 4),
+    getValidTargets: (state: GameState, origin: Point) => getAxialTargetsWithOptions(state, origin, 4, {
+        includeWalls: true,
+        includeActors: true,
+        stopAtObstacles: true
+    }),
     upgrades: {},
     scenarios: getSkillScenarios('GRAPPLE_HOOK')
 };

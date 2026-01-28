@@ -51,7 +51,7 @@ class TestEngine {
             statusEffects: [],
             temporaryArmor: 0,
             activeSkills: [],
-            speed: (stats as any).speed || 50,
+            speed: (stats as any).speed || 1,
             factionId: 'enemy'
         });
     }

@@ -13,6 +13,13 @@ export function isStunned(actor: Actor): boolean {
 }
 
 /**
+ * Checks if an actor is currently rooted
+ */
+export function isRooted(actor: Actor): boolean {
+    return actor.statusEffects?.some(s => s.type === 'rooted') ?? false;
+}
+
+/**
  * Ticks down all status effects on an actor by the given amount (default 1)
  */
 export function tickStatuses(actor: Actor, amount: number = 1): Actor {

@@ -1,7 +1,8 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexDistance, hexEquals, getNeighbors, getDirectionFromTo, hexAdd, hexDirection } from '../hex';
-import { getEnemyAt, isWalkable } from '../helpers';
+import { getNeighbors, hexAdd, hexDirection, hexDistance } from '../hex';
+import { getEnemyAt, isWithinBounds } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
+import { validateRange, validateAxialDirection, isBlockedByWall, isBlockedByLava } from '../systems/validation';
 
 /**
  * Implementation of the Shield Bash skill using the Compositional Skill Framework.
@@ -25,8 +26,7 @@ export const SHIELD_BASH: SkillDefinition = {
         if (!attacker || !attacker.position) return { effects, messages, consumesTurn: false };
 
         // 1. Validation
-        const dist = hexDistance(attacker.position, target);
-        if (dist > 1) {
+        if (!validateRange(attacker.position, target, 1)) {
             messages.push('Target out of range!');
             return { effects, messages, consumesTurn: false };
         }
@@ -48,26 +48,26 @@ export const SHIELD_BASH: SkillDefinition = {
             const enemy = getEnemyAt(state.enemies, t);
             if (!enemy) continue;
 
-            const directionIdx = getDirectionFromTo(attacker.position, t);
-            if (directionIdx === -1) continue;
-            const dirVec = hexDirection(directionIdx);
+            const { directionIndex } = validateAxialDirection(attacker.position, t);
+            if (directionIndex === -1) continue;
+            const dirVec = hexDirection(directionIndex);
             const pushDest = hexAdd(t, dirVec);
 
             // Check collision
-            const blockedByWall = state.wallPositions.some(w => hexEquals(w, pushDest));
+            const blockedByWall = isBlockedByWall(state, pushDest);
             const blockingEnemy = getEnemyAt(state.enemies, pushDest);
-            const isOutOfBounds = !isWalkable(pushDest, [], [], state.gridWidth, state.gridHeight);
+            const isOutOfBounds = !isWithinBounds(state, pushDest);
 
             if (blockedByWall || (blockingEnemy && blockingEnemy.id !== enemy.id) || isOutOfBounds) {
                 anyCollision = true;
                 effects.push({ type: 'ApplyStatus', target: t, status: 'stunned', duration: 1 });
                 messages.push(`Bashed ${enemy.subtype || 'enemy'} into obstacle!`);
-            } else if (state.lavaPositions.some(l => hexEquals(l, pushDest))) {
-                effects.push({ type: 'Displacement', target: 'targetActor', destination: pushDest });
+            } else if (isBlockedByLava(state, pushDest)) {
+                effects.push({ type: 'Displacement', target: enemy.id, destination: pushDest });
                 effects.push({ type: 'Juice', effect: 'lavaSink', target: pushDest });
                 messages.push(`${enemy.subtype || 'Enemy'} fell into Lava!`);
             } else {
-                effects.push({ type: 'Displacement', target: 'targetActor', destination: pushDest });
+                effects.push({ type: 'Displacement', target: enemy.id, destination: pushDest });
                 // MRD says: Pushes targets 1 tile + Stuns.
                 effects.push({ type: 'ApplyStatus', target: t, status: 'stunned', duration: 1 });
                 messages.push(`Pushed and stunned ${enemy.subtype || 'enemy'}!`);
@@ -79,6 +79,10 @@ export const SHIELD_BASH: SkillDefinition = {
         }
 
         return { effects, messages };
+    },
+    getValidTargets: (state: GameState, origin: Point) => {
+        // Can target adjacent hexes that contain someone to bash
+        return getNeighbors(origin).filter(n => !!getEnemyAt(state.enemies, n));
     },
     upgrades: {},
     scenarios: getSkillScenarios('SHIELD_BASH')

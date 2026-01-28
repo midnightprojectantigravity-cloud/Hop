@@ -1,9 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import type { GameState, Point } from '@hop/engine';
-import { hexDistance, hexEquals, isTileInDiamond, hexToPixel } from '@hop/engine';
+import {
+    hexDistance, hexEquals, isTileInDiamond, hexToPixel,
+    TILE_SIZE, COMPOSITIONAL_SKILLS
+} from '@hop/engine';
 import { HexTile } from './HexTile';
 import { Entity } from './Entity';
-import { TILE_SIZE, getSkillRange } from '@hop/engine';
 import PreviewOverlay from './PreviewOverlay';
 import { JuiceManager } from './JuiceManager';
 
@@ -12,10 +14,12 @@ interface GameBoardProps {
     onMove: (hex: Point) => void;
     selectedSkillId: string | null;
     showMovementRange: boolean;
+    onBusyStateChange?: (busy: boolean) => void;
 }
 
-export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selectedSkillId, showMovementRange }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selectedSkillId, showMovementRange, onBusyStateChange }) => {
     const [isShaking, setIsShaking] = useState(false);
+    const [hoveredTile, setHoveredTile] = useState<Point | null>(null);
 
     // Filter cells based on dynamic diamond geometry
     const cells = useMemo(() => {
@@ -69,9 +73,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         };
     }, [cells]);
 
-    // Use the helper to calculate real range (including upgrades)
-    const selectedSkillRange = selectedSkillId ? getSkillRange(gameState.player, selectedSkillId) : 0;
-
     return (
         <div className={`w-full h-full flex justify-center items-center overflow-hidden transition-transform duration-75 ${isShaking ? 'animate-shake' : ''}`}>
             <svg
@@ -83,35 +84,49 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                 className="max-h-full max-w-full"
             >
                 <g>
-                    <PreviewOverlay gameState={gameState} selectedSkillId={selectedSkillId} showMovementRange={showMovementRange} />
+                    <PreviewOverlay gameState={gameState} selectedSkillId={selectedSkillId} showMovementRange={showMovementRange} hoveredTile={hoveredTile} />
                     {cells.map((hex) => {
                         const dist = hexDistance(hex, gameState.player.position);
                         const isWall = gameState.wallPositions?.some(wp => hexEquals(wp, hex));
                         const isLava = gameState.lavaPositions.some(lp => hexEquals(lp, hex));
+                        const isFire = gameState.firePositions?.some(fp => hexEquals(fp.pos, hex));
 
-                        // Contextual Highlights:
-                        // 1. If movement range toggle is on, show distance 1
-                        const isMoveHighlight = showMovementRange && dist === 1;
+                        // Standard Movement (Passive Skills: Walk, Dash)
+                        let isMoveHighlight = false;
+                        if (showMovementRange && !selectedSkillId) {
+                            const movementSkillIds = ['BASIC_MOVE', 'DASH'];
+                            for (const id of movementSkillIds) {
+                                if (gameState.player.activeSkills.some(s => s.id === id)) {
+                                    const def = COMPOSITIONAL_SKILLS[id];
+                                    if (def?.getValidTargets) {
+                                        const validTargets = def.getValidTargets(gameState, gameState.player.position);
+                                        if (validTargets.some(v => hexEquals(v, hex))) {
+                                            isMoveHighlight = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
 
-                        // 2. If a skill is selected, show its specific range
-                        let isSkillHighlight = !!(selectedSkillId && dist > 0 && dist <= selectedSkillRange);
-
-                        // Enforce straight line for Spear Throw
-                        if (selectedSkillId === 'SPEAR_THROW') {
-                            const isInLine = (hex.q === gameState.player.position.q) ||
-                                (hex.r === gameState.player.position.r) ||
-                                (hex.s === gameState.player.position.s);
-                            isSkillHighlight = isSkillHighlight && isInLine;
+                            // Safety backup for movement (if no primary skills found)
+                            if (!isMoveHighlight && dist === 1 && !isWall) {
+                                const hasPrimarySkills = gameState.player.activeSkills.some(s => ['BASIC_MOVE', 'DASH'].includes(s.id));
+                                if (!hasPrimarySkills) isMoveHighlight = true;
+                            }
                         }
 
-                        // Final highlight state (respects walkable constraint: !isWall)
-                        let showRangeHighlight = (isMoveHighlight || isSkillHighlight) && !isWall;
-
-                        // Target restrictions:
-                        // Spear Throw, Jump, and Lunge cannot target lava
-                        if ((selectedSkillId === 'SPEAR_THROW' || selectedSkillId === 'JUMP' || selectedSkillId === 'LUNGE') && isLava) {
-                            showRangeHighlight = false;
+                        // Skill-specific Highlights (Active Skills)
+                        let isSkillHighlight = false;
+                        if (selectedSkillId) {
+                            const def = COMPOSITIONAL_SKILLS[selectedSkillId];
+                            if (def?.getValidTargets) {
+                                const validTargets = def.getValidTargets(gameState, gameState.player.position);
+                                isSkillHighlight = validTargets.some(v => hexEquals(v, hex));
+                            }
                         }
+
+                        // Final highlight state
+                        let showRangeHighlight = isSkillHighlight || isMoveHighlight;
 
                         const isTargeted = gameState.enemies.some(e => e.intentPosition && hexEquals(e.intentPosition, hex));
                         const isStairs = hexEquals(hex, gameState.stairsPosition);
@@ -126,8 +141,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                                 isTargeted={isTargeted}
                                 isStairs={isStairs}
                                 isLava={isLava}
+                                isFire={isFire}
                                 isShrine={isShrine}
                                 isWall={isWall}
+                                onMouseEnter={setHoveredTile}
                             />
                         );
                     })}
@@ -160,7 +177,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                     {gameState.dyingEntities?.map(e => <Entity key={`dying-${e.id}-${gameState.turnNumber}`} entity={e} isDying={true} />)}
 
                     {/* Juice Effects Layer (Top-most) */}
-                    <JuiceManager visualEvents={gameState.visualEvents || []} />
+                    <JuiceManager visualEvents={gameState.visualEvents || []} onBusyStateChange={onBusyStateChange} />
                 </g>
             </svg>
         </div>

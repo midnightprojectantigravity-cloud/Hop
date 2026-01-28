@@ -164,6 +164,32 @@ body::after {
   }
 }
 
+@keyframes dash {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@keyframes customPulse {
+
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-intent-dash {
+  animation: dash 5s linear infinite;
+}
+
+.animate-soft-pulse {
+  animation: customPulse 2s ease-in-out infinite;
+}
+
 /* ============================================
    JUICE: SCREEN SHAKE
    ============================================ */
@@ -300,10 +326,19 @@ body::after {
    JUICE: FLASH ANIMATION
    ============================================ */
 @keyframes flash {
-  0% { opacity: 0; }
-  50% { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
+
 .animate-flash {
   animation: flash 0.2s ease-out forwards;
 }
@@ -312,12 +347,78 @@ body::after {
    JUICE: SPEAR TRAIL ANIMATION
    ============================================ */
 @keyframes spearTrail {
-  0% { stroke-dashoffset: 100%; opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 0; }
+  0% {
+    stroke-dashoffset: 100%;
+    opacity: 1;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
 }
+
 .animate-spear-trail {
   stroke-dasharray: 100%;
   animation: spearTrail 0.4s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: VAPORIZE ANIMATION
+   ============================================ */
+@keyframes vaporize {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    fill: #f97316;
+  }
+
+  100% {
+    transform: scale(2);
+    opacity: 0;
+    fill: #ef4444;
+  }
+}
+
+.animate-vaporize {
+  animation: vaporize 0.6s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: PING ANIMATION
+   ============================================ */
+@keyframes ping {
+
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-ping {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ============================================
+   JUICE: EXPLOSION RING ANIMATION
+   ============================================ */
+@keyframes explosionRing {
+  0% {
+    transform: scale(0.2);
+    opacity: 1;
+    stroke-width: 10px;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+    stroke-width: 0px;
+  }
+}
+
+.animate-explosion-ring {
+  animation: explosionRing 0.8s ease-out forwards;
 }
 
 /* ============================================

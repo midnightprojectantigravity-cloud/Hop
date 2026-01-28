@@ -5,7 +5,9 @@ import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
 import { applyEffects, applyAtomicEffect } from './effect-engine';
 import { prepareKineticSimulation, translate1DToHex } from './hex-bridge';
 import { resolveKineticDash, resolveKineticPulse } from './kinetic-kernel';
-import { processTilePass, processTileEnter } from './tile-effects';
+import { TileResolver } from './tile-effects';
+import { pointToKey } from './tile-migration';
+
 
 /**
  * Movement System
@@ -48,9 +50,10 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
                     let pushDest = pos;
                     for (let j = 0; j < 4; j++) {
                         const next = hexAdd(pushDest, dirVec);
-                        if (isWalkable(next, state.wallPositions, [], state.gridWidth, state.gridHeight)) {
+                        if (isWalkable(next, state.wallPositions, [], state.gridWidth, state.gridHeight, state)) {
                             pushDest = next;
                         } else {
+
                             break;
                         }
                     }
@@ -73,9 +76,10 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
     }
 
     // 3. Standard Walkable Check
-    if (!isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight)) {
+    if (!isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight, state)) {
         return { ...state, message: [...state.message, "Blocked!"].slice(-50) };
     }
+
 
     // 4. Occupied Check (Distance 1)
     if (isOccupied(target, state)) {
@@ -105,12 +109,16 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
     // This ensures tiles react when units land on them (walking, dashing, etc.)
     const updatedActor = actorId === 'player' ? newState.player : newState.enemies.find(e => e.id === actorId);
     if (updatedActor) {
-        const enterResult = processTileEnter(target, updatedActor, newState);
-        if (enterResult.effects.length > 0 || enterResult.messages.length > 0) {
-            newState = applyEffects(newState, enterResult.effects, { targetId: actorId });
-            newState.message = [...newState.message, ...enterResult.messages].slice(-50);
+        const tile = newState.tiles.get(pointToKey(target));
+        if (tile) {
+            const enterResult = TileResolver.processEntry(updatedActor, tile, newState);
+            if (enterResult.effects.length > 0 || enterResult.messages.length > 0) {
+                newState = applyEffects(newState, enterResult.effects, { targetId: actorId });
+                newState.message = [...newState.message, ...enterResult.messages].slice(-50);
+            }
         }
     }
+
 
     return newState;
 };
@@ -184,26 +192,30 @@ export function processKineticRequest(state: GameState, request: KineticRequest)
 
             // TILE EFFECTS: Process onPass for this tile
             // This is where the magic happens - tiles observe and react to units
-            const tileResult = processTilePass(hexPos, actor, state, currentMomentum);
+            const tile = state.tiles.get(pointToKey(hexPos));
+            if (tile) {
+                const tileResult = TileResolver.processTransition(actor, tile, state, currentMomentum);
 
-            // Accumulate effects and messages from tile
-            effects.push(...tileResult.effects);
-            messages.push(...tileResult.messages);
+                // Accumulate effects and messages from tile
+                effects.push(...tileResult.effects);
+                messages.push(...tileResult.messages);
 
-            // Update momentum if tile modified it
-            if (tileResult.newMomentum !== undefined) {
-                currentMomentum = tileResult.newMomentum;
-            }
-
-            // Check if tile interrupted the chain
-            if (tileResult.interrupt) {
-                deadIds.add(entity.id);
-                if (isLead) {
-                    chainBroken = true;
-                    messages.push(`The chain broke! Remaining momentum lost.`);
+                // Update momentum if tile modified it
+                if (tileResult.newMomentum !== undefined) {
+                    currentMomentum = tileResult.newMomentum;
                 }
-                continue;
+
+                // Check if tile interrupted the chain
+                if (tileResult.interrupt) {
+                    deadIds.add(entity.id);
+                    if (isLead) {
+                        chainBroken = true;
+                        messages.push(`The chain broke! Remaining momentum lost.`);
+                    }
+                    continue;
+                }
             }
+
 
             // 2. Add to pulse steps
             pulseSteps.push({ actorId: entity.id, hexPos, isLead });

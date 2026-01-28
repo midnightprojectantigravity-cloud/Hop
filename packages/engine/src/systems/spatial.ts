@@ -17,9 +17,12 @@ export const refreshOccupancyMask = (state: GameState): bigint[] => {
     let mask = createOccupancyMask(state.gridWidth, state.gridHeight);
 
     // 1. Add Environment (Walls are ALWAYS solid)
-    state.wallPositions.forEach(p => {
-        mask = setOccupancy(mask, p, true);
+    state.tiles.forEach(tile => {
+        if (tile.baseId === 'WALL' || tile.traits.has('BLOCKS_LOS')) {
+            mask = setOccupancy(mask, tile.position, true);
+        }
     });
+
 
     // 2. Add Player
     mask = setOccupancy(mask, state.player.position, true);
@@ -61,7 +64,8 @@ export const getMovementRange = (state: GameState, origin: Point, movePoints: nu
             if (!isHexInRectangularGrid(n, state.gridWidth, state.gridHeight)) continue;
 
             // 2. Wall/Lava Check (Environment)
-            if (!isWalkable(n, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight)) continue;
+            if (!isWalkable(n, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight, state)) continue;
+
 
             // 3. THE FIX: Occupancy Check
             // We only care if SOMEONE ELSE is there. 

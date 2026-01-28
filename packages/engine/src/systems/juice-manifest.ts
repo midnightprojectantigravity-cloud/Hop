@@ -135,6 +135,15 @@ export const JuiceHelpers = {
         target: position,
         direction,
         intensity: 'high'
+    }),
+
+    /**
+     * Explosion ring (radial expansion)
+     */
+    explosionRing: (position: Point): AtomicEffect => ({
+        type: 'Juice',
+        effect: 'explosion_ring',
+        target: position
     })
 };
 
@@ -365,6 +374,30 @@ export const SKILL_JUICE_SIGNATURES = {
             return [JuiceHelpers.lightImpact(landingPoint)];
         },
         resolution: (): AtomicEffect[] => []
+    },
+
+    /**
+     * BOMB
+     * Intent: Area explosion after countdown
+     * Weight: Extreme (environmental force)
+     */
+    BOMB: {
+        impact: (position: Point): AtomicEffect[] => [
+            {
+                type: 'Juice',
+                effect: 'flash',
+                target: position,
+                color: '#ffaa00',
+                intensity: 'extreme'
+            },
+            JuiceHelpers.explosionRing(position),
+            JuiceHelpers.heavyImpact(position),
+            JuiceHelpers.shake('extreme'),
+            JuiceHelpers.freeze(100),
+            JuiceHelpers.combatText('BOOM!', position, '#ff4400')
+        ],
+        resolution: (affectedPoints: Point[]): AtomicEffect[] =>
+            affectedPoints.map(p => JuiceHelpers.lightImpact(p))
     }
 };
 
@@ -373,7 +406,7 @@ export const SKILL_JUICE_SIGNATURES = {
  * Reactions to hazards and terrain
  */
 export const ENVIRONMENTAL_JUICE = {
-    lavaSink: (position: Point, actorId: string): AtomicEffect[] => [
+    lavaSink: (position: Point): AtomicEffect[] => [
         {
             type: 'Juice',
             effect: 'lavaSink',

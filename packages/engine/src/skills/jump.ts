@@ -1,7 +1,9 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexDistance, getNeighbors, hexEquals } from '../hex';
+import { getNeighbors, hexEquals } from '../hex';
 import { getEnemyAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
+import { isBlockedByWall, isBlockedByLava, isBlockedByActor, validateRange } from '../systems/validation';
+import { getAreaTargets } from '../systems/navigation';
 
 /**
  * Implementation of the Jump skill using the Compositional Skill Framework.
@@ -24,17 +26,12 @@ export const JUMP: SkillDefinition = {
         if (!target) return { effects, messages, consumesTurn: false };
         if (!attacker || !attacker.position) return { effects, messages, consumesTurn: false };
 
-        const dist = hexDistance(attacker.position, target);
-        if (dist < 1 || dist > 2) {
+        if (!validateRange(attacker.position, target, 2)) {
             messages.push('Target out of range!');
             return { effects, messages, consumesTurn: false };
         }
 
-        const isWall = state.wallPositions.some(w => hexEquals(w, target));
-        const isLava = state.lavaPositions.some(l => hexEquals(l, target));
-        const isOccupiedByEnemy = !!getEnemyAt(state.enemies, target);
-
-        if (isWall || isLava || isOccupiedByEnemy) {
+        if (isBlockedByWall(state, target) || isBlockedByLava(state, target) || isBlockedByActor(state, target)) {
             messages.push('Blocked!');
             return { effects, messages, consumesTurn: false };
         }
@@ -55,6 +52,13 @@ export const JUMP: SkillDefinition = {
         effects.push({ type: 'Juice', effect: 'shake' });
 
         return { effects, messages };
+    },
+    getValidTargets: (state: GameState, origin: Point) => {
+        const range = 2;
+        return getAreaTargets(state, origin, range).filter(p => {
+            if (hexEquals(p, origin)) return false;
+            return !isBlockedByWall(state, p) && !isBlockedByLava(state, p) && !isBlockedByActor(state, p);
+        });
     },
     upgrades: {},
     scenarios: getSkillScenarios('JUMP')

@@ -7,6 +7,8 @@ import { isPlayerTurn } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
 import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './systems/components';
 import { addStatus } from './systems/actor';
+import { migratePositionArraysToTiles } from './systems/tile-migration';
+
 
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
@@ -25,7 +27,7 @@ export class ScenarioEngine {
             id: 'player',
             type: 'player',
             factionId: 'player',
-            speed: 100,
+            speed: 1,
             archetype: archetype,
             position: { ...pos },
             previousPosition: { ...pos },
@@ -53,13 +55,13 @@ export class ScenarioEngine {
     }
 
     spawnEnemy(type: string, pos: Point, id: string) {
-        const stats = (ENEMY_STATS as any)[type] || { hp: 1, maxHp: 1, speed: 50, weightClass: 'Standard' };
+        const stats = (ENEMY_STATS as any)[type] || { hp: 1, maxHp: 1, speed: 1, weightClass: 'Standard' };
         this.state.enemies.push({
             id,
             type: 'enemy',
             subtype: type,
             factionId: 'enemy',
-            speed: stats.speed || 50,
+            speed: stats.speed || 1,
             weightClass: stats.weightClass || 'Standard',
             position: { ...pos },
             previousPosition: { ...pos },
@@ -95,8 +97,18 @@ export class ScenarioEngine {
         } else if (type === 'void') {
             this.state.voidPositions = this.state.voidPositions || [];
             this.state.voidPositions.push(pos);
+        } else if (type === 'floor') {
+            // Just ensure it's not in other arrays
+            // For now, migration handles "not in array = stone"
         }
+        this.syncTiles();
     }
+
+    syncTiles() {
+        this.state.tiles = migratePositionArraysToTiles(this.state);
+    }
+
+
 
     applyStatus(targetId: string, status: 'stunned', duration: number = 1) {
         const enemyIndex = this.state.enemies.findIndex(e => e.id === targetId);
@@ -234,8 +246,10 @@ async function runTests() {
 
             try {
                 scenario.setup(engine);
-                // Force initiative queue rebuild after manual setup
+                // Force sync and initiative queue rebuild after manual setup
+                engine.syncTiles();
                 engine.state.initiativeQueue = undefined;
+
                 scenario.run(engine);
                 const isSuccess = scenario.verify(engine.state, engine.logs);
 

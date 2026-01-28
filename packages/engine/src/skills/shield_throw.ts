@@ -1,12 +1,14 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import {
-    hexDistance, hexAdd, hexEquals,
-    isHexInRectangularGrid, scaleVector, getHexLine, getDirectionFromTo, hexDirection
+
+    getHexLine, hexDirection
 } from '../hex';
-import { getActorAt, isPerimeter } from '../helpers';
+import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { processKineticPulse } from '../systems/kinetic-kernel';
-import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../systems/juice-manifest';
+import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
+import { validateLineOfSight, validateAxialDirection } from '../systems/validation';
+import { getAxialTargetsWithOptions } from '../systems/navigation';
 
 /**
  * Implementation of the Shield Throw skill.
@@ -35,16 +37,16 @@ export const SHIELD_THROW: SkillDefinition = {
         effects.push(...SKILL_JUICE_SIGNATURES.SHIELD_THROW.anticipation(attacker.position, target));
 
         // 1. Line of Sight / Travel Check
-        const line = getHexLine(attacker.position, target);
-        // Ensure unencumbered travel to target (no walls/perimeter)
-        for (const point of line.slice(1, -1)) {
-            const isWall = state.wallPositions?.some(w => hexEquals(w, point)) ||
-                isPerimeter(point, state.gridWidth, state.gridHeight);
-            if (isWall) {
-                messages.push('Shield hit a wall mid-flight!');
-                effects.push({ type: 'SpawnItem', itemType: 'shield', position: point });
-                return { effects, messages, consumesTurn: true };
-            }
+        const { isValid, blockedBy, blockedAt } = validateLineOfSight(state, attacker.position, target, {
+            stopAtWalls: true,
+            stopAtActors: true,
+            excludeActorId: attacker.id
+        });
+
+        if (!isValid && blockedBy === 'wall') {
+            messages.push('Shield hit a wall mid-flight!');
+            effects.push({ type: 'SpawnItem', itemType: 'shield', position: blockedAt! });
+            return { effects, messages, consumesTurn: true };
         }
 
         const targetActor = getActorAt(state, target);
@@ -54,13 +56,14 @@ export const SHIELD_THROW: SkillDefinition = {
             return { effects, messages, consumesTurn: true };
         }
 
+        const line = getHexLine(attacker.position, target);
         // JUICE: Execution - Shield arc + spin
         effects.push(...SKILL_JUICE_SIGNATURES.SHIELD_THROW.execution(line));
 
         // 2. Physics Resolution (Kinetic Pulse)
         const momentum = 4;
-        const dirIdx = getDirectionFromTo(attacker.position, target);
-        const direction = hexDirection(dirIdx);
+        const { directionIndex } = validateAxialDirection(attacker.position, target);
+        const direction = hexDirection(directionIndex);
 
         // Stun the primary target on impact
         effects.push({ type: 'ApplyStatus', target: targetActor.id, status: 'stunned', duration: 1 });
@@ -98,29 +101,8 @@ export const SHIELD_THROW: SkillDefinition = {
         };
     },
 
-    getValidTargets: (state: GameState, origin: Point) => {
-        const range = 4;
-        const valid: Point[] = [];
-        for (let d = 0; d < 6; d++) {
-            for (let i = 1; i <= range; i++) {
-                const p = hexAdd(origin, scaleVector(d, i));
-                if (!isHexInRectangularGrid(p, state.gridWidth, state.gridHeight)) break;
+    getValidTargets: (state: GameState, origin: Point) => getAxialTargetsWithOptions(state, origin, 4),
 
-                const isWall = state.wallPositions?.some(w => hexEquals(w, p)) ||
-                    isPerimeter(p, state.gridWidth, state.gridHeight);
-
-                const actor = getActorAt(state, p);
-                // Can target any hex with an actor (except self)
-                if (actor && actor.id !== state.player.id) {
-                    valid.push(p);
-                }
-
-                // Path is blocked by walls or other actors
-                if (isWall || actor) break;
-            }
-        }
-        return valid;
-    },
     upgrades: {},
     scenarios: getSkillScenarios('SHIELD_THROW')
 };

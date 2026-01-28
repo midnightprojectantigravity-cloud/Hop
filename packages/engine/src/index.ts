@@ -32,5 +32,9 @@ export * from './systems/status';
 export * from './systems/kinetic-kernel';
 export * from './systems/hex-bridge';
 
+// Juice & VFX
+export * from './systems/juice-manifest';
+
 // Tile Effects System (Observer-Based)
 export * from './systems/tile-effects';
+export * from './systems/tile-migration';

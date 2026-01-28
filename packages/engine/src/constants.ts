@@ -14,7 +14,7 @@ export const GRID_RADIUS = 5;
 export const INITIAL_PLAYER_STATS = {
     hp: 3,
     maxHp: 3,
-    speed: 100,        // Player baseline speed
+    speed: 1,        // Player baseline speed
     energy: 100,
     temporaryArmor: 0, // From Shield passive
 };
@@ -66,19 +66,19 @@ export const STATUS_REGISTRY: Record<string, { tickWindow: 'START_OF_TURN' | 'EN
 // Enemy stats with simplified tiers
 export const ENEMY_STATS = {
     // Melee enemies (Standard weight)
-    footman: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_ATTACK', 'AUTO_ATTACK'], actionCooldown: 2, weightClass: 'Standard', speed: 50 },
-    sprinter: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_ATTACK'], actionCooldown: 1, weightClass: 'Standard', speed: 70 },
+    footman: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_ATTACK', 'AUTO_ATTACK'], actionCooldown: 2, weightClass: 'Standard', speed: 1 },
+    sprinter: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_ATTACK'], actionCooldown: 1, weightClass: 'Standard', speed: 2 },
 
     // Heavy enemies
-    shieldBearer: { hp: 2, maxHp: 2, range: 1, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_ATTACK', 'SHIELD_BASH'], actionCooldown: 2, weightClass: 'Heavy', speed: 40 },
+    shieldBearer: { hp: 2, maxHp: 2, range: 1, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_ATTACK', 'SHIELD_BASH'], actionCooldown: 2, weightClass: 'Heavy', speed: 1 },
 
     // Ranged enemies (Standard weight)
-    archer: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 1, skills: ['SPEAR_THROW'], actionCooldown: 3, weightClass: 'Standard', speed: 60 },
-    bomber: { hp: 1, maxHp: 1, range: 3, damage: 1, type: 'ranged', cost: 1, skills: [], actionCooldown: 2, weightClass: 'Standard', speed: 30 },
-    warlock: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 2, skills: [], actionCooldown: 2, weightClass: 'Standard', speed: 55 },
+    archer: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 1, skills: ['SPEAR_THROW'], actionCooldown: 3, weightClass: 'Standard', speed: 1 },
+    bomber: { hp: 1, maxHp: 1, range: 3, damage: 1, type: 'ranged', cost: 1, skills: [], actionCooldown: 2, weightClass: 'Standard', speed: 1 },
+    warlock: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 2, skills: [], actionCooldown: 2, weightClass: 'Standard', speed: 1 },
 
     // Boss
-    sentinel: { hp: 30, maxHp: 30, range: 4, damage: 2, type: 'boss', cost: 25, skills: ['BASIC_ATTACK', 'SENTINEL_BLAST'], actionCooldown: 1, weightClass: 'Heavy', speed: 120 },
+    sentinel: { hp: 30, maxHp: 30, range: 4, damage: 2, type: 'boss', cost: 25, skills: ['BASIC_ATTACK', 'SENTINEL_BLAST'], actionCooldown: 1, weightClass: 'Heavy', speed: 1 },
 };
 
 // Hazard percentage (15-20% of map)

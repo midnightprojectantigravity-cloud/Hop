@@ -7,6 +7,10 @@ import type { Entity, Point, GameState } from '../types';
 import { getNeighbors, hexDistance, hexEquals, hexAdd, hexDirection, isHexInRectangularGrid } from '../hex';
 import { consumeRandom } from './rng';
 import { GRID_WIDTH, GRID_HEIGHT } from '../constants';
+import { isRooted } from './status';
+import { TileResolver } from './tile-effects';
+import { pointToKey } from './tile-migration';
+
 
 /**
  * Get the direction from one hex to another (0-5)
@@ -46,6 +50,11 @@ const findBestMove = (
     occupiedPositions: Point[] = [],
     preferDistance?: number
 ): { position: Point; state: GameState } => {
+    // Rooted Check: Cannot move if rooted
+    if (isRooted(enemy)) {
+        return { position: enemy.position, state };
+    }
+
     const neighbors = getNeighbors(enemy.position);
     let candidates: Point[] = [];
     let bestScore = preferDistance !== undefined
@@ -54,18 +63,28 @@ const findBestMove = (
 
     for (const n of neighbors) {
         const isInBounds = isHexInRectangularGrid(n, GRID_WIDTH, GRID_HEIGHT);
-        const isWall = state.wallPositions?.some((w: Point) => hexEquals(w, n));
-        const isLava = state.lavaPositions?.some((l: Point) => hexEquals(l, n));
-        const blocked = !isInBounds || isWall || isLava ||
-            occupiedPositions.some((p: Point) => hexEquals(p, n)) ||
+        const tile = state.tiles.get(pointToKey(n));
+
+        // Blocking Logic
+        const blockedByEnvironment = !isInBounds ||
+            tile?.traits.has('BLOCKS_LOS') ||
+            tile?.baseId === 'WALL';
+
+        const blockedByActors = occupiedPositions.some((p: Point) => hexEquals(p, n)) ||
             state.enemies.some((e: Entity) => e.id !== enemy.id && hexEquals(e.position, n)) ||
             hexEquals(n, targetPos);
 
-        if (blocked) continue;
+        if (blockedByEnvironment || blockedByActors) continue;
 
-        const score = preferDistance !== undefined
+        // Pathfinding Cost
+        const tileCost = tile ? TileResolver.getMovementCost(tile) : 1;
+        const distScore = preferDistance !== undefined
             ? Math.abs(hexDistance(n, targetPos) - preferDistance)
             : hexDistance(n, targetPos);
+
+        // Combine distance score with tile cost penalty
+        const score = distScore + (tileCost - 1);
+
 
         if (score < bestScore) {
             bestScore = score;
@@ -322,10 +341,82 @@ const computeGolemAction = (enemy: Entity, playerPos: Point, state: GameState): 
 };
 
 /**
+ * Minion AI: Used by skeletons and other player-aligned summons.
+ * Targets nearest enemy, but stays within 4 tiles of the player.
+ */
+const computeMinionAction = (minion: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState; message?: string } => {
+    const distToPlayer = hexDistance(minion.position, playerPos);
+
+    // TETHER LOGIC: If too far, must return to player
+    if (distToPlayer > 4) {
+        const { position, state: newState } = findBestMove(minion, playerPos, state, state.occupiedCurrentTurn);
+        const moved = !hexEquals(position, minion.position);
+        return {
+            entity: { ...minion, position, intent: moved ? 'Following' : 'Waiting' },
+            nextState: newState,
+            message: moved ? `${minion.subtype} follows you.` : undefined
+        };
+    }
+
+    // COMBAT LOGIC: Find nearest enemy
+    const nearestEnemy = state.enemies
+        .filter(e => e.factionId === 'enemy')
+        .sort((a, b) => hexDistance(minion.position, a.position) - hexDistance(minion.position, b.position))[0];
+
+    if (!nearestEnemy) {
+        // No enemies? Stay near player
+        if (distToPlayer > 1) {
+            const { position, state: newState } = findBestMove(minion, playerPos, state, state.occupiedCurrentTurn);
+            return { entity: { ...minion, position, intent: 'Idle' }, nextState: newState };
+        }
+        return { entity: { ...minion, intent: 'Idle' }, nextState: state };
+    }
+
+    const distToEnemy = hexDistance(minion.position, nearestEnemy.position);
+
+    if (distToEnemy === 1) {
+        return {
+            entity: { ...minion, intent: 'BASIC_ATTACK', intentPosition: { ...nearestEnemy.position } },
+            nextState: state
+        };
+    }
+
+    // Move toward enemy
+    const { position, state: newState } = findBestMove(minion, nearestEnemy.position, state, state.occupiedCurrentTurn);
+    const moved = !hexEquals(position, minion.position);
+    const nextDist = hexDistance(position, nearestEnemy.position);
+
+    return {
+        entity: {
+            ...minion,
+            position,
+            intent: moved ? 'Advancing' : (nextDist === 1 ? 'BASIC_ATTACK' : 'Waiting'),
+            intentPosition: (moved || nextDist > 1) ? undefined : { ...nearestEnemy.position }
+        },
+        nextState: newState,
+        message: moved ? `${minion.subtype} attacks ${nearestEnemy.subtype}!` : undefined
+    };
+};
+
+/**
  * Compute an enemy's next move/intent given the player's position and the current state.
  * Returns a new Entity instance (do not mutate input).
  */
 export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: GameState & { occupiedCurrentTurn?: Point[] }): { entity: Entity; nextState: GameState; message?: string } => {
+    // Minion Check: If faction is player, use minion AI
+    if (bt.factionId === 'player') {
+        return computeMinionAction(bt, playerMovedTo, state);
+    }
+
+    // Stealth System: If player is hidden, enemies ignore them
+    const isPlayerHidden = (state.player.stealthCounter || 0) > 0;
+    if (isPlayerHidden) {
+        return {
+            entity: { ...bt, intent: 'Searching', intentPosition: undefined },
+            nextState: state
+        };
+    }
+
     const dist = hexDistance(bt.position, playerMovedTo);
 
     // Route to specialized AI based on subtype

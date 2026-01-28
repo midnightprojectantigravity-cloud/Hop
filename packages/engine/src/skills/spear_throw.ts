@@ -1,8 +1,10 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexDistance, getHexLine, hexEquals, isHexInRectangularGrid } from '../hex';
-import { getEnemyAt } from '../helpers';
+import { hexEquals, getHexLine } from '../hex';
+
 import { getSkillScenarios } from '../scenarios';
 import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
+import { validateAxialDirection, validateRange, findFirstObstacle } from '../systems/validation';
+import { getAxialTargetsWithOptions } from '../systems/navigation';
 
 /**
  * Implementation of the Spear Throw skill using the Compositional Skill Framework.
@@ -30,13 +32,18 @@ export const SPEAR_THROW: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
-        const dist = hexDistance(shooter.position, target);
         let range = 3;
         if (activeUpgrades.includes('SPEAR_RANGE')) range += 1;
 
-        if (dist > range) {
+        if (!validateRange(shooter.position, target, range)) {
             messages.push('Out of range!');
             return { effects, messages, consumesTurn: false };
+        }
+
+        const { isAxial } = validateAxialDirection(shooter.position, target);
+        if (!isAxial) {
+            // Though getValidTargets filters axial, we should ideally check here if strict axial is required
+            // For now sticking to original behavior which didn't explicitly check axial in execute but did in getValidTargets
         }
 
         // JUICE: Anticipation - Red aiming laser
@@ -44,18 +51,20 @@ export const SPEAR_THROW: SkillDefinition = {
 
         const line = getHexLine(shooter.position, target);
 
-        // Find the first obstacle (enemy or wall)
+        // findFirstObstacle returns what we hit first
+        const obstacleResult = findFirstObstacle(state, line.slice(1), {
+            checkWalls: true,
+            checkActors: true,
+            excludeActorId: shooter.id
+        });
+
         let hitPos = target;
         let hitEnemy = undefined;
 
-        for (let i = 1; i < line.length; i++) {
-            const p = line[i];
-            const obstacle = getEnemyAt(state.enemies, p);
-            const isWall = state.wallPositions.some(w => hexEquals(w, p));
-            if (obstacle || isWall) {
-                hitPos = p;
-                hitEnemy = obstacle;
-                break;
+        if (obstacleResult.obstacle) {
+            hitPos = obstacleResult.position!;
+            if (obstacleResult.obstacle === 'actor') {
+                hitEnemy = obstacleResult.actor;
             }
         }
 
@@ -83,26 +92,12 @@ export const SPEAR_THROW: SkillDefinition = {
         return { effects, messages };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        // Enforce straight line (axial) and range
         const range = 3;
-        const valid: Point[] = [];
-        for (let d = 0; d < 6; d++) {
-            for (let i = 1; i <= range; i++) {
-                const p = {
-                    q: origin.q + i * [1, 1, 0, -1, -1, 0][d],
-                    r: origin.r + i * [0, -1, -1, 0, 1, 1][d],
-                    s: origin.s + i * [-1, 0, 1, 1, 0, -1][d]
-                };
-                if (!isHexInRectangularGrid(p, state.gridWidth, state.gridHeight)) break;
-
-                const isWall = state.wallPositions.some(w => hexEquals(w, p));
-                const enemy = getEnemyAt(state.enemies, p);
-
-                valid.push(p);
-                if (isWall || enemy) break; // Blocked
-            }
-        }
-        return valid;
+        return getAxialTargetsWithOptions(state, origin, range, {
+            stopAtObstacles: true,
+            includeActors: true,
+            includeWalls: true
+        });
     },
     upgrades: {
         SPEAR_RANGE: { id: 'SPEAR_RANGE', name: 'Extended Reach', description: 'Range +1', modifyRange: 1 },

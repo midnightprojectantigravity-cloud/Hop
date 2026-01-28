@@ -60,45 +60,52 @@ export const dashScenarios: ScenarioCollection = {
 
             setup: (engine: any) => {
                 // Start at (4,5)
-                engine.setPlayer({ q: 4, r: 5, s: -9 }, ['DASH']);
+                engine.setPlayer({ q: 4, r: 9, s: -13 }, ['DASH']);
                 engine.state.hasShield = true;
 
-                // Wall blocking a long-range dash to (4,2)
+                // Wall blocking the enemy, preventing them from moving further.
                 engine.setTile({ q: 4, r: 4, s: -8 }, 'wall');
 
-                // Enemy for the final successful shunt at (6,5)
-                engine.spawnEnemy('footman', { q: 6, r: 5, s: -11 }, 'victim');
+                // Wall blocking a long-range dash to (7,4)
+                engine.setTile({ q: 6, r: 5, s: -11 }, 'wall');
+
+                // Enemy for the two consecutive shunts
+                engine.spawnEnemy('footman', { q: 4, r: 7, s: -11 }, 'victim');
             },
             run: (engine: any) => {
-                // 1. FAIL: Try to dash THROUGH a wall to (4,3)
-                engine.useSkill('DASH', { q: 4, r: 3, s: -7 });
+                // 1. SUCCESS: Dash into enemy at (4,7) to trigger Shunt
+                engine.useSkill('DASH', { q: 4, r: 7, s: -11 });
 
-                // 2. FAIL: Try to dash out of range (to q:10)
-                engine.useSkill('DASH', { q: 10, r: 5, s: -15 });
+                // 2. FAIL: Try to dash THROUGH a wall to (7,4)
+                engine.useSkill('DASH', { q: 7, r: 4, s: -11 });
 
-                // 3. SUCCESS: Dash into enemy at (6,5) to trigger Shunt
-                // This is a horizontal move (q-axis)
-                engine.useSkill('DASH', { q: 6, r: 5, s: -11 });
+                // 3. FAIL: Try to dash out of axialrange to (6,6)
+                engine.useSkill('DASH', { q: 6, r: 6, s: -12 });
+
+                // 4. SUCCESS: Dash into enemy at (4,5) to trigger Shunt
+                // After this dash, the enemy should still be at (4,5) and the player should be at (4,6)
+                engine.useSkill('DASH', { q: 4, r: 5, s: -9 });
+
             },
             verify: (state: GameState, logs: string[]) => {
                 const victim = state.enemies.find(e => e.id === 'victim');
 
                 const checks = {
-                    // Player should NOT be at (4,3) or (10,5). 
-                    // They should have ended up at the victim's original spot (6,5).
-                    finalPositionCorrect: state.player.position.q === 6 && state.player.position.r === 5,
+                    // Player should NOT be at (4,7), (4,3) or (10,5). 
+                    // They should have ended up at the tile before the victim's final spot (4,6).
+                    finalPositionCorrect: state.player.position.q === 4 && state.player.position.r === 6,
 
-                    // Victim should be pushed further along the q-axis (e.g., to q:7)
-                    victimPushed: !!(victim && victim.position.q >= 7),
+                    // Victim should be at (4,5)
+                    victimPushed: !!(victim && victim.position.q === 4 && victim.position.r === 5),
 
                     // Logs should contain the history of the turn
                     wallErrorFound: logs.some(l => l.includes('wall blocks')),
-                    rangeErrorFound: logs.some(l => l.includes('range')),
+                    axialRangeErrorFound: logs.some(l => l.includes('Axial only!')),
                     shuntSuccess: logs.some(l => l.includes('Shield Shunt')),
 
                     // Crucial for balancing: The failures shouldn't have ended the turn prematurely,
                     // but the final success should have consumed exactly 1 turn.
-                    oneTurnSpent: state.turnsSpent === 1
+                    oneTurnSpent: state.turnsSpent === 2
                 };
 
                 if (Object.values(checks).some(v => v === false)) {

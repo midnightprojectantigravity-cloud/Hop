@@ -1,5 +1,5 @@
 import type { GameState, Point } from '../types';
-import { hexAdd, DIRECTIONS, hexEquals } from '../hex';
+import { hexAdd, DIRECTIONS, hexEquals, scaleVector, createHex } from '../hex';
 import { isWithinBounds, getActorAt } from '../helpers';
 
 export interface SearchOptions {
@@ -89,4 +89,55 @@ export function getReachableHexes(state: GameState, origin: Point, options: Sear
     }
 
     return reachable;
+}
+
+/**
+ * Enhanced axial targeting with configurable options.
+ */
+export function getAxialTargetsWithOptions(state: GameState, origin: Point, range: number, options: {
+    includeWalls?: boolean;
+    includeActors?: boolean;
+    stopAtObstacles?: boolean;
+} = {}): Point[] {
+    const { includeWalls = false, includeActors = true, stopAtObstacles = true } = options;
+    const valid: Point[] = [];
+
+    for (let d = 0; d < 6; d++) {
+        for (let i = 1; i <= range; i++) {
+            const coord = hexAdd(origin, scaleVector(d, i));
+
+            if (!isWithinBounds(state, coord)) break;
+
+            const isWall = state.wallPositions?.some(w => hexEquals(w, coord));
+            const actor = getActorAt(state, coord);
+
+            if (isWall) {
+                if (includeWalls) valid.push(coord);
+                if (stopAtObstacles) break;
+            } else if (actor) {
+                if (includeActors) valid.push(coord);
+                if (stopAtObstacles) break;
+            } else {
+                valid.push(coord);
+            }
+        }
+    }
+
+    return valid;
+}
+
+/**
+ * Gets targets in a circular area (range-based).
+ */
+export function getAreaTargets(state: GameState, center: Point, radius: number): Point[] {
+    const targets: Point[] = [];
+    for (let q = -radius; q <= radius; q++) {
+        for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
+            const coord = hexAdd(center, createHex(q, r));
+            if (isWithinBounds(state, coord)) {
+                targets.push(coord);
+            }
+        }
+    }
+    return targets;
 }

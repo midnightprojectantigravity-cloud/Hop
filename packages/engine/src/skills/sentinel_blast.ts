@@ -1,6 +1,7 @@
 import type { SkillDefinition, Point, GameState, AtomicEffect, Actor } from '../types';
 import { getNeighbors } from '../hex';
 import { getSkillScenarios } from '../scenarios';
+import { getAreaTargets } from '../systems/navigation';
 
 /**
  * SENTINEL_BLAST
@@ -37,6 +38,10 @@ export const SENTINEL_BLAST: SkillDefinition = {
             messages: ['The Sentinel unleashed a massive blast!'],
             consumesTurn: true
         };
+    },
+    getValidTargets: (state: GameState, origin: Point) => {
+        const range = 3;
+        return getAreaTargets(state, origin, range);
     },
     upgrades: {},
     scenarios: getSkillScenarios('SENTINEL_BLAST')

@@ -8,6 +8,14 @@ import { getSkillScenarios } from '../scenarios';
  * BASIC_MOVE Skill
  * Goal: Standard movement skill that uses BFS for pathfinding.
  */
+
+// 1. Extract the shared logic
+const getEffectiveMoveRange = (state: GameState, actor: Actor): number => {
+    const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
+    if (noEnemies) return 20;
+    return Math.max(actor.speed || 1, 1);
+};
+
 export const BASIC_MOVE: SkillDefinition = {
     id: 'BASIC_MOVE',
     name: 'Walk',
@@ -25,8 +33,8 @@ export const BASIC_MOVE: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
-        const movePoints = Math.max(attacker.speed || 1, 1);
-        const validTargets = getMovementRange(state, attacker.position, movePoints);
+        const range = getEffectiveMoveRange(state, attacker);
+        const validTargets = getMovementRange(state, attacker.position, range);
 
         const isTargetValid = validTargets.some((p: Point) => hexEquals(p, target));
 
@@ -35,8 +43,6 @@ export const BASIC_MOVE: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
-        const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
-
         effects.push({
             type: 'Displacement',
             target: 'self',
@@ -44,9 +50,7 @@ export const BASIC_MOVE: SkillDefinition = {
             source: attacker.position
         });
 
-        if (!noEnemies) {
-            messages.push('Moved.');
-        }
+        messages.push(`Moved (Range: ${range}).`);
 
         return { effects, messages, consumesTurn: true };
     },
@@ -54,13 +58,8 @@ export const BASIC_MOVE: SkillDefinition = {
         const actor = getActorAt(state, origin) as Actor;
         if (!actor) return [];
 
-        const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
-        if (noEnemies) {
-            // Return all walkable tiles if no enemies (simple implementation: BFS with high range)
-            return getMovementRange(state, origin, 20);
-        }
-
-        return getMovementRange(state, origin, Math.max(actor.speed || 1, 1));
+        const range = getEffectiveMoveRange(state, actor);
+        return getMovementRange(state, origin, range);
     },
     upgrades: {},
     scenarios: getSkillScenarios('BASIC_MOVE')

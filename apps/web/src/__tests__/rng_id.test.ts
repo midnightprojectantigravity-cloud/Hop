@@ -17,6 +17,7 @@ describe('rng id generation from state', () => {
       stairsPosition: { q: 0, r: 0, s: 0 },
       lavaPositions: [],
       wallPositions: [],
+      tiles: new Map(),
       floor: 1,
       upgrades: [],
       rngSeed: 'seed-1',

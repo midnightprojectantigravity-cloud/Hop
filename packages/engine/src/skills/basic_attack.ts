@@ -1,14 +1,9 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexDistance } from '../hex';
+import { getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
-
 import { getSkillScenarios } from '../scenarios';
+import { validateRange } from '../systems/validation';
 
-/**
- * COMPOSITIONAL SKILL FRAMEWORK
- * Standardized skill definition following Goal 1.
- * Features: Modular definition, Integrated TDD Scenarios.
- */
 /**
  * Basic Attack - A targeted melee attack skill.
  * Triggers by clicking on a neighboring hex occupied by an enemy.
@@ -37,11 +32,10 @@ export const BASIC_ATTACK: SkillDefinition = {
         }
 
         // Validate range
-        const dist = hexDistance(attacker.position, target);
         let range = 1;
         if (activeUpgrades.includes('EXTENDED_REACH')) range += 1;
 
-        if (dist > range || dist < 1) {
+        if (!validateRange(attacker.position, target, range)) {
             messages.push('Target out of range!');
             return { effects, messages, consumesTurn: false };
         }
@@ -50,6 +44,11 @@ export const BASIC_ATTACK: SkillDefinition = {
         const targetActor = getActorAt(state, target);
         if (!targetActor || targetActor.id === attacker.id) {
             messages.push('No enemy at target!');
+            return { effects, messages, consumesTurn: false };
+        }
+
+        if (targetActor.subtype === 'bomb') {
+            messages.push('Cannot attack a bomb!');
             return { effects, messages, consumesTurn: false };
         }
 
@@ -69,6 +68,12 @@ export const BASIC_ATTACK: SkillDefinition = {
         }
 
         return { effects, messages, consumesTurn: true };
+    },
+    getValidTargets: (state: GameState, origin: Point) => {
+        return getNeighbors(origin).filter(n => {
+            const actor = getActorAt(state, n);
+            return actor && actor.id !== state.player.id && actor.subtype !== 'bomb';
+        });
     },
     upgrades: {
         EXTENDED_REACH: {

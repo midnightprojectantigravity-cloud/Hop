@@ -1,10 +1,11 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { processKineticPulse } from '../systems/kinetic-kernel';
-import { hexEquals, hexDistance, getDirectionFromTo, hexDirection, getHexLine, hexAdd, hexSubtract, scaleVector } from '../hex';
-import { getActorAt, isPerimeter, isWithinBounds } from '../helpers';
+import { hexEquals, hexDirection, getHexLine } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { applyEffects } from '../systems/effect-engine';
-import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../systems/juice-manifest';
+import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
+import { validateAxialDirection, validateRange, findFirstObstacle } from '../systems/validation';
+import { getAxialTargetsWithOptions } from '../systems/navigation';
 
 /**
  * KINETIC DASH Skill
@@ -28,61 +29,50 @@ export const DASH: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
-        const dist = hexDistance(attacker.position, target);
-        const dirIdx = getDirectionFromTo(attacker.position, target);
-        const range = state.enemies.filter(e => e.hp > 0).length === 0 ? 20 : 4;
+        const { isAxial, directionIndex } = validateAxialDirection(attacker.position, target);
+        // const dist = hexDistance(attacker.position, target);
+        const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
+        const range = noEnemies ? 20 : 4;
 
-        if (dist < 1 || dist > range) {
+        if (!validateRange(attacker.position, target, range)) {
             return { effects, messages: ['Out of range!'], consumesTurn: false };
         }
-        if (dirIdx === -1) {
+        if (!isAxial) {
             return { effects, messages: ['Axial only! Dash must be in a straight line.'], consumesTurn: false };
         }
 
         // JUICE: Anticipation - Charge-up
         effects.push(...SKILL_JUICE_SIGNATURES.DASH.anticipation(attacker.position, target));
 
-        const dir = hexDirection(dirIdx);
+        const dir = hexDirection(directionIndex);
         const fullLine = getHexLine(attacker.position, target);
 
-        let stopPos = attacker.position;
-        let hitActor: Actor | null = null;
-        let blockedByWall = false;
-        let blockedByLava = false;
+        // findFirstObstacle returns what we hit first
+        const obstacleResult = findFirstObstacle(state, fullLine.slice(1), {
+            checkWalls: true,
+            checkActors: true,
+            checkLava: true,
+            excludeActorId: attacker.id
+        });
 
-        for (const point of fullLine.slice(1)) {
-            // 1. Wall/Perimeter Check
-            const isWall = state.wallPositions?.some(w => hexEquals(w, point)) ||
-                isPerimeter(point, state.gridWidth, state.gridHeight);
-            if (isWall) {
-                blockedByWall = true;
-                break;
+        // Determine stop position
+        let stopPos = target;
+        if (obstacleResult.obstacle) {
+            if (obstacleResult.obstacle === 'wall') {
+                return { effects, messages: ['A wall blocks the way!'], consumesTurn: false };
+            }
+            if (obstacleResult.obstacle === 'lava') {
+                return { effects, messages: ['Lava blocks the way!'], consumesTurn: false };
             }
 
-            // 2. Lava Check (Impassable - stay at current stopPos)
-            const isLava = state.lavaPositions?.some(l => hexEquals(l, point));
-            if (isLava) {
-                blockedByLava = true;
-                break;
-            }
-
-            // 3. Actor Interception
-            const actor = getActorAt(state, point);
-            if (actor && actor.id !== attacker.id) {
-                hitActor = actor;
-                break;
-            }
-
-            stopPos = point;
-            if (hexEquals(point, target)) break;
+            // If actor, we stop BEFORE them
+            const obstacleIdx = fullLine.findIndex(p => hexEquals(p, obstacleResult.position!));
+            stopPos = fullLine[obstacleIdx - 1] || attacker.position;
         }
 
-        // Apply Player Displacement
-        if (blockedByWall) {
-            return { effects, messages: ['A wall blocks the way!'], consumesTurn: false };
-        } else if (blockedByLava) {
-            return { effects, messages: ['Lava blocks the way!'], consumesTurn: false };
-        } else if (hitActor) {
+        const hitActor = obstacleResult.obstacle === 'actor' ? obstacleResult.actor : null;
+
+        if (hitActor) {
             // JUICE: Execution - Dash blur + momentum trail
             const dashPath = getHexLine(attacker.position, stopPos);
             effects.push(...SKILL_JUICE_SIGNATURES.DASH.execution(dashPath));
@@ -96,6 +86,7 @@ export const DASH: SkillDefinition = {
                     animationDuration: dashPath.length * 60  // 60ms per tile (fast dash)
                 }
             ];
+            // We apply it here to a tempState just to calculate kinetic pulses accurately
             const tempState = applyEffects(state, preFlightEffects, { sourceId: attacker.id });
 
             if (state.hasShield) {
@@ -108,65 +99,52 @@ export const DASH: SkillDefinition = {
                     direction: dir,
                     momentum: 5
                 });
-                effects.push(...pulseEffects);
 
-                // JUICE: Resolution - Kinetic wave + momentum trails
-                const kineticPath = getHexLine(stopPos, hexAdd(stopPos, scaleVector(dirIdx, 6)));
-                effects.push(...SKILL_JUICE_SIGNATURES.DASH.resolution(kineticPath));
-
-                messages.push("Shield Shunt!");
+                // IMPORTANT: The displacement MUST be in the final effects list!
+                return {
+                    effects: [...effects, ...preFlightEffects, ...pulseEffects],
+                    messages: [...messages, "Shield Shunt!"],
+                    consumesTurn: true
+                };
             } else {
                 // JUICE: Impact - Light (no shield)
                 effects.push(...SKILL_JUICE_SIGNATURES.DASH.impact(stopPos, dir, false));
-                messages.push("Stopped by an obstacle (Need shield to shunt).");
+
+                return {
+                    effects: [...effects, ...preFlightEffects],
+                    messages: [...messages, "Stopped by an obstacle (Need shield to shunt)."],
+                    consumesTurn: !hexEquals(attacker.position, stopPos)
+                };
             }
         } else {
             // JUICE: Execution - Dash blur + momentum trail (normal dash)
             const dashPath = getHexLine(attacker.position, stopPos);
             effects.push(...SKILL_JUICE_SIGNATURES.DASH.execution(dashPath));
 
-            effects.push({
+            const moveEff: AtomicEffect = {
                 type: 'Displacement',
                 target: 'self',
                 destination: stopPos,
                 path: dashPath,
                 animationDuration: dashPath.length * 60  // 60ms per tile
-            });
-            messages.push("Dashed!");
-        }
+            };
 
-        return {
-            effects,
-            messages,
-            consumesTurn: true
-        };
+            return {
+                effects: [...effects, moveEff],
+                messages: [...messages, "Dashed!"],
+                consumesTurn: !hexEquals(attacker.position, stopPos)
+            };
+        }
     },
 
     getValidTargets: (state: GameState, origin: Point) => {
         const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
         const range = noEnemies ? 20 : 4;
-        const valid: Point[] = [];
-
-        for (let d = 0; d < 6; d++) {
-            for (let i = 1; i <= range; i++) {
-                const p = hexAdd(origin, scaleVector(d, i));
-                if (!isWithinBounds(state, p)) break;
-
-                const isWall = state.wallPositions?.some(w => hexEquals(w, p)) ||
-                    isPerimeter(p, state.gridWidth, state.gridHeight);
-                if (isWall) break;
-
-                const isLava = state.lavaPositions?.some(l => hexEquals(l, p));
-                if (isLava) break; // Cannot dash into lava
-
-                const actor = getActorAt(state, p);
-                valid.push(p);
-
-                // Path is blocked for passing, but we can target the obstacle itself
-                if (actor) break;
-            }
-        }
-        return valid;
+        return getAxialTargetsWithOptions(state, origin, range, {
+            stopAtObstacles: true,
+            includeActors: true,
+            includeWalls: false
+        });
     },
 
     upgrades: {
