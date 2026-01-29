@@ -1,6 +1,7 @@
 import React from 'react';
 import { COMPOSITIONAL_SKILLS, generateInitialState, ENEMY_STATS, addStatus, buildInitiativeQueue, type GameState, type Point, type SkillDefinition, type ScenarioV2, pointToKey } from '@hop/engine';
 import { BASE_TILES } from '@hop/engine/systems/tile-registry';
+import type { TileID } from '@hop/engine/types/registry';
 
 interface TutorialManagerProps {
     onLoadScenario: (state: GameState, instructions: string) => void;
@@ -17,8 +18,9 @@ class ScenarioBuilder {
         this.state = generateInitialState(1, 'tutorial-seed');
         // Clear default generation artifacts
         this.state.enemies = [];
-        this.state.lavaPositions = [];
-        this.state.wallPositions = [];
+        // FIXED: lavaPositions and wallPositions no longer exist on GameState
+        // We initialize with an empty Map (or clear the existing one)
+        this.state.tiles = new Map();
     }
 
     setPlayer(pos: Point, skillIds: string[]) {
@@ -30,7 +32,7 @@ class ScenarioBuilder {
                 const def = COMPOSITIONAL_SKILLS[id];
                 return {
                     id,
-                    name: def?.name || id,
+                    name: typeof def?.name === 'function' ? def.name(this.state) : (def?.name || id),
                     description: def?.description || '',
                     slot: def?.slot || 'offensive',
                     cooldown: def?.baseVariables.cooldown || 0,
@@ -62,21 +64,26 @@ class ScenarioBuilder {
         });
     }
 
-    // Inside your Engine class/logic
     setTile(point: Point, type: string) {
-        const typeUpper = type.toUpperCase();
+        // 1. Normalize the string
+        const typeUpper = type.toUpperCase() as TileID;
         const key = pointToKey(point);
 
-        // 1. Sync Legacy Arrays (The "Visuals")
-        if (typeUpper === 'LAVA') this.state.lavaPositions.push(point);
-        if (typeUpper === 'WALL') this.state.wallPositions.push(point);
+        // 2. Safely access the definition
+        const baseTileDef = BASE_TILES[typeUpper];
 
-        // 2. Update the Source of Truth (The "Brain")
+        if (!baseTileDef) {
+            console.warn(`Attempted to set unknown tile type: ${typeUpper}`);
+            return;
+        }
+
+        // 3. Update the Source of Truth
         this.state.tiles.set(key, {
             baseId: typeUpper,
             position: point,
-            traits: new Set(BASE_TILES[typeUpper]?.defaultTraits || []),
-            effects: []
+            traits: new Set(baseTileDef.defaultTraits || []),
+            effects: [],
+            occupantId: undefined
         });
     }
 
@@ -89,16 +96,13 @@ class ScenarioBuilder {
         });
     }
 
-    // Stub methods that might be called by setup but are irrelevant for initial state construction
-    // e.g. run() uses useSkill, but setup usually just sets state.
     useSkill() { }
+
     applyStatus(targetId: string, status: string) {
-        // We can support applying initial status
         const idx = this.state.enemies.findIndex(e => e.id === targetId);
         if (idx !== -1) {
-            if (status === 'stunned') {
-                this.state.enemies[idx] = addStatus(this.state.enemies[idx], 'stunned', 1);
-            }
+            // Ensure addStatus is imported from your engine's status system
+            this.state.enemies[idx] = addStatus(this.state.enemies[idx], status as any, 1);
         }
     }
 }

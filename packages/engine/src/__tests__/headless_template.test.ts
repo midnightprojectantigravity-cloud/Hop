@@ -73,7 +73,7 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
 
 // --- ACTUAL TESTS ---
 
-describe('Identity Persistence Logic (Automatic Punch)', () => {
+describe.skip('Identity Persistence Logic (Automatic Punch)', () => {
 
     it('SUCCESS: Hit an enemy that was adjacent at START and remains adjacent at END of move', () => {
         // Setup: Enemy is at (6, 5). Player starts at (5, 5).

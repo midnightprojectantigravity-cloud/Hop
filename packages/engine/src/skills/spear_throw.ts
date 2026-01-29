@@ -1,10 +1,10 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexEquals, getHexLine } from '../hex';
+import { getHexLine } from '../hex';
 
 import { getSkillScenarios } from '../scenarios';
 import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
 import { validateAxialDirection, validateRange, findFirstObstacle } from '../systems/validation';
-import { getAxialTargetsWithOptions } from '../systems/navigation';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
  * Implementation of the Spear Throw skill using the Compositional Skill Framework.
@@ -77,7 +77,7 @@ export const SPEAR_THROW: SkillDefinition = {
 
             effects.push({ type: 'Damage', target: hitEnemy.position, amount: 99 });
             messages.push(`Spear killed ${hitEnemy.subtype || 'enemy'}!`);
-        } else if (state.wallPositions.some(w => hexEquals(w, hitPos))) {
+        } else if (obstacleResult.obstacle === 'wall') {
             messages.push('Spear hit a wall!');
         } else {
             // JUICE: Impact - Light (miss)
@@ -93,7 +93,7 @@ export const SPEAR_THROW: SkillDefinition = {
     },
     getValidTargets: (state: GameState, origin: Point) => {
         const range = 3;
-        return getAxialTargetsWithOptions(state, origin, range, {
+        return SpatialSystem.getAxialTargets(state, origin, range, {
             stopAtObstacles: true,
             includeActors: true,
             includeWalls: true

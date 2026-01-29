@@ -102,7 +102,7 @@ import type { GameState, AtomicEffect } from '../types';
 export const checkVitals = (state: GameState): AtomicEffect[] => {
   const effects: AtomicEffect[] = [];
   if (state.player.hp <= 0 && state.gameStatus === 'playing') {
-    effects.push({ type: 'GameOver', reason: 'PLAYER_DIED' });
+    effects.push({ type: 'GameOver' });
   }
   return effects;
 };

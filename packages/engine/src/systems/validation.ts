@@ -1,7 +1,7 @@
 import type { GameState, Point, Actor } from '../types';
 import { hexEquals, getHexLine, hexDistance, getDirectionFromTo } from '../hex';
 import { isPerimeter, getActorAt } from '../helpers';
-import { pointToKey } from './tile-migration';
+import { pointToKey } from '../hex';
 
 /**
  * Validation System

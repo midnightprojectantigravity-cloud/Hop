@@ -2,6 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexDistance, hexEquals, hexDirection } from '../hex';
 import { getEnemyAt } from '../helpers';
 import { validateAxialDirection } from '../systems/validation';
+import { pointToKey } from '../hex';
 
 /**
  * Bulwark Charge - SequentialChainPush
@@ -69,7 +70,9 @@ export const BULWARK_CHARGE: SkillDefinition = {
         // Validate all dests are movable (no wall, in bounds, not occupied by non-chain)
         let blocked = false;
         for (const d of desired) {
-            if (state.wallPositions.some(w => hexEquals(w, d.dest))) { blocked = true; break; }
+            const tile = state.tiles.get(pointToKey(d.dest));
+            if (tile?.baseId === 'WALL' || tile?.traits.has('BLOCKS_MOVEMENT')) { blocked = true; break; }
+
             // occupied by actor not in chain?
             const occ = state.enemies.find(e => hexEquals(e.position, d.dest) && !chain.some(c => c.id === e.id));
             if (occ) { blocked = true; break; }

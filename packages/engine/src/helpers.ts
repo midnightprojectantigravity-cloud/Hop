@@ -4,9 +4,8 @@
  * TODO: Prioritize bitmask checks (spatial.ts) in isOccupied/isWalkable for high-performance loops.
  */
 import type { GameState, Point, Entity, Actor } from './types';
-import { hexEquals, isHexInRectangularGrid, hexDistance } from './hex';
+import { hexEquals, isHexInRectangularGrid, hexDistance, pointToKey } from './hex';
 import { applyDamage } from './systems/actor';
-import { pointToKey } from './systems/tile-migration';
 
 
 
@@ -37,21 +36,16 @@ export const isSpecialTile = (
  */
 export const isWalkable = (
     position: Point,
-    _wallPositions: Point[],
-    _lavaPositions: Point[],
-    width: number,
-    height: number,
-    state?: GameState
+    state: GameState
 ): boolean => {
-    if (!isHexInRectangularGrid(position, width, height)) return false;
-    if (!state) return true; // Minimal fallback
+    if (!isHexInRectangularGrid(position, state.gridWidth, state.gridHeight)) return false;
 
     const tile = state.tiles.get(pointToKey(position));
-    if (!tile) return true; // Outside known tile map?
+    if (!tile) return true;
 
-    if (tile.traits.has('BLOCKS_LOS') || tile.baseId === 'WALL') return false;
+    if (tile.traits.has('BLOCKS_MOVEMENT') || tile.baseId === 'WALL') return false;
+    if (tile.traits.has('WALKABLE') || tile.baseId === 'ICE') return true;
 
-    // Note: Some liquids might be swimmable, but for standard walking we check LIQUID/HAZARDOUS
     // Lava is typically non-walkable in most engines unless flying/jumping
     if (tile.baseId === 'LAVA') return false;
 

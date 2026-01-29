@@ -3,7 +3,7 @@ import { getNeighbors, hexEquals } from '../hex';
 import { getEnemyAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { isBlockedByWall, isBlockedByLava, isBlockedByActor, validateRange } from '../systems/validation';
-import { getAreaTargets } from '../systems/navigation';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
  * Implementation of the Jump skill using the Compositional Skill Framework.
@@ -55,7 +55,7 @@ export const JUMP: SkillDefinition = {
     },
     getValidTargets: (state: GameState, origin: Point) => {
         const range = 2;
-        return getAreaTargets(state, origin, range).filter(p => {
+        return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
             return !isBlockedByWall(state, p) && !isBlockedByLava(state, p) && !isBlockedByActor(state, p);
         });

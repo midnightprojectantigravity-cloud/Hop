@@ -1,7 +1,7 @@
 import type { GameState, Point } from '../types';
 import type { Tile, TileTrait } from './tile-types';
-import { hexEquals, isHexInRectangularGrid } from '../hex';
-import { pointToKey } from './tile-migration';
+export { pointToKey } from '../hex';
+import { hexEquals, isHexInRectangularGrid, pointToKey } from '../hex';
 
 export const UnifiedTileService = {
     /**
@@ -56,12 +56,7 @@ export const UnifiedTileService = {
             return traits; // Hard stop at world edge
         }
 
-        // 2. Static Walls (Legacy/Performance Optimization)
-        if (state.wallPositions?.some(w => hexEquals(w, pos))) {
-            traits.add('BLOCKS_MOVEMENT');
-            traits.add('BLOCKS_LOS');
-            traits.add('ANCHOR');
-        }
+        // 2. Static Walls (REMOVED - now handled via tile data)
 
         // 3. Tile Data
         if (tile) {
@@ -108,5 +103,9 @@ export const UnifiedTileService = {
     isAnchorable(state: GameState, pos: Point): boolean {
         const traits = this.getTraitsAt(state, pos);
         return traits.has('ANCHOR');
-    }
+    },
+
+    hasTrait(state: GameState, pos: Point, trait: TileTrait): boolean {
+        return this.getTraitsAt(state, pos).has(trait);
+    },
 };

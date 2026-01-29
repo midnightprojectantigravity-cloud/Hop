@@ -1,6 +1,7 @@
 import type { BaseTile, TileEffectDefinition } from './tile-types';
+import type { TileID, TileEffectID } from '../types/registry';
 
-export const BASE_TILES: Record<string, BaseTile> = {
+export const BASE_TILES: Record<TileID, BaseTile> = {
     GRASS: {
         id: 'GRASS',
         name: 'Grass',
@@ -42,10 +43,38 @@ export const BASE_TILES: Record<string, BaseTile> = {
         description: 'The endless void',
         defaultTraits: new Set(['HAZARDOUS']),
         visual: { color: '#000000', icon: '⚫' }
+    },
+    STAIRS: {
+        id: 'STAIRS',
+        name: 'Stairs',
+        description: 'Lead to the next floor',
+        defaultTraits: new Set(['WALKABLE']),
+        visual: { color: '#ffffff', icon: '🪜' }
+    },
+    SHRINE: {
+        id: 'SHRINE',
+        name: 'Shrine',
+        description: 'A place of power',
+        defaultTraits: new Set(['WALKABLE', 'ANCHOR']),
+        visual: { color: '#ffd700', icon: '⛩️' }
+    },
+    GATE: {
+        id: 'GATE',
+        name: 'Gate',
+        description: 'A heavy gate',
+        defaultTraits: new Set(['BLOCKS_MOVEMENT', 'BLOCKS_LOS']),
+        visual: { color: '#444444', icon: '🚪' }
+    },
+    BRIDGE: {
+        id: 'BRIDGE',
+        name: 'Bridge',
+        description: 'Crossing the gap',
+        defaultTraits: new Set(['WALKABLE']),
+        visual: { color: '#8b4513', icon: '🌉' }
     }
 };
 
-export const TILE_EFFECTS: Record<string, TileEffectDefinition> = {
+export const TILE_EFFECTS: Record<TileEffectID, TileEffectDefinition> = {
     FIRE: {
         id: 'FIRE',
         name: 'Fire',
@@ -120,5 +149,30 @@ export const TILE_EFFECTS: Record<string, TileEffectDefinition> = {
         name: 'Steam',
         description: 'Obscuring steam cloud',
         // Example: could affect LOS
+    },
+    BLESSED: {
+        id: 'BLESSED',
+        name: 'Blessed',
+        description: 'Holy ground'
+    },
+    CURSED: {
+        id: 'CURSED',
+        name: 'Cursed',
+        description: 'Unholy ground'
+    },
+    ICE_WALL: {
+        id: 'ICE_WALL',
+        name: 'Ice Wall',
+        description: 'A wall of ice'
+    },
+    SMOKE: {
+        id: 'SMOKE',
+        name: 'Smoke',
+        description: 'Thick smoke'
+    },
+    BOMB_TICK: {
+        id: 'BOMB_TICK',
+        name: 'Bomb Tick',
+        description: 'About to explode'
     }
 };

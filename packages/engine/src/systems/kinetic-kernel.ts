@@ -3,6 +3,7 @@
 import { getHexLine, hexAdd, hexEquals, isHexInRectangularGrid } from "../hex";
 import type { AtomicEffect, GameState, Point } from "../types";
 import { JuiceHelpers, ENVIRONMENTAL_JUICE } from "./juice-manifest";
+import { pointToKey } from "../hex";
 
 /**
  * 1. Input Architecture
@@ -230,11 +231,13 @@ function findActiveChain(unitsOnLine: UnitOnLine[]): UnitOnLine[] {
 }
 
 function isWall(state: GameState, hex: Point): boolean {
-    return state.wallPositions.some(w => hexEquals(w, hex));
+    const tile = state.tiles.get(pointToKey(hex));
+    return tile?.baseId === 'WALL' || tile?.traits.has('BLOCKS_MOVEMENT') || false;
 }
 
 function isLava(state: GameState, hex: Point): boolean {
-    return state.lavaPositions.some(l => hexEquals(l, hex));
+    const tile = state.tiles.get(pointToKey(hex));
+    return tile?.baseId === 'LAVA' || tile?.traits.has('HAZARDOUS') || false;
 }
 
 // ----------------------------------------------------------------------------

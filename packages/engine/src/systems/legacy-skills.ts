@@ -5,8 +5,8 @@
  * TODO: Fully evacuate this file and delete it.
  */
 import type { GameState, Entity, Point, Skill } from '../types';
-import { hexDistance, hexEquals, getNeighbors, hexDirection, hexAdd, getHexLine } from '../hex';
-import { isWalkable } from '../helpers';
+import { hexDistance, hexEquals, getNeighbors, hexDirection, hexAdd, getHexLine, pointToKey } from '../hex';
+import { UnifiedTileService } from './unified-tile-service';
 import { addStatus } from './actor';
 import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
 
@@ -246,7 +246,7 @@ export const executeSpearThrow = (
         return { player, enemies, messages: ['Target must be in a straight line within range!'] };
     }
 
-    const walkable = isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight);
+    const walkable = UnifiedTileService.isWalkable(state, target);
     if (!walkable) {
         return { player, enemies, messages: ['Target must be a valid walkable tile!'] };
     }
@@ -336,13 +336,13 @@ export const executeLunge = (
     }
 
     // Check if path is blocked by wall
-    const isWall = state.wallPositions?.some(w => hexEquals(w, target));
+    const isWall = state.tiles.get(pointToKey(target))?.baseId === 'WALL';
     if (isWall) {
         return { player, enemies, messages: ['Cannot lunge into a wall!'] };
     }
 
     // Check if target is walkable (not lava for Lunge)
-    const walkable = isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight);
+    const walkable = UnifiedTileService.isWalkable(state, target);
     if (!walkable) {
         return { player, enemies, messages: ['Target must be a walkable tile (cannot lunge into lava)!'] };
     }
@@ -486,10 +486,10 @@ export const executeShieldBash = (
         const direction = getDirectionFromTo(sourcePos, actorPos);
         const pushDest = hexAdd(actorPos, hexDirection(direction));
 
-        const blockedByWall = state.wallPositions?.some(w => hexEquals(w, pushDest));
+        const blockedByWall = !UnifiedTileService.isWalkable(state, pushDest);
         const blockingEnemy = localEnemies.find(e => e.id !== targetActor.id && hexEquals(e.position, pushDest));
-        const lavaAtDest = state.lavaPositions?.some(l => hexEquals(l, pushDest));
-        const isOutOfBounds = !isWalkable(pushDest, [], [], state.gridWidth, state.gridHeight); // Check if it's in the actual grid
+        const lavaAtDest = state.tiles.get(pointToKey(pushDest))?.baseId === 'LAVA';
+        const isOutOfBounds = !UnifiedTileService.isWalkable(state, pushDest);
 
         if (isOutOfBounds || blockedByWall || blockingEnemy) {
             // Collision!
@@ -579,7 +579,7 @@ export const executeJump = (
     }
 
     // Check for target validity (must be walkable grid tile, no walls or lava)
-    const walkable = isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight);
+    const walkable = UnifiedTileService.isWalkable(state, target);
     if (!walkable) {
         return { player, enemies, messages: ['Target must be a valid walkable tile (walls block jumps)!'] };
     }

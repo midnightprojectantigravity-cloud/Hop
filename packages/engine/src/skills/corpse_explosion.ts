@@ -24,7 +24,8 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
-        const hasCorpse = state.corpsePositions?.some(cp => hexEquals(cp, target));
+        const corpses = state.dyingEntities || [];
+        const hasCorpse = corpses.some(cp => hexEquals(cp.position, target));
         if (!hasCorpse) {
             return { effects, messages: ['A corpse is required!'], consumesTurn: false };
         }
@@ -55,7 +56,7 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
         };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        return (state.corpsePositions || []).filter(cp => hexDistance(origin, cp) <= 4);
+        return (state.dyingEntities || []).filter(cp => hexDistance(origin, cp.position) <= 4).map(e => e.position);
     },
     upgrades: {},
     scenarios: getSkillScenarios('CORPSE_EXPLOSION')

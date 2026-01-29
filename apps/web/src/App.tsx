@@ -1,41 +1,136 @@
+/**
+ * TODO:
+ * Understood. Since `migratePositionArraysToTiles` is fully deprecated and removed from the engine, your `App.tsx` needs to pivot from "migration mode" to "native Tile mode."
+ * 
+ * The logic you have in your `useReducer` initializer is currently trying to call a ghost function. Given that you're working with a **flat-top hex grid** and a **headless engine** for skill validation, keeping your local storage synchronization clean is vital.
+ * 
+ *  ### 🛠️ The Fix: Native Map Restoration
+ * 
+ *  Since `localStorage` cannot natively store a JavaScript `Map`, you should handle the conversion directly within the `App.tsx` initialization logic.
+ * 
+ *  **Replace your `useReducer` init block with this:**
+ * 
+ *  ```typescript
+ *  const [gameState, dispatch] = useReducer(gameReducer, null, () => {
+ *    const saved = localStorage.getItem('hop_save');
+ *    if (saved) {
+ *      try {
+ *        const parsed = JSON.parse(saved);
+ * 
+ *        // 1. Restore BigInt Array (Occupancy Mask)
+ *        if (parsed && Array.isArray(parsed.occupancyMask)) {
+ *          parsed.occupancyMask = parsed.occupancyMask.map((v: any) => 
+ *            typeof v === 'string' ? BigInt(v) : v
+ *          );
+ *        }
+ * 
+ *        // 2. Map Restoration (Unified Tile Service)
+ *        // If tiles were saved as an array of entries [[key, value], ...], restore to Map
+ *        if (Array.isArray(parsed.tiles)) {
+ *          parsed.tiles = new Map(parsed.tiles);
+ *        } else if (!parsed.tiles || typeof parsed.tiles !== 'object') {
+ *          // Fallback for totally broken/empty tile states
+ *          parsed.tiles = new Map();
+ *        }
+ * 
+ *        const isCompatible = parsed.gridWidth === GRID_WIDTH && parsed.gridHeight === GRID_HEIGHT;
+ *        if (isCompatible && (parsed.gameStatus === 'playing' || parsed.gameStatus === 'choosing_upgrade')) {
+ *          return parsed;
+ *        }
+ *      } catch (e) {
+ *        console.error('Failed to load save', e);
+ *      }
+ *    }
+ *    return generateHubState();
+ *  });
+ * 
+ *  ```
+ * 
+ *  ### 💾 Saving the Map correctly
+ * 
+ *  To ensure `JSON.stringify` doesn't turn your `tiles` Map into an empty object `{}`, you need to convert it to an array of entries before it hits `localStorage`.
+ * 
+ *  **Update your `useEffect` save hook:**
+ * 
+ *  ```typescript
+ *  useEffect(() => {
+ *    if (gameState.gameStatus === 'playing' || gameState.gameStatus === 'choosing_upgrade') {
+ *      const stateToSave = {
+ *        ...gameState,
+ *        // Convert Map to Array for JSON serialization
+ *        tiles: Array.from(gameState.tiles.entries()) 
+ *      };
+ * 
+ *      const safeStringify = (obj: any) => 
+ *        JSON.stringify(obj, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
+ *      
+ *      localStorage.setItem('hop_save', safeStringify(stateToSave));
+ *    } else {
+ *      localStorage.removeItem('hop_save');
+ *    }
+ *  }, [gameState]);
+ * 
+ *  ```
+ * 
+ *  ### Why this matters for your 2026 Engine
+ * 
+ *  * **Skill Mechanics Validation**: If the tiles aren't restored as a proper `Map`, your `SpatialSystem.isWalkable` calls will crash, breaking the automated testing framework you're building for skill balancing.
+ *  * **Headless Parity**: By using `Array.from(tiles.entries())`, you ensure that the state format in your browser matches the JSON snapshots used in your vitest suites.
+ * 
+ *  Now that the legacy migration code is purged, would you like me to help you streamline the **Replay System** to ensure it correctly captures these new `Map`-based tile updates for deterministic playback?
+ * 
+ */
+
+
 import { useReducer, useRef, useState, useEffect } from 'react';
 import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';
 import { UpgradeOverlay } from './components/UpgradeOverlay';
 import { SkillTray } from './components/SkillTray';
-import { gameReducer, generateInitialState, generateHubState, hexEquals, migratePositionArraysToTiles, pointToKey } from '@hop/engine';
+import { gameReducer, generateInitialState, generateHubState, hexEquals, pointToKey } from '@hop/engine';
 import type { Point, Action, GameState } from '@hop/engine';
 import type { ReplayRecord } from './components/ReplayManager';
-import { GRID_WIDTH, GRID_HEIGHT } from '@hop/engine';
 import { isPlayerTurn } from '@hop/engine';
 import { Hub } from './components/Hub';
 
 function App() {
+  // packages/web/src/App.tsx
+
   const [gameState, dispatch] = useReducer(gameReducer, null, () => {
     const saved = localStorage.getItem('hop_save');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed && Array.isArray(parsed.occupancyMask)) {
-          parsed.occupancyMask = parsed.occupancyMask.map((v: any) => typeof v === 'string' ? BigInt(v) : v);
+
+        // 1. Check if tiles exists and convert it to a Map
+        if (parsed.tiles) {
+          const tileEntries = Array.isArray(parsed.tiles)
+            ? parsed.tiles
+            : Object.entries(parsed.tiles);
+
+          // Convert entries to Map AND convert trait arrays back to Sets
+          parsed.tiles = new Map(
+            tileEntries.map(([key, tile]: [string, any]) => [
+              key,
+              {
+                ...tile,
+                traits: new Set(tile.traits) // Convert Array -> Set
+              }
+            ])
+          );
         }
-        const isCompatible = parsed.gridWidth === GRID_WIDTH && parsed.gridHeight === GRID_HEIGHT;
 
-        if (isCompatible && (parsed.gameStatus === 'playing' || parsed.gameStatus === 'choosing_upgrade')) {
-          if (!Array.isArray(parsed.message)) parsed.message = [];
-
-          // Legacy Save Migration: Add tiles if missing
-          if (!parsed.tiles || (parsed.tiles instanceof Map === false && !Array.isArray(parsed.tiles))) {
-            console.log('Migrating legacy save to Tile System...');
-            parsed.tiles = migratePositionArraysToTiles(parsed);
-          } else if (Array.isArray(parsed.tiles)) {
-            // If serialization saved it as array entries, convert back to Map
-            parsed.tiles = new Map(parsed.tiles);
-          }
-
-          return parsed;
+        // 2. BigInt restoration for the occupancy mask
+        if (Array.isArray(parsed.occupancyMask)) {
+          parsed.occupancyMask = parsed.occupancyMask.map((v: any) =>
+            typeof v === 'string' ? BigInt(v) : v
+          );
         }
-      } catch (e) { console.error('Failed to load save', e); }
+
+        return parsed;
+      } catch (e) {
+        console.error('Failed to hydrate Map state:', e);
+      }
     }
     return generateHubState();
   });
@@ -69,12 +164,21 @@ function App() {
   }, [gameState]);
 
   useEffect(() => {
-    if (gameState.gameStatus === 'playing' || gameState.gameStatus === 'choosing_upgrade') {
-      const safeStringify = (obj: any) => JSON.stringify(obj, (_k, v) => typeof v === 'bigint' ? v.toString() : v);
-      localStorage.setItem('hop_save', safeStringify(gameState));
-    } else {
-      localStorage.removeItem('hop_save');
-    }
+    const stateToSave = {
+      ...gameState,
+      tiles: Array.from(gameState.tiles.entries()).map(([key, tile]) => [
+        key,
+        {
+          ...tile,
+          traits: Array.from(tile.traits) // Convert Set -> Array
+        }
+      ])
+    };
+
+    const safeStringify = (obj: any) =>
+      JSON.stringify(obj, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
+
+    localStorage.setItem('hop_save', safeStringify(stateToSave));
   }, [gameState]);
 
   useEffect(() => {

@@ -6,6 +6,13 @@ import type { Point } from './types';
 
 export const createHex = (q: number, r: number): Point => ({ q, r, s: -q - r });
 
+/**
+ * Single source of truth for coordinate keys.
+ * ALWAYS uses axial coordinates (q, r).
+ */
+export const getHexKey = (pos: Point): string => `${pos.q},${pos.r}`;
+export const pointToKey = getHexKey;
+
 export const hexEquals = (a: Point, b: Point): boolean => a.q === b.q && a.r === b.r && a.s === b.s;
 
 export const hexAdd = (a: Point, b: Point): Point => createHex(a.q + b.q, a.r + b.r);

@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import type { GameState, Point } from '@hop/engine';
 import {
     hexDistance, hexEquals, isTileInDiamond, hexToPixel,
-    TILE_SIZE, COMPOSITIONAL_SKILLS
+    TILE_SIZE, COMPOSITIONAL_SKILLS, pointToKey
 } from '@hop/engine';
 import { HexTile } from './HexTile';
 import { Entity } from './Entity';
@@ -25,7 +25,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
     const cells = useMemo(() => {
         let hexes = gameState.rooms?.[0]?.hexes;
 
-        // Fallback: If rooms are missing (e.g. legacy saves or engine bug), generate the full diamond grid
+        // Fallback: If rooms are missing, generate the full diamond grid
         if (!hexes || hexes.length === 0) {
             hexes = [];
             for (let q = 0; q < gameState.gridWidth; q++) {
@@ -58,7 +58,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
 
         cells.forEach(hex => {
             const { x, y } = hexToPixel(hex, TILE_SIZE);
-            // Add half-tile buffer for the hex corners
             minX = Math.min(minX, x - TILE_SIZE);
             minY = Math.min(minY, y - TILE_SIZE);
             maxX = Math.max(maxX, x + TILE_SIZE);
@@ -84,14 +83,25 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                 className="max-h-full max-w-full"
             >
                 <g>
-                    <PreviewOverlay gameState={gameState} selectedSkillId={selectedSkillId} showMovementRange={showMovementRange} hoveredTile={hoveredTile} />
+                    <PreviewOverlay
+                        gameState={gameState}
+                        selectedSkillId={selectedSkillId}
+                        showMovementRange={showMovementRange}
+                        hoveredTile={hoveredTile}
+                    />
                     {cells.map((hex) => {
-                        const dist = hexDistance(hex, gameState.player.position);
-                        const isWall = gameState.wallPositions?.some(wp => hexEquals(wp, hex));
-                        const isLava = gameState.lavaPositions.some(lp => hexEquals(lp, hex));
-                        const isFire = gameState.firePositions?.some(fp => hexEquals(fp.pos, hex));
+                        // FIXED: Use pointToKey for O(1) lookup in the Unified Tile Service
+                        const tileKey = pointToKey(hex);
+                        const tile = gameState.tiles.get(tileKey);
 
-                        // Standard Movement (Passive Skills: Walk, Dash)
+                        // Trait-based detection
+                        const isWall = tile?.baseId === 'WALL' || tile?.traits?.has('BLOCKS_LOS');
+                        const isLava = tile?.traits?.has('LAVA');
+                        const isFire = tile?.traits?.has('FIRE');
+
+                        const dist = hexDistance(hex, gameState.player.position);
+
+                        // Movement Highlights
                         let isMoveHighlight = false;
                         if (showMovementRange && !selectedSkillId) {
                             const movementSkillIds = ['BASIC_MOVE', 'DASH'];
@@ -108,14 +118,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                                 }
                             }
 
-                            // Safety backup for movement (if no primary skills found)
                             if (!isMoveHighlight && dist === 1 && !isWall) {
                                 const hasPrimarySkills = gameState.player.activeSkills.some(s => ['BASIC_MOVE', 'DASH'].includes(s.id));
                                 if (!hasPrimarySkills) isMoveHighlight = true;
                             }
                         }
 
-                        // Skill-specific Highlights (Active Skills)
+                        // Skill Highlights
                         let isSkillHighlight = false;
                         if (selectedSkillId) {
                             const def = COMPOSITIONAL_SKILLS[selectedSkillId];
@@ -125,16 +134,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                             }
                         }
 
-                        // Final highlight state
-                        let showRangeHighlight = isSkillHighlight || isMoveHighlight;
-
+                        const showRangeHighlight = isSkillHighlight || isMoveHighlight;
                         const isTargeted = gameState.enemies.some(e => e.intentPosition && hexEquals(e.intentPosition, hex));
                         const isStairs = hexEquals(hex, gameState.stairsPosition);
                         const isShrine = gameState.shrinePosition && hexEquals(hex, gameState.shrinePosition);
 
                         return (
                             <HexTile
-                                key={`${hex.q},${hex.r}`}
+                                key={tileKey}
                                 hex={hex}
                                 onClick={() => onMove(hex)}
                                 isValidMove={showRangeHighlight}
@@ -170,13 +177,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                             activeSkills: [],
                             speed: 0,
                             factionId: 'player'
-                        }} isSpear={true} />
+                        } as any} isSpear={true} />
                     )}
+
                     <Entity entity={gameState.player} />
                     {gameState.enemies.map(e => <Entity key={e.id} entity={e} />)}
                     {gameState.dyingEntities?.map(e => <Entity key={`dying-${e.id}-${gameState.turnNumber}`} entity={e} isDying={true} />)}
 
-                    {/* Juice Effects Layer (Top-most) */}
                     <JuiceManager visualEvents={gameState.visualEvents || []} onBusyStateChange={onBusyStateChange} />
                 </g>
             </svg>

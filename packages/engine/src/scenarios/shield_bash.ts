@@ -32,7 +32,7 @@ export const shieldBashScenarios: ScenarioCollection = {
             },
             verify: (state: GameState, logs: string[]) => {
                 const enemyGone = state.enemies.length === 0;
-                const messageOk = logs.some(l => l.includes('fell into Lava!'));
+                const messageOk = logs.some(l => l.includes('Lava Sink'));
                 return enemyGone && messageOk;
             }
         },

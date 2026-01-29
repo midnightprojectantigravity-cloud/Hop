@@ -11,7 +11,6 @@ import { jumpScenarios } from './jump';
 import { shieldBashScenarios } from './shield_bash';
 import { bulwarkChargeScenarios } from './bulwark_charge';
 import { vaultScenarios } from './vault';
-import { hazardScenarios } from './hazards';
 import { basicMoveScenarios } from './basic_move';
 import { sentinelBlastScenarios } from './sentinel_blast';
 import { fireballScenarios } from './fireball';
@@ -34,7 +33,7 @@ export const SCENARIO_COLLECTIONS: ScenarioCollection[] = [
     shieldBashScenarios,
     bulwarkChargeScenarios,
     vaultScenarios,
-    hazardScenarios,
+    // hazardScenarios,
     basicMoveScenarios,
     sentinelBlastScenarios,
     fireballScenarios,

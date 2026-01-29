@@ -3,7 +3,7 @@ import { hexEquals, getNeighbors, getHexLine } from '../hex';
 import { getEnemyAt } from '../helpers';
 import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
 import { isBlockedByWall, isBlockedByLava, isBlockedByActor, validateRange } from '../systems/validation';
-import { getAreaTargets } from '../systems/navigation';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
  * Implementation of the Vault skill
@@ -81,7 +81,7 @@ export const VAULT: SkillDefinition = {
     },
     getValidTargets: (state: GameState, origin: Point) => {
         const range = 2;
-        return getAreaTargets(state, origin, range).filter(p => {
+        return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
             return !isBlockedByWall(state, p) && !isBlockedByLava(state, p) && !isBlockedByActor(state, p);
         });

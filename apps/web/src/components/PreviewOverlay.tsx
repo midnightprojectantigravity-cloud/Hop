@@ -3,7 +3,7 @@ import type { GameState, Point } from '@hop/engine';
 import {
     hexToPixel, getHexLine, hexAdd, scaleVector, hexEquals, isHexInRectangularGrid,
     TILE_SIZE, COMPOSITIONAL_SKILLS, getSkillRange,
-    getSkillAoE
+    getSkillAoE, UnifiedTileService
 } from '@hop/engine';
 
 interface PreviewOverlayProps {
@@ -76,13 +76,16 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
                     const p = hexAdd(playerPos, scaleVector(d, i));
                     if (!isHexInRectangularGrid(p, gameState.gridWidth, gameState.gridHeight)) break;
 
-                    const isWall = !!gameState.wallPositions?.some(w => hexEquals(w, p));
+                    // FIXED: Use UnifiedTileService trait check instead of wallPositions array
+                    const isWall = UnifiedTileService.isLosBlocking(gameState, p);
                     const isEnemy = !!gameState.enemies.some(e => hexEquals(e.position, p) && e.hp > 0);
 
                     const line = getHexLine(playerPos, p);
                     const interior = line.slice(1, -1);
+
+                    // FIXED: Interior collision check using UnifiedTileService
                     const interiorBlocked = interior.some(iP =>
-                        gameState.wallPositions?.some(w => hexEquals(w, iP)) ||
+                        UnifiedTileService.isLosBlocking(gameState, iP) ||
                         gameState.enemies.some(e => e.hp > 0 && hexEquals(e.position, iP))
                     );
 
@@ -96,7 +99,8 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
         } else {
             // For circular or arbitrary area skills (Jump, Blast, Attack, Bash, etc.)
             validSet.forEach(p => {
-                const isWall = !!gameState.wallPositions?.some(w => hexEquals(w, p));
+                // FIXED: Map-based trait check
+                const isWall = UnifiedTileService.isLosBlocking(gameState, p);
                 const isEnemy = !!gameState.enemies.some(e => hexEquals(e.position, p) && e.hp > 0);
                 results.push({ p, isValidTarget: true, isBlocked: false, isWall, isEnemy });
             });
@@ -107,7 +111,6 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
 
     // Tier 3: Hover Intent (Immediate Impact)
     const intentPreview = useMemo(() => {
-        // Handle Movement Preview (Level 1 Intent)
         if (showMovementRange && hoveredTile && !selectedSkillId) {
             const isMoveTile = movementTiles.some(t => hexEquals(t, hoveredTile));
             if (isMoveTile) {
@@ -116,7 +119,6 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
             }
         }
 
-        // Handle Skill Preview (Level 2/3 Intent)
         if (!selectedSkillId || !hoveredTile) return null;
 
         const targetEntry = skillTargets.find(t => hexEquals(t.p, hoveredTile));
@@ -170,7 +172,6 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
                         const points = intentPreview.path.map(p => hexToPixel(p, TILE_SIZE));
                         const d = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
-                        // Calculate arrow head direction
                         const last = points[points.length - 1];
                         const secondLast = points[points.length - 2] || { x: last.x - 1, y: last.y };
                         const angle = Math.atan2(last.y - secondLast.y, last.x - secondLast.x);

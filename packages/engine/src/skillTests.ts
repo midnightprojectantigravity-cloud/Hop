@@ -1,4 +1,4 @@
-import type { Action, GameState, Point, Entity, Actor } from './types';
+import type { Action, GameState, Point, Entity } from './types';
 import { COMPOSITIONAL_SKILLS } from './skillRegistry';
 import { gameReducer, generateInitialState } from './logic';
 import { ENEMY_STATS } from './constants';
@@ -7,8 +7,7 @@ import { isPlayerTurn } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
 import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './systems/components';
 import { addStatus } from './systems/actor';
-import { migratePositionArraysToTiles, pointToKey } from './systems/tile-migration';
-
+import { pointToKey } from './systems/unified-tile-service';
 
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
@@ -89,62 +88,45 @@ export class ScenarioEngine {
     setTile(pos: Point, type: 'lava' | 'wall' | 'floor' | 'slippery' | 'void') {
         const key = pointToKey(pos);
 
-        // 1. Maintain Legacy Arrays (Back-compat)
-        if (type === 'lava') {
-            this.state.lavaPositions.push(pos);
-        } else if (type === 'wall') {
-            this.state.wallPositions.push(pos);
-        } else if (type === 'slippery') {
-            this.state.slipperyPositions = this.state.slipperyPositions || [];
-            this.state.slipperyPositions.push(pos);
-        } else if (type === 'void') {
-            this.state.voidPositions = this.state.voidPositions || [];
-            this.state.voidPositions.push(pos);
-        }
-
-        // 2. Populate MODULAR TILE MAP (UnifiedTileService Truth)
         if (!this.state.tiles) {
             this.state.tiles = new Map();
         }
 
-        // Ensure it's a Map (migration might have made it one, but safe check)
-        if (this.state.tiles instanceof Map) {
-            const newTile = {
-                baseId: type.toUpperCase(),
-                position: pos,
-                traits: new Set<any>(), // any to avoid import cycles with TileTrait if strict
-                effects: []
-            };
+        const newTile = {
+            baseId: 'STONE' as any,
+            position: pos,
+            traits: new Set<any>(),
+            effects: []
+        };
 
-            if (type === 'wall') {
-                newTile.traits.add('BLOCKS_MOVEMENT');
-                newTile.traits.add('BLOCKS_LOS');
-                newTile.traits.add('ANCHOR');
-            }
-            if (type === 'lava') {
-                newTile.traits.add('DAMAGING');
-                newTile.traits.add('HAZARDOUS'); // Key for Lava Sink
-                newTile.traits.add('LIQUID');
-                newTile.baseId = 'LAVA';
-            }
-            if (type === 'void') {
-                newTile.traits.add('HAZARDOUS');
-                newTile.baseId = 'VOID';
-            }
-            if (type === 'slippery') {
-                newTile.traits.add('SLIPPERY');
-                newTile.baseId = 'ICE';
-            }
-
-            this.state.tiles.set(key, newTile as any);
+        if (type === 'wall') {
+            newTile.baseId = 'WALL';
+            newTile.traits.add('BLOCKS_MOVEMENT');
+            newTile.traits.add('BLOCKS_LOS');
+            newTile.traits.add('ANCHOR');
+        } else if (type === 'lava') {
+            newTile.baseId = 'LAVA';
+            newTile.traits.add('WALKABLE');
+            newTile.traits.add('HAZARDOUS');
+            newTile.traits.add('LIQUID');
+        } else if (type === 'void') {
+            newTile.baseId = 'VOID';
+            newTile.traits.add('HAZARDOUS');
+        } else if (type === 'slippery') {
+            newTile.baseId = 'ICE';
+            newTile.traits.add('WALKABLE');
+            newTile.traits.add('SLIPPERY');
+        } else {
+            newTile.baseId = 'STONE';
+            newTile.traits.add('WALKABLE');
         }
+
+        this.state.tiles.set(key, newTile as any);
     }
 
     syncTiles() {
-        this.state.tiles = migratePositionArraysToTiles(this.state);
+        // No-op for now, as setTile directly populates state.tiles
     }
-
-
 
     applyStatus(targetId: string, status: 'stunned', duration: number = 1) {
         const enemyIndex = this.state.enemies.findIndex(e => e.id === targetId);
@@ -175,13 +157,10 @@ export class ScenarioEngine {
         this.logs.push(...newMessages);
         this.state = nextState;
 
-        // Auto-advance turns in headless mode if it's not player's turn
-        // This mimics the UI useEffect loop
         let safety = 0;
         while (!isPlayerTurn(this.state) && this.state.gameStatus === 'playing' && safety < 100) {
             const advAc: Action = { type: 'ADVANCE_TURN' };
             const afterAdv = gameReducer(this.state, advAc);
-            // Capture messages from enemy turns
             const advMessages = afterAdv.message.slice(this.state.message.length);
             this.logs.push(...advMessages);
             this.state = afterAdv;
@@ -225,15 +204,18 @@ function renderDiagnosticGrid(state: GameState, traces: any[] = []) {
     const height = state.gridHeight;
     const lines: string[] = [];
 
-    // P=Player, E=Enemy, #=Wall, L=Lava, *=Trace
     for (let r = 0; r < height; r++) {
         let line = ' '.repeat(r % 2 === 0 ? 0 : 2);
         for (let q = 0; q < width; q++) {
             const pos = { q, r, s: -q - r };
             const isPlayer = hexEquals(state.player.position, pos);
             const enemy = state.enemies.find(e => hexEquals(e.position, pos));
-            const isWall = state.wallPositions.some(w => hexEquals(w, pos));
-            const isLava = state.lavaPositions.some(l => hexEquals(l, pos));
+
+            const key = `${pos.q},${pos.r}`;
+            const tile = state.tiles.get(key);
+            const isWall = tile?.baseId === 'WALL';
+            const isLava = tile?.baseId === 'LAVA';
+
             const isTrace = traces.some(t => t.path.some((p: Point) => hexEquals(p, pos)));
 
             let char = '.';
@@ -269,21 +251,16 @@ async function runTests() {
 
             const initialState = generateInitialState(1, 'test-seed');
             initialState.enemies = [];
-            initialState.lavaPositions = [];
-            initialState.wallPositions = [];
-            initialState.slipperyPositions = [];
-            initialState.voidPositions = [];
             initialState.shrinePosition = undefined;
             initialState.shrineOptions = undefined;
             initialState.stairsPosition = { q: 99, r: 99, s: -198 };
             initialState.gameStatus = 'playing';
+            if (initialState.tiles) initialState.tiles.clear();
 
             const engine = new ScenarioEngine(initialState);
 
             try {
                 scenario.setup(engine);
-                // Force sync and initiative queue rebuild after manual setup
-                engine.syncTiles();
                 engine.state.initiativeQueue = undefined;
 
                 scenario.run(engine);
@@ -301,8 +278,8 @@ async function runTests() {
                     log(`      Enemies: ${JSON.stringify(engine.state.enemies.map((e: Entity) => `${e.id}@${e.position.q},${e.position.r}`))}`);
                     log(`      Player: ${engine.state.player.position.q},${engine.state.player.position.r}`);
 
-                    const traces = engine.state.visualEvents
-                        ? engine.state.visualEvents.filter(ve => ve.type === 'kinetic_trace').map(ve => ve.payload)
+                    const traces = (engine.state as any).visualEvents
+                        ? (engine.state as any).visualEvents.filter((ve: any) => ve.type === 'kinetic_trace').map((ve: any) => ve.payload)
                         : [];
                     log(`\nDiagnostic Grid:\n${renderDiagnosticGrid(engine.state, traces)}`);
                     failed++;
@@ -320,7 +297,6 @@ async function runTests() {
     process.exit(failed > 0 ? 1 : 0);
 }
 
-// Only run the skill test runner when explicitly requested via env var.
 if (typeof process !== 'undefined' && process.env.SKILL_TESTS_RUN === '1') {
     runTests();
 }

@@ -87,15 +87,14 @@ export function prepareKineticSimulation(
         }
     }
 
-    // Walls
-    for (let i = 0; i < state.wallPositions.length; i++) {
-        allEntities.push({ id: `wall_${i}`, type: 'wall', hex: state.wallPositions[i] });
-    }
-
-    // Lava (for interception detection in apply phase)
-    for (let i = 0; i < state.lavaPositions.length; i++) {
-        allEntities.push({ id: `lava_${i}`, type: 'lava', hex: state.lavaPositions[i] });
-    }
+    // Environment (Walls and Lava) from tiles
+    state.tiles?.forEach((tile, key) => {
+        if (tile.baseId === 'WALL') {
+            allEntities.push({ id: `wall_${key}`, type: 'wall', hex: tile.position });
+        } else if (tile.baseId === 'LAVA') {
+            allEntities.push({ id: `lava_${key}`, type: 'lava', hex: tile.position });
+        }
+    });
 
     // Project to 1D
     const positionMap = new Map<number, Point>();

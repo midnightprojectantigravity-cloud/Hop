@@ -1,7 +1,7 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
-import { getMovementRange } from '../systems/spatial';
+import { SpatialSystem } from '../systems/SpatialSystem';
 import { getSkillScenarios } from '../scenarios';
 
 /**
@@ -34,7 +34,7 @@ export const BASIC_MOVE: SkillDefinition = {
         if (!target) return { effects, messages, consumesTurn: false };
 
         const range = getEffectiveMoveRange(state, attacker);
-        const validTargets = getMovementRange(state, attacker.position, range);
+        const validTargets = SpatialSystem.getMovementRange(state, attacker.position, range);
 
         const isTargetValid = validTargets.some((p: Point) => hexEquals(p, target));
 
@@ -59,7 +59,7 @@ export const BASIC_MOVE: SkillDefinition = {
         if (!actor) return [];
 
         const range = getEffectiveMoveRange(state, actor);
-        return getMovementRange(state, origin, range);
+        return SpatialSystem.getMovementRange(state, origin, range);
     },
     upgrades: {},
     scenarios: getSkillScenarios('BASIC_MOVE')

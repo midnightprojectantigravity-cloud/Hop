@@ -1,12 +1,12 @@
 import type { GameState, Point, AtomicEffect } from '../types';
-import { hexDistance, hexEquals, getHexLine, getDirectionFromTo, hexDirection, hexAdd } from '../hex';
-import { getEnemyAt, isWalkable, isOccupied } from '../helpers';
+import { hexDistance, hexEquals, getHexLine, getDirectionFromTo, hexDirection, hexAdd, pointToKey } from '../hex';
+import { getEnemyAt, isOccupied } from '../helpers';
 import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
 import { applyEffects, applyAtomicEffect } from './effect-engine';
 import { prepareKineticSimulation, translate1DToHex } from './hex-bridge';
 import { resolveKineticDash, resolveKineticPulse } from './kinetic-kernel';
 import { TileResolver } from './tile-effects';
-import { pointToKey } from './tile-migration';
+import { UnifiedTileService } from './unified-tile-service';
 
 
 /**
@@ -34,9 +34,7 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
         for (let i = 0; i < path.length; i++) {
             const pos = path[i];
             const enemy = getEnemyAt(state.enemies, pos);
-            const isWall = state.wallPositions.some(w => hexEquals(w, pos));
-
-            if (isWall) {
+            if (UnifiedTileService.getTraitsAt(state, pos).has('BLOCKS_MOVEMENT')) {
                 return { ...state, message: [...state.message, "Blocked by wall!"].slice(-50) };
             }
 
@@ -46,17 +44,29 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
                     const dirIdx = getDirectionFromTo(actor.position, target);
                     const dirVec = hexDirection(dirIdx);
 
-                    // Push enemy 4 tiles
-                    let pushDest = pos;
-                    for (let j = 0; j < 4; j++) {
-                        const next = hexAdd(pushDest, dirVec);
-                        if (isWalkable(next, state.wallPositions, [], state.gridWidth, state.gridHeight, state)) {
-                            pushDest = next;
-                        } else {
+                    // Push enemy with momentum (standard 4)
+                    let currentPos = pos;
+                    let currentMomentum = 4;
 
-                            break;
+                    while (currentMomentum > 0) {
+                        const next = hexAdd(currentPos, dirVec);
+                        const walkable = UnifiedTileService.isWalkable(state, next);
+
+                        if (!walkable) break;
+
+                        const tile = state.tiles.get(pointToKey(next));
+                        if (tile) {
+                            const transition = TileResolver.processTransition(enemy, tile, state, currentMomentum);
+                            currentMomentum = transition.newMomentum ?? (currentMomentum - 1);
+                            if (transition.interrupt) break;
+                        } else {
+                            currentMomentum -= 1;
                         }
+
+                        currentPos = next;
                     }
+
+                    const pushDest = currentPos;
 
                     // Apply displacement and stun to enemy
                     let newState = state;
@@ -75,8 +85,26 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
         }
     }
 
-    // 3. Standard Walkable Check
-    if (!isWalkable(target, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight, state)) {
+    // 3. Continuous Path Evaluation (Hazards & Walls)
+    const line = getHexLine(actor.position, target);
+    const path = line.slice(1);
+
+    const pathResult = TileResolver.processPath(actor, path, state);
+
+    if (pathResult.interruptedAt) {
+        // 1. Move to the lethal hex
+        let newState = applyEffects(state, [{
+            type: 'Displacement' as const,
+            target: actorId === 'player' ? 'self' : 'targetActor',
+            destination: pathResult.interruptedAt
+        }], { targetId: actorId });
+
+        // 2. Apply lethal effects (Damage/Death/Juice)
+        return applyEffects(newState, pathResult.result.effects, { targetId: actorId });
+    }
+
+    // 4. Standard Blocked Check (Walls/Actors)
+    if (!UnifiedTileService.isWalkable(state, pathResult.lastValidPos)) {
         return { ...state, message: [...state.message, "Blocked!"].slice(-50) };
     }
 
@@ -100,12 +128,25 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
 
     // 5. Apply Movement
     const moveEffects: AtomicEffect[] = [
-        { type: 'Displacement' as const, target: actorId === 'player' ? 'self' : 'targetActor', destination: target, source: actor.position }
+        { type: 'Displacement' as const, target: actorId === 'player' ? 'self' : 'targetActor', destination: target, source: actor.position, path: [actor.position, ...path] }
     ];
 
     let newState = applyEffects(state, moveEffects, { targetId: actorId });
 
-    // 6. Process onEnter tile effects
+    // 6. Sliding / Continuous Momentum
+    // If the TileResolver indicated we have momentum left (e.g. SLIPPERY), continue moving in the same direction
+    if (pathResult.result.newMomentum && pathResult.result.newMomentum > 0) {
+        const lastPos = path[path.length - 1];
+        const prevPos = path[path.length - 2] || actor.position;
+        const dir = getDirectionFromTo(prevPos, lastPos);
+
+        if (dir !== -1) {
+            const nextHex = hexAdd(lastPos, hexDirection(dir));
+            return resolveMove(newState, actorId, nextHex);
+        }
+    }
+
+    // 7. Process onEnter tile effects
     // This ensures tiles react when units land on them (walking, dashing, etc.)
     const updatedActor = actorId === 'player' ? newState.player : newState.enemies.find(e => e.id === actorId);
     if (updatedActor) {
@@ -119,9 +160,8 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
         }
     }
 
-
     return newState;
-};
+}
 
 export interface KineticRequest {
     sourceId: string;
@@ -191,7 +231,6 @@ export function processKineticRequest(state: GameState, request: KineticRequest)
             if (!actor) continue;
 
             // TILE EFFECTS: Process onPass for this tile
-            // This is where the magic happens - tiles observe and react to units
             const tile = state.tiles.get(pointToKey(hexPos));
             if (tile) {
                 const tileResult = TileResolver.processTransition(actor, tile, state, currentMomentum);
@@ -205,12 +244,19 @@ export function processKineticRequest(state: GameState, request: KineticRequest)
                     currentMomentum = tileResult.newMomentum;
                 }
 
-                // Check if tile interrupted the chain
+                // Check if tile interrupted (LAVA/VOID death)
                 if (tileResult.interrupt) {
                     deadIds.add(entity.id);
+                    // Add the final displacement to the dead position
+                    pulseSteps.push({ actorId: entity.id, hexPos, isLead });
+                    effects.push({
+                        type: 'Displacement',
+                        target: entity.id === state.player.id ? 'self' : entity.id,
+                        destination: hexPos
+                    });
+
                     if (isLead) {
                         chainBroken = true;
-                        messages.push(`The chain broke! Remaining momentum lost.`);
                     }
                     continue;
                 }

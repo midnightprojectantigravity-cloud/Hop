@@ -1,6 +1,9 @@
 import type { Point } from '../types';
 
 /**
+ * TODO: 
+ * Ask about this file
+ * 
  * MASK UTILITIES
  * Low-level bitmask operations for spatial hashing.
  * No dependencies on high-level state or helpers to avoid circular imports.

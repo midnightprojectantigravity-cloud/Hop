@@ -12,7 +12,8 @@ import { TileResolver } from '../systems/tile-effects';
 import { UnifiedTileService } from '../systems/unified-tile-service';
 
 import { validateLineOfSight, validateAxialDirection } from '../systems/validation';
-import { getAxialTargetsWithOptions } from '../systems/navigation';
+import { SpatialSystem } from '../systems/SpatialSystem';
+
 
 export const GRAPPLE_HOOK: SkillDefinition = {
     id: 'GRAPPLE_HOOK',
@@ -145,7 +146,7 @@ export const GRAPPLE_HOOK: SkillDefinition = {
         }
     },
 
-    getValidTargets: (state: GameState, origin: Point) => getAxialTargetsWithOptions(state, origin, 4, {
+    getValidTargets: (state: GameState, origin: Point) => SpatialSystem.getAxialTargets(state, origin, 4, {
         includeWalls: true,
         includeActors: true,
         stopAtObstacles: true

@@ -2,7 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { isBlockedByWall, isBlockedByLava, isBlockedByActor, validateRange } from '../systems/validation';
-import { getAreaTargets } from '../systems/navigation';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
  * SHADOW_STEP Skill
@@ -58,7 +58,7 @@ export const SHADOW_STEP: SkillDefinition = {
         if (!isStealthed) return [];
 
         const range = 2;
-        return getAreaTargets(state, origin, range).filter(p => {
+        return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
             return !isBlockedByWall(state, p) && !isBlockedByLava(state, p) && !isBlockedByActor(state, p);
         });

@@ -5,7 +5,7 @@ import { getSkillScenarios } from '../scenarios';
 import { applyEffects } from '../systems/effect-engine';
 import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
 import { validateAxialDirection, validateRange, findFirstObstacle } from '../systems/validation';
-import { getAxialTargetsWithOptions } from '../systems/navigation';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
  * KINETIC DASH Skill
@@ -140,7 +140,7 @@ export const DASH: SkillDefinition = {
     getValidTargets: (state: GameState, origin: Point) => {
         const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
         const range = noEnemies ? 20 : 4;
-        return getAxialTargetsWithOptions(state, origin, range, {
+        return SpatialSystem.getAxialTargets(state, origin, range, {
             stopAtObstacles: true,
             includeActors: true,
             includeWalls: false

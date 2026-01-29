@@ -5,6 +5,8 @@
  * TODO: Implement "Hazard Generation" (e.g. dynamic spikes or traps) using the same RNG seed.
  */
 import type { Point, Room, FloorTheme, Entity } from '../types';
+import type { Tile } from './tile-types';
+import { BASE_TILES } from './tile-registry';
 import { createHex, hexEquals, hexDistance, getDiamondGrid } from '../hex';
 import { createRng } from './rng';
 import {
@@ -17,18 +19,15 @@ import {
     HAZARD_PERCENTAGE
 } from '../constants';
 import { isSpecialTile } from '../helpers';
-import { createSkill } from './legacy-skills';
-import { type PhysicsComponent, type GameComponent } from './components';
 
 export interface DungeonResult {
     rooms: Room[];
     allHexes: Point[];
     stairsPosition: Point;
     shrinePosition?: Point;
-    lavaPositions: Point[];
-    wallPositions: Point[];
-    spawnPositions: Point[];
     playerSpawn: Point;
+    spawnPositions: Point[];
+    tiles: Map<string, Tile>;
 }
 
 /**
@@ -68,14 +67,9 @@ export const generateDungeon = (
     }
 
     // 5. Determine Player Spawn (Bottom-center of playable area)
-    // Usable area is 7x9 diamond.
-    // Center column is q=4. Bottom row of 9x11 diamond is r=10 (for q=4).
-    // Perimeter at q=4 is r=0 and r=10.
-    // So playable bottom at q=4 is r=9.
     const playerSpawn = createHex(4, 9);
 
     // 6. Place Stairs (Top-center of playable area)
-    // Playable top at q=4 is r=1.
     const stairsPosition = createHex(4, 1);
 
     // 7. Place Shrine (if applicable)
@@ -87,7 +81,9 @@ export const generateDungeon = (
             !hexEquals(h, stairsPosition) &&
             hexDistance(h, playerSpawn) >= 3
         );
-        shrinePosition = potentialShrines[Math.floor(rng.next() * potentialShrines.length)];
+        if (potentialShrines.length > 0) {
+            shrinePosition = potentialShrines[Math.floor(rng.next() * potentialShrines.length)];
+        }
     }
 
     // 8. Generate Hazards (Lava/Void)
@@ -119,7 +115,7 @@ export const generateDungeon = (
             stairsPosition,
             shrinePosition,
             lavaPositions,
-            wallPositions: [] // already in wallPositions
+            wallPositions: []
         }) &&
         !wallPositions.some(wp => hexEquals(wp, h)) &&
         hexDistance(h, playerSpawn) >= 3
@@ -134,15 +130,47 @@ export const generateDungeon = (
         connections: []
     };
 
+    // 10. Populate Tile Map
+    const tileMap = new Map<string, Tile>();
+
+    // Fill with stone first
+    for (const h of allHexes) {
+        tileMap.set(`${h.q},${h.r}`, {
+            baseId: 'STONE',
+            position: h,
+            traits: new Set(BASE_TILES.STONE.defaultTraits),
+            effects: []
+        });
+    }
+
+    // Apply Walls
+    for (const w of wallPositions) {
+        tileMap.set(`${w.q},${w.r}`, {
+            baseId: 'WALL',
+            position: w,
+            traits: new Set(BASE_TILES.WALL.defaultTraits),
+            effects: []
+        });
+    }
+
+    // Apply Hazards (Lava)
+    for (const l of lavaPositions) {
+        tileMap.set(`${l.q},${l.r}`, {
+            baseId: 'LAVA',
+            position: l,
+            traits: new Set(BASE_TILES.LAVA.defaultTraits),
+            effects: []
+        });
+    }
+
     return {
         rooms: [mainRoom],
         allHexes,
         stairsPosition,
         shrinePosition,
-        lavaPositions,
-        wallPositions,
         spawnPositions,
-        playerSpawn
+        playerSpawn,
+        tiles: tileMap
     };
 };
 
@@ -153,15 +181,15 @@ export const generateEnemies = (
 ): Entity[] => {
     const rng = createRng(seed + ':enemies');
     const budget = FLOOR_ENEMY_BUDGET[Math.min(floor, FLOOR_ENEMY_BUDGET.length - 1)];
-    const availableTypes = FLOOR_ENEMY_TYPES[floor] || FLOOR_ENEMY_TYPES[Math.max(...Object.keys(FLOOR_ENEMY_TYPES).map(Number))];
+    const availableTypes = (FLOOR_ENEMY_TYPES as any)[floor] || (FLOOR_ENEMY_TYPES as any)[Math.max(...Object.keys(FLOOR_ENEMY_TYPES).map(Number))];
 
     const enemies: Entity[] = [];
     let remainingBudget = budget;
     const usedPositions: Point[] = [];
 
     while (remainingBudget > 0 && usedPositions.length < spawnPositions.length) {
-        const affordableTypes = availableTypes.filter(t => {
-            const stats = ENEMY_STATS[t as keyof typeof ENEMY_STATS];
+        const affordableTypes = availableTypes.filter((t: string) => {
+            const stats = (ENEMY_STATS as any)[t];
             return stats && stats.cost <= remainingBudget;
         });
 
@@ -169,7 +197,7 @@ export const generateEnemies = (
 
         const typeIdx = Math.floor(rng.next() * affordableTypes.length);
         const enemyType = affordableTypes[typeIdx];
-        const stats = ENEMY_STATS[enemyType as keyof typeof ENEMY_STATS];
+        const stats = (ENEMY_STATS as any)[enemyType];
 
         const availablePositions = spawnPositions.filter(
             p => !usedPositions.some(u => hexEquals(u, p))
@@ -181,14 +209,13 @@ export const generateEnemies = (
         const position = availablePositions[posIdx];
         usedPositions.push(position);
 
-        // Health scaling: +1 HP every 5 floors
         const hpScale = Math.floor(floor / 5);
         const finalHp = stats.hp + hpScale;
         const finalMaxHp = stats.maxHp + hpScale;
 
-        const weightClass = (stats as any).weightClass || 'Standard';
-        const componentsSet = new Map<string, GameComponent>();
-        componentsSet.set('physics', { type: 'physics', weightClass } as PhysicsComponent);
+        const weightClass = stats.weightClass || 'Standard';
+        const componentsSet = new Map<string, any>();
+        componentsSet.set('physics', { type: 'physics', weightClass });
 
         enemies.push({
             id: `enemy_${enemies.length}_${rng.next().toString(36).slice(2, 8)}`,
@@ -203,10 +230,10 @@ export const generateEnemies = (
             isVisible: true,
             statusEffects: [],
             temporaryArmor: 0,
-            activeSkills: (stats as any).skills?.map((s: string) => createSkill(s)).filter(Boolean) || [],
+            activeSkills: [], // Compositional skills only now? No, we still use statistical type
             weightClass: weightClass,
             components: componentsSet,
-        });
+        } as any);
 
         remainingBudget -= stats.cost;
     }
@@ -215,7 +242,7 @@ export const generateEnemies = (
 };
 
 export const getFloorTheme = (floor: number): FloorTheme => {
-    return (FLOOR_THEMES[floor as keyof typeof FLOOR_THEMES] || 'catacombs') as FloorTheme;
+    return (FLOOR_THEMES as any)[floor] || 'catacombs';
 };
 
 export default {

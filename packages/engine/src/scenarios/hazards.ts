@@ -76,9 +76,34 @@ export const hazardScenarios: ScenarioCollection = {
                 engine.move({ q: 4, r: 4, s: -8 });
             },
             verify: (state: GameState, logs: string[]) => {
-                const damaged = state.player.hp === 2;
-                const messageOk = logs.some(l => l.includes('Void consumes'));
-                return damaged && messageOk;
+                const isDead = state.player.hp <= 0;
+                const messageOk = logs.some(l => l.includes(' soul') || l.includes('Void'));
+                return isDead && messageOk;
+            }
+        },
+        {
+            id: 'lava_bridge_intercept',
+            title: 'Lava Bridge Intercept',
+            description: 'A unit pushed across a lava gap must die mid-path.',
+            relatedSkills: ['THEME_HAZARDS', 'SHIELD_BASH'],
+            category: 'hazards',
+            difficulty: 'advanced',
+            tags: ['lava', 'path-intercept', 'physics'],
+            setup: (engine: any) => {
+                engine.setPlayer({ q: 3, r: 4, s: -7 }, ['SHIELD_BASH']);
+                engine.spawnEnemy('shieldBearer', { q: 4, r: 4, s: -8 }, 'Target');
+                engine.setTile({ q: 5, r: 4, s: -9 }, 'lava'); // The Gap
+                engine.setTile({ q: 6, r: 4, s: -10 }, 'floor'); // Safe landing?
+            },
+            run: (engine: any) => {
+                engine.useSkill('SHIELD_BASH', { q: 4, r: 4, s: -8 });
+            },
+            verify: (state: GameState, logs: string[]) => {
+                const enemy = state.enemies.find(e => e.id === 'Target');
+                // Should die on the lava tile (5,4,-9)
+                const diedOnLava = enemy && enemy.hp <= 0 && hexEquals(enemy.position, { q: 5, r: 4, s: -9 });
+                const messageOk = logs.some(l => l.includes('Sunk in Lava') || l.includes('Lava Sink'));
+                return !!diedOnLava && messageOk;
             }
         }
     ]

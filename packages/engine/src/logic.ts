@@ -2,7 +2,6 @@
  * CORE ENGINE LOGIC
  * Follows the Command Pattern & Immutable State.
  * resolveEnemyActions and gameReducer are the primary entry points.
- * TODO: Migrate all remaining legacy skills (Spear/Shield/Jump) to the Compositional Framework.
  */
 import type { GameState, Action, Entity, AtomicEffect } from './types';
 import { hexEquals, getNeighbors } from './hex';
@@ -11,24 +10,12 @@ import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
 import { checkShrine, checkStairs, getEnemyAt, applyFireDamage } from './helpers';
 import { increaseMaxHp } from './systems/actor';
 import { generateDungeon, generateEnemies, getFloorTheme } from './systems/map';
-import {
-    tickSkillCooldowns,
-    UPGRADE_DEFINITIONS,
-    addUpgrade,
-    createDefaultSkills,
-    executeShieldBash,
-    executeJump,
-    executeSpearThrow,
-    executeLunge,
-    applyPassiveSkills,
-    hasUpgrade,
-} from './systems/legacy-skills';
+import { tickSkillCooldowns, UPGRADE_DEFINITIONS, addUpgrade, createDefaultSkills, applyPassiveSkills } from './systems/legacy-skills';
 import { COMPOSITIONAL_SKILLS } from './skillRegistry';
 import { applyEffects } from './systems/effect-engine';
-import { migratePositionArraysToTiles } from './systems/tile-migration';
 
 import { applyAutoAttack } from './skills/auto_attack';
-import { refreshOccupancyMask } from './systems/spatial';
+import { SpatialSystem } from './systems/SpatialSystem';
 import { createCommand, createDelta } from './systems/commands';
 import {
     buildInitiativeQueue,
@@ -41,7 +28,6 @@ import {
     isPlayerTurn,
 } from './systems/initiative';
 import { tickStatuses } from './systems/status';
-import { createInitialTileGrid } from './systems/tile-migration';
 
 
 /**
@@ -78,7 +64,6 @@ export const generateInitialState = (
     loadout?: Loadout
 ): GameState => {
     // If no seed provided, we MUST generate one, but this should be rare in strict mode.
-    // For now, fall back to Date.now() ONLY if strictly necessary, but ideally caller provides it.
     const actualSeed = seed || String(Date.now());
 
     // Determine floor theme
@@ -86,7 +71,8 @@ export const generateInitialState = (
 
     // Use tactical arena generation for all floors
     const dungeon = generateDungeon(floor, actualSeed);
-    const enemies = generateEnemies(floor, dungeon.spawnPositions, actualSeed);
+    // dungeon.spawnPositions is valid if we kept it in map.ts
+    const enemies = generateEnemies(floor, (dungeon as any).spawnPositions || [], actualSeed);
 
     // Build player state (preserve HP/upgrades/skills across floors)
     const playerStats = preservePlayer ? {
@@ -100,13 +86,9 @@ export const generateInitialState = (
     const activeSkills = preservePlayer?.activeSkills || loadoutApplied.activeSkills;
     const archetype = (preservePlayer as any)?.archetype || loadoutApplied.archetype;
 
-    // Use the fixed playerSpawn from dungeon generation
-    // const playerPos = dungeon.playerSpawn; // (Directly used below)
+    // Unified Tile Service: Initialized directly from dungeon
+    const tiles = dungeon.tiles || new Map();
 
-    // Unified Tile Service: Ensure tiles Map is populated
-    const tiles = createInitialTileGrid([]);
-
-    // We construct the state first, and then migrate legacy arrays to tiles if needed
     const tempState: GameState = {
         turnNumber: 1,
         player: {
@@ -137,16 +119,7 @@ export const generateInitialState = (
 
         hasSpear: true,
         stairsPosition: dungeon.stairsPosition,
-        occupancyMask: [], // Will be refreshed below
-        // Legacy Arrays (Source)
-        lavaPositions: dungeon.lavaPositions,
-        wallPositions: dungeon.wallPositions,
-        // Empty defaults
-        slipperyPositions: [],
-        voidPositions: [],
-        firePositions: [],
-        corpsePositions: [],
-        trapPositions: [],
+        occupancyMask: [0n], // Will be refreshed below
 
         shrinePosition: dungeon.shrinePosition,
         shrineOptions: undefined,
@@ -175,29 +148,21 @@ export const generateInitialState = (
 
         // Core Systems
         initiativeQueue: undefined, // Initialized below
-        tiles: tiles, // Will be populated via migration below
+        tiles: tiles,
     };
 
-    // CRITICAL: Sync the legacy arrays to the Tile Map so UnifiedTileService works
-    tempState.tiles = migratePositionArraysToTiles(tempState);
-
     tempState.initiativeQueue = buildInitiativeQueue(tempState);
-    tempState.occupancyMask = refreshOccupancyMask(tempState);
+    tempState.occupancyMask = SpatialSystem.refreshOccupancyMask(tempState);
 
     return tempState;
 };
 
-/**
- * HELPER: Interceptor for Status Hooks
- * Dispatches effects based on the specific turn window.
- */
 const executeStatusWindow = (state: GameState, actorId: string, window: 'START_OF_TURN' | 'END_OF_TURN'): { state: GameState, messages: string[] } => {
     const actor = actorId === 'player' ? state.player : state.enemies.find(e => e.id === actorId);
     if (!actor) return { state, messages: [] };
     const effects: AtomicEffect[] = [];
     const messages: string[] = [];
     actor.statusEffects.forEach(status => {
-        // Only trigger if the status defines this window
         if (status.tickWindow === window && status.onTick) {
             const result = status.onTick(actor, state);
             if (result) {
@@ -210,35 +175,27 @@ const executeStatusWindow = (state: GameState, actorId: string, window: 'START_O
     return { state: newState, messages };
 };
 
-/**
- * Process exactly ONE actor's turn (non-player) from the initiative queue.
- * Yields control back to the caller (UI) for potential delays.
- */
 export const processNextTurn = (state: GameState): GameState => {
     let curState = state;
     let messages: string[] = [];
     const dyingEntities: Entity[] = [];
 
-    // 1. Advance to next actor
     const { queue: nextQueue, actorId } = advanceInitiative(curState);
     curState = { ...curState, initiativeQueue: nextQueue };
 
     if (!actorId) return curState;
 
-    // 2. Player Turn Initiation
     if (actorId === curState.player.id) {
         curState = { ...curState, initiativeQueue: startActorTurn(curState, curState.player) };
         return curState;
     }
 
-    // 3. Enemy Validation
     const enemy = curState.enemies.find(e => e.id === actorId);
     if (!enemy) {
         curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
         return processNextTurn(curState);
     }
 
-    // 4. START OF TURN WINDOW
     curState = { ...curState, initiativeQueue: startActorTurn(curState, enemy) };
     const turnStartPos = getTurnStartPosition(curState, actorId)!;
 
@@ -246,11 +203,9 @@ export const processNextTurn = (state: GameState): GameState => {
     curState = sotResult.state;
     messages.push(...sotResult.messages);
 
-    // Re-fetch enemy after SOT effects
     let activeEnemy = curState.enemies.find(e => e.id === actorId);
     if (!activeEnemy) return curState;
 
-    // Fire Damage Tick (Start of Turn)
     const fireRes = applyFireDamage(curState, activeEnemy.position, activeEnemy);
     if (fireRes.messages.length > 0) {
         messages.push(...fireRes.messages);
@@ -262,17 +217,14 @@ export const processNextTurn = (state: GameState): GameState => {
     }
     if (activeEnemy.hp <= 0) return curState;
 
-    // 5. ACTION PHASE (Skip if Stunned)
     const isStunned = activeEnemy.statusEffects.some(s => s.type === 'stunned');
     if (isStunned) {
         messages.push(`${activeEnemy.subtype || activeEnemy.type} is stunned and skips their turn!`);
     } else {
-        // Resolve Telegraphed Attacks
         const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId);
         curState = tele.state;
         messages.push(...tele.messages);
 
-        // Resolve AI Movement/Skills
         const updatedEnemy = curState.enemies.find(e => e.id === actorId);
         if (updatedEnemy) {
             const turnResult = resolveSingleEnemyTurn(curState, updatedEnemy, turnStartPos);
@@ -290,12 +242,10 @@ export const processNextTurn = (state: GameState): GameState => {
         }
     }
 
-    // 6. END OF TURN WINDOW (Status Decay & EOT Effects)
     const eotResult = executeStatusWindow(curState, actorId, 'END_OF_TURN');
     curState = eotResult.state;
     messages.push(...eotResult.messages);
 
-    // Final cleanup: decrement durations and remove expired
     curState = {
         ...curState,
         enemies: curState.enemies.map(e => e.id === actorId ? tickStatuses(e) : e),
@@ -309,19 +259,10 @@ export const processNextTurn = (state: GameState): GameState => {
     };
 };
 
-/**
- * Main entry point for turn cycle resolution.
- * Granularly resolves actors until player input IS required.
- */
 const resolveTurnCycle = (state: GameState): GameState => {
     let curState = state;
     const playerPos = state.player.position;
     const messages: string[] = [];
-
-    // 1. START OF TURN (Player) - Happens before player action in next call, 
-    // but for the "Wrap Up", we process the current turn's EOT logic.
-
-    // 2. Auto Attack
 
     const playerStartPos = getTurnStartPosition(curState, 'player') || curState.player.previousPosition || curState.player.position;
     const persistentNeighborIds = getTurnStartNeighborIds(curState, 'player') ?? undefined;
@@ -330,47 +271,39 @@ const resolveTurnCycle = (state: GameState): GameState => {
         curState.player,
         getNeighbors(playerStartPos),
         playerStartPos,
-        persistentNeighborIds // Now guaranteed to be string[] | undefined
+        persistentNeighborIds
     );
     curState = autoAttackResult.state;
     messages.push(...autoAttackResult.messages);
 
-    // Item Pickups (Spear/Shield)
     if (curState.spearPosition && hexEquals(playerPos, curState.spearPosition)) {
         curState.hasSpear = true;
         curState.spearPosition = undefined;
         messages.push('Picked up your spear.');
     }
 
-    // 3. END OF TURN WINDOW (Player Hooks)
     const eotResult = executeStatusWindow(curState, 'player', 'END_OF_TURN');
     curState = eotResult.state;
     messages.push(...eotResult.messages);
 
-    // 4. Tile Tick & Effects (onStay)
     const tileTickResult = tickTileEffects(curState);
     curState = tileTickResult.state;
     messages.push(...tileTickResult.messages);
 
-    // 5. Decay and Initiative End
     let player = tickSkillCooldowns(curState.player);
-
     player = tickStatuses(player);
     player = applyPassiveSkills(player);
 
-    // 6. Final State Update
     curState = {
         ...curState,
         player,
         message: [...curState.message, ...messages].slice(-50),
-
         kills: curState.kills + autoAttackResult.kills,
         turnNumber: curState.turnNumber + 1,
         turnsSpent: curState.turnsSpent + 1,
         initiativeQueue: endActorTurn(curState, 'player')
     };
 
-    // PHASE 2: Check for world-state transitions (Stairs/Shrine)
     if (checkShrine(curState, playerPos)) {
         const allUpgrades = Object.keys(UPGRADE_DEFINITIONS);
         const available = allUpgrades.filter(u => !state.upgrades.includes(u));
@@ -398,9 +331,7 @@ const resolveTurnCycle = (state: GameState): GameState => {
         const arcadeMax = 10;
         if (state.floor >= arcadeMax) {
             const baseSeed = state.initialSeed ?? state.rngSeed ?? '0';
-            const speedBonus = Math.max(0, (state.floor * 30 - state.turnsSpent) * 50);
-            const damagePenalty = (player.maxHp - player.hp) * 10;
-            const score = (state.floor * 1000) + speedBonus - damagePenalty;
+            const score = (state.floor * 1000);
             return {
                 ...curState,
                 pendingStatus: {
@@ -416,30 +347,35 @@ const resolveTurnCycle = (state: GameState): GameState => {
             };
         }
 
-        // Standard next floor
         return {
             ...curState,
             pendingStatus: {
-                status: 'playing', // Special case: this will trigger a full state regeneration
+                status: 'playing',
             },
             message: [...curState.message, 'Descending to the next level...'].slice(-50)
         };
     }
 
-    // PHASE 3: Yield control. The UI will call processNextTurn until player's turn.
     return curState;
 };
 
-// DEPRECATED ALIAS: resolveEnemyActions is now handled via processNextTurn loop.
-// For compatibility with old tests/logic calling resolveEnemyActions directly:
 export const resolveEnemyActions = (state: GameState): GameState => {
-    // 0. Update AI positions for pathfinding
-    refreshOccupancyMask(state);
+    SpatialSystem.refreshOccupancyMask(state);
+    /** TODO: 
+     * This will not work. Your state is immutable. To update the mask, you must assign the result back to the state:
+     * 
+     * TypeScript
+     * 
+     * export const resolveEnemyActions = (state: GameState): GameState => {
+     *     const updatedMask = SpatialSystem.refreshOccupancyMask(state);
+     *     const nextState = { ...state, occupancyMask: updatedMask };
+     *     return resolveTurnCycle(nextState);
+     * };
+     */
     return resolveTurnCycle(state);
 };
 
 export const gameReducer = (state: GameState, action: Action): GameState => {
-    // Allow certain meta actions while in non-playing states (hub/won/lost)
     if (state.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE' && action.type !== 'LOAD_STATE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN') return state;
 
     const clearedState: GameState = {
@@ -454,49 +390,38 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
     switch (action.type) {
         case 'LOAD_STATE': {
             const loaded = action.payload;
-            // Legacy Migration
-            if (!loaded.tiles || (loaded.tiles instanceof Map === false && !Array.isArray(loaded.tiles))) {
-                console.log('[Logic] Migrating loaded state to Tile System...');
-                loaded.tiles = migratePositionArraysToTiles(loaded);
-            } else if (Array.isArray(loaded.tiles)) {
-                // If serialization saved it as array entries, convert back to Map
-                loaded.tiles = new Map(loaded.tiles);
+            if (Array.isArray(loaded.tiles)) {
+                loaded.tiles = new Map(
+                    loaded.tiles.map(([key, tile]: [string, any]) => [
+                        key,
+                        {
+                            ...tile,
+                            traits: new Set(tile.traits), // Hydrate the Set!
+                        }
+                    ])
+                );
             }
             return loaded;
         }
         case 'RESET': {
-            // Meta-Persistence: Preserve the current archetype/loadout on reset
             const currentArchetype = state.player.archetype;
             const loadoutId = currentArchetype === 'SKIRMISHER' ? 'SKIRMISHER' : 'VANGUARD';
             const loadout = DEFAULT_LOADOUTS[loadoutId];
-
-            const newState = generateInitialState(1, action.payload?.seed || String(Date.now()), undefined, undefined, loadout);
-            return {
-                ...newState,
-                commandLog: [],
-                undoStack: [],
-                actionLog: []
-            };
+            return generateInitialState(1, action.payload?.seed || String(Date.now()), undefined, undefined, loadout);
         }
     }
 
     if (state.gameStatus !== 'playing' && action.type !== 'SELECT_UPGRADE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN') return state;
 
-    // Command Pattern (Goal 2)
     const command = createCommand(action);
     const oldState = state;
 
-    // Standard start-of-player-turn setup
     let curState = {
         ...clearedState,
-        initiativeQueue: clearedState.initiativeQueue // Don't reset turn start on every action!
+        initiativeQueue: clearedState.initiativeQueue
     };
 
-    let intermediateState: GameState;
-
-    // Wrapped logic to produce the next state
     const resolveGameState = (s: GameState, a: Action): GameState => {
-        // Guard: Prevent player actions if it's not currently the player's turn
         const playerActions = ['MOVE', 'THROW_SPEAR', 'WAIT', 'USE_SKILL', 'JUMP', 'SHIELD_BASH', 'ATTACK', 'LEAP'];
         if (playerActions.includes(a.type) && !isPlayerTurn(s)) {
             return s;
@@ -507,14 +432,12 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 if (!('payload' in a)) return s;
                 const upgradeId = a.payload;
                 let player = s.player;
-
                 const upgradeDef = UPGRADE_DEFINITIONS[upgradeId];
                 if (upgradeDef) {
                     player = addUpgrade(player, upgradeDef.skill, upgradeId);
                 } else if (upgradeId === 'EXTRA_HP') {
                     player = increaseMaxHp(player, 1, true);
                 }
-
                 return {
                     ...s,
                     player,
@@ -527,158 +450,42 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             }
 
             case 'USE_SKILL': {
-                if (!('payload' in a)) return s;
                 const { skillId, target } = a.payload;
-
-                // PRE-ACTION SNAPSHOT for Auto-Attack Persistence (captured in initiative entries now)
-
-                // Lunge handling (as upgrade of Spear Throw)
-                const isLunge = skillId === 'LUNGE';
-                const skill = isLunge
-                    ? s.player.activeSkills?.find(s => s.id === 'SPEAR_THROW')
-                    : s.player.activeSkills?.find(s => s.id === skillId);
-
-                if (!isLunge && (!skill || skill.currentCooldown > 0)) {
-                    return { ...s, message: [...s.message, skill ? 'Skill on cooldown!' : 'You don\'t have this skill!'].slice(-50) };
-                }
-
-                if (isLunge && !hasUpgrade(s.player, 'SPEAR_THROW', 'LUNGE')) {
-                    return { ...s, message: [...s.message, 'You don\'t have the Lunge upgrade!'].slice(-50) };
-                }
-
-                // 1. Compositional Skill
+                const skill = s.player.activeSkills?.find(sk => sk.id === skillId);
                 const compDef = COMPOSITIONAL_SKILLS[skillId];
+
                 if (compDef) {
                     const targetEnemy = target ? getEnemyAt(s.enemies, target) : undefined;
-                    const activeUpgrades = skill?.activeUpgrades || [];
-                    const execution = compDef.execute(s, s.player, target, activeUpgrades);
-
+                    const execution = compDef.execute(s, s.player, target, skill?.activeUpgrades || []);
                     let newState = applyEffects(s, execution.effects, { targetId: targetEnemy?.id });
-
                     const stateAfterSkill = {
                         ...newState,
                         message: [...newState.message, ...execution.messages].slice(-50)
                     };
-
-                    // Stealth Decay: Offensive actions reduce stealth
-                    if ((stateAfterSkill.player.stealthCounter || 0) > 0) {
-                        stateAfterSkill.player = {
-                            ...stateAfterSkill.player,
-                            stealthCounter: Math.max(0, stateAfterSkill.player.stealthCounter! - 1)
-                        };
-                    }
-
-                    // If the execution does not consume a turn, do NOT apply cooldowns or advance enemy actions.
-                    if (execution.consumesTurn === false) {
-                        return stateAfterSkill;
-                    }
-
-                    // Apply skill cooldowns only when the skill actually consumed the player's action.
-                    const withCooldowns: GameState = {
-                        ...stateAfterSkill,
-                        player: {
-                            ...stateAfterSkill.player,
-                            activeSkills: stateAfterSkill.player.activeSkills?.map((s: any) =>
-                                s.id === skillId ? { ...s, currentCooldown: compDef.baseVariables.cooldown } : s
-                            )
-                        }
-                    };
-
-                    return resolveEnemyActions(withCooldowns);
+                    if (execution.consumesTurn === false) return stateAfterSkill;
+                    return resolveEnemyActions(stateAfterSkill);
                 }
-
-                // 2. Legacy Skills (Fallback)
-                let result;
-                switch (skillId) {
-                    case 'SPEAR_THROW': result = executeSpearThrow(target!, state); break;
-                    case 'SHIELD_BASH': result = executeShieldBash(target!, state); break;
-                    case 'JUMP': result = executeJump(target!, state); break;
-                    case 'LUNGE': result = executeLunge(target!, state); break;
-                    default: return { ...clearedState, message: [...state.message, `Unknown skill: ${skillId}`].slice(-50) };
-                }
-
-                if (result.messages[0].includes('not in hand') || result.messages[0].includes('out of range')) {
-                    return { ...clearedState, message: [...state.message, ...result.messages].slice(-50) };
-                }
-
-                // Legacy skill application
-                let newLavaPositions = state.lavaPositions;
-                if (result.lavaCreated?.length) newLavaPositions = [...state.lavaPositions, ...result.lavaCreated];
-
-                if (result.consumesTurn === false) {
-                    return {
-                        ...s,
-                        player: result.player,
-                        enemies: result.enemies,
-                        lavaPositions: newLavaPositions,
-                        message: [...s.message, ...result.messages].slice(-50),
-                        environmentalKills: (s.environmentalKills || 0) + (result.environmentalKills || 0),
-                        kills: (s.kills || 0) + (result.kills || 0),
-                        lastSpearPath: result.lastSpearPath,
-                        isShaking: result.isShaking
-                    };
-                }
-
-                return resolveEnemyActions({
-                    ...s,
-                    player: result.player,
-                    enemies: result.enemies,
-                    lavaPositions: newLavaPositions,
-                    message: [...s.message, ...result.messages].slice(-50),
-                    environmentalKills: (s.environmentalKills || 0) + (result.environmentalKills || 0),
-                    kills: (s.kills || 0) + (result.kills || 0),
-                    lastSpearPath: result.lastSpearPath,
-                    isShaking: result.isShaking
-                });
+                return s;
             }
 
             case 'MOVE': {
                 if (!('payload' in a)) return s;
                 const target = a.payload;
 
-                // 1. Check if there is an enemy at the target location
-                const targetEnemy = s.enemies.find(e => hexEquals(e.position, target));
-
-                if (targetEnemy) {
-                    // REDIRECT TO ATTACK: If an enemy is there, try to use the first offensive skill
-                    const attackSkillId = s.player.activeSkills?.find(sk =>
-                        sk.id === 'BASIC_ATTACK' || sk.id === 'SHIELD_BASH' || sk.id === 'SPEAR_THROW'
-                    )?.id;
-
+                // BUMP ATTACK: If there is an enemy at the target, redirect to BASIC_ATTACK
+                const enemyAtTarget = getEnemyAt(s.enemies, target);
+                if (enemyAtTarget) {
+                    const attackSkillId = s.player.activeSkills?.find(sk => sk.id === 'BASIC_ATTACK')?.id;
                     if (attackSkillId) {
-                        const skillAction: Action = { type: 'USE_SKILL', payload: { skillId: attackSkillId, target } };
-                        return gameReducer(s, skillAction);
+                        return gameReducer(s, { type: 'USE_SKILL', payload: { skillId: attackSkillId, target } });
                     }
                 }
 
-                // 2. Standard Movement Logic (If no enemy or no attack skill found)
                 const moveSkillId = s.player.activeSkills?.find(sk => sk.id === 'BASIC_MOVE' || sk.id === 'DASH')?.id;
-
                 if (moveSkillId) {
-                    const skillAction: Action = { type: 'USE_SKILL', payload: { skillId: moveSkillId, target } };
-                    return gameReducer(s, skillAction);
+                    return gameReducer(s, { type: 'USE_SKILL', payload: { skillId: moveSkillId, target } });
                 }
-
-                return { ...s, message: [...s.message, "This unit is stationary."].slice(-50) };
-            }
-
-            case 'THROW_SPEAR': {
-                if (!('payload' in a)) return s;
-                const target = a.payload;
-
-                const result = executeSpearThrow(target, s);
-                if (result.messages[0].includes('not in hand')) return { ...s, message: [...s.message, result.messages[0]].slice(-50) };
-
-                return resolveEnemyActions({
-                    ...s,
-                    enemies: result.enemies,
-                    hasSpear: result.hasSpear ?? false,
-                    spearPosition: result.spearPosition,
-                    message: [...s.message, ...result.messages].slice(-50),
-                    kills: (s.kills || 0) + (result.kills || 0),
-                    lastSpearPath: result.lastSpearPath,
-                    isShaking: result.isShaking
-                });
+                return s;
             }
 
             case 'WAIT': {
@@ -689,7 +496,6 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 if (!('payload' in a)) return s;
                 const loadout = a.payload as Loadout;
                 const applied = applyLoadoutToPlayer(loadout);
-
                 return {
                     ...s,
                     player: {
@@ -706,14 +512,9 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             }
 
             case 'START_RUN': {
-                console.log('Reducer: START_RUN', a.payload);
                 const { loadoutId, seed } = a.payload;
                 const loadout = DEFAULT_LOADOUTS[loadoutId];
-                if (!loadout) {
-                    console.error('Reducer: Loadout not found!', loadoutId);
-                    return s;
-                }
-                // Generate a fresh state for Floor 1 with the chosen loadout
+                if (!loadout) return s;
                 return generateInitialState(1, seed, undefined, undefined, loadout);
             }
 
@@ -724,19 +525,15 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             case 'RESOLVE_PENDING': {
                 if (!s.pendingStatus) return s;
                 const { status, shrineOptions, completedRun } = s.pendingStatus;
-
                 if (status === 'playing' && s.gameStatus === 'playing') {
-                    // This is a floor transition
                     const baseSeed = s.initialSeed ?? s.rngSeed ?? '0';
                     const nextSeed = `${baseSeed}:${s.floor + 1}`;
-                    const nextHp = Math.min(s.player.maxHp, s.player.hp + 1);
                     return generateInitialState(s.floor + 1, nextSeed, baseSeed, {
                         ...s.player,
-                        hp: nextHp,
+                        hp: Math.min(s.player.maxHp, s.player.hp + 1),
                         upgrades: s.upgrades,
                     });
                 }
-
                 return {
                     ...s,
                     gameStatus: status,
@@ -755,9 +552,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         }
     };
 
-    intermediateState = resolveGameState(curState, action);
-
-    // Finalize Command and Delta
+    const intermediateState = resolveGameState(curState, action);
     const delta = createDelta(oldState, intermediateState);
     command.delta = delta;
 
@@ -769,9 +564,6 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
     };
 };
 
-/**
- * Generates a deterministic fingerprint for state verification.
- */
 export const fingerprintFromState = (state: GameState): string => {
     const p = state.player;
     const enemies = state.enemies.map(e => ({
@@ -797,4 +589,3 @@ export const fingerprintFromState = (state: GameState): string => {
 
     return JSON.stringify(obj);
 };
-

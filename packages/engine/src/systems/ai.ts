@@ -4,12 +4,13 @@
  * TODO: Fully migrate specialized enemy logic (Bomber/Warlock) into the Compositional Skill Framework.
  */
 import type { Entity, Point, GameState } from '../types';
-import { getNeighbors, hexDistance, hexEquals, hexAdd, hexDirection, isHexInRectangularGrid } from '../hex';
+import { hexDistance, hexEquals, hexAdd, hexDirection } from '../hex';
 import { consumeRandom } from './rng';
-import { GRID_WIDTH, GRID_HEIGHT } from '../constants';
 import { isRooted } from './status';
 import { TileResolver } from './tile-effects';
-import { pointToKey } from './tile-migration';
+import { pointToKey } from '../hex';
+import { SpatialSystem } from './SpatialSystem';
+import { UnifiedTileService } from './unified-tile-service';
 
 
 /**
@@ -55,21 +56,24 @@ const findBestMove = (
         return { position: enemy.position, state };
     }
 
-    const neighbors = getNeighbors(enemy.position);
+    const neighbors = SpatialSystem.getNeighbors(enemy.position);
     let candidates: Point[] = [];
     let bestScore = preferDistance !== undefined
         ? Math.abs(hexDistance(enemy.position, targetPos) - preferDistance)
         : hexDistance(enemy.position, targetPos);
 
     for (const n of neighbors) {
-        const isInBounds = isHexInRectangularGrid(n, GRID_WIDTH, GRID_HEIGHT);
+        // 1. Boundary Check
+        if (!SpatialSystem.isWithinBounds(state, n)) continue;
+
         const tile = state.tiles.get(pointToKey(n));
 
-        // Blocking Logic
-        const blockedByEnvironment = !isInBounds ||
+        // 2. Blocking Logic (Environment)
+        const blockedByEnvironment =
             tile?.traits.has('BLOCKS_LOS') ||
             tile?.baseId === 'WALL';
 
+        // 3. Blocking Logic (Actors)
         const blockedByActors = occupiedPositions.some((p: Point) => hexEquals(p, n)) ||
             state.enemies.some((e: Entity) => e.id !== enemy.id && hexEquals(e.position, n)) ||
             hexEquals(n, targetPos);
@@ -208,11 +212,8 @@ const computeWarlockAction = (enemy: Entity, playerPos: Point, state: GameState)
         }
 
         // Check if blocked OR non-walkable
-        const isInBounds = isHexInRectangularGrid(candidate, GRID_WIDTH, GRID_HEIGHT);
-        const isWall = state.wallPositions?.some((w: Point) => hexEquals(w, candidate));
-        const isLava = state.lavaPositions?.some((l: Point) => hexEquals(l, candidate));
-
-        const blocked = !isInBounds || isWall || isLava ||
+        const blocked = !SpatialSystem.isWithinBounds(state, candidate) ||
+            !UnifiedTileService.isWalkable(state, candidate) ||
             state.occupiedCurrentTurn?.some((p: Point) => hexEquals(p, candidate)) ||
             state.enemies.some((e: Entity) => e.id !== enemy.id && hexEquals(e.position, candidate)) ||
             hexEquals(candidate, playerPos);
@@ -471,12 +472,10 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
 
             if (canBomb) {
                 // Find valid bomb target (adjacent to player, not player's tile, walkable)
-                const candidateTargets = getNeighbors(playerMovedTo).filter(n => {
-                    const isInBounds = isHexInRectangularGrid(n, GRID_WIDTH, GRID_HEIGHT);
-                    const isWall = state.wallPositions?.some((w: Point) => hexEquals(w, n));
-                    const isLava = state.lavaPositions?.some((l: Point) => hexEquals(l, n));
+                const candidateTargets = SpatialSystem.getNeighbors(playerMovedTo).filter(n => {
+                    const isBlocking = !UnifiedTileService.isWalkable(state, n);
                     const isOccupiedByEnemy = state.enemies.some((e: Entity) => hexEquals(e.position, n));
-                    return isInBounds && !isWall && !isLava && !isOccupiedByEnemy && !hexEquals(n, playerMovedTo);
+                    return SpatialSystem.isWithinBounds(state, n) && !isBlocking && !isOccupiedByEnemy && !hexEquals(n, playerMovedTo);
                 });
 
                 if (candidateTargets.length > 0) {

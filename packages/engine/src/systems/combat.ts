@@ -4,7 +4,7 @@
  * TODO: Fully migrate telegraphed attacks to the SkillDefinition/COMPOSITIONAL_SKILLS system.
  */
 import type { GameState, Point, Entity, AtomicEffect } from '../types';
-import { hexEquals, getNeighbors } from '../hex';
+import { hexEquals, getNeighbors, pointToKey } from '../hex';
 import { computeEnemyAction } from './ai';
 import { applyDamage } from './actor';
 import { getActorAt } from '../helpers';
@@ -82,7 +82,8 @@ export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point
 /** Apply lava damage to an actor (enemy). Returns a new Entity with hp adjusted and messages. */
 export const applyLavaToEnemy = (enemy: Entity, state: GameState): { enemy: Entity; messages: string[] } => {
   const messages: string[] = [];
-  if (state.lavaPositions.some(lp => hexEquals(lp, enemy.position))) {
+  const tile = state.tiles.get(pointToKey(enemy.position));
+  if (tile?.baseId === 'LAVA' || tile?.traits.has('HAZARDOUS')) {
     const name = enemy.subtype ? enemy.subtype.charAt(0).toUpperCase() + enemy.subtype.slice(1) : 'Enemy';
     messages.push(`${name} fell into Lava!`);
     return { enemy: applyDamage(enemy, 99), messages }; // Instant kill

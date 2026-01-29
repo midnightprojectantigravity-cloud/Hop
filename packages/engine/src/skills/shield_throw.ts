@@ -8,7 +8,7 @@ import { getSkillScenarios } from '../scenarios';
 import { processKineticPulse } from '../systems/kinetic-kernel';
 import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
 import { validateLineOfSight, validateAxialDirection } from '../systems/validation';
-import { getAxialTargetsWithOptions } from '../systems/navigation';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
  * Implementation of the Shield Throw skill.
@@ -101,7 +101,7 @@ export const SHIELD_THROW: SkillDefinition = {
         };
     },
 
-    getValidTargets: (state: GameState, origin: Point) => getAxialTargetsWithOptions(state, origin, 4),
+    getValidTargets: (state: GameState, origin: Point) => SpatialSystem.getAxialTargets(state, origin, 4),
 
     upgrades: {},
     scenarios: getSkillScenarios('SHIELD_THROW')

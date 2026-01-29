@@ -1,4 +1,5 @@
 import type { GameComponent } from './systems/components';
+import type { SkillID, StatusID, ArchetypeID, JuiceEffectID } from './types/registry';
 
 /**
  * ARCHITECTURE OVERVIEW: "Gold Standard" Tech Stack
@@ -34,7 +35,7 @@ export interface MovementTrace {
 /** Status Effects: Buffs/Debuffs with logic hooks */
 export interface StatusEffect {
     id: string;
-    type: 'stunned' | 'poisoned' | 'armored' | 'hidden' | 'rooted' | 'fire_immunity';
+    type: StatusID;
 
     duration: number; // -1 for permanent
     stacks?: number;
@@ -99,30 +100,16 @@ export type AtomicEffect =
     }
     | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string; source?: Point }
     | { type: 'Heal'; target: 'targetActor'; amount: number }
-    | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: 'stunned' | 'poisoned' | 'armored' | 'hidden' | 'rooted' | 'fire_immunity'; duration: number }
+    | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: StatusID; duration: number }
     | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
     | { type: 'PickupShield'; position?: Point }
-    | { type: 'GrantSkill'; skillId: string }
+    | { type: 'GrantSkill'; skillId: SkillID }
     | { type: 'LavaSink'; target: string }
     | { type: 'Impact'; target: string; damage: number; direction?: Point }
     | { type: 'Message'; text: string }
     | {
         type: 'Juice';
-        effect:
-        // Legacy effects (keep for backward compatibility)
-        | 'shake' | 'flash' | 'freeze' | 'combat_text' | 'impact'
-        // Environmental reactions
-        | 'lavaSink' | 'lavaRipple' | 'wallCrack' | 'iceShatter' | 'voidConsume' | 'explosion_ring'
-        // Projectile/Path effects
-        | 'spearTrail' | 'shieldArc' | 'hookCable' | 'dashBlur'
-        // Momentum & Weight
-        | 'momentumTrail' | 'heavyImpact' | 'lightImpact' | 'kineticWave'
-        // Anticipation & Telegraphs
-        | 'anticipation' | 'chargeUp' | 'aimingLaser' | 'trajectory'
-        // Skill Signatures
-        | 'grappleHookWinch' | 'shieldSpin' | 'spearWhistle' | 'vaultLeap'
-        // Status & Feedback
-        | 'stunBurst' | 'poisonCloud' | 'armorGleam' | 'hiddenFade';
+        effect: JuiceEffectID;
         target?: Point | string;
         path?: Point[];
         intensity?: 'low' | 'medium' | 'high' | 'extreme';
@@ -132,7 +119,7 @@ export type AtomicEffect =
         color?: string; // Hex color for themed effects
         metadata?: Record<string, any>; // Extensible payload for frontend
     }
-    | { type: 'ModifyCooldown'; skillId: string; amount: number; setExact?: boolean }
+    | { type: 'ModifyCooldown'; skillId: SkillID; amount: number; setExact?: boolean }
     | { type: 'UpdateComponent'; target: 'self' | 'targetActor'; key: string; value: GameComponent }
     | { type: 'SpawnCorpse'; position: Point }
     | { type: 'RemoveCorpse'; position: Point }
@@ -168,7 +155,7 @@ export interface ScenarioV2 {
 }
 
 export interface SkillDefinition {
-    id: string;
+    id: SkillID;
     /** Tactical name (supports State-Shifting skills) */
     name: string | ((state: GameState) => string);
     /** Tactical description (supports State-Shifting skills) */
@@ -197,7 +184,7 @@ export interface SkillDefinition {
 
 // Skill with cooldown tracking and upgrade system
 export interface Skill {
-    id: string;
+    id: SkillID;
     /** Tactical name (supports State-Shifting skills) */
     name: string | ((state: GameState) => string);
     /** Tactical description (supports State-Shifting skills) */
@@ -253,7 +240,7 @@ export interface Actor {
     weightClass?: WeightClass;
 
     // Archetype for passive/core logic
-    archetype?: 'VANGUARD' | 'SKIRMISHER' | 'FIREMAGE' | 'NECROMANCER' | 'HUNTER' | 'ASSASSIN';
+    archetype?: ArchetypeID;
 
     // Stealth system
     stealthCounter?: number;
@@ -285,20 +272,6 @@ export interface GameState {
     hasSpear: boolean;
     spearPosition?: Point;
     stairsPosition: Point;
-    /** @deprecated Use tiles Map instead */
-    lavaPositions: Point[];
-    /** @deprecated Use tiles Map instead */
-    wallPositions: Point[];
-    /** @deprecated Use tiles Map instead */
-    slipperyPositions?: Point[];
-    /** @deprecated Use tiles Map instead */
-    voidPositions?: Point[];
-    /** @deprecated Use tiles Map instead */
-    firePositions?: { pos: Point, duration: number }[];
-    /** @deprecated Use tiles Map instead */
-    corpsePositions?: Point[];
-    /** @deprecated Use tiles Map instead */
-    trapPositions?: { pos: Point, ownerId: string }[];
 
     /** The World-Class Data-Driven Tile Grid */
     tiles: Map<string, import('./systems/tile-types').Tile>;

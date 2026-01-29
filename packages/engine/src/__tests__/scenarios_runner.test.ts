@@ -1,9 +1,9 @@
-
 import { describe, test, expect } from 'vitest';
 import { SCENARIO_COLLECTIONS } from '../scenarios';
 import { ScenarioEngine } from '../skillTests';
 import { generateInitialState } from '../logic';
 import { buildInitiativeQueue } from '../systems/initiative';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 describe('Skill Scenarios Integration', () => {
     SCENARIO_COLLECTIONS.forEach(collection => {
@@ -13,28 +13,34 @@ describe('Skill Scenarios Integration', () => {
             collection.scenarios.forEach(scenario => {
                 test(scenario.title, () => {
                     const initialState = generateInitialState(1, 'test-seed');
+
                     // Reset game board for test isolation
                     initialState.enemies = [];
-                    initialState.lavaPositions = [];
-                    initialState.wallPositions = [];
-                    initialState.slipperyPositions = [];
-                    initialState.voidPositions = [];
                     initialState.shrinePosition = undefined;
                     initialState.stairsPosition = { q: 99, r: 99, s: -198 };
                     initialState.gameStatus = 'playing';
-                    // Unified Tile Service: Clear the pre-generated dungeon map to ensure test isolation
-                    if (initialState.tiles) initialState.tiles.clear();
+
+                    /**
+                     * FIXED: Unified Tile Service
+                     * 'lavaPositions' and 'wallPositions' no longer exist on GameState.
+                     * Clearing the tiles map removes all environmental obstacles.
+                     */
+                    if (initialState.tiles) {
+                        initialState.tiles.clear();
+                    }
 
                     const engine = new ScenarioEngine(initialState);
 
                     // Setup
                     scenario.setup(engine);
 
-                    // Force initiative queue rebuild to ensure consistency after setup modifications
+                    // Re-calculate occupancy mask after setup adds walls/units
+                    engine.state.occupancyMask = SpatialSystem.refreshOccupancyMask(engine.state);
+
+                    // Force initiative queue rebuild
                     engine.state.initiativeQueue = buildInitiativeQueue(engine.state);
 
                     // Advance initiative until it is the player's turn
-                    // (buildInitiativeQueue starts at index -1, so we must advance at least once)
                     let safety = 0;
                     while (safety < 100) {
                         const q = engine.state.initiativeQueue;

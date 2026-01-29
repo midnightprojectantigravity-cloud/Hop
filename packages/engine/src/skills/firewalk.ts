@@ -2,7 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexDistance } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange, isBlockedByActor } from '../systems/validation';
-import { pointToKey } from '../systems/tile-migration';
+import { pointToKey } from '../hex';
 
 /**
  * FIREWALK Skill

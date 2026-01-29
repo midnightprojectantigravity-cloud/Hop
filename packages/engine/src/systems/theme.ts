@@ -1,6 +1,8 @@
 import type { GameState, AtomicEffect } from '../types';
-import { hexEquals, getDirectionFromTo, hexAdd, hexDirection } from '../hex';
-import { isWalkable, isOccupied } from '../helpers';
+import { getDirectionFromTo, hexAdd, hexDirection } from '../hex';
+import { UnifiedTileService } from './unified-tile-service';
+import { isOccupied } from '../helpers';
+import { pointToKey } from '../hex';
 
 /**
  * THEME LOGIC INTERCEPTORS
@@ -19,7 +21,8 @@ export const slipperyInterceptor = (
     if (effect.type !== 'Displacement') return effect;
 
     const dest = effect.destination;
-    const isSlippery = state.slipperyPositions?.some(p => hexEquals(p, dest));
+    const tile = state.tiles.get(pointToKey(dest));
+    const isSlippery = tile?.baseId === 'ICE' || tile?.traits.has('SLIPPERY');
 
     if (!isSlippery) return effect;
 
@@ -35,7 +38,7 @@ export const slipperyInterceptor = (
     const slideDest = hexAdd(dest, slideDir);
 
     // Check if slide destination is valid
-    const walkable = isWalkable(slideDest, state.wallPositions, state.lavaPositions, state.gridWidth, state.gridHeight);
+    const walkable = UnifiedTileService.isWalkable(state, slideDest);
     const occupied = isOccupied(slideDest, state);
 
     if (walkable && !occupied) {
@@ -69,7 +72,7 @@ export const voidInterceptor = (
     if (effect.type !== 'Displacement') return effect;
 
     const dest = effect.destination;
-    const isVoid = state.voidPositions?.some(p => hexEquals(p, dest));
+    const isVoid = state.tiles.get(pointToKey(dest))?.baseId === 'VOID';
 
     if (!isVoid) return effect;
 

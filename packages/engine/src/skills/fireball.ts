@@ -2,7 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getNeighbors } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, validateRange } from '../systems/validation';
-import { getAxialTargetsWithOptions } from '../systems/navigation';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 
 
@@ -54,7 +54,7 @@ export const FIREBALL: SkillDefinition = {
         };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        return getAxialTargetsWithOptions(state, origin, 3);
+        return SpatialSystem.getAxialTargets(state, origin, 3);
     },
     upgrades: {},
     scenarios: getSkillScenarios('FIREBALL')

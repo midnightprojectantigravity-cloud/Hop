@@ -1,12 +1,11 @@
 import type { GameState, AtomicEffect, Actor, Point, MovementTrace, StatusEffect } from '../types';
 import { hexEquals, getHexLine, getDirectionFromTo } from '../hex';
-import { applyDamage } from './actor';
+import { applyDamage, checkVitals } from './actor';
 import { STATUS_REGISTRY } from '../constants';
 
-import { nextIdFromState } from './rng';
 import { addToQueue } from './initiative';
 import { TileResolver } from './tile-effects';
-import { pointToKey } from './tile-migration';
+import { pointToKey } from '../hex';
 import { BASE_TILES } from './tile-registry';
 
 
@@ -38,7 +37,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     origin,
                     path,
                     destination: effect.destination,
-                    wasLethal: nextState.lavaPositions.some(l => hexEquals(l, effect.destination))
+                    wasLethal: nextState.tiles.get(pointToKey(effect.destination))?.traits.has('HAZARDOUS') || false
                 };
                 nextState.visualEvents = [...(nextState.visualEvents || []), {
                     type: 'kinetic_trace' as const,
@@ -85,7 +84,6 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                             const updated = applyDamage(e, effect.amount);
                             if (updated.hp <= 0) {
                                 nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
-                                nextState.corpsePositions = [...(nextState.corpsePositions || []), e.position];
                             }
                             return updated;
                         }
@@ -133,7 +131,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 if (hexEquals(nextState.player.position, targetPos)) {
                     nextState.player = applyDamage(nextState.player, effect.amount);
                     if (nextState.player.hp <= 0) {
-                        nextState.corpsePositions = [...(nextState.corpsePositions || []), nextState.player.position];
+                        // Game over handled by vitals check
                     }
                 }
                 nextState.enemies = nextState.enemies.map((e: Actor) => {
@@ -141,7 +139,6 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         const updated = applyDamage(e, effect.amount);
                         if (updated.hp <= 0) {
                             nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
-                            nextState.corpsePositions = [...(nextState.corpsePositions || []), e.position];
                         }
                         return updated;
                     }
@@ -178,8 +175,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 STATUS_REGISTRY[type as keyof typeof STATUS_REGISTRY]?.tickWindow || 'END_OF_TURN';
 
             const addStatusWithMetadata = (actor: Actor, statusType: any, duration: number, stateObj: GameState): { actor: Actor; nextState: GameState } => {
-                const res = nextIdFromState(stateObj, 4);
-                const id = `${statusType.toUpperCase()}_${res.id}`;
+                const id = `STATUS_${Date.now()}`;
 
                 // Retrieve the window from our registry
                 const tickWindow = getStatusWindow(statusType);
@@ -196,7 +192,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         ...actor,
                         statusEffects: [...actor.statusEffects, newStatus]
                     },
-                    nextState: { ...stateObj, rngCounter: res.nextState.rngCounter }
+                    nextState: { ...stateObj }
                 };
             };
 
@@ -270,11 +266,10 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     nextState.hasSpear = false;
                 }
             } else if (effect.itemType === 'bomb') {
-                const res = nextIdFromState(nextState, 6);
-                nextState.rngCounter = res.nextState.rngCounter;
+                const bombId = `bomb-${Date.now()}`;
 
                 const bomb: Actor = {
-                    id: `bomb-${res.id}`,
+                    id: bombId,
                     type: 'enemy',
                     subtype: 'bomb',
                     factionId: 'enemy',
@@ -430,11 +425,10 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             break;
         }
         case 'SpawnCorpse': {
-            nextState.corpsePositions = [...(nextState.corpsePositions || []), effect.position];
+            // Corpses now represented by dead actors in dyingEntities or tile data if we add it
             break;
         }
         case 'RemoveCorpse': {
-            nextState.corpsePositions = (nextState.corpsePositions || []).filter(cp => !hexEquals(cp, effect.position));
             break;
         }
         case 'SpawnActor': {
@@ -451,7 +445,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 tile = {
                     baseId: 'STONE',
                     position: effect.position,
-                    traits: new Set(BASE_TILES.STONE.defaultTraits),
+                    traits: new Set(BASE_TILES.STONE!.defaultTraits),
                     effects: []
                 };
                 nextState.tiles.set(key, tile);
@@ -465,11 +459,9 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'PlaceTrap': {
-            nextState.trapPositions = [...(nextState.trapPositions || []), { pos: effect.position, ownerId: effect.ownerId }];
             break;
         }
         case 'RemoveTrap': {
-            nextState.trapPositions = (nextState.trapPositions || []).filter(tp => !hexEquals(tp.pos, effect.position));
             break;
         }
         case 'SetStealth': {
@@ -491,7 +483,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
     return nextState;
 };
 
-import { checkVitals } from './vitals';
+
 
 /**
  * Apply a list of effects to the game state.

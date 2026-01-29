@@ -3,7 +3,7 @@ import { hexAdd, hexDirection } from '../hex';
 import { getActorAt, isWithinBounds } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, isBlockedByWall } from '../systems/validation';
-import { getAxialTargetsWithOptions } from '../systems/navigation';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
  * FIREWALL Skill
@@ -71,7 +71,7 @@ export const FIREWALL: SkillDefinition = {
         };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        return getAxialTargetsWithOptions(state, origin, 4);
+        return SpatialSystem.getAxialTargets(state, origin, 4);
     },
     upgrades: {},
     scenarios: getSkillScenarios('FIREWALL')

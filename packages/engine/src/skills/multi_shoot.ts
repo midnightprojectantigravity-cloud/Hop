@@ -2,7 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getNeighbors } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, validateRange } from '../systems/validation';
-import { getAxialTargetsWithOptions } from '../systems/navigation';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
  * MULTI_SHOOT Skill
@@ -48,7 +48,7 @@ export const MULTI_SHOOT: SkillDefinition = {
         };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        return getAxialTargetsWithOptions(state, origin, 4);
+        return SpatialSystem.getAxialTargets(state, origin, 4);
     },
     upgrades: {},
     scenarios: getSkillScenarios('MULTI_SHOOT')
