@@ -1,10 +1,11 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getNeighbors, hexAdd, hexDirection, hexDistance } from '../hex';
-import { getEnemyAt, isWithinBounds } from '../helpers';
+import { getEnemyAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange, validateAxialDirection } from '../systems/validation';
-import { TileResolver } from '../systems/tile-effects';
+// import { TileResolver } from '../systems/tile-effects';
 import { pointToKey } from '../hex';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
  * Implementation of the Shield Bash skill using the Compositional Skill Framework.
@@ -59,25 +60,17 @@ export const SHIELD_BASH: SkillDefinition = {
             const tile = state.tiles.get(pointToKey(pushDest));
             const blockedByWall = tile?.baseId === 'WALL' || tile?.traits.has('BLOCKS_MOVEMENT');
             const blockingEnemy = getEnemyAt(state.enemies, pushDest);
-            const isOutOfBounds = !isWithinBounds(state, pushDest);
+            const isOutOfBounds = !SpatialSystem.isWithinBounds(state, pushDest);
 
             if (blockedByWall || (blockingEnemy && blockingEnemy.id !== enemy.id) || isOutOfBounds) {
                 anyCollision = true;
                 effects.push({ type: 'ApplyStatus', target: t, status: 'stunned', duration: 1 });
                 messages.push(`Bashed ${enemy.subtype || 'enemy'} into obstacle!`);
             } else {
-                effects.push({ type: 'Displacement', target: enemy.id, destination: pushDest });
-
-                // Process Entry Effects (Lava, etc.)
-                const tile = state.tiles.get(pointToKey(pushDest));
-                if (tile) {
-                    const entryResult = TileResolver.processEntry(enemy, tile, state);
-                    effects.push(...entryResult.effects);
-                    messages.push(...entryResult.messages);
-                }
+                effects.push({ type: 'Displacement', target: enemy.id, destination: pushDest, simulatePath: true });
 
                 // MRD says: Pushes targets 1 tile + Stuns.
-                if (!effects.some(e => e.type === 'Damage' || e.type === 'LavaSink')) {
+                if (true) { // Path/Entry hazards are now handled by effect-engine.ts
                     effects.push({ type: 'ApplyStatus', target: t, status: 'stunned', duration: 1 });
                     messages.push(`Pushed and stunned ${enemy.subtype || 'enemy'}!`);
                 }

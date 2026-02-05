@@ -2,7 +2,8 @@ import type { GameState, Actor, Point } from '../types';
 import type { Tile, TileHookResult, TileHookContext, TileEffectState } from './tile-types';
 import { TILE_EFFECTS } from './tile-registry';
 import type { TileEffectID } from '../types/registry';
-import { pointToKey } from '../hex';
+import { hexEquals } from '../hex';
+import { UnifiedTileService } from './unified-tile-service';
 
 /**
  * TILE EFFECTS SYSTEM
@@ -46,9 +47,11 @@ export class TileResolver {
             source: actor.previousPosition
         };
 
-        if (tile.traits.has('HAZARDOUS')) {
+        const traits = UnifiedTileService.getTraitsForTile(state, tile);
+
+        if (traits.has('HAZARDOUS') && !actor.isFlying) {
             const damage = 99;
-            if (tile.baseId === 'LAVA') {
+            if (tile.baseId === 'LAVA' || traits.has('LAVA')) {
                 this.mergeResults(combinedResult, {
                     effects: [
                         { type: 'Damage', target: actor.id, amount: damage, reason: 'lava_sink' },
@@ -57,7 +60,7 @@ export class TileResolver {
                     messages: [`Lava Sink! You were engulfed by lava!`],
                     interrupt: true
                 });
-            } else if (tile.baseId === 'VOID') {
+            } else if (tile.baseId === 'VOID' || traits.has('VOID')) {
                 this.mergeResults(combinedResult, {
                     effects: [
                         { type: 'Damage', target: actor.id, amount: damage, reason: 'void_sink' },
@@ -90,13 +93,38 @@ export class TileResolver {
     /**
      * Process tile transition (unit passes through)
      */
-    static processTransition(actor: Actor, tile: Tile, state: GameState, momentum?: number): TileHookResult {
+    static processTransition(actor: Actor, tile: Tile, state: GameState, momentum?: number, options: { ignoreActors?: boolean, ignoreGroundHazards?: boolean } = {}): TileHookResult {
+        const { ignoreActors = false, ignoreGroundHazards = false } = options;
         const combinedResult: TileHookResult = {
             effects: [],
             messages: [],
-            newMomentum: 0, // Default: Non-special tiles stop momentum
+            newMomentum: momentum !== undefined ? Math.max(0, momentum - 1) : undefined,
             interrupt: false
         };
+
+        const traits = UnifiedTileService.getTraitsForTile(state, tile);
+
+        // 1. Physical Collision (Wall/Environment)
+        if (traits.has('BLOCKS_MOVEMENT')) {
+            combinedResult.interrupt = true;
+            combinedResult.newMomentum = 0;
+            return combinedResult;
+        }
+
+        // 2. Physical Collision (Other Actors)
+        // We use isOccupied which checks the mask. 
+        // Note: During a slide, we might need a more refined check if the mask hasn't been refreshed yet, 
+        // but for now, this ensures units don't phase through each other in multi-unit pulses.
+        if (!ignoreActors) {
+            const currentOccupant = state.enemies.find(e => e.id !== actor.id && e.hp > 0 && hexEquals(e.position, tile.position))
+                || (actor.id !== state.player.id && hexEquals(state.player.position, tile.position) ? state.player : undefined);
+
+            if (currentOccupant) {
+                combinedResult.interrupt = true;
+                combinedResult.newMomentum = 0;
+                return combinedResult;
+            }
+        }
 
         const context: TileHookContext = {
             tile,
@@ -108,7 +136,7 @@ export class TileResolver {
         };
 
         // 1. Process Base Traits
-        if (tile.traits.has('HAZARDOUS')) {
+        if (traits.has('HAZARDOUS') && !actor.isFlying && !ignoreGroundHazards) {
             // LETHAL HAZARD: Intercept and kill immediately
             const damage = 99;
 
@@ -117,12 +145,12 @@ export class TileResolver {
                     { type: 'Damage', target: actor.id, amount: damage, reason: 'hazard_intercept' },
                     { type: 'Juice', effect: 'lavaSink', target: tile.position }
                 ],
-                messages: [tile.baseId === 'LAVA' ? 'Sunk in Lava!' : 'Consumed by Void!'],
+                messages: [(tile.baseId === 'LAVA' || traits.has('LAVA')) ? 'Sunk in Lava!' : 'Consumed by Void!'],
                 interrupt: true
             });
-        } else if (tile.traits.has('SLIPPERY')) {
+        } else if (traits.has('SLIPPERY')) {
             combinedResult.newMomentum = Math.max(1, (momentum || 0));
-        } else if (tile.traits.has('LIQUID')) {
+        } else if (traits.has('LIQUID')) {
             if (momentum !== undefined && momentum > 0) {
                 combinedResult.newMomentum = Math.max(0, momentum - 1);
             }
@@ -136,6 +164,68 @@ export class TileResolver {
             const result = effectDef.onPass(context);
             this.mergeResults(combinedResult, result);
             if (combinedResult.interrupt) break;
+        }
+
+        // 3. Trap Trigger Check (Kinetic Tri-Trap)
+        if (!combinedResult.interrupt && !actor.isFlying && !ignoreGroundHazards && state.traps) {
+            const trapAtPos = state.traps.find(t =>
+                hexEquals(t.position, tile.position) &&
+                t.cooldown === 0 &&
+                t.ownerId !== actor.id // Don't trigger on owner
+            );
+
+            if (trapAtPos) {
+                // Calculate fling destination (outward from trap)
+                const dq = tile.position.q - trapAtPos.position.q || 1;
+                const dr = tile.position.r - trapAtPos.position.r || 0;
+
+                // Determine direction index
+                let dirIdx = 0;
+                if (dq > 0 && dr === 0) dirIdx = 0;
+                else if (dq > 0 && dr < 0) dirIdx = 1;
+                else if (dq === 0 && dr < 0) dirIdx = 2;
+                else if (dq < 0 && dr === 0) dirIdx = 3;
+                else if (dq < 0 && dr > 0) dirIdx = 4;
+                else dirIdx = 5;
+
+                // Calculate destination (magnitude 3)
+                const FLING_MAGNITUDE = 3;
+                let dest = tile.position;
+                const hexDirection = (dir: number) => {
+                    const directions = [
+                        { q: 1, r: 0, s: -1 },
+                        { q: 1, r: -1, s: 0 },
+                        { q: 0, r: -1, s: 1 },
+                        { q: -1, r: 0, s: 1 },
+                        { q: -1, r: 1, s: 0 },
+                        { q: 0, r: 1, s: -1 }
+                    ];
+                    return directions[dir % 6];
+                };
+                const dir = hexDirection(dirIdx);
+
+                for (let i = 0; i < FLING_MAGNITUDE; i++) {
+                    const next = { q: dest.q + dir.q, r: dest.r + dir.r, s: dest.s + dir.s };
+                    if (!UnifiedTileService.isWalkable(state, next)) break;
+                    dest = next;
+                }
+
+                this.mergeResults(combinedResult, {
+                    effects: [
+                        {
+                            type: 'Displacement',
+                            target: actor.id,
+                            destination: dest,
+                            source: tile.position,
+                            isFling: true
+                        },
+                        { type: 'Juice', effect: 'kineticWave', target: tile.position, intensity: 'high' },
+                        { type: 'Juice', effect: 'combat_text', target: tile.position, text: 'TRAP!' }
+                    ],
+                    messages: [`${actor.subtype || 'Unit'} triggered a kinetic trap!`],
+                    interrupt: true
+                });
+            }
         }
 
         return combinedResult;
@@ -157,8 +247,10 @@ export class TileResolver {
             isFinalDestination: false
         };
 
+        const traits = UnifiedTileService.getTraitsForTile(state, tile);
+
         // Traits
-        if (tile.baseId === 'LAVA' && !actor.statusEffects.some(s => s.type === 'fire_immunity')) {
+        if ((tile.baseId === 'LAVA' || traits.has('LAVA')) && !actor.isFlying && !actor.statusEffects.some(s => s.type === 'fire_immunity')) {
             const isPlayer = actor.id === 'player';
             this.mergeResults(combinedResult, {
                 effects: [{ type: 'Damage', target: actor.id, amount: isPlayer ? 1 : 99, reason: 'lava_tick' }],
@@ -215,47 +307,62 @@ export class TileResolver {
     /**
      * processPath
      * Evaluates a movement path hex-by-hex to check for interrupts/hazards.
+     * @param momentum Initial movement energy
+     * @param options Transition options (ignoreActors, ignoreGroundHazards)
      */
-    static processPath(actor: Actor, path: Point[], state: GameState, momentum?: number): {
-        interruptedAt?: Point,
+    static processPath(actor: Actor, path: Point[], state: GameState, momentum?: number, options: { ignoreActors?: boolean, ignoreGroundHazards?: boolean } = {}): {
         lastValidPos: Point,
-        result: TileHookResult
+        result: TileHookResult,
+        interrupt: boolean
     } {
-        const combinedResult: TileHookResult = { effects: [], messages: [], interrupt: false, newMomentum: momentum };
-        let lastValidPos = actor.position;
+        let currentPos = actor.position;
+        let currentMomentum = momentum;
+        let totalResult: TileHookResult = { effects: [], messages: [], newMomentum: momentum, interrupt: false };
 
-        for (const pos of path) {
-            const tile = state.tiles.get(pointToKey(pos));
-            if (!tile) {
-                lastValidPos = pos;
-                continue;
+        for (const nextPoint of path) {
+            const tile = UnifiedTileService.getTileAt(state, nextPoint);
+            const traits = UnifiedTileService.getTraitsForTile(state, tile);
+
+            const stepResult = this.processTransition(actor, tile, state, currentMomentum, options);
+
+            // WALLS/BLOCKING: Stop BEFORE entering
+            if (stepResult.interrupt && traits.has('BLOCKS_MOVEMENT')) {
+                totalResult.interrupt = true;
+                break;
             }
 
-            const stepResult = this.processTransition(actor, tile, state, combinedResult.newMomentum);
-            this.mergeResults(combinedResult, stepResult);
+            // Otherwise, we "enter" the tile (even if we die there)
+            currentPos = nextPoint;
+            this.mergeResults(totalResult, stepResult);
 
-            if (combinedResult.interrupt) {
-                return { interruptedAt: pos, lastValidPos, result: combinedResult };
+            if (totalResult.interrupt) {
+                totalResult.interrupt = true;
+                break;
             }
 
-            lastValidPos = pos;
-            if (combinedResult.newMomentum !== undefined) {
-                // If momentum hits zero, stop here
-                if (combinedResult.newMomentum <= 0) break;
+            currentMomentum = totalResult.newMomentum;
+
+            if (currentMomentum !== undefined && currentMomentum <= 0) {
+                break;
             }
         }
 
-        return { lastValidPos, result: combinedResult };
+        return {
+            lastValidPos: currentPos,
+            result: totalResult,
+            interrupt: !!totalResult.interrupt
+        };
     }
 
     /**
      * Utility to get movement cost for AI
      */
-    static getMovementCost(tile: Tile): number {
+    static getMovementCost(state: GameState, tile: Tile): number {
+        const traits = UnifiedTileService.getTraitsForTile(state, tile);
         let cost = 1;
-        if (tile.traits.has('HAZARDOUS')) cost += 5;
-        if (tile.traits.has('LIQUID')) cost += 1;
-        if (tile.effects.some(e => e.id === 'FIRE')) cost += 2;
+        if (traits.has('HAZARDOUS')) cost += 5;
+        if (traits.has('LIQUID')) cost += 1;
+        if (traits.has('FIRE')) cost += 2;
         return cost;
     }
 }

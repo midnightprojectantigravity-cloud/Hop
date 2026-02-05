@@ -40,6 +40,7 @@ export type TileTrait =
     | 'DAMAGING'       // Causes damage (Generic)
     | 'LAVA'           // Specific: Damaging + Liquid
     | 'FIRE'           // Specific: Damaging + Flammable
+    | 'VOID'           // Specific: Eternal vacuum
     | 'PIT';           // Specific: Instant death/falling
 
 /**

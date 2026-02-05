@@ -24,12 +24,25 @@ export const jumpScenarios: ScenarioCollection = {
 
             setup: (engine: any) => {
                 engine.setPlayer({ q: 3, r: 6, s: -9 }, ['JUMP']);
+                // Jumping over lava should not trigger damage
+                engine.setTile({ q: 3, r: 5, s: -8 }, 'lava');
             },
             run: (engine: any) => {
                 engine.useSkill('JUMP', { q: 3, r: 4, s: -7 });
             },
             verify: (state: GameState, logs: string[]) => {
-                return hexEquals(state.player.position, { q: 3, r: 4, s: -7 }) && logs.some(l => l.includes('Jumped'));
+                const checks = {
+                    playerInPosition: hexEquals(state.player.position, { q: 3, r: 4, s: -7 }),
+                    jumpedSuccessfully: logs.some(l => l.includes('Jumped'))
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Jump Basic Failed:', checks);
+                    console.log('Final State:', state.player.position);
+                    console.log('Logs:', logs);
+                }
+
+                return Object.values(checks).every(v => v === true);
             }
         },
         {
@@ -52,10 +65,19 @@ export const jumpScenarios: ScenarioCollection = {
                 engine.useSkill('JUMP', { q: 3, r: 8, s: -11 });
             },
             verify: (state: GameState, logs: string[]) => {
-                const n1Stunned = logs.filter(l => l.includes('stunned by landing')).length >= 2;
-                const distantNotStunned = !logs.some(l => l.includes('distant_enemy') && l.includes('stunned'));
-                const playerAtTarget = state.player.position.r === 8;
-                return n1Stunned && distantNotStunned && playerAtTarget;
+                const checks = {
+                    n1Stunned: logs.filter(l => l.includes('stunned by landing')).length >= 2,
+                    distantNotStunned: !logs.some(l => l.includes('distant_enemy') && l.includes('stunned')),
+                    playerAtTarget: state.player.position.r === 8
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Jump Stunning Landing Failed:', checks);
+                    console.log('Final State:', state.player.position);
+                    console.log('Logs:', logs);
+                }
+
+                return Object.values(checks).every(v => v === true);
             }
         }
     ]

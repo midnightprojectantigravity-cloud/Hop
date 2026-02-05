@@ -47,7 +47,8 @@ export const BASIC_MOVE: SkillDefinition = {
             type: 'Displacement',
             target: 'self',
             destination: target,
-            source: attacker.position
+            source: attacker.position,
+            simulatePath: true
         });
 
         messages.push(`Moved (Range: ${range}).`);

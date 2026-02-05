@@ -10,47 +10,38 @@ import { applyDamage } from './systems/actor';
 
 
 /**
- * Determines if a point is a special tile (player start, stairs, shrine, lava, or wall).
- * This is primarily used during map generation to avoid overlapping key elements.
+ * Determines if a point is a special tile (stairs, shrine, or hazardous).
+ * Primarily used during map generation.
  */
+import { UnifiedTileService } from './systems/unified-tile-service';
+
 export const isSpecialTile = (
     point: Point,
-    specialPositions: {
+    state: {
         playerStart?: Point;
-        stairsPosition: Point;
+        stairsPosition?: Point;
         shrinePosition?: Point;
         lavaPositions?: Point[];
         wallPositions?: Point[];
+        tiles?: any;
+        gridWidth?: number;
+        gridHeight?: number;
     }
 ): boolean => {
-    if (specialPositions.playerStart && hexEquals(point, specialPositions.playerStart)) return true;
-    if (hexEquals(point, specialPositions.stairsPosition)) return true;
-    if (specialPositions.shrinePosition && hexEquals(point, specialPositions.shrinePosition)) return true;
-    if (specialPositions.lavaPositions?.some(lp => hexEquals(lp, point))) return true;
-    if (specialPositions.wallPositions?.some(wp => hexEquals(wp, point))) return true;
+    if (state.playerStart && hexEquals(point, state.playerStart)) return true;
+    if (state.stairsPosition && hexEquals(point, state.stairsPosition)) return true;
+    if (state.shrinePosition && hexEquals(point, state.shrinePosition)) return true;
+    if (state.lavaPositions?.some(lp => hexEquals(lp, point))) return true;
+    if (state.wallPositions?.some(wp => hexEquals(wp, point))) return true;
+
+    if (state.tiles) {
+        const traits = UnifiedTileService.getTraitsAt(state as any, point);
+        if (traits.has('HAZARDOUS') || traits.has('BLOCKS_MOVEMENT')) return true;
+    }
+
     return false;
 };
 
-/**
- * Checks if a position is walkable (exists in grid and is not a wall or lava).
- */
-export const isWalkable = (
-    position: Point,
-    state: GameState
-): boolean => {
-    if (!isHexInRectangularGrid(position, state.gridWidth, state.gridHeight)) return false;
-
-    const tile = state.tiles.get(pointToKey(position));
-    if (!tile) return true;
-
-    if (tile.traits.has('BLOCKS_MOVEMENT') || tile.baseId === 'WALL') return false;
-    if (tile.traits.has('WALKABLE') || tile.baseId === 'ICE') return true;
-
-    // Lava is typically non-walkable in most engines unless flying/jumping
-    if (tile.baseId === 'LAVA') return false;
-
-    return true;
-};
 
 
 /**
@@ -89,76 +80,6 @@ export const isOccupied = (
     // Fallback for safety
     return !!getActorAt(state, position);
 };
-
-/**
- * Apply lava damage to a given position. Returns the new Entity and any messages.
- * @deprecated Use TileResolver.processStay/Enter instead
- */
-export const applyLavaDamage = (
-    state: GameState,
-    position: Point,
-    entityIn?: Entity
-): { entity: Entity; messages: string[] } => {
-    const messages: string[] = [];
-    let entity = entityIn ?? state.player;
-
-    const hasImmunity = entity.statusEffects.some(s => s.type === 'fire_immunity');
-    if (hasImmunity) return { entity, messages };
-
-    const tile = state.tiles.get(pointToKey(position));
-    if (tile?.baseId === 'LAVA' || tile?.traits.has('LIQUID')) {
-        // Lava is instant death for enemies, heavy damage for player
-        const damage = entity.type === 'player' ? 1 : 99;
-        entity = applyDamage(entity, damage);
-        messages.push(`${entity.type === 'player' ? 'You were' : (entity.subtype || entity.type) + ' was'} engulfed by lava!`);
-    }
-    return { entity, messages };
-};
-
-/**
- * Apply void damage to a given position. Returns the new Entity and any messages.
- * @deprecated Use TileResolver.processStay/Enter instead
- */
-export const applyVoidDamage = (
-    state: GameState,
-    position: Point,
-    entityIn?: Entity
-): { entity: Entity; messages: string[] } => {
-    const messages: string[] = [];
-    let entity = entityIn ?? state.player;
-
-    const tile = state.tiles.get(pointToKey(position));
-    if (tile?.baseId === 'VOID') {
-        const damage = entity.type === 'player' ? 1 : 99;
-        entity = applyDamage(entity, damage);
-        messages.push(`${entity.type === 'player' ? 'Void consumes you' : 'Void consumes ' + (entity.subtype || entity.type)}!`);
-    }
-    return { entity, messages };
-};
-
-/**
- * Apply fire damage to a given position. Returns the new Entity and any messages.
- * @deprecated Use TileResolver.processStay/Enter instead
- */
-export const applyFireDamage = (
-    state: GameState,
-    position: Point,
-    entityIn?: Entity
-): { entity: Entity; messages: string[] } => {
-    const messages: string[] = [];
-    let entity = entityIn ?? state.player;
-
-    const hasImmunity = entity.statusEffects.some(s => s.type === 'fire_immunity');
-    if (hasImmunity) return { entity, messages };
-
-    const tile = state.tiles.get(pointToKey(position));
-    if (tile?.effects.some(e => e.id === 'FIRE')) {
-        entity = applyDamage(entity, 1);
-        messages.push(`${entity.type === 'player' ? 'You are' : (entity.subtype || entity.type) + ' is'} burning!`);
-    }
-    return { entity, messages };
-};
-
 
 /**
  * Check if the player is on a shrine.
@@ -207,12 +128,6 @@ export const isPerimeter = (
 };
 
 
-/**
- * Checks if a point is within the grid bounds.
- */
-export const isWithinBounds = (state: GameState, p: Point): boolean => {
-    return isHexInRectangularGrid(p, state.gridWidth, state.gridHeight);
-};
 
 /**
  * Resolves an ID to an Actor object from the GameState.
@@ -244,6 +159,8 @@ export const getSkillAoE = (
 
     // Projected thread line (e.g., 2 hexes beyond impact)
     const result: Point[] = [];
+    const seen = new Set<string>();
+
     const projectionDistance = 2; // Default "danger zone" beyond impact
     for (let i = 1; i <= projectionDistance; i++) {
         const projection = {
@@ -252,7 +169,11 @@ export const getSkillAoE = (
             s: target.s + Math.round(ds * i)
         };
         if (isHexInRectangularGrid(projection, state.gridWidth, state.gridHeight)) {
-            result.push(projection);
+            const key = `${projection.q},${projection.r}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                result.push(projection);
+            }
         }
     }
     return result;

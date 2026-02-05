@@ -64,6 +64,40 @@ class ScenarioBuilder {
         });
     }
 
+    spawnFalcon(pos: Point, id: string) {
+        const falcon = {
+            id,
+            type: 'enemy' as const,
+            subtype: 'falcon',
+            factionId: 'player',
+            speed: 95, // High speed, acts after player (100)
+            position: { ...pos },
+            previousPosition: { ...pos },
+            hp: 1,
+            maxHp: 1,
+            statusEffects: [],
+            temporaryArmor: 0,
+            activeSkills: [],
+            isFlying: true,
+            companionOf: 'player',
+            companionState: {
+                mode: 'roost',
+                orbitStep: 0,
+                apexStrikeCooldown: 0,
+            }
+        } as any;
+
+        this.state.enemies.push(falcon);
+        if (!this.state.companions) this.state.companions = [];
+        this.state.companions.push(falcon);
+    }
+
+    spawnCompanion(type: string, pos: Point, id: string) {
+        if (type === 'falcon') {
+            this.spawnFalcon(pos, id);
+        }
+    }
+
     setTile(point: Point, type: string) {
         // 1. Normalize the string
         const typeUpper = type.toUpperCase() as TileID;
@@ -96,7 +130,21 @@ class ScenarioBuilder {
         });
     }
 
-    useSkill() { }
+    useSkill(_skillId: string, _target?: Point) { }
+
+    wait() { }
+
+    move(_pos: Point) { }
+
+    getEnemy(id: string) {
+        return this.state.enemies.find(e => e.id === id);
+    }
+
+    setTurn(turn: number) {
+        this.state.turnNumber = turn;
+    }
+
+    exitToHub() { }
 
     applyStatus(targetId: string, status: string) {
         const idx = this.state.enemies.findIndex(e => e.id === targetId);

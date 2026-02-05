@@ -1,6 +1,11 @@
 import type { GameState } from '../types';
 import type { ScenarioCollection } from './types';
 
+/**
+ * Grapple Hook Scenarios
+ * Tests: LoS blocking, Lava sinking, and weight-based behavior
+ * This file has been reviewed and is now up to standards.
+ */
 export const grappleHookScenarios: ScenarioCollection = {
     id: 'grapple_hook',
     name: 'Grapple Hook',
@@ -40,11 +45,13 @@ export const grappleHookScenarios: ScenarioCollection = {
             },
 
             verify: (state: GameState, logs: string[]) => {
+                const player = state.player;
+                const target1 = state.enemies.find(e => e.id === 'target1');
                 const checks = {
                     // Wall blocked the hook
-                    playerInOriginalPosition: state.player.position.q === 4 && state.player.position.r === 6 && state.player.position.s === -10,
+                    playerInOriginalPosition: player.position.q === 4 && player.position.r === 6 && player.position.s === -10,
                     // Target fell in lava and was removed or killed
-                    target1Dead: !state.enemies.find(e => e.id === 'target1') || state.enemies.find(e => e.id === 'target1')!.hp <= 0,
+                    target1Dead: !target1,
                     // Feedback was provided
                     losWarning: logs.some(l => l.includes('Line of sight'))
                 };
@@ -52,9 +59,6 @@ export const grappleHookScenarios: ScenarioCollection = {
                 if (Object.values(checks).some(v => v === false)) {
                     console.log('❌ Scenario Failed Details:', checks);
                     console.log('Logs:', logs);
-                }
-                else {
-                    console.log('✅ Scenario Passed', logs);
                 }
 
                 return Object.values(checks).every(v => v === true);
@@ -109,9 +113,6 @@ export const grappleHookScenarios: ScenarioCollection = {
                     console.log('❌ Scenario Failed Details:', checks);
                     console.log('Player Pos:', state.player.position);
                     console.log('Victim Status:', victim?.statusEffects);
-                }
-                else {
-                    console.log('✅ Scenario Passed', logs);
                 }
 
                 return Object.values(checks).every(v => v === true);

@@ -28,7 +28,8 @@ export type TileEffectID =
     | 'CURSED'
     | 'ICE_WALL'
     | 'SMOKE'
-    | 'BOMB_TICK';
+    | 'BOMB_TICK'
+    | 'TRI_TRAP';
 
 /** All known Skill IDs */
 export type SkillID =
@@ -56,7 +57,15 @@ export type SkillID =
     | 'SNEAK_ATTACK'
     | 'SOUL_SWAP'
     | 'SWIFT_ROLL'
-    | 'THEME_HAZARDS';
+    | 'THEME_HAZARDS'
+    | 'FALCON_COMMAND'
+    | 'FALCON_PECK'
+    | 'FALCON_APEX_STRIKE'
+    | 'FALCON_HEAL'
+    | 'FALCON_SCOUT'
+    | 'KINETIC_TRI_TRAP'
+    | 'WITHDRAWAL'
+    | 'ABSORB_FIRE';
 
 /** All known Status Effect Types */
 export type StatusID =
@@ -67,7 +76,9 @@ export type StatusID =
     | 'rooted'
     | 'fire_immunity'
     | 'burning'
-    | 'protected';
+    | 'protected'
+    | 'marked_scout'
+    | 'marked_predator';
 
 /** All known Archetypes */
 export type ArchetypeID =

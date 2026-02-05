@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { DEFAULT_LOADOUTS, type Loadout } from '@hop/engine';
+import { DEFAULT_LOADOUTS, type Loadout, getEntityVisual } from '@hop/engine';
 
 interface ArchetypeSelectorProps {
     onSelect: (loadout: Loadout) => void;
@@ -30,7 +30,7 @@ export const ArchetypeSelector: React.FC<ArchetypeSelectorProps> = ({ onSelect }
                             <div className="flex justify-between items-start mb-4">
                                 <div className="p-3 bg-white/5 rounded-xl border border-white/10 group-hover:border-white/30 transition-colors">
                                     <span className="text-3xl">
-                                        {loadout.id === 'VANGUARD' ? '🔱' : '⚔️'}
+                                        {getEntityVisual(loadout.id === 'ASSASSIN' ? 'assassin_player' : loadout.id.toLowerCase(), 'player').icon}
                                     </span>
                                 </div>
                                 <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/50">

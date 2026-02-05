@@ -3,7 +3,7 @@
  * Manages telegraphed attacks and enemy turn resolution.
  * TODO: Fully migrate telegraphed attacks to the SkillDefinition/COMPOSITIONAL_SKILLS system.
  */
-import type { GameState, Point, Entity, AtomicEffect } from '../types';
+import type { GameState, Point, Entity, AtomicEffect, Actor } from '../types';
 import { hexEquals, getNeighbors, pointToKey } from '../hex';
 import { computeEnemyAction } from './ai';
 import { applyDamage } from './actor';
@@ -12,8 +12,11 @@ import { applyAutoAttack } from '../skills/auto_attack';
 import { getTurnStartNeighborIds } from './initiative';
 import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
 import { applyEffects } from './effect-engine';
+import { resolveFalconTurn } from './falcon';
 import { isStunned, tickStatuses, handleStunReset } from './status';
 import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from './juice-manifest';
+import { TileResolver } from './tile-effects';
+import { UnifiedTileService } from './unified-tile-service';
 
 export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point, targetActorId?: string): { state: GameState; messages: string[] } => {
   let curState = state;
@@ -79,17 +82,6 @@ export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point
   return { state: curState, messages };
 };
 
-/** Apply lava damage to an actor (enemy). Returns a new Entity with hp adjusted and messages. */
-export const applyLavaToEnemy = (enemy: Entity, state: GameState): { enemy: Entity; messages: string[] } => {
-  const messages: string[] = [];
-  const tile = state.tiles.get(pointToKey(enemy.position));
-  if (tile?.baseId === 'LAVA' || tile?.traits.has('HAZARDOUS')) {
-    const name = enemy.subtype ? enemy.subtype.charAt(0).toUpperCase() + enemy.subtype.slice(1) : 'Enemy';
-    messages.push(`${name} fell into Lava!`);
-    return { enemy: applyDamage(enemy, 99), messages }; // Instant kill
-  }
-  return { enemy, messages };
-};
 
 /**
  * Resolve a single enemy's turn logic.
@@ -168,6 +160,11 @@ export const resolveSingleEnemyTurn = (
     nextEnemy = { ...enemy, intent: undefined, intentPosition: undefined };
   } else if (enemy.intent === 'Casting' && enemy.intentPosition) {
     nextEnemy = { ...enemy, intent: undefined, intentPosition: undefined };
+  } else if (enemy.subtype === 'falcon') {
+    const { state: falconState, messages: falconMsgs } = resolveFalconTurn(curState, enemy);
+    curState = falconState;
+    messages.push(...falconMsgs);
+    nextEnemy = curState.enemies.find(e => e.id === enemy.id) || enemy;
   } else {
     // Normal AI turn
     const { entity, nextState: aiState, message } = computeEnemyAction(enemy, state.player.position, curState);
@@ -213,20 +210,27 @@ export const resolveSingleEnemyTurn = (
   curState = autoAttackResult.state;
   messages.push(...autoAttackResult.messages);
 
-  // 3. Lava Check
-  const { enemy: afterLava, messages: lavaMsgs } = applyLavaToEnemy(nextEnemy, curState);
-  if (lavaMsgs.length > 0) {
-    curState = applyEffects(curState, [JuiceHelpers.lavaRipple(nextEnemy.position)]);
-  }
-  messages.push(...lavaMsgs);
+  // 3. Centralized Stay Check (Lava, Fire, stay effects)
+  const currentTile = UnifiedTileService.getTileAt(curState, nextEnemy.position);
+  const stayResult = TileResolver.processStay(nextEnemy as Actor, currentTile, curState);
 
-  const isDead = afterLava.hp <= 0;
+  if (stayResult.effects.length > 0) {
+    curState = applyEffects(curState, stayResult.effects, { targetId: enemy.id });
+    if (stayResult.effects.some(e => e.type === 'Damage' && e.reason === 'lava_tick')) {
+      curState = applyEffects(curState, [JuiceHelpers.lavaRipple(nextEnemy.position)]);
+    }
+  }
+  messages.push(...stayResult.messages);
+
+  nextEnemy = curState.enemies.find(e => e.id === enemy.id) || nextEnemy;
+
+  const isDead = nextEnemy.hp <= 0;
   if (isDead) {
     curState = { ...curState, enemies: curState.enemies.filter(e => e.id !== enemy.id) };
   } else {
     curState = {
       ...curState,
-      enemies: curState.enemies.map(e => e.id === enemy.id ? afterLava : e)
+      enemies: curState.enemies.map(e => e.id === enemy.id ? nextEnemy : e)
     };
   }
 
@@ -259,6 +263,5 @@ export const computeNextEnemies = (state: GameState): { enemies: Entity[]; nextS
 
 export default {
   resolveTelegraphedAttacks,
-  applyLavaToEnemy,
   computeNextEnemies,
 };

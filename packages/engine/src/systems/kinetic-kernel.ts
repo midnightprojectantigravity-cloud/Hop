@@ -3,7 +3,8 @@
 import { getHexLine, hexAdd, hexEquals, isHexInRectangularGrid } from "../hex";
 import type { AtomicEffect, GameState, Point } from "../types";
 import { JuiceHelpers, ENVIRONMENTAL_JUICE } from "./juice-manifest";
-import { pointToKey } from "../hex";
+
+import { UnifiedTileService } from "./unified-tile-service";
 
 /**
  * 1. Input Architecture
@@ -145,14 +146,21 @@ export function processKineticPulse(state: GameState, request: KineticPulseReque
         }
 
         // Emit displacements with paths
-        for (const [unitId, path] of chainMovementPaths.entries()) {
-            effects.push({
-                type: 'Displacement',
-                target: unitId,
-                destination: path[path.length - 1],
-                path: path,
-                animationDuration: 100  // Single tile movement: 100ms
-            });
+        // IMPORTANT: We process from lead unit backward (reverse chain order)
+        // so that lead units clear the way for trailing units in the execution queue.
+        const reversedChain = [...chain].reverse();
+        for (const unit of reversedChain) {
+            const path = chainMovementPaths.get(unit.id);
+            if (path) {
+                effects.push({
+                    type: 'Displacement',
+                    target: unit.id,
+                    destination: path[path.length - 1],
+                    path: path,
+                    ignoreCollision: true, // KineticPulse already handles collisions/chains
+                    animationDuration: 150 // Consistent speed for pulses
+                });
+            }
         }
 
         // JUICE: Momentum trail for chain movement
@@ -231,13 +239,13 @@ function findActiveChain(unitsOnLine: UnitOnLine[]): UnitOnLine[] {
 }
 
 function isWall(state: GameState, hex: Point): boolean {
-    const tile = state.tiles.get(pointToKey(hex));
-    return tile?.baseId === 'WALL' || tile?.traits.has('BLOCKS_MOVEMENT') || false;
+    const traits = UnifiedTileService.getTraitsAt(state, hex);
+    return traits.has('BLOCKS_MOVEMENT') || traits.has('BLOCKS_LOS');
 }
 
 function isLava(state: GameState, hex: Point): boolean {
-    const tile = state.tiles.get(pointToKey(hex));
-    return tile?.baseId === 'LAVA' || tile?.traits.has('HAZARDOUS') || false;
+    const traits = UnifiedTileService.getTraitsAt(state, hex);
+    return traits.has('HAZARDOUS') || traits.has('LIQUID');
 }
 
 // ----------------------------------------------------------------------------

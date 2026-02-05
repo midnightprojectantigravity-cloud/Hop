@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import type { GameState, Point } from '@hop/engine';
 import {
     hexDistance, hexEquals, isTileInDiamond, hexToPixel,
-    TILE_SIZE, COMPOSITIONAL_SKILLS, pointToKey
+    TILE_SIZE, COMPOSITIONAL_SKILLS, pointToKey, UnifiedTileService
 } from '@hop/engine';
 import { HexTile } from './HexTile';
 import { Entity } from './Entity';
@@ -92,12 +92,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                     {cells.map((hex) => {
                         // FIXED: Use pointToKey for O(1) lookup in the Unified Tile Service
                         const tileKey = pointToKey(hex);
-                        const tile = gameState.tiles.get(tileKey);
 
-                        // Trait-based detection
-                        const isWall = tile?.baseId === 'WALL' || tile?.traits?.has('BLOCKS_LOS');
-                        const isLava = tile?.traits?.has('LAVA');
-                        const isFire = tile?.traits?.has('FIRE');
+                        // Trait-based detection via UnifiedTileService
+                        const traits = UnifiedTileService.getTraitsAt(gameState, hex);
+                        const isWall = traits.has('BLOCKS_MOVEMENT') && traits.has('BLOCKS_LOS');
+                        const isLava = traits.has('LAVA') || (traits.has('HAZARDOUS') && traits.has('LIQUID'));
+                        const isFire = traits.has('FIRE');
 
                         const dist = hexDistance(hex, gameState.player.position);
 

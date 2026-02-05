@@ -27,7 +27,7 @@ export const BASE_TILES: Record<TileID, BaseTile> = {
         id: 'WALL',
         name: 'Wall',
         description: 'Solid wall',
-        defaultTraits: new Set(['BLOCKS_LOS']),
+        defaultTraits: new Set(['BLOCKS_LOS', 'BLOCKS_MOVEMENT', 'ANCHOR']),
         visual: { color: '#333333', icon: '🧱' }
     },
     ICE: {
@@ -174,5 +174,10 @@ export const TILE_EFFECTS: Record<TileEffectID, TileEffectDefinition> = {
         id: 'BOMB_TICK',
         name: 'Bomb Tick',
         description: 'About to explode'
+    },
+    TRI_TRAP: {
+        id: 'TRI_TRAP',
+        name: 'Kinetic Trap',
+        description: 'Hidden trap that flings non-flying units outward'
     }
 };

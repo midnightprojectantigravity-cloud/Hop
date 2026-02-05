@@ -23,16 +23,16 @@ export const fireballScenarios: ScenarioCollection = {
                 // Target 1: Valid Axial (q-axis)
                 // We place an enemy at the target and one at a neighbor
                 engine.spawnEnemy('footman', { q: 5, r: 4, s: -9 }, 'primary_target');
-                engine.spawnEnemy('footman', { q: 6, r: 5, s: -11 }, 'neighbor_target');
+                engine.spawnEnemy('footman', { q: 6, r: 4, s: -10 }, 'neighbor_target');
 
                 // Target 2: Invalid Diagonal (not axial)
-                engine.spawnEnemy('footman', { q: 7, r: 5, s: -12 }, 'diagonal_enemy');
+                engine.spawnEnemy('footman', { q: 6, r: 5, s: -11 }, 'diagonal_enemy');
 
 
                 // Wall LoS blocked by the blocker enemy
                 engine.setTile({ q: 6, r: 3, s: -9 }, 'wall');
 
-                // Wall is the target, confirm the stun radius 
+                // Wall is the target, confirm the aoe radius 
                 engine.setTile({ q: 6, r: 6, s: -12 }, 'wall');
                 engine.setTile({ q: 5, r: 6, s: -11 }, 'lava');
             },

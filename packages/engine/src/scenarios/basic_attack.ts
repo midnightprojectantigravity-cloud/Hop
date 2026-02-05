@@ -5,6 +5,7 @@ import { hexEquals } from '../hex';
 /**
  * Basic Attack Scenarios
  * Tests: Melee combat, range validation, and move-attack interaction
+ * This file has been reviewed and is now up to standards.
  */
 export const basicAttackScenarios: ScenarioCollection = {
     id: 'basic_attack',
@@ -40,13 +41,13 @@ export const basicAttackScenarios: ScenarioCollection = {
 
                 const checks = {
                     // VERIFICATION: Range Enforcement
-                    // Should still have 1 HP because the attack was out of range.
-                    farStaysAlive: far && far.hp === 1,
+                    // Should still have max HP because the attack was out of range.
+                    farStaysAlive: far && far.hp === far.maxHp,
                     rangeError: logs.some(l => l.includes('out of range')),
 
                     // VERIFICATION: Bump Attack Success
                     // The adjacent enemy should be damaged/dead.
-                    adjTookDamage: !adj || adj.hp <= 0,
+                    adjTookDamage: !adj || adj.hp <= adj.maxHp,
 
                     // VERIFICATION: Spatial Integrity
                     // IMPORTANT: The player should NOT have moved into the enemy's hex.

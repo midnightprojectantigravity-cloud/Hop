@@ -1,6 +1,6 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexAdd, hexDirection } from '../hex';
-import { getActorAt, isWithinBounds } from '../helpers';
+import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, isBlockedByWall } from '../systems/validation';
 import { SpatialSystem } from '../systems/SpatialSystem';
@@ -40,13 +40,13 @@ export const FIREWALL: SkillDefinition = {
         let p1 = target;
         for (let i = 0; i < 2; i++) {
             p1 = hexAdd(p1, hexDirection(perp1));
-            if (isWithinBounds(state, p1)) wallPoints.push(p1);
+            if (SpatialSystem.isWithinBounds(state, p1)) wallPoints.push(p1);
         }
 
         let p2 = target;
         for (let i = 0; i < 2; i++) {
             p2 = hexAdd(p2, hexDirection(perp2));
-            if (isWithinBounds(state, p2)) wallPoints.push(p2);
+            if (SpatialSystem.isWithinBounds(state, p2)) wallPoints.push(p2);
         }
 
         for (const p of wallPoints) {

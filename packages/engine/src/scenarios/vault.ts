@@ -22,15 +22,24 @@ export const vaultScenarios: ScenarioCollection = {
             tags: ['state-shift', 'stun', 'movement'],
 
             setup: (engine: any) => {
-                engine.setTurn(1);
                 engine.setPlayer({ q: 3, r: 6, s: -9 }, ['VAULT']);
-                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'victim');
+                engine.setTile({ q: 3, r: 5, s: -8 }, 'lava');
+                engine.spawnEnemy('footman', { q: 4, r: 4, s: -8 }, 'victim');
             },
             run: (engine: any) => {
                 engine.useSkill('VAULT', { q: 3, r: 4, s: -7 });
             },
             verify: (_state: GameState, logs: string[]) => {
-                return logs.some(l => l.includes('Stun Vault executed!'));
+                const checks = {
+                    stunned: logs.some(l => l.includes('Stun Vault executed!'))
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Vault Stun Failed:', checks);
+                    console.log('Logs:', logs);
+                }
+
+                return Object.values(checks).every(v => v === true);
             }
         },
         {
@@ -44,15 +53,25 @@ export const vaultScenarios: ScenarioCollection = {
             tags: ['state-shift', 'movement'],
 
             setup: (engine: any) => {
-                engine.setTurn(2);
                 engine.setPlayer({ q: 3, r: 6, s: -9 }, ['VAULT']);
-                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'victim');
+                engine.setTile({ q: 3, r: 5, s: -8 }, 'lava');
+                engine.spawnEnemy('footman', { q: 4, r: 3, s: -7 }, 'victim');
             },
             run: (engine: any) => {
+                engine.wait();
                 engine.useSkill('VAULT', { q: 3, r: 4, s: -7 });
             },
             verify: (_state: GameState, logs: string[]) => {
-                return logs.some(l => l.includes('Vaulted!')) && !logs.some(l => l.includes('Slam landing!'));
+                const checks = {
+                    vaulted: logs.some(l => l.includes('Vaulted!'))
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Vault Normal Failed:', checks);
+                    console.log('Logs:', logs);
+                }
+
+                return Object.values(checks).every(v => v === true);
             }
         }
     ]

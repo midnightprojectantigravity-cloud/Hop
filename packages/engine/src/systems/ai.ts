@@ -81,7 +81,7 @@ const findBestMove = (
         if (blockedByEnvironment || blockedByActors) continue;
 
         // Pathfinding Cost
-        const tileCost = tile ? TileResolver.getMovementCost(tile) : 1;
+        const tileCost = tile ? TileResolver.getMovementCost(state, tile) : 1;
         const distScore = preferDistance !== undefined
             ? Math.abs(hexDistance(n, targetPos) - preferDistance)
             : hexDistance(n, targetPos);

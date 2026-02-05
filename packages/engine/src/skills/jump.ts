@@ -37,7 +37,14 @@ export const JUMP: SkillDefinition = {
         }
 
         // Execute Jump
-        effects.push({ type: 'Displacement', target: 'self', destination: target });
+        effects.push({
+            type: 'Displacement',
+            target: 'self',
+            destination: target,
+            ignoreCollision: true,
+            ignoreGroundHazards: true,
+            simulatePath: true
+        } as any);
         messages.push('Jumped!');
 
         // AoE Stun (Neighbors)

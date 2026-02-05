@@ -5,6 +5,7 @@ import type { ScenarioCollection } from './types';
 /**
  * Auto Attack Scenarios
  * Tests: Passive skill mechanics, turn-start memory, and friendly fire prevention
+ * This file has been reviewed and is now up to standards.
  */
 export const autoAttackScenarios: ScenarioCollection = {
     id: 'auto_attack',

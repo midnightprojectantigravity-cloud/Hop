@@ -16,6 +16,7 @@ describe('Skill Scenarios Integration', () => {
 
                     // Reset game board for test isolation
                     initialState.enemies = [];
+                    initialState.companions = [];
                     initialState.shrinePosition = undefined;
                     initialState.stairsPosition = { q: 99, r: 99, s: -198 };
                     initialState.gameStatus = 'playing';

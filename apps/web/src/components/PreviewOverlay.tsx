@@ -212,7 +212,7 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
                     })()}
 
                     {/* AoE Hazard Zone */}
-                    {intentPreview.aoe.map((hex) => {
+                    {Array.from(new Map(intentPreview.aoe.map(hex => [`${hex.q},${hex.r}`, hex])).values()).map((hex) => {
                         const { x, y } = hexToPixel(hex, TILE_SIZE);
                         return (
                             <circle

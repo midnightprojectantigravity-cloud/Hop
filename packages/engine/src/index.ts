@@ -37,3 +37,9 @@ export * from './systems/juice-manifest';
 // Tile Effects System (Observer-Based)
 export * from './systems/tile-effects';
 export * from './hex';
+
+// Falcon Companion System
+export * from './systems/falcon';
+
+// Visual Registry (for frontend rendering)
+export * from './systems/visual-registry';

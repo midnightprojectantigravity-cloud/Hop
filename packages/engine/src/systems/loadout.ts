@@ -38,7 +38,7 @@ export const DEFAULT_LOADOUTS: Record<string, Loadout> = {
         name: 'Fire Mage',
         description: 'Area control with fire and high-damage spells.',
         startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'FIREBALL', 'FIREWALL', 'FIREWALK']
+        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'ABSORB_FIRE', 'FIREBALL', 'FIREWALL', 'FIREWALK']
     },
     NECROMANCER: {
         id: 'NECROMANCER',
@@ -52,7 +52,7 @@ export const DEFAULT_LOADOUTS: Record<string, Loadout> = {
         name: 'Hunter',
         description: 'Ranged precision and traps.',
         startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'MULTI_SHOOT', 'SET_TRAP', 'SWIFT_ROLL']
+        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'FALCON_COMMAND', 'KINETIC_TRI_TRAP', 'WITHDRAWAL']
     },
     ASSASSIN: {
         id: 'ASSASSIN',

@@ -6,33 +6,34 @@ import { hexEquals, isHexInRectangularGrid, pointToKey } from '../hex';
 export const UnifiedTileService = {
     /**
      * getTileAt: Safe accessor for state.tiles
-     * Handles:
-     * - Map<string, Tile> (New System)
-     * - Object/Array (Legacy/Serialization)
-     * - Undefined/Null (Safety)
+     * Always returns a Tile object (uses fallback if missing)
      */
-    getTileAt(state: GameState, pos: Point): Tile | undefined {
-        if (!state.tiles) return undefined;
-
+    getTileAt(state: GameState, pos: Point): Tile {
         const key = pointToKey(pos);
+        let tile: any = undefined;
 
-        if (state.tiles instanceof Map) {
-            return state.tiles.get(key);
+        if (state.tiles) {
+            if (state.tiles instanceof Map) {
+                tile = state.tiles.get(key);
+            } else if (Array.isArray(state.tiles)) {
+                tile = (state.tiles as any[]).find((t: any) =>
+                    (Array.isArray(t) && t[0] === key) ||
+                    (t.position && hexEquals(t.position, pos))
+                );
+            } else {
+                tile = (state.tiles as any)[key];
+            }
         }
 
-        // Handle legacy array serialization or object form
-        if (Array.isArray(state.tiles)) {
-            // This is slow (O(N)), but only happens if migration failed or mostly in tests
-            // Ideally we migrate on load, but this is a fail-safe.
-            const entry = (state.tiles as any[]).find((t: any) =>
-                (Array.isArray(t) && t[0] === key) // Map.entries() format
-                || (t.position && hexEquals(t.position, pos)) // Object format
-            );
-            return Array.isArray(entry) ? entry[1] : entry;
-        }
+        if (tile) return tile as Tile;
 
-        // Handle plain object dictionary
-        return (state.tiles as any)[key];
+        // Fallback: Default playable floor
+        return {
+            position: pos,
+            baseId: 'STONE',
+            traits: new Set(['WALKABLE']),
+            effects: []
+        };
     },
 
     /**
@@ -43,45 +44,60 @@ export const UnifiedTileService = {
      * 3. Tile Data (New System)
      * 4. Dynamic Effects (Ice, Fire, etc)
      */
-    getTraitsAt(state: GameState, pos: Point): Set<TileTrait> {
+    /**
+     * getTraitsForTile: Internal helper to map a Tile object to its actual traits
+     * Combines baseId mappings, instance traits, and dynamic effects.
+     */
+    getTraitsForTile(state: GameState, tile: Tile): Set<TileTrait> {
         const traits = new Set<TileTrait>();
-        const tile = this.getTileAt(state, pos);
+        const pos = tile.position;
 
         // 1. Perimeter Check
         const inBounds = isHexInRectangularGrid(pos, state.gridWidth, state.gridHeight);
         if (!inBounds) {
             traits.add('BLOCKS_MOVEMENT');
             traits.add('BLOCKS_LOS');
-            traits.add('ANCHOR'); // Map edge is grapple-able
-            return traits; // Hard stop at world edge
+            traits.add('ANCHOR');
+            return traits;
         }
 
-        // 2. Static Walls (REMOVED - now handled via tile data)
-
-        // 3. Tile Data
-        if (tile) {
-            // Base Traits
-            tile.traits.forEach(t => traits.add(t));
-
-            // Effect Traits
-            tile.effects.forEach(eff => {
-                // Future-proof: We can map effect IDs to traits here
-                if (eff.id === 'ICE_WALL') {
-                    traits.add('BLOCKS_MOVEMENT');
-                    traits.add('BLOCKS_LOS');
-                    traits.add('ANCHOR');
-                }
-                if (eff.id === 'SMOKE') traits.add('BLOCKS_LOS');
-            });
+        // 2. Base ID Mappings (Fallback for lost traits during serialization)
+        if (tile.baseId === 'LAVA') {
+            traits.add('HAZARDOUS');
+            traits.add('LIQUID');
+            traits.add('LAVA' as TileTrait); // Added for visual targeting
+        }
+        if (tile.baseId === 'WALL') {
+            traits.add('BLOCKS_MOVEMENT');
+            traits.add('BLOCKS_LOS');
+            traits.add('ANCHOR');
         }
 
-        // 4. Default Floor 
-        // If it's in-bounds, not a wall, and has no tile data, it's walkable floor.
-        if (inBounds && !tile && !traits.has('BLOCKS_MOVEMENT')) {
-            traits.add('WALKABLE');
-        }
+        // 3. Instance Traits (The Set we hydrate on load)
+        tile.traits.forEach(t => traits.add(t));
+
+        // 4. Dynamic Effect Mappings (Fireball/Firewall logic)
+        tile.effects.forEach(eff => {
+            if (eff.id === 'FIRE') {
+                traits.add('FIRE' as TileTrait);      // Critical for visuals
+                traits.add('HAZARDOUS'); // Critical for AI/Damage
+            }
+            if (eff.id === 'ICE_WALL') {
+                traits.add('BLOCKS_MOVEMENT');
+                traits.add('BLOCKS_LOS');
+                traits.add('ANCHOR');
+            }
+            if (eff.id === 'SMOKE') {
+                traits.add('BLOCKS_LOS');
+            }
+        });
 
         return traits;
+    },
+
+    getTraitsAt(state: GameState, pos: Point): Set<TileTrait> {
+        const tile = this.getTileAt(state, pos);
+        return this.getTraitsForTile(state, tile);
     },
 
     isPassable(state: GameState, pos: Point): boolean {

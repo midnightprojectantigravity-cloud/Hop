@@ -29,7 +29,16 @@ import { SWIFT_ROLL } from './skills/swift_roll';
 import { SNEAK_ATTACK } from './skills/sneak_attack';
 import { SMOKE_SCREEN } from './skills/smoke_screen';
 import { SHADOW_STEP } from './skills/shadow_step';
+import { FALCON_COMMAND } from './skills/falcon_command';
+import { FALCON_PECK } from './skills/falcon_peck';
+import { FALCON_APEX_STRIKE } from './skills/falcon_apex_strike';
+import { FALCON_HEAL } from './skills/falcon_heal';
+import { FALCON_SCOUT } from './skills/falcon_scout';
+import { KINETIC_TRI_TRAP } from './skills/kinetic_tri_trap';
+import { WITHDRAWAL } from './skills/withdrawal';
+import { ABSORB_FIRE } from './skills/absorb_fire';
 import type { SkillDefinition } from './types';
+import type { SkillID } from './types/registry';
 
 /**
  * A registry of all skills using the new Compositional Skill Framework.
@@ -60,7 +69,38 @@ export const COMPOSITIONAL_SKILLS: Record<string, SkillDefinition> = {
     SNEAK_ATTACK,
     SMOKE_SCREEN,
     SHADOW_STEP,
+    FALCON_COMMAND,
+    FALCON_PECK,
+    FALCON_APEX_STRIKE,
+    FALCON_HEAL,
+    FALCON_SCOUT,
+    KINETIC_TRI_TRAP,
+    WITHDRAWAL,
+    ABSORB_FIRE,
 };
+
+/**
+ * Creates an ActiveSkill instance from a SkillID.
+ */
+export function createActiveSkill(id: SkillID): any {
+    const def = COMPOSITIONAL_SKILLS[id];
+    if (!def) return null;
+
+    return {
+        id,
+        name: def.name,
+        description: def.description,
+        slot: def.slot,
+        cooldown: def.baseVariables.cooldown || 0,
+        currentCooldown: 0,
+        range: def.baseVariables.range || 0,
+        upgrades: Object.keys(def.upgrades || {}),
+        activeUpgrades: [],
+    };
+}
+
+// Export as SkillRegistry for convenience
+export const SkillRegistry = COMPOSITIONAL_SKILLS;
 
 /**
  * Find a skill definition by ID.

@@ -4,6 +4,7 @@ import type { ScenarioCollection } from './types';
 /**
  * Bulwark Charge Scenarios
  * Tests: Chain pushing, wall hard-stop stuns
+ * This file is work in progress, not ready for automated testing yet.
  */
 export const bulwarkChargeScenarios: ScenarioCollection = {
     id: 'bulwark_charge',

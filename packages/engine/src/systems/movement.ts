@@ -91,12 +91,12 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
 
     const pathResult = TileResolver.processPath(actor, path, state);
 
-    if (pathResult.interruptedAt) {
-        // 1. Move to the lethal hex
+    if (pathResult.interrupt) {
+        // 1. Move to the lethal hex (lastValidPos is where the actor ended up)
         let newState = applyEffects(state, [{
             type: 'Displacement' as const,
             target: actorId === 'player' ? 'self' : 'targetActor',
-            destination: pathResult.interruptedAt
+            destination: pathResult.lastValidPos
         }], { targetId: actorId });
 
         // 2. Apply lethal effects (Damage/Death/Juice)

@@ -4,6 +4,7 @@ import type { ScenarioCollection } from './types';
 /**
  * Dash Scenarios
  * Tests: Axial movement, range, wall blocking, and Shield Shunt collision
+ * This file has been reviewed and is now up to standards.
  */
 export const dashScenarios: ScenarioCollection = {
     id: 'dash',
@@ -22,7 +23,7 @@ export const dashScenarios: ScenarioCollection = {
             tags: ['lava', 'push', 'environmental-kill'],
 
             setup: (engine: any) => {
-                engine.setPlayer({ q: 4, r: 5, s: -9 }, ['DASH']);
+                engine.setPlayer({ q: 3, r: 5, s: -8 }, ['DASH']);
                 engine.spawnEnemy('footman', { q: 5, r: 5, s: -10 }, 'victim');
                 engine.setTile({ q: 7, r: 5, s: -12 }, 'lava');
                 engine.state.hasShield = true;
@@ -59,7 +60,7 @@ export const dashScenarios: ScenarioCollection = {
             tags: ['stress-test', 'collision', 'range'],
 
             setup: (engine: any) => {
-                // Start at (4,5)
+                // Start at (4,9)
                 engine.setPlayer({ q: 4, r: 9, s: -13 }, ['DASH']);
                 engine.state.hasShield = true;
 
@@ -91,7 +92,7 @@ export const dashScenarios: ScenarioCollection = {
                 const victim = state.enemies.find(e => e.id === 'victim');
 
                 const checks = {
-                    // Player should NOT be at (4,7), (4,3) or (10,5). 
+                    // Player should NOT be at (4,7), (4,3), (6,6) or (7,4). 
                     // They should have ended up at the tile before the victim's final spot (4,6).
                     finalPositionCorrect: state.player.position.q === 4 && state.player.position.r === 6,
 
@@ -104,8 +105,8 @@ export const dashScenarios: ScenarioCollection = {
                     shuntSuccess: logs.some(l => l.includes('Shield Shunt')),
 
                     // Crucial for balancing: The failures shouldn't have ended the turn prematurely,
-                    // but the final success should have consumed exactly 1 turn.
-                    oneTurnSpent: state.turnsSpent === 2
+                    // but the final success should have consumed exactly 2 turns.
+                    twoTurnSpent: state.turnsSpent === 2
                 };
 
                 if (Object.values(checks).some(v => v === false)) {

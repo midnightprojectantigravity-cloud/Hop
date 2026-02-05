@@ -85,6 +85,41 @@ export class ScenarioEngine {
         });
     }
 
+    spawnFalcon(pos: Point, id: string) {
+        // We use the player as the owner for these tests
+        const falcon = {
+            id,
+            type: 'enemy' as const,
+            subtype: 'falcon',
+            factionId: 'player',
+            speed: 95, // High speed, acts after player
+            position: { ...pos },
+            previousPosition: { ...pos },
+            hp: 1,
+            maxHp: 1,
+            statusEffects: [],
+            temporaryArmor: 0,
+            activeSkills: [],
+            isFlying: true,
+            companionOf: 'player',
+            companionState: {
+                mode: 'roost',
+                orbitStep: 0,
+                apexStrikeCooldown: 0,
+            }
+        } as Entity;
+
+        this.state.enemies.push(falcon);
+        if (!this.state.companions) this.state.companions = [];
+        this.state.companions.push(falcon);
+    }
+
+    spawnCompanion(type: string, pos: Point, id: string) {
+        if (type === 'falcon') {
+            this.spawnFalcon(pos, id);
+        }
+    }
+
     setTile(pos: Point, type: 'lava' | 'wall' | 'floor' | 'slippery' | 'void') {
         const key = pointToKey(pos);
 

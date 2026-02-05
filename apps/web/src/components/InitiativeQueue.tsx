@@ -1,4 +1,4 @@
-import type { GameState, Actor, InitiativeEntry } from '@hop/engine';
+import { getEntityVisual, type GameState, type Actor, type InitiativeEntry } from '@hop/engine';
 
 interface InitiativeDisplayProps {
     gameState: GameState;
@@ -42,7 +42,7 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
                                 ${hasActed ? 'grayscale' : ''}
                             `}>
                                 <span className="text-xl">
-                                    {isPlayer ? '🔱' : getEnemyIcon(actor.subtype || '')}
+                                    {getEntityVisual(actor.subtype, actor.type, actor.enemyType as 'melee' | 'ranged' | 'boss', actor.archetype).icon}
                                 </span>
 
                                 {isCurrent && (
@@ -75,18 +75,4 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
     );
 };
 
-const getEnemyIcon = (subtype: string): string => {
-    switch (subtype) {
-        case 'footman': return '⚔️';
-        case 'archer': return '🏹';
-        case 'bomber': return '💣';
-        case 'shieldBearer': return '🛡️';
-        case 'sprinter': return '🏃';
-        case 'assassin': return '👤';
-        case 'warlock': return '🔮';
-        case 'golem': return '🧱';
-        case 'sentinel': return '👁️';
-        case 'bomb': return '🧨';
-        default: return '💀';
-    }
-};
+

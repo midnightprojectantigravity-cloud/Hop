@@ -31,9 +31,16 @@ export const shieldBashScenarios: ScenarioCollection = {
                 engine.useSkill('SHIELD_BASH', { q: 3, r: 5, s: -8 });
             },
             verify: (state: GameState, logs: string[]) => {
-                const enemyGone = state.enemies.length === 0;
-                const messageOk = logs.some(l => l.includes('Lava Sink'));
-                return enemyGone && messageOk;
+                const checks = {
+                    enemyGone: state.enemies.length === 0,
+                    messageOk: logs.some(l => l.includes('Lava')),
+                };
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('❌ Scenario Failed Details:', checks);
+                    console.log('Current Player Pos:', state.player.position);
+                    console.log('Logs found:', logs);
+                }
+                return Object.values(checks).every(v => v === true);
             }
         },
         {

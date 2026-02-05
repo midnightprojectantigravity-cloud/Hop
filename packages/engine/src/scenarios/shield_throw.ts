@@ -28,16 +28,18 @@ export const shieldThrowScenarios: ScenarioCollection = {
 
             run: (engine: any) => engine.useSkill('SHIELD_THROW', { q: 3, r: 5, s: -8 }),
 
-            verify: (state: GameState) => {
+            verify: (state: GameState, logs: string[]) => {
                 const enemy = state.enemies.find(e => e.id === 'victim');
 
-                const checks = [
-                    enemy?.position.r === 1, // 5 - 4 = 1
-                ];
+                const checks = {
+                    victimAt1: enemy?.position.r === 1, // 5 - 4 = 1
+                    victimStunned: logs?.some(log => log.includes('stunned')),
+                };
 
                 if (Object.values(checks).some(v => v === false)) {
                     console.log('❌ Shield Throw Failed:', checks);
                     console.log('Enemy Pos:', enemy?.position);
+                    console.log('Logs:', logs);
                 }
 
                 return Object.values(checks).every(v => v === true);
@@ -52,57 +54,37 @@ export const shieldThrowScenarios: ScenarioCollection = {
             category: 'combat',
             difficulty: 'intermediate',
             isTutorial: true,
-            tags: ['collision', 'push', 'stun'],
+            tags: ['collision', 'lava', 'push', 'environmental-kill'],
 
             setup: (engine: any) => {
                 engine.setPlayer({ q: 3, r: 6, s: -9 }, ['SHIELD_THROW']);
                 engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'victim');
                 engine.spawnEnemy('shieldbearer', { q: 3, r: 3, s: -6 }, 'obstacle');
+                engine.setTile({ q: 3, r: 1, s: -4 }, 'lava');
             },
 
             run: (engine: any) => engine.useSkill('SHIELD_THROW', { q: 3, r: 5, s: -8 }),
 
-            verify: (state: GameState) => {
+            verify: (state: GameState, logs: string[]) => {
                 const victim = state.enemies.find(e => e.id === 'victim');
                 const obstacle = state.enemies.find(e => e.id === 'obstacle');
 
                 // Kinetic Pulse supports Chain Reaction: Victim pushes Obstacle!
                 const checks = {
                     victimPushed: (victim?.position.r ?? 5) === 3,
-                    obstaclePushed: (obstacle?.position.r ?? 3) === 2,
+                    obstacleDead: !obstacle
                 };
 
                 if (Object.values(checks).some(v => v === false)) {
                     console.log('❌ Shield Throw Failed:', checks);
                     console.log('Victim Pushed:', checks.victimPushed);
                     console.log('Victim Pos:', victim?.position);
-                    console.log('Obstacle Pushed:', checks.obstaclePushed);
-                    console.log('Obstacle Pos:', obstacle?.position);
+                    console.log('Obstacle Dead:', checks.obstacleDead);
+                    console.log('Logs:', logs);
                 }
 
                 return Object.values(checks).every(v => v === true);
             }
-        },
-
-        {
-            id: 'shield_lava_sink',
-            title: 'Shield Lava Sink',
-            description: 'Verify enemy sinks when pushed into lava.',
-            relatedSkills: ['SHIELD_THROW'],
-            category: 'hazards',
-            difficulty: 'intermediate',
-            isTutorial: true,
-            tags: ['lava', 'push', 'environmental-kill'],
-
-            setup: (engine: any) => {
-                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['SHIELD_THROW']);
-                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'victim');
-                engine.setTile({ q: 3, r: 4, s: -7 }, 'lava');
-            },
-
-            run: (engine: any) => engine.useSkill('SHIELD_THROW', { q: 3, r: 5, s: -8 }),
-
-            verify: (state: GameState) => !state.enemies.find(e => e.id === 'victim')
         }
     ]
 };

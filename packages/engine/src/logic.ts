@@ -7,7 +7,7 @@ import type { GameState, Action, Entity, AtomicEffect } from './types';
 import { hexEquals, getNeighbors } from './hex';
 import { resolveTelegraphedAttacks, resolveSingleEnemyTurn } from './systems/combat';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
-import { checkShrine, checkStairs, getEnemyAt, applyFireDamage } from './helpers';
+import { checkShrine, checkStairs, getEnemyAt } from './helpers';
 import { increaseMaxHp } from './systems/actor';
 import { generateDungeon, generateEnemies, getFloorTheme } from './systems/map';
 import { tickSkillCooldowns, UPGRADE_DEFINITIONS, addUpgrade, createDefaultSkills, applyPassiveSkills } from './systems/legacy-skills';
@@ -206,15 +206,7 @@ export const processNextTurn = (state: GameState): GameState => {
     let activeEnemy = curState.enemies.find(e => e.id === actorId);
     if (!activeEnemy) return curState;
 
-    const fireRes = applyFireDamage(curState, activeEnemy.position, activeEnemy);
-    if (fireRes.messages.length > 0) {
-        messages.push(...fireRes.messages);
-        curState = {
-            ...curState,
-            enemies: curState.enemies.map(e => e.id === actorId ? fireRes.entity : e)
-        };
-        activeEnemy = fireRes.entity as Entity;
-    }
+    // Fire damage is now handled by TileResolver.processStay in combat.ts
     if (activeEnemy.hp <= 0) return curState;
 
     const isStunned = activeEnemy.statusEffects.some(s => s.type === 'stunned');

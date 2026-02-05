@@ -16,7 +16,7 @@ export interface Point {
     s: number;
 }
 
-export type WeightClass = 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
+export type WeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
 
 // (Actor model introduced below; `Entity` is now an alias to `Actor`)
 
@@ -97,9 +97,12 @@ export type AtomicEffect =
         stunDuration?: number;
         path?: Point[];  // Optional: Full path for smooth tile-by-tile animation
         animationDuration?: number;  // Optional: Suggested duration in ms (e.g., 150ms per tile)
+        ignoreCollision?: boolean;
+        simulatePath?: boolean;
+        ignoreGroundHazards?: boolean;
     }
     | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string; source?: Point }
-    | { type: 'Heal'; target: 'targetActor'; amount: number }
+    | { type: 'Heal'; target: 'targetActor' | string; amount: number }
     | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: StatusID; duration: number }
     | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
     | { type: 'PickupShield'; position?: Point }
@@ -126,8 +129,17 @@ export type AtomicEffect =
     | { type: 'SpawnActor', actor: Actor }
     | { type: 'PlaceFire'; position: Point; duration: number }
     | { type: 'PlaceTrap'; position: Point; ownerId: string }
-    | { type: 'RemoveTrap'; position: Point }
+    | { type: 'RemoveTrap'; position: Point; ownerId?: string }
     | { type: 'SetStealth'; target: 'self' | 'targetActor' | string; amount: number }
+    | {
+        type: 'UpdateCompanionState';
+        target: string;
+        mode?: 'scout' | 'predator' | 'roost';
+        markTarget?: string | Point; // ID (Predator) or Point (Scout)
+        orbitStep?: number;
+        apexStrikeCooldown?: number;
+        healCooldown?: number;
+    }
     | { type: 'GameOver'; reason: 'PLAYER_DIED' | 'OUT_OF_TIME' };
 
 export interface VisualEvent {
@@ -221,7 +233,7 @@ export interface Actor {
 
     // Logic state
     previousPosition?: Point;
-    enemyType?: 'melee' | 'ranged';
+    enemyType?: 'melee' | 'ranged' | 'boss';
 
     // Initiative system
     initiative?: number; // Custom initiative score (overrides default)
@@ -244,6 +256,18 @@ export interface Actor {
 
     // Stealth system
     stealthCounter?: number;
+
+    // Companion system (Falcon)
+    companionOf?: string;      // Owner's actor ID (for Falcon)
+    isFlying?: boolean;        // Ignores traps, ground hazards
+    companionState?: {
+        mode: 'scout' | 'predator' | 'roost';
+        markTarget?: Point | string;  // Tile position or Actor ID
+        orbitStep?: number;           // Scout rotation counter (0-5)
+        revivalCooldown?: number;     // Tethered Spirit countdown
+        apexStrikeCooldown?: number;  // Tracking for design alignment
+        healCooldown?: number;
+    };
 }
 
 // Backwards-compatible alias: existing code that expects `Entity` keeps working.
@@ -265,6 +289,7 @@ export interface GameState {
     turnNumber: number;
     player: Entity;
     enemies: Entity[];
+    companions?: Entity[];
     gridWidth: number;
     gridHeight: number;
     gameStatus: 'hub' | 'playing' | 'won' | 'lost' | 'choosing_upgrade';
@@ -330,6 +355,14 @@ export interface GameState {
         shrineOptions?: string[];
         completedRun?: any;
     };
+
+    // Kinetic Tri-Trap system
+    traps?: Array<{
+        position: Point;
+        ownerId: string;
+        isRevealed: boolean;
+        cooldown: number;  // Individual trap reset CD
+    }>;
 }
 
 export type Action =

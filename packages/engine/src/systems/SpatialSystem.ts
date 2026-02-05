@@ -3,7 +3,7 @@
  * Unified source of truth for all grid-based queries, navigation, and occupancy bitmasks.
  */
 import type { GameState, Point } from '../types';
-import { pointToKey } from '../hex';
+// import { pointToKey } from '../hex';
 import {
     hexAdd,
     hexEquals,
@@ -55,7 +55,7 @@ export const SpatialSystem = {
 
         // 1. Environmental Blockers
         state.tiles?.forEach(tile => {
-            if (tile.baseId === 'WALL' || tile.traits?.has('BLOCKS_LOS')) {
+            if (tile.baseId === 'WALL' || tile.traits?.has('BLOCKS_MOVEMENT')) {
                 mask = setOccupancy(mask, tile.position, true);
             }
         });

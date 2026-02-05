@@ -5,10 +5,7 @@ import { hexEquals } from '../hex';
 /**
  * Basic Move Scenarios
  * Tests: Standard movement and spatial state updates
- */
-/**
- * Basic Move Scenarios
- * Adjusted to center map coordinates (4, 5, -9)
+ * This file has been reviewed and is now up to standards.
  */
 export const basicMoveScenarios: ScenarioCollection = {
     id: 'basic_move',
@@ -51,6 +48,7 @@ export const basicMoveScenarios: ScenarioCollection = {
                 if (Object.values(checks).some(v => v === false)) {
                     console.log('❌ Scenario Failed Details:', checks);
                     console.log('Final Position:', state.player.position);
+                    console.log('Logs found:', logs);
                 }
 
                 return Object.values(checks).every(v => v === true);
@@ -100,6 +98,7 @@ export const basicMoveScenarios: ScenarioCollection = {
                 if (Object.values(checks).some(v => v === false)) {
                     console.log('❌ Free Move Scenario Failed:', checks);
                     console.log('Final Position:', state.player.position);
+                    console.log('Logs found:', logs);
                 }
 
                 return Object.values(checks).every(v => v === true);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Actor as EntityType } from '@hop/engine';
-import { isStunned, hexToPixel, getDirectionFromTo, hexEquals, TILE_SIZE, getHexLine } from '@hop/engine';
+import { isStunned, hexToPixel, getDirectionFromTo, hexEquals, TILE_SIZE, getHexLine, getEntityVisual, isEntityFlying } from '@hop/engine';
 
 interface EntityProps {
     entity: EntityType;
@@ -10,63 +10,45 @@ interface EntityProps {
 
 
 const renderIcon = (entity: EntityType, isPlayer: boolean, size = 24) => {
-    const playerColor = '#3b82f6';
-    const enemyColor = '#ef4444';
-    const borderColor = '#ffffff';
+    const visual = getEntityVisual(entity.subtype, entity.type, entity.enemyType as 'melee' | 'ranged' | 'boss', entity.archetype);
+    const { icon, shape, color, borderColor, size: sizeMult = 1.0 } = visual;
+    const finalSize = size * sizeMult;
 
-    if (isPlayer) {
-        return (
-            <g>
-                <title>Player</title>
-                {/* Blue square with white border */}
-                <rect x={-size * 0.8} y={-size * 0.8} width={size * 1.6} height={size * 1.6} fill={playerColor} stroke={borderColor} strokeWidth={2} />
-                {/* Simplified Spear icon overlay */}
-                <path d={`M0 ${-size * 0.4} L0 ${size * 0.4} M${-size * 0.15} ${-size * 0.2} L0 ${-size * 0.5} L${size * 0.15} ${-size * 0.2}`} stroke={borderColor} strokeWidth={2} fill="none" />
-            </g>
-        );
-    }
+    return (
+        <g>
+            <title>{isPlayer ? 'Player' : `${entity.subtype || 'Enemy'}`}</title>
+            {shape === 'square' && (
+                <rect x={-finalSize * 0.8} y={-finalSize * 0.8} width={finalSize * 1.6} height={finalSize * 1.6} fill={color} stroke={borderColor} strokeWidth={2} />
+            )}
+            {shape === 'diamond' && (
+                <path d={`M0 ${-finalSize * 0.8} L${finalSize * 0.6} 0 L0 ${finalSize * 0.8} L${-finalSize * 0.6} 0 Z`} fill={color} stroke={borderColor} strokeWidth={1} />
+            )}
+            {shape === 'triangle' && (
+                <path d={`M0 ${-finalSize * 0.8} L${finalSize * 0.7} ${finalSize * 0.5} L${-finalSize * 0.7} ${finalSize * 0.5} Z`} fill={color} stroke={borderColor} strokeWidth={1} />
+            )}
+            {shape === 'circle' && (
+                <circle r={finalSize * 0.7} fill={color} stroke={borderColor} strokeWidth={1} />
+            )}
 
-    if (entity.subtype === 'bomb') {
-        const timer = entity.actionCooldown ?? 0;
-        return (
-            <g style={{ transition: 'transform 0.2s ease-in-out', pointerEvents: 'none' }}>
-                <circle r={size * 0.6} fill="#1f2937" stroke="#000" />
-                <circle r={size * 0.2} cy={-size * 0.3} fill={timer === 1 ? "#ef4444" : "#f59e0b"} />
-                <text y={size * 0.2} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold">{timer}</text>
-            </g>
-        );
-    }
+            {/* Special overlays */}
+            {entity.subtype === 'bomb' && (
+                <text y={finalSize * 0.2} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold">
+                    {entity.actionCooldown ?? 0}
+                </text>
+            )}
 
-    // Bomber: Red Circle
-    if (entity.subtype === 'bomber') {
-        return (
-            <g>
-                <title>Bomber Enemy</title>
-                <circle r={size * 0.7} fill={enemyColor} stroke={borderColor} strokeWidth={1} />
-            </g>
-        );
-    }
+            {/* Icon/Emoji */}
+            {!isPlayer && entity.subtype !== 'bomb' && (
+                <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={finalSize * 0.8} opacity={0.8}>
+                    {icon}
+                </text>
+            )}
 
-    // Enemies: Melee = Diamond, Ranged = Triangle
-    const isMelee = entity.enemyType === 'melee' || ['footman', 'shieldBearer', 'golem', 'sprinter', 'assassin'].includes(entity.subtype || '');
-
-    if (isMelee) {
-        return (
-            <g>
-                <title>Melee Enemy</title>
-                {/* Red Diamond */}
-                <path d={`M0 ${-size * 0.8} L${size * 0.6} 0 L0 ${size * 0.8} L${-size * 0.6} 0 Z`} fill={enemyColor} stroke={borderColor} strokeWidth={1} />
-            </g>
-        );
-    } else {
-        return (
-            <g>
-                <title>Ranged Enemy</title>
-                {/* Red Triangle */}
-                <path d={`M0 ${-size * 0.8} L${size * 0.7} ${size * 0.5} L${-size * 0.7} ${size * 0.5} Z`} fill={enemyColor} stroke={borderColor} strokeWidth={1} />
-            </g>
-        );
-    }
+            {isPlayer && (
+                <path d={`M0 ${-finalSize * 0.4} L0 ${finalSize * 0.4} M${-finalSize * 0.15} ${-finalSize * 0.2} L0 ${-finalSize * 0.5} L${finalSize * 0.15} ${-finalSize * 0.2}`} stroke={borderColor} strokeWidth={2} fill="none" />
+            )}
+        </g>
+    );
 };
 
 export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
@@ -146,14 +128,20 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
     const isInvisible = entity.isVisible === false;
 
     if (isSpear) {
+        const spearVisual = getEntityVisual('spear', 'enemy'); // Spear is treated like an entity for visual config
         return (
             <g style={{ pointerEvents: 'none' }}>
                 <g transform={`translate(${x},${y})`}>
-                    <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize="20" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>🔱</text>
+                    <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize="20" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>
+                        {spearVisual.icon}
+                    </text>
                 </g>
             </g>
         );
     }
+
+    const visual = getEntityVisual(entity.subtype, entity.type, entity.enemyType as 'melee' | 'ranged' | 'boss', entity.archetype);
+    const isFlying = isEntityFlying(entity);
 
     return (
         <g style={{ pointerEvents: 'none' }}>
@@ -183,11 +171,20 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
                 <g
                     transform={stretchTransform}
                     className={`${isFlashing ? 'entity-damaged' : ''} ${!isDying && !isStunned(entity) ? 'animate-idle' : ''}`}
-                    opacity={isInvisible ? 0.3 : 1}
+                    opacity={isInvisible ? 0.3 : (visual.opacity || 1)}
                     style={{ filter: isInvisible ? 'blur(1px)' : 'none' }}
                 >
                     {/* subtle background circle */}
                     <circle r={TILE_SIZE * 0.9} fill={isPlayer ? 'rgba(139,94,52,0.06)' : 'rgba(184,20,20,0.06)'} opacity={1} />
+
+                    {/* Shadow if flying */}
+                    {isFlying && (
+                        <ellipse
+                            cx={0} cy={TILE_SIZE * 0.3}
+                            rx={TILE_SIZE * 0.4} ry={TILE_SIZE * 0.15}
+                            fill="black" opacity={0.2}
+                        />
+                    )}
 
                     {/* SVG icon */}
                     <g transform="translate(0,-2) scale(0.9)">
@@ -202,14 +199,14 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
                         </g>
                     )}
 
-                    {/* Shield direction indicator for shield bearer */}
-                    {entity.subtype === 'shieldBearer' && entity.facing !== undefined && !isStunned(entity) && (
+                    {/* Shield direction indicator */}
+                    {visual.showFacing && entity.facing !== undefined && !isStunned(entity) && (
                         <line
                             x1={0}
                             y1={0}
                             x2={Math.cos((entity.facing * 60 - 90) * Math.PI / 180) * TILE_SIZE * 0.5}
                             y2={Math.sin((entity.facing * 60 - 90) * Math.PI / 180) * TILE_SIZE * 0.5}
-                            stroke="#fbbf24"
+                            stroke={visual.borderColor}
                             strokeWidth={3}
                             strokeLinecap="round"
                         />
