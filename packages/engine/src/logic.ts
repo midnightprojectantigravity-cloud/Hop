@@ -5,13 +5,12 @@
  */
 import type { GameState, Action, Entity, AtomicEffect } from './types';
 import { hexEquals, getNeighbors } from './hex';
-import { resolveTelegraphedAttacks, resolveSingleEnemyTurn } from './systems/combat';
+import { resolveTelegraphedAttacks } from './systems/combat';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
 import { checkShrine, checkStairs, getEnemyAt } from './helpers';
-import { increaseMaxHp } from './systems/actor';
 import { generateDungeon, generateEnemies, getFloorTheme } from './systems/map';
-import { tickSkillCooldowns, UPGRADE_DEFINITIONS, addUpgrade, createDefaultSkills, applyPassiveSkills } from './systems/legacy-skills';
-import { COMPOSITIONAL_SKILLS } from './skillRegistry';
+import { tickActorSkills, addUpgrade, increaseMaxHp } from './systems/actor';
+import { SkillRegistry, createDefaultSkills } from './skillRegistry';
 import { applyEffects } from './systems/effect-engine';
 
 import { applyAutoAttack } from './skills/auto_attack';
@@ -25,9 +24,11 @@ import {
     removeFromQueue,
     getTurnStartPosition,
     getTurnStartNeighborIds,
+    getCurrentEntry,
     isPlayerTurn,
 } from './systems/initiative';
 import { tickStatuses } from './systems/status';
+import { createEntity } from './systems/entity-factory';
 
 
 /**
@@ -89,20 +90,25 @@ export const generateInitialState = (
     // Unified Tile Service: Initialized directly from dungeon
     const tiles = dungeon.tiles || new Map();
 
+    const basePlayer = createEntity({
+        id: 'player',
+        type: 'player',
+        position: dungeon.playerSpawn,
+        hp: playerStats.hp,
+        maxHp: playerStats.maxHp,
+        speed: playerStats.speed,
+        factionId: 'player',
+        activeSkills,
+        archetype,
+        weightClass: 'Standard',
+        components: new Map(),
+    });
+
     const tempState: GameState = {
         turnNumber: 1,
         player: {
-            ...playerStats,
-            id: 'player',
-            type: 'player',
-            factionId: 'player',
-            position: dungeon.playerSpawn,
+            ...basePlayer,
             previousPosition: dungeon.playerSpawn,
-            statusEffects: [],
-            temporaryArmor: 0,
-            activeSkills,
-            components: new Map(),
-            archetype: archetype
         },
         enemies: enemies.map(e => ({
             ...e,
@@ -175,74 +181,300 @@ const executeStatusWindow = (state: GameState, actorId: string, window: 'START_O
     return { state: newState, messages };
 };
 
-export const processNextTurn = (state: GameState): GameState => {
+// NEW PIPELINE IMPORTS
+import { StrategyRegistry } from './systems/strategy-registry';
+import { processIntent } from './systems/intent-middleware';
+import { TacticalEngine } from './systems/tactical-engine';
+import type { Intent } from './types/intent';
+import { ManualStrategy } from './strategy/manual';
+
+export const processNextTurn = (state: GameState, isResuming: boolean = false): GameState => {
     let curState = state;
-    let messages: string[] = [];
+    const messages: string[] = [];
     const dyingEntities: Entity[] = [];
 
-    const { queue: nextQueue, actorId } = advanceInitiative(curState);
-    curState = { ...curState, initiativeQueue: nextQueue };
+    // Safety brake for recursive/infinite loops
+    let iterations = 0;
+    const MAX_ITERATIONS = 100;
 
-    if (!actorId) return curState;
+    let skipAdvance = false;
 
-    if (actorId === curState.player.id) {
-        curState = { ...curState, initiativeQueue: startActorTurn(curState, curState.player) };
-        return curState;
-    }
+    while (iterations < MAX_ITERATIONS) {
+        iterations++;
 
-    const enemy = curState.enemies.find(e => e.id === actorId);
-    if (!enemy) {
-        curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
-        return processNextTurn(curState);
-    }
+        // GLOBAL DEATH CHECK: If player is dead, the game is over.
+        if (curState.player.hp <= 0 && curState.pendingStatus?.status !== 'lost') {
+            return {
+                ...curState,
+                pendingStatus: {
+                    status: 'lost'
+                },
+                message: [...curState.message, 'You have fallen...'].slice(-50)
+            };
+        }
+        curState.occupancyMask = SpatialSystem.refreshOccupancyMask(curState);
 
-    curState = { ...curState, initiativeQueue: startActorTurn(curState, enemy) };
-    const turnStartPos = getTurnStartPosition(curState, actorId)!;
+        let actorId: string | undefined;
 
-    const sotResult = executeStatusWindow(curState, actorId, 'START_OF_TURN');
-    curState = sotResult.state;
-    messages.push(...sotResult.messages);
+        if (((isResuming && iterations === 1) || skipAdvance) && curState.initiativeQueue) {
+            skipAdvance = false;
+            const q = curState.initiativeQueue;
+            if (q.entries.length > 0 && q.currentIndex >= 0 && q.currentIndex < q.entries.length) {
+                actorId = q.entries[q.currentIndex].actorId;
+            }
+        } else {
+            // 1. Advance Initiative normally
+            const res = advanceInitiative(curState);
+            curState = { ...curState, initiativeQueue: res.queue };
+            actorId = res.actorId ?? undefined;
+        }
 
-    let activeEnemy = curState.enemies.find(e => e.id === actorId);
-    if (!activeEnemy) return curState;
+        if (!actorId) break; // End of round?
 
-    // Fire damage is now handled by TileResolver.processStay in combat.ts
-    if (activeEnemy.hp <= 0) return curState;
+        const actor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
 
-    const isStunned = activeEnemy.statusEffects.some(s => s.type === 'stunned');
-    if (isStunned) {
-        messages.push(`${activeEnemy.subtype || activeEnemy.type} is stunned and skips their turn!`);
-    } else {
+        // If actor is missing/dead, remove from queue and continue
+        if (!actor || actor.hp <= 0) {
+            curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
+            continue;
+        }
+
+        // 2. Start Turn Logic
+        const entry = getCurrentEntry(curState.initiativeQueue!);
+        if (!entry?.turnStartPosition) {
+            curState = { ...curState, initiativeQueue: startActorTurn(curState, actor) };
+        }
+
+        if (!isResuming || iterations > 1) {
+            const sotResult = executeStatusWindow(curState, actorId, 'START_OF_TURN');
+            curState = sotResult.state;
+            messages.push(...sotResult.messages);
+
+            const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId);
+            curState = tele.state;
+            messages.push(...tele.messages);
+        }
+
+
+        // Re-fetch actor after status updates (might have died?)
+        const activeActor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
+        if (!activeActor || activeActor.hp <= 0) {
+            curState = {
+                ...curState,
+                initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId),
+                message: [...curState.message, ...messages].slice(-50)
+            };
+            continue;
+        }
+
+        // 4. Resolve Telegraphs (Environment/Delayed Skills) - Mostly for Player/Enemies interaction
+        // Note: original code only checked telegraphs for enemy actors? Check if player needs this.
+        // Assuming environment affects everyone.
         const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId);
         curState = tele.state;
         messages.push(...tele.messages);
 
-        const updatedEnemy = curState.enemies.find(e => e.id === actorId);
-        if (updatedEnemy) {
-            const turnResult = resolveSingleEnemyTurn(curState, updatedEnemy, turnStartPos);
-            curState = turnResult.state;
-            messages.push(...turnResult.messages);
+        // 5. THE AGENCY PIPELINE
+        const strategy = StrategyRegistry.resolve(activeActor);
+        const intentOrPromise = strategy.getIntent(curState, activeActor);
 
-            if (turnResult.isDead) {
+        // Check if we need to wait for input (Manual Strategy)
+        if (intentOrPromise instanceof Promise) {
+            // HALT EXECUTION: Return state and wait for input action
+            return {
+                ...curState,
+                message: [...curState.message, ...messages].slice(-50),
+                dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
+            };
+        }
+
+        // We have a synchronous Intent
+        let intent = intentOrPromise as Intent;
+
+        // DEEP DIAGNOSTIC: Log Loadout and Intent
+        const loadoutStr = activeActor.activeSkills.map(s => s.id).join(', ');
+        console.log(`[ENGINE] Actor: ${actorId} | Loadout: [${loadoutStr}] | Pos: ${JSON.stringify(activeActor.position)}`);
+        console.log(`[ENGINE] Intent: ${intent.type} | Skill: ${intent.skillId} | TargetHex: ${intent.targetHex ? JSON.stringify(intent.targetHex) : 'none'} | TargetId: ${intent.primaryTargetId || 'none'}`);
+
+        // Apply RNG Consumption from Strategy (if any)
+        if (intent.metadata.rngConsumption) {
+            curState = {
+                ...curState,
+                rngCounter: (curState.rngCounter || 0) + intent.metadata.rngConsumption
+            };
+        }
+
+        // 6. Middleware Layer
+        intent = processIntent(intent, curState, activeActor);
+
+        // 7. Tactical Execution Layer
+        const { effects, messages: tacticalMessages, consumesTurn, targetId, kills } = TacticalEngine.execute(intent, activeActor, curState);
+        // Console log for headless debugging (Intent Fidelity)
+        console.log(`[ENGINE] ${actorId} intends ${intent.type} (${intent.skillId}) onto ${targetId || (intent.targetHex ? JSON.stringify(intent.targetHex) : 'self')}`);
+
+
+        // WORLD-CLASS LOGIC: The "Smoking Gun" Debug Log
+        // If an intent produces zero effects, we need to know why in headless mode.
+        if (effects.length === 0 && intent.type !== 'WAIT') {
+            const warnMsg = `[ENGINE] WARNING: Intent ${intent.type} (${intent.skillId}) for actor ${actorId} produced ZERO effects!`;
+            console.warn(warnMsg);
+        }
+
+        // 8. Apply Effects
+        // Note: applyEffects handles damage, healing, movement, etc.
+        const stateBeforeEffects = curState;
+        const nextState = applyEffects(curState, effects, { sourceId: actorId, targetId });
+
+        if (actorId === 'player') {
+            nextState.kills = (nextState.kills || 0) + (kills || 0);
+        }
+
+        // 9. Post-Action Cleanup / End of Turn
+
+        // Handle Turn Consumption (FIDELITY GUARD)
+        if (consumesTurn === false) {
+            // Revert state for non-consuming actions (except MESSAGES)
+            curState = {
+                ...stateBeforeEffects,
+                message: [...curState.message, ...tacticalMessages].slice(-50)
+            };
+            skipAdvance = true;
+            continue; // Loop back for SAME actor!
+        }
+
+        // Success Path
+        curState = nextState;
+        messages.push(...tacticalMessages);
+
+        // Check Death
+        const postActionActor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
+        if (!postActionActor || postActionActor.hp <= 0) {
+            // Actor died during their own turn (e.g. walked into lava)
+            if (actorId === 'player') {
                 return {
                     ...curState,
-                    enemies: curState.enemies.filter(e => e.id !== actorId),
-                    initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId),
-                    message: [...curState.message, ...messages].slice(-50)
+                    pendingStatus: { status: 'lost' },
+                    message: [...curState.message, ...messages, 'You have fallen...'].slice(-50)
+                };
+            }
+            curState = {
+                ...curState,
+                enemies: curState.enemies.filter(e => e.id !== actorId),
+                initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId),
+                message: [...curState.message, ...messages].slice(-50)
+            };
+            continue; // Next actor
+        }
+
+        // End of Turn Statuses
+        const eotResult = executeStatusWindow(curState, actorId, 'END_OF_TURN');
+        curState = eotResult.state;
+        messages.push(...eotResult.messages);
+
+        curState = {
+            ...curState,
+            enemies: curState.enemies.map(e => e.id === actorId ? tickStatuses(e) : e),
+            player: actorId === 'player' ? tickStatuses(curState.player) : curState.player,
+            initiativeQueue: endActorTurn(curState, actorId)
+        };
+
+        // 10. Passives / After-Turn Cleanup (Auto-Attack, etc)
+        const actorAfterTurn = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
+        if (actorAfterTurn && actorAfterTurn.hp > 0) {
+            const playerStartPos = getTurnStartPosition(curState, actorId) || actorAfterTurn.previousPosition || actorAfterTurn.position;
+            const persistentNeighborIds = getTurnStartNeighborIds(curState, actorId) ?? undefined;
+
+            const autoAttackResult = applyAutoAttack(
+                curState,
+                actorAfterTurn,
+                getNeighbors(playerStartPos),
+                playerStartPos,
+                persistentNeighborIds
+            );
+            curState = autoAttackResult.state;
+            messages.push(...autoAttackResult.messages);
+            if (actorId === 'player') {
+                curState.kills = (curState.kills || 0) + autoAttackResult.kills;
+            }
+        }
+
+        if (actorId === 'player') {
+            const playerPos = curState.player.position;
+
+            // 1. Pick up spear if on it
+            if (curState.spearPosition && hexEquals(playerPos, curState.spearPosition)) {
+                curState = {
+                    ...curState,
+                    hasSpear: true,
+                    spearPosition: undefined,
+                    message: [...curState.message, 'Picked up your spear.'].slice(-50)
+                };
+            }
+
+            // 2. Tile Ticks (Lava damage, etc)
+            const tileTickResult = tickTileEffects(curState);
+            curState = tileTickResult.state;
+            messages.push(...tileTickResult.messages);
+
+            curState.player = tickActorSkills(curState.player);
+            curState = { ...curState, turnNumber: curState.turnNumber + 1, turnsSpent: (curState.turnsSpent || 0) + 1 };
+
+            // CHECK TILE INTERACTIONS (Shrines / Stairs)
+            if (checkShrine(curState, curState.player.position)) {
+                const allUpgrades = SkillRegistry.getAllUpgrades().map(u => u.id);
+                const available = allUpgrades.filter(u => !curState.upgrades.includes(u));
+                const picked: string[] = [];
+                let rngState = { ...curState };
+                for (let i = 0; i < 3 && available.length > 0; i++) {
+                    const res = consumeRandom(rngState);
+                    rngState = res.nextState;
+                    const idx = Math.floor(res.value * available.length);
+                    picked.push(available[idx]);
+                    available.splice(idx, 1);
+                }
+                return {
+                    ...curState,
+                    rngCounter: rngState.rngCounter,
+                    pendingStatus: {
+                        status: 'choosing_upgrade',
+                        shrineOptions: picked.length > 0 ? picked : ['EXTRA_HP']
+                    },
+                    message: [...curState.message, 'A holy shrine! Choose an upgrade.'].slice(-50)
+                };
+            }
+
+            if (checkStairs(curState, curState.player.position)) {
+                const arcadeMax = 10;
+                if (curState.floor >= arcadeMax) {
+                    const baseSeed = curState.initialSeed ?? curState.rngSeed ?? '0';
+                    const score = (curState.floor * 1000);
+                    return {
+                        ...curState,
+                        pendingStatus: {
+                            status: 'won',
+                            completedRun: {
+                                seed: baseSeed,
+                                actionLog: curState.actionLog,
+                                score,
+                                floor: curState.floor
+                            }
+                        },
+                        message: [...curState.message, `Arcade Cleared! Final Score: ${score}`].slice(-50)
+                    };
+                }
+
+                return {
+                    ...curState,
+                    pendingStatus: {
+                        status: 'playing',
+                    },
+                    message: [...curState.message, 'Descending to the next level...'].slice(-50)
                 };
             }
         }
+
+        // Loop continues to next actor
     }
-
-    const eotResult = executeStatusWindow(curState, actorId, 'END_OF_TURN');
-    curState = eotResult.state;
-    messages.push(...eotResult.messages);
-
-    curState = {
-        ...curState,
-        enemies: curState.enemies.map(e => e.id === actorId ? tickStatuses(e) : e),
-        initiativeQueue: endActorTurn(curState, actorId)
-    };
 
     return {
         ...curState,
@@ -251,121 +483,7 @@ export const processNextTurn = (state: GameState): GameState => {
     };
 };
 
-const resolveTurnCycle = (state: GameState): GameState => {
-    let curState = state;
-    const playerPos = state.player.position;
-    const messages: string[] = [];
 
-    const playerStartPos = getTurnStartPosition(curState, 'player') || curState.player.previousPosition || curState.player.position;
-    const persistentNeighborIds = getTurnStartNeighborIds(curState, 'player') ?? undefined;
-    const autoAttackResult = applyAutoAttack(
-        curState,
-        curState.player,
-        getNeighbors(playerStartPos),
-        playerStartPos,
-        persistentNeighborIds
-    );
-    curState = autoAttackResult.state;
-    messages.push(...autoAttackResult.messages);
-
-    if (curState.spearPosition && hexEquals(playerPos, curState.spearPosition)) {
-        curState.hasSpear = true;
-        curState.spearPosition = undefined;
-        messages.push('Picked up your spear.');
-    }
-
-    const eotResult = executeStatusWindow(curState, 'player', 'END_OF_TURN');
-    curState = eotResult.state;
-    messages.push(...eotResult.messages);
-
-    const tileTickResult = tickTileEffects(curState);
-    curState = tileTickResult.state;
-    messages.push(...tileTickResult.messages);
-
-    let player = tickSkillCooldowns(curState.player);
-    player = tickStatuses(player);
-    player = applyPassiveSkills(player);
-
-    curState = {
-        ...curState,
-        player,
-        message: [...curState.message, ...messages].slice(-50),
-        kills: curState.kills + autoAttackResult.kills,
-        turnNumber: curState.turnNumber + 1,
-        turnsSpent: curState.turnsSpent + 1,
-        initiativeQueue: endActorTurn(curState, 'player')
-    };
-
-    if (checkShrine(curState, playerPos)) {
-        const allUpgrades = Object.keys(UPGRADE_DEFINITIONS);
-        const available = allUpgrades.filter(u => !state.upgrades.includes(u));
-        const picked: string[] = [];
-        let rngState = { ...curState };
-        for (let i = 0; i < 3 && available.length > 0; i++) {
-            const res = consumeRandom(rngState);
-            rngState = res.nextState;
-            const idx = Math.floor(res.value * available.length);
-            picked.push(available[idx]);
-            available.splice(idx, 1);
-        }
-        return {
-            ...curState,
-            rngCounter: rngState.rngCounter,
-            pendingStatus: {
-                status: 'choosing_upgrade',
-                shrineOptions: picked.length > 0 ? picked : ['EXTRA_HP']
-            },
-            message: [...curState.message, 'A holy shrine! Choose an upgrade.'].slice(-50)
-        };
-    }
-
-    if (checkStairs(curState, playerPos)) {
-        const arcadeMax = 10;
-        if (state.floor >= arcadeMax) {
-            const baseSeed = state.initialSeed ?? state.rngSeed ?? '0';
-            const score = (state.floor * 1000);
-            return {
-                ...curState,
-                pendingStatus: {
-                    status: 'won',
-                    completedRun: {
-                        seed: baseSeed,
-                        actionLog: state.actionLog,
-                        score,
-                        floor: state.floor
-                    }
-                },
-                message: [...curState.message, `Arcade Cleared! Final Score: ${score}`].slice(-50)
-            };
-        }
-
-        return {
-            ...curState,
-            pendingStatus: {
-                status: 'playing',
-            },
-            message: [...curState.message, 'Descending to the next level...'].slice(-50)
-        };
-    }
-
-    return curState;
-};
-
-export const resolveEnemyActions = (state: GameState): GameState => {
-    SpatialSystem.refreshOccupancyMask(state);
-    /** TODO: 
-     * This will not work. Your state is immutable. To update the mask, you must assign the result back to the state:
-     * 
-     * TypeScript
-     * 
-     * export const resolveEnemyActions = (state: GameState): GameState => {
-     *     const updatedMask = SpatialSystem.refreshOccupancyMask(state);
-     *     const nextState = { ...state, occupancyMask: updatedMask };
-     *     return resolveTurnCycle(nextState);
-     * };
-     */
-    return resolveTurnCycle(state);
-};
 
 export const gameReducer = (state: GameState, action: Action): GameState => {
     if (state.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE' && action.type !== 'LOAD_STATE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN') return state;
@@ -405,7 +523,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
 
     if (state.gameStatus !== 'playing' && action.type !== 'SELECT_UPGRADE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN') return state;
 
-    const command = createCommand(action);
+    const command = createCommand(action, state);
     const oldState = state;
 
     let curState = {
@@ -424,9 +542,13 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 if (!('payload' in a)) return s;
                 const upgradeId = a.payload;
                 let player = s.player;
-                const upgradeDef = UPGRADE_DEFINITIONS[upgradeId];
+                const upgradeDef = SkillRegistry.getUpgrade(upgradeId);
                 if (upgradeDef) {
-                    player = addUpgrade(player, upgradeDef.skill, upgradeId);
+                    // Find which skill this upgrade belongs to
+                    const skillId = SkillRegistry.getSkillForUpgrade(upgradeId);
+                    if (skillId) {
+                        player = addUpgrade(player, skillId, upgradeId);
+                    }
                 } else if (upgradeId === 'EXTRA_HP') {
                     player = increaseMaxHp(player, 1, true);
                 }
@@ -443,45 +565,85 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
 
             case 'USE_SKILL': {
                 const { skillId, target } = a.payload;
-                const skill = s.player.activeSkills?.find(sk => sk.id === skillId);
-                const compDef = COMPOSITIONAL_SKILLS[skillId];
-
-                if (compDef) {
-                    const targetEnemy = target ? getEnemyAt(s.enemies, target) : undefined;
-                    const execution = compDef.execute(s, s.player, target, skill?.activeUpgrades || []);
-                    let newState = applyEffects(s, execution.effects, { targetId: targetEnemy?.id });
-                    const stateAfterSkill = {
-                        ...newState,
-                        message: [...newState.message, ...execution.messages].slice(-50)
-                    };
-                    if (execution.consumesTurn === false) return stateAfterSkill;
-                    return resolveEnemyActions(stateAfterSkill);
+                // Handle Player Action via ManualStrategy
+                const strategy = StrategyRegistry.resolve(s.player);
+                if (strategy instanceof ManualStrategy) {
+                    strategy.pushIntent({
+                        type: 'USE_SKILL',
+                        actorId: s.player.id,
+                        skillId,
+                        targetHex: target,
+                        priority: 10,
+                        metadata: { expectedValue: 0, reasoningCode: 'PLAYER_INPUT', isGhost: false }
+                    });
                 }
-                return s;
+                return processNextTurn(s, true); // Resume! Action was added to intent queue.
             }
 
             case 'MOVE': {
                 if (!('payload' in a)) return s;
                 const target = a.payload;
 
-                // BUMP ATTACK: If there is an enemy at the target, redirect to BASIC_ATTACK
+                const playerSkills = s.player.activeSkills || [];
                 const enemyAtTarget = getEnemyAt(s.enemies, target);
-                if (enemyAtTarget) {
-                    const attackSkillId = s.player.activeSkills?.find(sk => sk.id === 'BASIC_ATTACK')?.id;
-                    if (attackSkillId) {
-                        return gameReducer(s, { type: 'USE_SKILL', payload: { skillId: attackSkillId, target } });
+
+                const preferredOrder = ['BASIC_ATTACK', 'BASIC_MOVE', 'DASH'];
+                const passiveSkills = playerSkills.filter(sk => sk.slot === 'passive');
+                const sortedSkills = [
+                    ...passiveSkills.filter(sk => preferredOrder.includes(sk.id)),
+                    ...passiveSkills.filter(sk => !preferredOrder.includes(sk.id))
+                ];
+
+                // Pick the first skill whose valid targets include this tile.
+                let chosenSkillId: string | undefined;
+                for (const sk of sortedSkills) {
+                    const def = SkillRegistry.get(sk.id);
+                    if (!def?.getValidTargets) continue;
+                    const validTargets = def.getValidTargets(s, s.player.position);
+                    if (validTargets.some(v => hexEquals(v, target))) {
+                        chosenSkillId = sk.id;
+                        break;
                     }
                 }
 
-                const moveSkillId = s.player.activeSkills?.find(sk => sk.id === 'BASIC_MOVE' || sk.id === 'DASH')?.id;
-                if (moveSkillId) {
-                    return gameReducer(s, { type: 'USE_SKILL', payload: { skillId: moveSkillId, target } });
+                if (!chosenSkillId) {
+                    return {
+                        ...s,
+                        message: [...s.message, enemyAtTarget ? 'No valid passive attack for target.' : 'No valid passive movement for target.'].slice(-50)
+                    };
                 }
-                return s;
+
+                // Intent type: if targeting an enemy, mark as ATTACK; otherwise MOVE.
+                const intentType: any = enemyAtTarget ? 'ATTACK' : 'MOVE';
+                const skillId = chosenSkillId;
+
+                const strategy = StrategyRegistry.resolve(s.player);
+                if (strategy instanceof ManualStrategy) {
+                    strategy.pushIntent({
+                        type: intentType,
+                        actorId: s.player.id,
+                        skillId,
+                        targetHex: target,
+                        primaryTargetId: enemyAtTarget?.id,
+                        priority: 10,
+                        metadata: { expectedValue: 0, reasoningCode: 'PLAYER_INPUT', isGhost: false }
+                    });
+                }
+                return processNextTurn(s, true); // Resume!
             }
 
             case 'WAIT': {
-                return resolveEnemyActions(s);
+                const strategy = StrategyRegistry.resolve(s.player);
+                if (strategy instanceof ManualStrategy) {
+                    strategy.pushIntent({
+                        type: 'WAIT',
+                        actorId: s.player.id,
+                        skillId: 'WAIT',
+                        priority: 10,
+                        metadata: { expectedValue: 0, reasoningCode: 'PLAYER_INPUT', isGhost: false }
+                    });
+                }
+                return processNextTurn(s, true); // Resume!
             }
 
             case 'APPLY_LOADOUT': {
@@ -511,7 +673,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             }
 
             case 'ADVANCE_TURN': {
-                return processNextTurn(s);
+                return processNextTurn(s, false);
             }
 
             case 'RESOLVE_PENDING': {
@@ -539,13 +701,15 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 return generateHubState();
             }
 
+
+
             default:
                 return s;
         }
     };
 
     const intermediateState = resolveGameState(curState, action);
-    const delta = createDelta(oldState, intermediateState);
+    const delta = createDelta(oldState, intermediateState, state);
     command.delta = delta;
 
     return {

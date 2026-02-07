@@ -28,7 +28,7 @@ export const kineticTriTrapScenarios: ScenarioCollection = {
                 engine.state.player.archetype = 'HUNTER';
             },
             run: (engine: any) => {
-                engine.useSkill('KINETIC_TRI_TRAP', null);
+                engine.useSkill('KINETIC_TRI_TRAP', { q: 5, r: 5, s: -10 });
             },
             verify: (state: GameState, logs: string[]) => {
                 const playerPos = state.player.position;
@@ -69,8 +69,8 @@ export const kineticTriTrapScenarios: ScenarioCollection = {
                 engine.state.player.archetype = 'HUNTER';
             },
             run: (engine: any) => {
-                engine.useSkill('KINETIC_TRI_TRAP', null);
-                engine.useSkill('KINETIC_TRI_TRAP', null);
+                engine.useSkill('KINETIC_TRI_TRAP', { q: 5, r: 5, s: -10 });
+                engine.useSkill('KINETIC_TRI_TRAP', { q: 5, r: 5, s: -10 });
             },
             verify: (state: GameState, logs: string[]) => {
                 const traps = state.traps;

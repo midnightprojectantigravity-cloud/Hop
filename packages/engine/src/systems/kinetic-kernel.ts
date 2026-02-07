@@ -178,6 +178,7 @@ export function processKineticPulse(state: GameState, request: KineticPulseReque
             const destinationHex = lineHexes[unit.pos1D];
 
             if (isLava(state, destinationHex)) {
+                // console.log(`DEBUG: Unit ${unit.id} sunk in lava at ${destinationHex.q},${destinationHex.r}`);
                 effects.push({
                     type: 'LavaSink',
                     target: unit.id
@@ -245,7 +246,9 @@ function isWall(state: GameState, hex: Point): boolean {
 
 function isLava(state: GameState, hex: Point): boolean {
     const traits = UnifiedTileService.getTraitsAt(state, hex);
-    return traits.has('HAZARDOUS') || traits.has('LIQUID');
+    const result = traits.has('HAZARDOUS') || traits.has('LIQUID');
+    // console.log(`DEBUG: isLava check at ${hex.q},${hex.r}: ${result} (Hazard: ${traits.has('HAZARDOUS')}, Liquid: ${traits.has('LIQUID')})`);
+    return result;
 }
 
 // ----------------------------------------------------------------------------

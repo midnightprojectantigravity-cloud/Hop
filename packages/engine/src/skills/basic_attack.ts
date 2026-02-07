@@ -47,6 +47,12 @@ export const BASIC_ATTACK: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
+        // Faction check: Cannot attack friendlies
+        if (targetActor.factionId === attacker.factionId) {
+            messages.push('Cannot attack friendlies!');
+            return { effects, messages, consumesTurn: false };
+        }
+
         if (targetActor.subtype === 'bomb') {
             messages.push('Cannot attack a bomb!');
             return { effects, messages, consumesTurn: false };

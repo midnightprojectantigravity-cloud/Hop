@@ -7,14 +7,14 @@
  * - Tethered Spirit: At 0 HP, removed. Skill CD (3 turns). Auto-revives adjacent to Hunter.
  */
 
-import { Actor, GameState, Point, AtomicEffect } from '../types';
-import { SkillID } from '../types/registry';
+import type { Actor, GameState, Point, AtomicEffect } from '../types';
 import { hexEquals, getNeighbors, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
 import { SpatialSystem } from './SpatialSystem';
 import { UnifiedTileService } from './unified-tile-service';
 import { applyEffects } from './effect-engine';
-import { SkillRegistry, createActiveSkill } from '../skillRegistry';
+import { SkillRegistry } from '../skillRegistry';
+import { createFalcon as createFalconEntity } from './entity-factory';
 
 // ============================================================================
 // FALCON STATS
@@ -30,42 +30,6 @@ export const FALCON_STATS = {
     apexStrikeCooldown: 2,
     revivalCooldown: 3,
 };
-
-// ============================================================================
-// FALCON FACTORY
-// ============================================================================
-
-/**
- * Create a new Falcon actor for the Hunter
- */
-export function createFalcon(hunterId: string, position: Point): Actor {
-    return {
-        id: `falcon-${hunterId}`,
-        type: 'enemy', // Uses enemy pool for AI processing
-        subtype: 'falcon',
-        position,
-        hp: 1,
-        maxHp: 1,
-        speed: 95, // High speed, acts after player (100)
-        factionId: 'player', // Allied with player
-        statusEffects: [],
-        temporaryArmor: 0,
-        activeSkills: [
-            createActiveSkill('BASIC_MOVE'),
-            createActiveSkill('FALCON_PECK'),
-            createActiveSkill('FALCON_APEX_STRIKE'),
-            createActiveSkill('FALCON_HEAL'),
-            createActiveSkill('FALCON_SCOUT'),
-        ].filter(Boolean),
-        weightClass: 'Light',
-        isFlying: true,
-        companionOf: hunterId,
-        companionState: {
-            mode: 'roost',
-            orbitStep: 0,
-        },
-    };
-}
 
 /**
  * Spawn Falcon adjacent to Hunter
@@ -84,7 +48,7 @@ export function spawnFalcon(state: GameState, hunterId: string): { state: GameSt
 
     if (!validSpawn) return { state, falcon: null };
 
-    const falcon = createFalcon(hunterId, validSpawn);
+    const falcon = createFalconEntity({ ownerId: hunterId, position: validSpawn });
 
     return {
         state: {
@@ -199,27 +163,7 @@ export function findFalconTarget(state: GameState, falcon: Actor): Actor | Point
 // FALCON AI BEHAVIORS
 // ============================================================================
 
-/**
- * Calculate next orbit position (1 hex clockwise around mark)
- */
-function getNextOrbitPosition(markPos: Point, currentPos: Point, _orbitStep: number): Point {
-    // Get the 6 neighbors of the mark (the orbit ring)
-    const orbitPositions = getNeighbors(markPos);
 
-    // If we are not on the orbit ring, move to the nearest point on it
-    if (hexDistance(currentPos, markPos) !== 1) {
-        return orbitPositions.sort((a, b) =>
-            hexDistance(currentPos, a) - hexDistance(currentPos, b)
-        )[0];
-    }
-
-    // Find current index in orbit
-    let currentIdx = orbitPositions.findIndex(p => hexEquals(p, currentPos));
-
-    // Rotate clockwise (next index)
-    const nextIdx = (currentIdx + 1) % 6;
-    return orbitPositions[nextIdx];
-}
 
 /**
  * Find nearest enemy in range for Basic Peck
@@ -286,8 +230,8 @@ export function executeScoutBehavior(
         return { effects, newPosition: falcon.position, messages };
     }
 
-    const markPos = markTarget as Point;
-    const orbitStep = falcon.companionState?.orbitStep ?? 0;
+    // const markPos = markTarget as Point;
+    // const orbitStep = falcon.companionState?.orbitStep ?? 0;
 
     // 1. ACTION PRIORITY: Check for enemies in range for Basic Peck
     const nearestEnemy = findNearestEnemyInRange(state, falcon.position, 1);

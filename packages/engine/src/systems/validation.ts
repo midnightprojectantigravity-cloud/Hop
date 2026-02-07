@@ -2,6 +2,7 @@ import type { GameState, Point, Actor } from '../types';
 import { hexEquals, getHexLine, hexDistance, getDirectionFromTo } from '../hex';
 import { isPerimeter, getActorAt } from '../helpers';
 import { pointToKey } from '../hex';
+import { UnifiedTileService } from './unified-tile-service';
 
 /**
  * Validation System
@@ -105,14 +106,61 @@ export function validateLineOfSight(state: GameState, origin: Point, target: Poi
     });
 
     if (result.obstacle) {
-        // If we hit something BEFORE the target, or IF we care about hitting the target itself
-        // Usually LOS means "can I reach the target". 
-        // If target IS the obstacle, it's valid for LOS (you can see what you hit).
-        // But if there's an obstacle BETWEEN, then it's invalid.
         if (result.position && !hexEquals(result.position, target)) {
             return { isValid: false, blockedBy: result.obstacle, blockedAt: result.position };
         }
     }
 
     return { isValid: true };
+}
+
+/**
+ * Returns true if the first obstacle along the line is the target actor.
+ * Useful for projectile targeting that must stop on the first actor.
+ */
+export function hasClearLineToActor(
+    state: GameState,
+    origin: Point,
+    target: Point,
+    targetActorId: string,
+    excludeActorId?: string
+): boolean {
+    const line = getHexLine(origin, target);
+    const pathToCheck = line.slice(1);
+    const result = findFirstObstacle(state, pathToCheck, {
+        checkWalls: true,
+        checkActors: true,
+        checkLava: false,
+        excludeActorId
+    });
+    return result.obstacle === 'actor'
+        && result.actor?.id === targetActorId
+        && result.position
+        && hexEquals(result.position, target);
+}
+
+/**
+ * Hazard Policy Helpers (Targeting + Movement)
+ */
+export function isHazardousTile(state: GameState, position: Point): { isHazard: boolean; isFireHazard: boolean } {
+    const traits = UnifiedTileService.getTraitsAt(state, position);
+    const isHazard = traits.has('HAZARDOUS') || traits.has('LAVA') || traits.has('FIRE') || traits.has('VOID');
+    const isFireHazard = traits.has('LAVA') || traits.has('FIRE');
+    return { isHazard, isFireHazard };
+}
+
+export function canLandOnHazard(state: GameState, actor: Actor, position: Point): boolean {
+    const { isHazard, isFireHazard } = isHazardousTile(state, position);
+    if (!isHazard) return true;
+    if (actor.isFlying) return true;
+    const hasAbsorbFire = actor.activeSkills?.some(s => s.id === 'ABSORB_FIRE')
+        || actor.statusEffects?.some(s => s.type === 'fire_immunity');
+    if (hasAbsorbFire && isFireHazard) return true;
+    return false;
+}
+
+export function canPassHazard(state: GameState, actor: Actor, position: Point, skillId: string): boolean {
+    if (canLandOnHazard(state, actor, position)) return true;
+    const passSkills = new Set(['JUMP', 'VAULT', 'GRAPPLE_HOOK', 'DASH']);
+    return passSkills.has(skillId);
 }

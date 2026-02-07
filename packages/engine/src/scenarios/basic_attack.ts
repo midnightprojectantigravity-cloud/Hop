@@ -1,3 +1,4 @@
+import { persistLog } from '../utils/logger';
 import type { GameState } from '../types';
 import type { ScenarioCollection } from './types';
 import { hexEquals } from '../hex';
@@ -25,8 +26,6 @@ export const basicAttackScenarios: ScenarioCollection = {
                 engine.setPlayer({ q: 3, r: 6, s: -9 }, ['BASIC_ATTACK']);
                 engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'adj_victim');
                 engine.spawnEnemy('footman', { q: 3, r: 4, s: -7 }, 'far_victim');
-                // Use the engine's built-in state to track history if possible, 
-                // or just use the end state for verification.
             },
             run: (engine: any) => {
                 // 1. Attempt out-of-range attack
@@ -41,32 +40,26 @@ export const basicAttackScenarios: ScenarioCollection = {
 
                 const checks = {
                     // VERIFICATION: Range Enforcement
-                    // Should still have max HP because the attack was out of range.
                     farStaysAlive: far && far.hp === far.maxHp,
                     rangeError: logs.some(l => l.includes('out of range')),
 
                     // VERIFICATION: Bump Attack Success
-                    // The adjacent enemy should be damaged/dead.
                     adjTookDamage: !adj || adj.hp <= adj.maxHp,
 
                     // VERIFICATION: Spatial Integrity
-                    // IMPORTANT: The player should NOT have moved into the enemy's hex.
                     playerPositionHeld: hexEquals(state.player.position, { q: 3, r: 6, s: -9 }),
 
                     // VERIFICATION: Turn Accounting
-                    // If your GameState tracks total turns, we check it here.
-                    // Assuming 1 successful action occurred, turnsSpent should be 1.
                     oneTurnConsumed: state.turnsSpent === 1,
                 }
 
                 if (Object.values(checks).some(v => v === false)) {
-                    console.log('❌ Scenario Failed Details:', checks);
-                    console.log('Current Player Pos:', state.player.position);
-                    console.log('Logs found:', logs);
+                    const failMsg = `❌ Basic Attack Failed: ${JSON.stringify(checks)}\nCurrent Player Pos: ${JSON.stringify(state.player.position)}\nLogs: ${JSON.stringify(logs)}\n`;
+                    console.log(failMsg);
+                    persistLog('integration_debug.txt', failMsg);
                 }
 
                 return Object.values(checks).every(v => v === true);
-
             }
         }
     ]

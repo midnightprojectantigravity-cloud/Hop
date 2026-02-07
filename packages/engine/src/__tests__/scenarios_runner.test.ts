@@ -2,8 +2,9 @@ import { describe, test, expect } from 'vitest';
 import { SCENARIO_COLLECTIONS } from '../scenarios';
 import { ScenarioEngine } from '../skillTests';
 import { generateInitialState } from '../logic';
-import { buildInitiativeQueue } from '../systems/initiative';
+import { buildInitiativeQueue, isPlayerTurn } from '../systems/initiative';
 import { SpatialSystem } from '../systems/SpatialSystem';
+import { StrategyRegistry } from '../systems/strategy-registry';
 
 describe('Skill Scenarios Integration', () => {
     SCENARIO_COLLECTIONS.forEach(collection => {
@@ -12,6 +13,10 @@ describe('Skill Scenarios Integration', () => {
         describe(`${collection.name} (${collection.id})`, () => {
             collection.scenarios.forEach(scenario => {
                 test(scenario.title, () => {
+                    // WORLD-CLASS LOGIC: Test Isolation
+                    // StrategyRegistry is static; must be reset to clear intents from previous tests
+                    StrategyRegistry.reset();
+
                     const initialState = generateInitialState(1, 'test-seed');
 
                     // Reset game board for test isolation
@@ -44,11 +49,10 @@ describe('Skill Scenarios Integration', () => {
                     // Advance initiative until it is the player's turn
                     let safety = 0;
                     while (safety < 100) {
-                        const q = engine.state.initiativeQueue;
-                        if (q && q.currentIndex >= 0 && q.entries[q.currentIndex].actorId === 'player') {
+                        if (isPlayerTurn(engine.state)) {
                             break;
                         }
-                        engine.dispatch({ type: 'ADVANCE_TURN' });
+                        engine.state = engine.dispatchSync({ type: 'ADVANCE_TURN' });
                         safety++;
                     }
 
@@ -56,7 +60,7 @@ describe('Skill Scenarios Integration', () => {
                     scenario.run(engine);
 
                     // Verify
-                    const passed = scenario.verify(engine.state, engine.logs);
+                    const passed = scenario.verify(engine.state, engine.logs, engine.events);
 
                     if (!passed) {
                         console.error(`Scenario Failed: ${scenario.title}`);

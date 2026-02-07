@@ -15,7 +15,6 @@ export const hazardScenarios: ScenarioCollection = {
             tags: ['lava', 'jump'],
             setup: (engine: any) => {
                 engine.setPlayer({ q: 4, r: 9, s: -13 }, ['JUMP']);
-                engine.state.lavaPositions = [{ q: 4, r: 8, s: -12 }];
                 // Ensure tiles map is updated
                 engine.state.tiles.set('4,8', { baseId: 'LAVA', position: { q: 4, r: 8, s: -12 }, traits: new Set(['HAZARDOUS', 'LAVA', 'LIQUID']), effects: [] });
             },
@@ -40,7 +39,6 @@ export const hazardScenarios: ScenarioCollection = {
             tags: ['lava', 'walk'],
             setup: (engine: any) => {
                 engine.setPlayer({ q: 4, r: 9, s: -13 }, ['BASIC_MOVE']);
-                engine.state.lavaPositions = [{ q: 4, r: 8, s: -12 }];
                 engine.state.tiles.set('4,8', { baseId: 'LAVA', position: { q: 4, r: 8, s: -12 }, traits: new Set(['HAZARDOUS', 'LAVA', 'LIQUID']), effects: [] });
             },
             run: (engine: any) => {
@@ -65,7 +63,6 @@ export const hazardScenarios: ScenarioCollection = {
             setup: (engine: any) => {
                 engine.setPlayer({ q: 4, r: 9, s: -13 }, ['FALCON_COMMAND']);
                 engine.spawnFalcon({ q: 4, r: 8, s: -12 }, 'my-falcon');
-                engine.state.lavaPositions = [{ q: 4, r: 8, s: -12 }];
                 engine.state.tiles.set('4,8', { baseId: 'LAVA', position: { q: 4, r: 8, s: -12 }, traits: new Set(['HAZARDOUS', 'LAVA', 'LIQUID']), effects: [] });
             },
             run: (engine: any) => {

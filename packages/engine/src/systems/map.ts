@@ -19,6 +19,7 @@ import {
     HAZARD_PERCENTAGE
 } from '../constants';
 import { isSpecialTile } from '../helpers';
+import { createEnemy, getEnemySkillLoadout } from './entity-factory';
 
 export interface DungeonResult {
     rooms: Room[];
@@ -113,11 +114,10 @@ export const generateDungeon = (
         !isSpecialTile(h, {
             playerStart: playerSpawn,
             stairsPosition,
-            shrinePosition,
-            lavaPositions,
-            wallPositions: []
+            shrinePosition
         }) &&
         !wallPositions.some(wp => hexEquals(wp, h)) &&
+        !lavaPositions.some(lp => hexEquals(lp, h)) &&
         hexDistance(h, playerSpawn) >= 3
     );
 
@@ -214,26 +214,19 @@ export const generateEnemies = (
         const finalMaxHp = stats.maxHp + hpScale;
 
         const weightClass = stats.weightClass || 'Standard';
-        const componentsSet = new Map<string, any>();
-        componentsSet.set('physics', { type: 'physics', weightClass });
-
-        enemies.push({
+        const enemy = createEnemy({
             id: `enemy_${enemies.length}_${rng.next().toString(36).slice(2, 8)}`,
-            type: 'enemy',
             subtype: enemyType,
-            enemyType: stats.type as 'melee' | 'ranged',
             position,
             hp: finalHp,
             maxHp: finalMaxHp,
             speed: stats.speed || 50,
-            factionId: 'enemy',
-            isVisible: true,
-            statusEffects: [],
-            temporaryArmor: 0,
-            activeSkills: [], // Compositional skills only now? No, we still use statistical type
+            skills: getEnemySkillLoadout(enemyType),
             weightClass: weightClass,
-            components: componentsSet,
-        } as any);
+            enemyType: stats.type as 'melee' | 'ranged',
+        });
+        enemy.isVisible = true;
+        enemies.push(enemy);
 
         remainingBudget -= stats.cost;
     }

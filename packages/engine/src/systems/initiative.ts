@@ -81,8 +81,13 @@ export const buildInitiativeQueue = (state: GameState): InitiativeQueue => {
         });
     }
 
-    // Sort by initiative (descending - higher goes first)
-    entries.sort((a, b) => b.initiative - a.initiative);
+    // Sort by initiative (descending - higher goes first), with ID tie-breaker (Player always wins ties)
+    entries.sort((a, b) => {
+        if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+        if (a.actorId === 'player') return -1;
+        if (b.actorId === 'player') return 1;
+        return a.actorId.localeCompare(b.actorId);
+    });
 
     // console.log(`DEBUG: Built queue with ${entries.length} entries: ${entries.map(e => e.actorId).join(', ')}`);
     return {
@@ -171,6 +176,13 @@ export const startActorTurn = (state: GameState, actor: Actor): InitiativeQueue 
 
     const updatedEntries = queue.entries.map(entry => {
         if (entry.actorId === actor.id) {
+            // WORLD-CLASS LOGIC: Idempotent Turn Start
+            // If we are resuming a turn (e.g. after USE_SKILL), we MUST NOT overwrite
+            // the turn-start data, or passives like AUTO_ATTACK will lose their memory.
+            if (entry.turnStartPosition) {
+                return entry;
+            }
+
             // Capture both position and identity-based neighbor IDs at turn start
             const neighborPositions = getNeighbors(actor.position);
             const neighborIds = neighborPositions.map(p => getActorAt(state, p)?.id).filter(Boolean) as string[];

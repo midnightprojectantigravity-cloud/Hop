@@ -107,4 +107,53 @@ export const checkVitals = (state: GameState): AtomicEffect[] => {
   return effects;
 };
 
-export default { applyDamage, applyHeal, increaseMaxHp, resolveMeleeAttack, addStatus, removeStatus, checkVitals };
+/**
+ * Step through cooldowns for all active skills on an actor.
+ */
+export const tickActorSkills = (actor: Entity): Entity => {
+  if (!actor.activeSkills) return actor;
+  return {
+    ...actor,
+    activeSkills: actor.activeSkills.map(skill => ({
+      ...skill,
+      currentCooldown: Math.max(0, skill.currentCooldown - 1)
+    }))
+  };
+};
+
+/**
+ * Check if an actor has a specific upgrade across any of their skills.
+ */
+export const hasUpgrade = (actor: Entity, upgradeId: string): boolean => {
+  if (!actor.activeSkills) return false;
+  return actor.activeSkills.some(s => s.activeUpgrades?.includes(upgradeId));
+};
+
+/**
+ * Add an upgrade to an actor's specific skill.
+ */
+export const addUpgrade = (actor: Entity, skillId: string, upgradeId: string): Entity => {
+  if (!actor.activeSkills) return actor;
+  return {
+    ...actor,
+    activeSkills: actor.activeSkills.map(s => {
+      if (s.id === skillId && !s.activeUpgrades.includes(upgradeId)) {
+        return { ...s, activeUpgrades: [...s.activeUpgrades, upgradeId] };
+      }
+      return s;
+    })
+  };
+};
+
+export default {
+  applyDamage,
+  applyHeal,
+  increaseMaxHp,
+  resolveMeleeAttack,
+  addStatus,
+  removeStatus,
+  checkVitals,
+  tickActorSkills,
+  hasUpgrade,
+  addUpgrade
+};

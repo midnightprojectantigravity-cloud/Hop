@@ -21,7 +21,7 @@ export const FALCON_SCOUT: SkillDefinition = {
         cost: 0,
         cooldown: 0,
     },
-    execute: (state: GameState, attacker: Actor, target?: Point): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
+    execute: (state: GameState, attacker: Actor, _target?: Point): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
 

@@ -4,8 +4,7 @@
  * TODO: Prioritize bitmask checks (spatial.ts) in isOccupied/isWalkable for high-performance loops.
  */
 import type { GameState, Point, Entity, Actor } from './types';
-import { hexEquals, isHexInRectangularGrid, hexDistance, pointToKey } from './hex';
-import { applyDamage } from './systems/actor';
+import { hexEquals, isHexInRectangularGrid, hexDistance } from './hex';
 
 
 
@@ -21,8 +20,6 @@ export const isSpecialTile = (
         playerStart?: Point;
         stairsPosition?: Point;
         shrinePosition?: Point;
-        lavaPositions?: Point[];
-        wallPositions?: Point[];
         tiles?: any;
         gridWidth?: number;
         gridHeight?: number;
@@ -31,9 +28,6 @@ export const isSpecialTile = (
     if (state.playerStart && hexEquals(point, state.playerStart)) return true;
     if (state.stairsPosition && hexEquals(point, state.stairsPosition)) return true;
     if (state.shrinePosition && hexEquals(point, state.shrinePosition)) return true;
-    if (state.lavaPositions?.some(lp => hexEquals(lp, point))) return true;
-    if (state.wallPositions?.some(wp => hexEquals(wp, point))) return true;
-
     if (state.tiles) {
         const traits = UnifiedTileService.getTraitsAt(state as any, point);
         if (traits.has('HAZARDOUS') || traits.has('BLOCKS_MOVEMENT')) return true;

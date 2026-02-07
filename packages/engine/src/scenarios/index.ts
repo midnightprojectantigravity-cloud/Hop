@@ -19,6 +19,7 @@ import { falconCommandScenarios } from './falcon_command';
 import { kineticTriTrapScenarios } from './kinetic_tri_trap';
 import { withdrawalScenarios } from './withdrawal';
 import { absorbFireScenarios } from './absorb_fire';
+import { tileInteractionScenarios } from './tile_interactions';
 
 /**
  * Central registry for all test scenarios
@@ -46,6 +47,7 @@ export const SCENARIO_COLLECTIONS: ScenarioCollection[] = [
     kineticTriTrapScenarios,
     withdrawalScenarios,
     absorbFireScenarios,
+    tileInteractionScenarios,
 ];
 
 // Flat list of all scenarios for easy iteration

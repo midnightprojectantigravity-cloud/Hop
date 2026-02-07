@@ -1,6 +1,5 @@
 import type { Actor, Point, Skill, WeightClass } from '../types';
 import type { GameComponent } from './components';
-import { SkillRegistry } from '../skillRegistry';
 
 /**
  * ENTITY FACTORY SYSTEM
@@ -26,7 +25,8 @@ export interface BaseEntityConfig {
     archetype?: string;
 
     // Skill loadout
-    skills: string[]; // Skill IDs to include
+    skills?: string[]; // Skill IDs to include
+    activeSkills?: Skill[]; // Prebuilt skills (preserve cooldowns/upgrades)
 
     // Special traits
     isFlying?: boolean;
@@ -41,26 +41,19 @@ export interface BaseEntityConfig {
  */
 export function createEntity(config: BaseEntityConfig): Actor {
     // Build skill loadout
-    const activeSkills: Skill[] = config.skills.map(skillId => {
-        const def = SkillRegistry[skillId];
-        if (!def) {
-            console.warn(`Skill ${skillId} not found in registry`);
-            return null;
-        }
-
-        return {
-            id: def.id,
-            name: def.name,
-            description: def.description,
-            slot: def.slot,
-            cooldown: def.baseVariables.cooldown,
+    const activeSkills: Skill[] = config.activeSkills
+        ? [...config.activeSkills]
+        : (config.skills || []).map(skillId => ({
+            id: skillId as any,
+            name: String(skillId),
+            description: String(skillId),
+            slot: 'utility',
+            cooldown: 0,
             currentCooldown: 0,
-            range: def.baseVariables.range,
-            upgrades: Object.keys(def.upgrades),
+            range: 0,
+            upgrades: [],
             activeUpgrades: [],
-            energyCost: def.baseVariables.cost,
-        };
-    }).filter(Boolean) as Skill[];
+        })) as Skill[];
 
     // Build components map
     const components = new Map(config.components || []);
@@ -170,6 +163,13 @@ export function createFalcon(config: {
     ownerId: string;
     position: Point;
 }): Actor {
+    const falconSkills: Skill[] = [
+        { id: 'BASIC_MOVE', name: 'BASIC_MOVE', description: 'BASIC_MOVE', slot: 'utility', cooldown: 0, currentCooldown: 0, range: 1, upgrades: [], activeUpgrades: [] },
+        { id: 'FALCON_PECK', name: 'FALCON_PECK', description: 'FALCON_PECK', slot: 'offensive', cooldown: 0, currentCooldown: 0, range: 1, upgrades: [], activeUpgrades: [] },
+        { id: 'FALCON_APEX_STRIKE', name: 'FALCON_APEX_STRIKE', description: 'FALCON_APEX_STRIKE', slot: 'offensive', cooldown: 0, currentCooldown: 0, range: 4, upgrades: [], activeUpgrades: [] },
+        { id: 'FALCON_HEAL', name: 'FALCON_HEAL', description: 'FALCON_HEAL', slot: 'utility', cooldown: 0, currentCooldown: 0, range: 1, upgrades: [], activeUpgrades: [] },
+        { id: 'FALCON_SCOUT', name: 'FALCON_SCOUT', description: 'FALCON_SCOUT', slot: 'utility', cooldown: 0, currentCooldown: 0, range: 3, upgrades: [], activeUpgrades: [] },
+    ];
     const entity = createEntity({
         id: `falcon-${config.ownerId}`,
         type: 'enemy', // Type is 'enemy' but factionId is 'player'
@@ -179,7 +179,7 @@ export function createFalcon(config: {
         maxHp: 1,
         speed: 95, // High speed, acts after player (100)
         factionId: 'player',
-        skills: ['BASIC_MOVE', 'FALCON_PECK'], // Falcon has basic movement and attack
+        activeSkills: falconSkills,
         weightClass: 'Light' as WeightClass,
         isFlying: true,
         companionOf: config.ownerId,
@@ -207,7 +207,7 @@ export function getEnemySkillLoadout(enemyType: string): string[] {
         sprinter: [],
         shieldBearer: ['SHIELD_BASH'],
         archer: ['SPEAR_THROW'],
-        bomber: [],
+        bomber: ['BOMB_TOSS'],
         warlock: [],
         sentinel: ['SENTINEL_BLAST'],
     };

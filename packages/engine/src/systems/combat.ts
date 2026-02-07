@@ -4,19 +4,20 @@
  * TODO: Fully migrate telegraphed attacks to the SkillDefinition/COMPOSITIONAL_SKILLS system.
  */
 import type { GameState, Point, Entity, AtomicEffect, Actor } from '../types';
-import { hexEquals, getNeighbors, pointToKey } from '../hex';
+import { hexEquals, getNeighbors } from '../hex';
 import { computeEnemyAction } from './ai';
-import { applyDamage } from './actor';
 import { getActorAt } from '../helpers';
 import { applyAutoAttack } from '../skills/auto_attack';
 import { getTurnStartNeighborIds } from './initiative';
-import { COMPOSITIONAL_SKILLS } from '../skillRegistry';
+import { SkillRegistry } from '../skillRegistry';
 import { applyEffects } from './effect-engine';
 import { resolveFalconTurn } from './falcon';
 import { isStunned, tickStatuses, handleStunReset } from './status';
 import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from './juice-manifest';
 import { TileResolver } from './tile-effects';
 import { UnifiedTileService } from './unified-tile-service';
+import { applyDamage } from './actor';
+import { createEntity } from './entity-factory';
 
 export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point, targetActorId?: string): { state: GameState; messages: string[] } => {
   let curState = state;
@@ -32,7 +33,7 @@ export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point
     if (e.intent && e.intentPosition) {
       let enemyHandled = false;
       // 1. Try to find a compositional skill that matches the intent
-      const skillDef = COMPOSITIONAL_SKILLS[e.intent];
+      const skillDef = SkillRegistry.get(e.intent);
       const activeSkill = e.activeSkills?.find(s => s.id === e.intent);
 
       if (skillDef && activeSkill) {
@@ -140,18 +141,19 @@ export const resolveSingleEnemyTurn = (
       messages.push(`${enemy.subtype} placed a bomb.`);
       const bombId = `bomb_${enemy.id}_${state.turnNumber}`;
       const bomb: Entity = {
-        id: bombId,
-        type: 'enemy',
-        subtype: 'bomb',
-        factionId: 'enemy',
-        position: enemy.intentPosition,
-        hp: 1,
-        maxHp: 1,
-        speed: 10,
+        ...createEntity({
+          id: bombId,
+          type: 'enemy',
+          subtype: 'bomb',
+          factionId: 'enemy',
+          position: enemy.intentPosition,
+          hp: 1,
+          maxHp: 1,
+          speed: 10,
+          skills: [],
+          weightClass: 'Standard',
+        }),
         actionCooldown: 2,
-        statusEffects: [],
-        temporaryArmor: 0,
-        activeSkills: [],
       };
       curState = { ...curState, enemies: [...curState.enemies, bomb] };
     } else {

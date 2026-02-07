@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import type { GameState, Point } from '@hop/engine';
 import {
     hexToPixel, getHexLine, hexAdd, scaleVector, hexEquals, isHexInRectangularGrid,
-    TILE_SIZE, COMPOSITIONAL_SKILLS, getSkillRange,
+    TILE_SIZE, SkillRegistry, getSkillRange,
     getSkillAoE, UnifiedTileService
 } from '@hop/engine';
 
@@ -28,7 +28,7 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
         movementSkillIds.forEach(id => {
             const skill = gameState.player.activeSkills.find(s => s.id === id);
             if (skill) {
-                const def = COMPOSITIONAL_SKILLS[id];
+                const def = SkillRegistry.get(id);
                 if (def?.getValidTargets) {
                     const targets = def.getValidTargets(gameState, playerPos);
                     targets.forEach(p => {
@@ -61,7 +61,7 @@ export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selec
     // Tier 2: Skill Targeting (Action State)
     const skillTargets = useMemo(() => {
         if (!selectedSkillId) return [] as Array<{ p: Point; isValidTarget: boolean; isBlocked: boolean; isWall: boolean; isEnemy: boolean }>;
-        const def = COMPOSITIONAL_SKILLS[selectedSkillId];
+        const def = SkillRegistry.get(selectedSkillId);
         const range = def?.baseVariables?.range ?? getSkillRange(gameState.player, selectedSkillId);
         const validSet: Point[] = def?.getValidTargets ? def.getValidTargets(gameState, playerPos) : [];
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { UPGRADE_DEFINITIONS, type GameState } from '@hop/engine';
+import { SkillRegistry, type GameState } from '@hop/engine';
 
 interface UpgradeOverlayProps {
     onSelect: (upgradeId: string) => void;
@@ -24,7 +24,7 @@ export const UpgradeOverlay: React.FC<UpgradeOverlayProps> = ({ onSelect, gameSt
     for (const skill of player.activeSkills || []) {
         for (const upId of skill.upgrades) {
             if (!skill.activeUpgrades.includes(upId)) {
-                const def = UPGRADE_DEFINITIONS[upId];
+                const def = SkillRegistry.getUpgrade(upId);
                 if (def) {
                     eligibleUpgrades.push({
                         id: upId,

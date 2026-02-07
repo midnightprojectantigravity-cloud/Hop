@@ -106,6 +106,7 @@ export type AtomicEffect =
     | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: StatusID; duration: number }
     | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
     | { type: 'PickupShield'; position?: Point }
+    | { type: 'PickupSpear'; position?: Point }
     | { type: 'GrantSkill'; skillId: SkillID }
     | { type: 'LavaSink'; target: string }
     | { type: 'Impact'; target: string; damage: number; direction?: Point }
@@ -163,7 +164,7 @@ export interface ScenarioV2 {
     rationale?: string;      // RATIONALE block for Narrative TDD
     setup: (engine: any) => void; // Functional setup (mutates state/engine)
     run: (engine: any) => void;   // The specific action to take
-    verify: (state: GameState, logs: string[]) => boolean; // The behavioral assertion
+    verify: (state: GameState, logs: string[], events?: import('./types').VisualEvent[]) => boolean; // The behavioral assertion
 }
 
 export interface SkillDefinition {

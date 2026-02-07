@@ -1,8 +1,8 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexEquals, getNeighbors, getHexLine } from '../hex';
-import { getEnemyAt } from '../helpers';
+import { getActorAt, getEnemyAt } from '../helpers';
 import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
-import { isBlockedByWall, isBlockedByLava, isBlockedByActor, validateRange } from '../systems/validation';
+import { isBlockedByWall, isBlockedByActor, validateRange, canLandOnHazard } from '../systems/validation';
 import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
@@ -33,7 +33,11 @@ export const VAULT: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
-        if (isBlockedByWall(state, target) || isBlockedByLava(state, target) || isBlockedByActor(state, target)) {
+        if (isBlockedByWall(state, target) || isBlockedByActor(state, target)) {
+            messages.push('Blocked!');
+            return { effects, messages, consumesTurn: false };
+        }
+        if (!canLandOnHazard(state, attacker, target)) {
             messages.push('Blocked!');
             return { effects, messages, consumesTurn: false };
         }
@@ -53,6 +57,7 @@ export const VAULT: SkillDefinition = {
             target: 'self',
             destination: target,
             path: vaultPath,
+            ignoreGroundHazards: true,
             animationDuration: 250  // Slower, acrobatic leap
         });
 
@@ -81,9 +86,11 @@ export const VAULT: SkillDefinition = {
     },
     getValidTargets: (state: GameState, origin: Point) => {
         const range = 2;
+        const actor = getActorAt(state, origin) as Actor | undefined;
+        if (!actor) return [];
         return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
-            return !isBlockedByWall(state, p) && !isBlockedByLava(state, p) && !isBlockedByActor(state, p);
+            return !isBlockedByWall(state, p) && !isBlockedByActor(state, p) && canLandOnHazard(state, actor as Actor, p);
         });
     },
     upgrades: {},

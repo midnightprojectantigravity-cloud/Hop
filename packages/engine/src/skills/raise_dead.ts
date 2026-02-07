@@ -2,6 +2,8 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexDistance, hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
+import { stableIdFromSeed } from '../systems/rng';
+import { createEntity } from '../systems/entity-factory';
 
 /**
  * RAISE_DEAD Skill
@@ -38,8 +40,12 @@ export const RAISE_DEAD: SkillDefinition = {
         effects.push({ type: 'RemoveCorpse', position: target });
 
         // 2. Spawn Skeleton
-        const skeleton: Actor = {
-            id: `skeleton_${Date.now()}`,
+        const seed = state.initialSeed ?? state.rngSeed ?? '0';
+        const counter = (state.turnNumber << 16)
+            + (state.actionLog?.length ?? 0)
+            + (state.dyingEntities?.length ?? 0);
+        const skeleton: Actor = createEntity({
+            id: `skeleton_${stableIdFromSeed(seed, counter, 8, 'skeleton')}`,
             type: 'enemy', // Technical type for initiative entry sorting
             subtype: 'skeleton',
             factionId: 'player', // CRITICAL: Friendly to player
@@ -47,11 +53,9 @@ export const RAISE_DEAD: SkillDefinition = {
             hp: 2,
             maxHp: 2,
             speed: 50,
-            statusEffects: [],
-            temporaryArmor: 0,
-            activeSkills: [],
+            skills: [],
             weightClass: 'Standard'
-        };
+        });
 
         effects.push({ type: 'SpawnActor', actor: skeleton });
 

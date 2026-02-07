@@ -1,5 +1,5 @@
-import type { Action, GameState, Point, Entity } from './types';
-import { COMPOSITIONAL_SKILLS } from './skillRegistry';
+import type { Action, GameState, Point, Entity, VisualEvent } from './types';
+import { SkillRegistry } from './skillRegistry';
 import { gameReducer, generateInitialState } from './logic';
 import { ENEMY_STATS } from './constants';
 import { hexEquals } from './hex';
@@ -7,7 +7,7 @@ import { isPlayerTurn } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
 import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './systems/components';
 import { addStatus } from './systems/actor';
-import { pointToKey } from './systems/unified-tile-service';
+import { pointToKey, UnifiedTileService } from './systems/unified-tile-service';
 
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
@@ -15,6 +15,7 @@ import { pointToKey } from './systems/unified-tile-service';
 export class ScenarioEngine {
     state: GameState;
     logs: string[] = [];
+    events: VisualEvent[] = [];
 
     constructor(initialState: GameState) {
         this.state = initialState;
@@ -33,11 +34,11 @@ export class ScenarioEngine {
             hp: 3,
             maxHp: 3,
             activeSkills: skillIds.map(id => {
-                const def = COMPOSITIONAL_SKILLS[id];
+                const def = SkillRegistry.get(id);
                 return {
                     id,
                     name: def?.name || id,
-                    description: def?.description || '',
+                    description: typeof def?.description === 'function' ? def.description({} as any) : (def?.description || ''),
                     slot: def?.slot || 'offensive',
                     cooldown: def?.baseVariables.cooldown || 0,
                     currentCooldown: 0,
@@ -99,7 +100,22 @@ export class ScenarioEngine {
             maxHp: 1,
             statusEffects: [],
             temporaryArmor: 0,
-            activeSkills: [],
+            activeSkills: [
+                SkillRegistry.get('FALCON_PECK')!,
+                SkillRegistry.get('FALCON_HEAL')!,
+                SkillRegistry.get('FALCON_APEX_STRIKE')!,
+                SkillRegistry.get('FALCON_SCOUT')!
+            ].map(s => ({
+                id: s.id,
+                name: typeof s.name === 'function' ? s.name({} as any) : s.name,
+                description: typeof s.description === 'function' ? s.description({} as any) : s.description,
+                slot: s.slot,
+                cooldown: s.baseVariables.cooldown,
+                currentCooldown: 0,
+                range: s.baseVariables.range,
+                upgrades: Object.keys(s.upgrades),
+                activeUpgrades: []
+            })),
             isFlying: true,
             companionOf: 'player',
             companionState: {
@@ -159,6 +175,10 @@ export class ScenarioEngine {
         this.state.tiles.set(key, newTile as any);
     }
 
+    getTileAt(pos: Point) {
+        return UnifiedTileService.getTileAt(this.state, pos);
+    }
+
     syncTiles() {
         // No-op for now, as setTile directly populates state.tiles
     }
@@ -187,20 +207,39 @@ export class ScenarioEngine {
 
     dispatch(action: Action) {
         const oldLogLength = this.state.message.length;
+        const oldEventLength = (this.state.visualEvents || []).length;
+
         const nextState = gameReducer(this.state, action);
+
         const newMessages = nextState.message.slice(oldLogLength);
+        const newEvents = (nextState.visualEvents || []).slice(oldEventLength);
+
         this.logs.push(...newMessages);
+        this.events.push(...newEvents);
         this.state = nextState;
 
-        let safety = 0;
-        while (!isPlayerTurn(this.state) && this.state.gameStatus === 'playing' && safety < 100) {
-            const advAc: Action = { type: 'ADVANCE_TURN' };
-            const afterAdv = gameReducer(this.state, advAc);
-            const advMessages = afterAdv.message.slice(this.state.message.length);
-            this.logs.push(...advMessages);
-            this.state = afterAdv;
-            safety++;
-        }
+        // WORLD-CLASS LOGIC: Autonomous Synchronization
+        // The engine (via gameReducer -> processNextTurn) is now autonomous.
+        // It will loop through AI turns automatically until it hits a player decision point.
+        // We no longer need to manually dispatch ADVANCE_TURN.
+    }
+
+    /**
+     * Executes an action without the autonomous loop trigger.
+     * Useful for setup phases where we need discrete control.
+     */
+    dispatchSync(action: Action): GameState {
+        const oldLogLength = this.state.message.length;
+        const oldEventLength = (this.state.visualEvents || []).length;
+
+        this.state = gameReducer(this.state, action);
+
+        const newMessages = this.state.message.slice(oldLogLength);
+        const newEvents = (this.state.visualEvents || []).slice(oldEventLength);
+
+        this.logs.push(...newMessages);
+        this.events.push(...newEvents);
+        return this.state;
     }
 
     wait() {
@@ -299,7 +338,8 @@ async function runTests() {
                 engine.state.initiativeQueue = undefined;
 
                 scenario.run(engine);
-                const isSuccess = scenario.verify(engine.state, engine.logs);
+
+                const isSuccess = scenario.verify(engine.state, engine.logs, engine.events);
 
                 if (isSuccess) {
                     log('    [PASS]');

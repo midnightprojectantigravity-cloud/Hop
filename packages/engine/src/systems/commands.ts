@@ -5,14 +5,17 @@
  * TODO: Implement "Compressed JSON Patches" for StateDelta to reduce memory footprint.
  */
 import type { GameState, Action, Command, StateDelta } from '../types';
+import { stableIdFromSeed } from './rng';
 
 /**
  * Create a new command from an action.
  */
-export const createCommand = (action: Action): Command => {
+export const createCommand = (action: Action, state: GameState): Command => {
+    const seed = state.initialSeed ?? state.rngSeed ?? '0';
+    const counter = state.commandLog?.length ?? 0;
     return {
-        id: Math.random().toString(36).slice(2, 9),
-        timestamp: Date.now(),
+        id: stableIdFromSeed(seed, counter, 9, 'cmd'),
+        timestamp: state.turnNumber,
         action,
     };
 };
@@ -22,12 +25,14 @@ export const createCommand = (action: Action): Command => {
  * In a production app, this would use JSON patches or similar.
  * For our "Lite" version, we store enough data to revert the specific change.
  */
-export const createDelta = (oldState: GameState, _newState: GameState): StateDelta => {
+export const createDelta = (oldState: GameState, _newState: GameState, state: GameState): StateDelta => {
+    const seed = state.initialSeed ?? state.rngSeed ?? '0';
+    const counter = state.undoStack?.length ?? 0;
     // For Infinite Undo, we can store the whole old state in undoData 
     // OR we can implement specific field-level diffs.
     // Given the "Lite" requirement, we'll store a shallow copy of affected entities.
     return {
-        id: Math.random().toString(36).slice(2, 9),
+        id: stableIdFromSeed(seed, counter, 9, 'delta'),
         undoData: {
             player: { ...oldState.player },
             enemies: [...oldState.enemies],

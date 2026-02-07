@@ -5,7 +5,7 @@
  * TODO: Implement "Cloud Save" by integrating with an external database/API.
  */
 import type { Skill } from '../types';
-import { createSkill } from './legacy-skills';
+import { createActiveSkill } from '../skillRegistry';
 
 export interface Loadout {
     id: string;
@@ -81,7 +81,7 @@ export const deserializeLoadout = (json: string): Loadout => {
  * Apply a loadout to a set of player stats.
  */
 export const applyLoadoutToPlayer = (loadout: Loadout): { upgrades: string[]; activeSkills: Skill[]; archetype: any } => {
-    const activeSkills = loadout.startingSkills.map(s => createSkill(s)).filter(Boolean) as Skill[];
+    const activeSkills = loadout.startingSkills.map(s => createActiveSkill(s as any)).filter(Boolean) as Skill[];
     const archetype = loadout.id;
     return {
         upgrades: [...loadout.startingUpgrades],

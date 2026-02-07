@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import type { GameState, Point } from '@hop/engine';
 import {
     hexDistance, hexEquals, isTileInDiamond, hexToPixel,
-    TILE_SIZE, COMPOSITIONAL_SKILLS, pointToKey, UnifiedTileService
+    TILE_SIZE, SkillRegistry, pointToKey, UnifiedTileService
 } from '@hop/engine';
 import { HexTile } from './HexTile';
 import { Entity } from './Entity';
@@ -107,7 +107,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                             const movementSkillIds = ['BASIC_MOVE', 'DASH'];
                             for (const id of movementSkillIds) {
                                 if (gameState.player.activeSkills.some(s => s.id === id)) {
-                                    const def = COMPOSITIONAL_SKILLS[id];
+                                    const def = SkillRegistry.get(id);
                                     if (def?.getValidTargets) {
                                         const validTargets = def.getValidTargets(gameState, gameState.player.position);
                                         if (validTargets.some(v => hexEquals(v, hex))) {
@@ -127,7 +127,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                         // Skill Highlights
                         let isSkillHighlight = false;
                         if (selectedSkillId) {
-                            const def = COMPOSITIONAL_SKILLS[selectedSkillId];
+                            const def = SkillRegistry.get(selectedSkillId);
                             if (def?.getValidTargets) {
                                 const validTargets = def.getValidTargets(gameState, gameState.player.position);
                                 isSkillHighlight = validTargets.some(v => hexEquals(v, hex));

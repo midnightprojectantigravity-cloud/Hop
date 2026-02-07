@@ -1,5 +1,5 @@
 import React from 'react';
-import { COMPOSITIONAL_SKILLS, generateInitialState, ENEMY_STATS, addStatus, buildInitiativeQueue, type GameState, type Point, type SkillDefinition, type ScenarioV2, pointToKey } from '@hop/engine';
+import { COMPOSITIONAL_SKILLS, SkillRegistry, generateInitialState, ENEMY_STATS, addStatus, buildInitiativeQueue, type GameState, type Point, type SkillDefinition, type ScenarioV2, pointToKey } from '@hop/engine';
 import { BASE_TILES } from '@hop/engine/systems/tile-registry';
 import type { TileID } from '@hop/engine/types/registry';
 
@@ -29,7 +29,7 @@ class ScenarioBuilder {
             position: pos,
             previousPosition: pos,
             activeSkills: skillIds.map(id => {
-                const def = COMPOSITIONAL_SKILLS[id];
+                const def = SkillRegistry.get(id);
                 return {
                     id,
                     name: typeof def?.name === 'function' ? def.name(this.state) : (def?.name || id),
@@ -156,7 +156,7 @@ class ScenarioBuilder {
 }
 
 export const TutorialManager: React.FC<TutorialManagerProps> = ({ onLoadScenario }) => {
-    const skills = Object.values(COMPOSITIONAL_SKILLS);
+    const skills = Object.values(COMPOSITIONAL_SKILLS) as SkillDefinition[];
 
     const handleScenarioClick = (scenario: ScenarioV2) => {
         const builder = new ScenarioBuilder();

@@ -22,7 +22,6 @@ export * from './systems/commands';
 export * from './systems/mask';
 export * from './systems/loadout';
 export * from './systems/components';
-export * from './systems/legacy-skills';
 export * from './systems/movement';
 export * from './systems/status';
 export * from './systems/unified-tile-service';

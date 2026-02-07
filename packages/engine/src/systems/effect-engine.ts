@@ -1,13 +1,15 @@
-import type { GameState, AtomicEffect, Actor, Point, MovementTrace, StatusEffect } from '../types';
+import type { GameState, AtomicEffect, Actor, Point, MovementTrace } from '../types';
 import { hexEquals, getHexLine, getDirectionFromTo, hexDirection, hexAdd } from '../hex';
-import { applyDamage, checkVitals } from './actor';
-import { STATUS_REGISTRY } from '../constants';
+import { applyDamage, checkVitals, addStatus } from './actor';
 
 import { addToQueue } from './initiative';
 import { TileResolver } from './tile-effects';
 import { pointToKey } from '../hex';
 import { BASE_TILES } from './tile-registry';
 import { UnifiedTileService } from './unified-tile-service';
+import { SpatialSystem } from './SpatialSystem';
+import { stableIdFromSeed } from './rng';
+import { createEntity } from './entity-factory';
 
 
 /**
@@ -15,6 +17,11 @@ import { UnifiedTileService } from './unified-tile-service';
  */
 export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, context: { targetId?: string; sourceId?: string } = {}): GameState => {
     let nextState = { ...state };
+    const ensureTilesClone = () => {
+        if (nextState.tiles === state.tiles) {
+            nextState = { ...nextState, tiles: new Map(nextState.tiles) };
+        }
+    };
 
     switch (effect.type) {
         case 'Displacement': {
@@ -147,6 +154,11 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         nextState.companions = nextState.companions.map(updatePos);
                     }
                 }
+
+                // WORLD-CLASS LOGIC: Spatial Synchronization
+                // Displacement changes unit positions; we MUST refresh the bitmask so the AI/Validation 
+                // sees the new reality immediately within the same turn if multiple effects occur.
+                nextState.occupancyMask = SpatialSystem.refreshOccupancyMask(nextState);
             }
             break;
         }
@@ -163,7 +175,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             }
 
             // ABSORB_FIRE Logic: Intercept Fire Damage
-            const fireReasons = ['fire_damage', 'lava_sink', 'burning', 'hazard_intercept'];
+            const fireReasons = ['fire_damage', 'lava_sink', 'burning', 'hazard_intercept', 'lava_tick', 'oil_explosion', 'void_sink'];
             const isFireDamage = effect.reason && fireReasons.includes(effect.reason);
 
             if (isFireDamage && targetActorId) {
@@ -294,31 +306,6 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'ApplyStatus': {
-            const getStatusWindow = (type: string) =>
-                STATUS_REGISTRY[type as keyof typeof STATUS_REGISTRY]?.tickWindow || 'END_OF_TURN';
-
-            const addStatusWithMetadata = (actor: Actor, statusType: any, duration: number, stateObj: GameState): { actor: Actor; nextState: GameState } => {
-                const id = `STATUS_${Date.now()}`;
-
-                // Retrieve the window from our registry
-                const tickWindow = getStatusWindow(statusType);
-
-                const newStatus: StatusEffect = {
-                    id,
-                    type: statusType,
-                    duration,
-                    tickWindow
-                };
-
-                return {
-                    actor: {
-                        ...actor,
-                        statusEffects: [...actor.statusEffects, newStatus]
-                    },
-                    nextState: { ...stateObj }
-                };
-            };
-
             let targetActorId = '';
             let targetPos: Point | null = null;
             if (typeof effect.target === 'string') {
@@ -331,29 +318,33 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             let resolvedPos = targetPos;
 
             if (targetActorId) {
-                if (targetActorId === nextState.player.id) {
-                    resolvedPos = nextState.player.position;
-                    const result = addStatusWithMetadata(nextState.player, effect.status, effect.duration, nextState);
-                    nextState.player = result.actor;
-                    nextState.rngCounter = result.nextState.rngCounter;
-                } else {
-                    const updateStatus = (e: Actor) => {
-                        if (e.id === targetActorId) {
-                            const result = addStatusWithMetadata(e, effect.status, effect.duration, nextState);
-                            nextState.rngCounter = result.nextState.rngCounter;
-                            return result.actor;
+                const targetActor = targetActorId === nextState.player.id
+                    ? nextState.player
+                    : (nextState.enemies.find(e => e.id === targetActorId) || nextState.companions?.find(e => e.id === targetActorId));
+
+                if (targetActor) {
+                    resolvedPos = targetActor.position;
+                    const name = targetActorId === nextState.player.id ? 'You' : (targetActor.subtype || targetActor.id);
+                    const suffix = targetActorId === nextState.player.id ? 'are' : 'is';
+                    nextState.message = [...(nextState.message || []), `${name} ${suffix} ${effect.status}!`].slice(-50);
+
+                    if (targetActorId === nextState.player.id) {
+                        nextState.player = addStatus(nextState.player, effect.status as any, effect.duration);
+                    } else {
+                        const updateStatus = (e: Actor) => (e.id === targetActorId) ? addStatus(e, effect.status as any, effect.duration) : e;
+                        nextState.enemies = nextState.enemies.map(updateStatus);
+                        if (nextState.companions) {
+                            nextState.companions = nextState.companions.map(updateStatus);
                         }
-                        return e;
-                    };
-                    nextState.enemies = nextState.enemies.map(updateStatus);
-                    if (nextState.companions) {
-                        nextState.companions = nextState.companions.map(updateStatus);
                     }
                 }
             }
 
             if (effect.status === 'stunned' && resolvedPos) {
-                nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'impact', position: resolvedPos } }];
+                nextState.visualEvents = [...(nextState.visualEvents || []),
+                { type: 'vfx', payload: { type: 'stunBurst', position: resolvedPos } },
+                { type: 'combat_text', payload: { text: 'STUNNED', position: resolvedPos } }
+                ];
             }
             break;
         }
@@ -386,6 +377,15 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             break;
         }
 
+        case 'PickupSpear': {
+            const pickupPos = effect.position || nextState.spearPosition;
+            if (pickupPos && nextState.spearPosition && hexEquals(nextState.spearPosition, pickupPos)) {
+                nextState.hasSpear = true;
+                nextState.spearPosition = undefined;
+            }
+            break;
+        }
+
         case 'SpawnItem': {
             if (effect.itemType === 'spear') {
                 nextState.spearPosition = effect.position;
@@ -393,21 +393,25 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     nextState.hasSpear = false;
                 }
             } else if (effect.itemType === 'bomb') {
-                const bombId = `bomb-${Date.now()}`;
-
+                const seed = nextState.initialSeed ?? nextState.rngSeed ?? '0';
+                const counter = (nextState.turnNumber << 16)
+                    + (nextState.actionLog?.length ?? 0)
+                    + nextState.enemies.length;
+                const bombId = `bomb-${stableIdFromSeed(seed, counter, 8, 'bomb')}`;
                 const bomb: Actor = {
-                    id: bombId,
-                    type: 'enemy',
-                    subtype: 'bomb',
-                    factionId: 'enemy',
-                    position: effect.position,
-                    hp: 1,
-                    maxHp: 1,
-                    speed: 10,
+                    ...createEntity({
+                        id: bombId,
+                        type: 'enemy',
+                        subtype: 'bomb',
+                        factionId: 'enemy',
+                        position: effect.position,
+                        hp: 1,
+                        maxHp: 1,
+                        speed: 10,
+                        skills: [],
+                        weightClass: 'Standard',
+                    }),
                     actionCooldown: 2,
-                    statusEffects: [],
-                    temporaryArmor: 0,
-                    activeSkills: []
                 };
                 nextState.enemies = [...nextState.enemies, bomb];
             } else if (effect.itemType === 'shield') {
@@ -581,6 +585,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
         case 'PlaceFire': {
             const key = pointToKey(effect.position);
+            ensureTilesClone();
             let tile = nextState.tiles.get(key);
             if (!tile) {
                 tile = {
@@ -589,8 +594,14 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     traits: new Set(BASE_TILES.STONE!.defaultTraits),
                     effects: []
                 };
-                nextState.tiles.set(key, tile);
+            } else {
+                tile = {
+                    ...tile,
+                    traits: new Set(tile.traits),
+                    effects: [...tile.effects]
+                };
             }
+            nextState.tiles.set(key, tile);
 
             const result = TileResolver.applyEffect(tile, 'FIRE', effect.duration, 1, nextState, context.sourceId);
             if (result.messages.length > 0) {
@@ -602,13 +613,13 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         case 'PlaceTrap': {
             if (!nextState.traps) nextState.traps = [];
 
-            // Add new trap
-            nextState.traps.push({
+            // Add new trap (IMMUTABLE)
+            nextState.traps = [...nextState.traps, {
                 position: effect.position,
                 ownerId: effect.ownerId,
                 isRevealed: false,
                 cooldown: 0
-            });
+            }];
             break;
         }
         case 'RemoveTrap': {

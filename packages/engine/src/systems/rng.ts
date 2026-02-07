@@ -43,6 +43,27 @@ export const createRng = (seed: string | number) => {
 };
 
 /**
+ * Deterministic, stateless ID generator from a seed + counter.
+ * Does NOT consume GameState.rngCounter.
+ */
+export const stableIdFromSeed = (
+    seed: string | number,
+    counter: number,
+    len = 9,
+    salt: string = ''
+): string => {
+    const base = `${seed}:${counter}:${salt}`;
+    const rng = createRng(base);
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let out = '';
+    for (let i = 0; i < len; i++) {
+        const idx = Math.floor(rng.next() * alphabet.length) % alphabet.length;
+        out += alphabet[idx];
+    }
+    return out;
+};
+
+/**
  * FIXED: Added randomFromSeed
  * Use this for stateless random checks.
  */

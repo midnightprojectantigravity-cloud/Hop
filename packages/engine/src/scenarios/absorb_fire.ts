@@ -20,9 +20,10 @@ export const absorbFireScenarios: ScenarioCollection = {
 
                 // Place fire under player
                 engine.setTile({ q: 0, r: 0, s: 0 }, 'stone');
-                // Manually add fire effect
-                const key = '0,0';
-                const tile = engine.state.tiles.get(key);
+
+                // Use pointToKey to find tile
+                const p = { q: 0, r: 0, s: 0 };
+                const tile = engine.getTileAt(p);
                 if (tile) {
                     tile.effects.push({ id: 'FIRE', duration: 3, potency: 1 });
                 }

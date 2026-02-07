@@ -11,7 +11,7 @@ export const ABSORB_FIRE: SkillDefinition = {
         cooldown: 0,
         range: 0
     },
-    execute: (state: GameState, attacker: Actor, target?: Point): { effects: AtomicEffect[]; messages: string[] } => {
+    execute: (_state: GameState, _attacker: Actor, _target?: Point): { effects: AtomicEffect[]; messages: string[] } => {
         // Passive skill, no active execution
         return { effects: [], messages: [] };
     },

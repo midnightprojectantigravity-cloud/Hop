@@ -1,10 +1,11 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { processKineticPulse } from '../systems/kinetic-kernel';
 import { hexEquals, hexDirection, getHexLine } from '../hex';
+import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { applyEffects } from '../systems/effect-engine';
 import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
-import { validateAxialDirection, validateRange, findFirstObstacle } from '../systems/validation';
+import { validateAxialDirection, validateRange, findFirstObstacle, canLandOnHazard } from '../systems/validation';
 import { SpatialSystem } from '../systems/SpatialSystem';
 
 /**
@@ -51,7 +52,7 @@ export const DASH: SkillDefinition = {
         const obstacleResult = findFirstObstacle(state, fullLine.slice(1), {
             checkWalls: true,
             checkActors: true,
-            checkLava: true,
+            checkLava: false,
             excludeActorId: attacker.id
         });
 
@@ -83,6 +84,7 @@ export const DASH: SkillDefinition = {
                     target: 'self',
                     destination: stopPos,
                     path: dashPath,
+                    ignoreGroundHazards: true,
                     animationDuration: dashPath.length * 60  // 60ms per tile (fast dash)
                 }
             ];
@@ -126,6 +128,7 @@ export const DASH: SkillDefinition = {
                 target: 'self',
                 destination: stopPos,
                 path: dashPath,
+                ignoreGroundHazards: true,
                 animationDuration: dashPath.length * 60  // 60ms per tile
             };
 
@@ -140,11 +143,13 @@ export const DASH: SkillDefinition = {
     getValidTargets: (state: GameState, origin: Point) => {
         const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
         const range = noEnemies ? 20 : 4;
+        const actor = getActorAt(state, origin) as Actor | undefined;
+        if (!actor) return [];
         return SpatialSystem.getAxialTargets(state, origin, range, {
             stopAtObstacles: true,
             includeActors: true,
             includeWalls: false
-        });
+        }).filter(p => canLandOnHazard(state, actor, p));
     },
 
     upgrades: {

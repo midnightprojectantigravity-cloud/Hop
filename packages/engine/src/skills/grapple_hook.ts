@@ -11,7 +11,7 @@ import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../systems/juice-manifest'
 import { TileResolver } from '../systems/tile-effects';
 import { UnifiedTileService } from '../systems/unified-tile-service';
 
-import { validateLineOfSight, validateAxialDirection } from '../systems/validation';
+import { validateLineOfSight, validateAxialDirection, canLandOnHazard } from '../systems/validation';
 import { SpatialSystem } from '../systems/SpatialSystem';
 
 
@@ -62,7 +62,7 @@ export const GRAPPLE_HOOK: SkillDefinition = {
             // JUICE: Execution - Hook cable + dash blur
             effects.push(...SKILL_JUICE_SIGNATURES.GRAPPLE_HOOK.execution(getHexLine(shooter.position, destination)));
 
-            effects.push({ type: 'Displacement', target: shooter.id, destination });
+            effects.push({ type: 'Displacement', target: shooter.id, destination, ignoreGroundHazards: true });
 
             // Trigger tile-enter effects (e.g. Lava Sink)
             const tile = UnifiedTileService.getTileAt(state, destination);
@@ -146,11 +146,29 @@ export const GRAPPLE_HOOK: SkillDefinition = {
         }
     },
 
-    getValidTargets: (state: GameState, origin: Point) => SpatialSystem.getAxialTargets(state, origin, 4, {
-        includeWalls: true,
-        includeActors: true,
-        stopAtObstacles: true
-    }),
+    getValidTargets: (state: GameState, origin: Point) => {
+        const shooter = getActorAt(state, origin) as Actor | undefined;
+        if (!shooter) return [];
+        return SpatialSystem.getAxialTargets(state, origin, 4, {
+            includeWalls: true,
+            includeActors: true,
+            stopAtObstacles: true
+        }).filter(t => {
+            const { directionIndex } = validateAxialDirection(origin, t);
+            const dir = hexDirection(directionIndex);
+            const targetActor = getActorAt(state, t);
+            const tileTraits = UnifiedTileService.getTraitsAt(state, t);
+            const isWallTile = tileTraits.has('BLOCKS_MOVEMENT') || tileTraits.has('ANCHOR');
+
+            // Landing position depends on target type
+            const landingPos = isWallTile
+                ? hexSubtract(t, dir)
+                : (targetActor ? t : undefined);
+
+            if (!landingPos) return false;
+            return canLandOnHazard(state, shooter, landingPos);
+        });
+    },
     upgrades: {},
     scenarios: getSkillScenarios('GRAPPLE_HOOK')
 };

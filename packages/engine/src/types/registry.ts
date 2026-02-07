@@ -49,6 +49,7 @@ export type SkillID =
     | 'CORPSE_EXPLOSION'
     | 'FIREWALK'
     | 'FIREWALL'
+    | 'BOMB_TOSS'
     | 'MULTI_SHOOT'
     | 'RAISE_DEAD'
     | 'SET_TRAP'

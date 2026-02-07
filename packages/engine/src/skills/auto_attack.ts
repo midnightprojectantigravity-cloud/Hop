@@ -76,12 +76,12 @@ export const AUTO_ATTACK: SkillDefinition = {
 
         for (const neighborPos of currentNeighbors) {
             const targetActor = getActorAt(state, neighborPos);
-            if (!targetActor || targetActor.id === attacker.id) continue;
+            if (!targetActor || targetActor.hp <= 0 || targetActor.id === attacker.id) continue;
 
-            // 1. Check Faction
+            // Faction Check: Passive skills should NOT hit friendlies
             if (attacker.factionId === targetActor.factionId) continue;
 
-            // 2. Check Persistence (ID Intersection or Spatial Fallback)
+            // Integrity Check: Use Identity Persistence (IDs)
             const isPersistent = persistentTargetIds.length > 0
                 ? persistentTargetIds.includes(targetActor.id)
                 : previousNeighbors.some(p => hexEquals(p, neighborPos));
