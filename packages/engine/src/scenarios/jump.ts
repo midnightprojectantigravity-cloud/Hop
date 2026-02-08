@@ -64,6 +64,7 @@ export const jumpScenarios: ScenarioCollection = {
 
             setup: (engine: any) => {
                 engine.setPlayer({ q: 3, r: 6, s: -9 }, ['JUMP']);
+                engine.addUpgrade('JUMP', 'STUNNING_LANDING');
                 engine.spawnEnemy('footman', { q: 3, r: 7, s: -10 }, 'neighbor_1');
                 engine.spawnEnemy('footman', { q: 4, r: 7, s: -11 }, 'neighbor_2');
                 engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'distant_enemy');

@@ -346,10 +346,10 @@ function App() {
     }
   }, [gameState.gameStatus, isReplayMode, gameState.initialSeed]);
 
-  const handleStartRun = () => {
+  const handleStartRun = (mode: 'normal' | 'daily') => {
     const id = gameState.selectedLoadoutId;
     if (!id) { console.warn('Start Run called without a selected loadout.'); return; }
-    dispatch({ type: 'START_RUN', payload: { loadoutId: id } });
+    dispatch({ type: 'START_RUN', payload: { loadoutId: id, mode } });
   };
 
   if (gameState.gameStatus === 'hub') {
@@ -358,7 +358,7 @@ function App() {
         <Hub
           gameState={gameState}
           onSelectLoadout={(l) => {
-            dispatch({ type: 'START_RUN', payload: { loadoutId: l.id } });
+            dispatch({ type: 'APPLY_LOADOUT', payload: l });
           }}
           onStartRun={handleStartRun}
           onLoadScenario={handleLoadScenario}

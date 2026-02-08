@@ -179,5 +179,21 @@ export const TILE_EFFECTS: Record<TileEffectID, TileEffectDefinition> = {
         id: 'TRI_TRAP',
         name: 'Kinetic Trap',
         description: 'Hidden trap that flings non-flying units outward'
+    },
+    SNARE: {
+        id: 'SNARE',
+        name: 'Snare',
+        description: 'Entangling roots that halt movement and root the target.',
+        onPass: (context) => {
+            if (context.actor.isFlying) return { effects: [], messages: [] };
+            return {
+                effects: [
+                    { type: 'ApplyStatus', target: context.actor.id, status: 'rooted', duration: 2 }
+                ],
+                messages: ['Snared! Movement halted.'],
+                interrupt: true,
+                newMomentum: 0
+            };
+        }
     }
 };

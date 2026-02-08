@@ -15,14 +15,14 @@ export const absorbFireScenarios: ScenarioCollection = {
             tags: ['fire', 'healing'],
             setup: (engine: any) => {
                 // Set player with 1/3 HP and the skill
-                engine.setPlayer({ q: 0, r: 0, s: 0 }, ['ABSORB_FIRE']);
+                engine.setPlayer({ q: 4, r: 5, s: -9 }, ['ABSORB_FIRE']);
                 engine.state.player.hp = 1;
 
                 // Place fire under player
-                engine.setTile({ q: 0, r: 0, s: 0 }, 'stone');
+                engine.setTile({ q: 4, r: 5, s: -9 }, 'stone');
 
                 // Use pointToKey to find tile
-                const p = { q: 0, r: 0, s: 0 };
+                const p = { q: 4, r: 5, s: -9 };
                 const tile = engine.getTileAt(p);
                 if (tile) {
                     tile.effects.push({ id: 'FIRE', duration: 3, potency: 1 });
@@ -47,15 +47,15 @@ export const absorbFireScenarios: ScenarioCollection = {
             category: 'passive',
             tags: ['lava', 'healing'],
             setup: (engine: any) => {
-                engine.setPlayer({ q: 0, r: 1, s: -1 }, ['ABSORB_FIRE', 'BASIC_MOVE']);
+                engine.setPlayer({ q: 4, r: 5, s: -9 }, ['ABSORB_FIRE', 'BASIC_MOVE']);
                 engine.state.player.hp = 1;
 
-                // Place Lava at 0,2,-2 (adjacent to 0,1,-1)
-                engine.setTile({ q: 0, r: 2, s: -2 }, 'lava');
+                // Place lava on an adjacent in-bounds tile.
+                engine.setTile({ q: 4, r: 6, s: -10 }, 'lava');
             },
             run: (engine: any) => {
                 // Walk into lava
-                engine.useSkill('BASIC_MOVE', { q: 0, r: 2, s: -2 });
+                engine.useSkill('BASIC_MOVE', { q: 4, r: 6, s: -10 });
             },
             verify: (state: any) => {
                 const player = state.player;
@@ -63,7 +63,7 @@ export const absorbFireScenarios: ScenarioCollection = {
                 const checks = {
                     alive: player.hp > 0,
                     healed: player.hp === player.maxHp,
-                    onLava: hexEquals(player.position, { q: 0, r: 2, s: -2 })
+                    onLava: hexEquals(player.position, { q: 4, r: 6, s: -10 })
                 };
                 if (!checks.alive || !checks.healed || !checks.onLava) {
                     console.log('Walk into Lava Failed:', checks, 'HP:', player.hp, 'MaxHP:', player.maxHp);

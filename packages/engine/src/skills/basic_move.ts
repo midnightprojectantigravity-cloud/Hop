@@ -1,8 +1,10 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexEquals } from '../hex';
+import { getNeighbors, hexDistance, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
 import { SpatialSystem } from '../systems/SpatialSystem';
 import { getSkillScenarios } from '../scenarios';
+import { canLandOnHazard, isBlockedByActor } from '../systems/validation';
+import { UnifiedTileService } from '../systems/unified-tile-service';
 
 /**
  * BASIC_MOVE Skill
@@ -14,6 +16,12 @@ const getEffectiveMoveRange = (state: GameState, actor: Actor): number => {
     const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
     if (noEnemies) return 20;
     return Math.max(actor.speed || 1, 1);
+};
+
+const isBlockedMovementTile = (state: GameState, target: Point): boolean => {
+    if (!SpatialSystem.isWithinBounds(state, target)) return true;
+    const traits = UnifiedTileService.getTraitsAt(state, target);
+    return traits.has('BLOCKS_MOVEMENT');
 };
 
 export const BASIC_MOVE: SkillDefinition = {
@@ -37,8 +45,13 @@ export const BASIC_MOVE: SkillDefinition = {
         const validTargets = SpatialSystem.getMovementRange(state, attacker.position, range);
 
         const isTargetValid = validTargets.some((p: Point) => hexEquals(p, target));
+        const isHazardAdjacentLanding =
+            hexDistance(attacker.position, target) === 1 &&
+            canLandOnHazard(state, attacker, target) &&
+            !isBlockedMovementTile(state, target) &&
+            !isBlockedByActor(state, target, attacker.id);
 
-        if (!isTargetValid) {
+        if (!isTargetValid && !isHazardAdjacentLanding) {
             messages.push('Target out of reach or blocked!');
             return { effects, messages, consumesTurn: false };
         }
@@ -60,7 +73,13 @@ export const BASIC_MOVE: SkillDefinition = {
         if (!actor) return [];
 
         const range = getEffectiveMoveRange(state, actor);
-        return SpatialSystem.getMovementRange(state, origin, range);
+        const movementTargets = SpatialSystem.getMovementRange(state, origin, range);
+        const hazardNeighbors = getNeighbors(origin).filter(p =>
+            canLandOnHazard(state, actor, p) &&
+            !isBlockedMovementTile(state, p) &&
+            !isBlockedByActor(state, p, actor.id)
+        );
+        return [...movementTargets, ...hazardNeighbors.filter(h => !movementTargets.some(m => hexEquals(m, h)))];
     },
     upgrades: {},
     scenarios: getSkillScenarios('BASIC_MOVE')

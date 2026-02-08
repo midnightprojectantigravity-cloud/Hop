@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createRng, randomFromSeed, consumeRandom, nextIdFromState } from '../src/rng.js';
+import { createRng, randomFromSeed, consumeRandom, nextIdFromState } from '../src/systems/rng.ts';
 import crypto from 'crypto';
 
 const args = process.argv.slice(2);

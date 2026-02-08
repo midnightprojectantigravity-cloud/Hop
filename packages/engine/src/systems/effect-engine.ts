@@ -1,6 +1,6 @@
 import type { GameState, AtomicEffect, Actor, Point, MovementTrace } from '../types';
 import { hexEquals, getHexLine, getDirectionFromTo, hexDirection, hexAdd } from '../hex';
-import { applyDamage, checkVitals, addStatus } from './actor';
+import { applyDamage, applyHeal, checkVitals, addStatus } from './actor';
 
 import { addToQueue } from './initiative';
 import { TileResolver } from './tile-effects';
@@ -177,24 +177,47 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             // ABSORB_FIRE Logic: Intercept Fire Damage
             const fireReasons = ['fire_damage', 'lava_sink', 'burning', 'hazard_intercept', 'lava_tick', 'oil_explosion', 'void_sink'];
             const isFireDamage = effect.reason && fireReasons.includes(effect.reason);
+            const hasEmberWard = nextState.upgrades?.includes('RELIC_EMBER_WARD');
+            const hasCinderOrb = nextState.upgrades?.includes('RELIC_CINDER_ORB');
 
             if (isFireDamage && targetActorId) {
                 const victim = targetActorId === nextState.player.id ? nextState.player : nextState.enemies.find(e => e.id === targetActorId);
                 const hasAbsorb = victim?.activeSkills?.some(s => s.id === 'ABSORB_FIRE');
+                let adjustedAmount = effect.amount;
+
+                if (targetActorId === nextState.player.id && hasEmberWard) {
+                    adjustedAmount = Math.max(0, adjustedAmount - 1);
+                    nextState.message = [...(nextState.message || []), 'Ember Ward dampens the flames.'].slice(-50);
+                }
 
                 if (hasAbsorb) {
+                    const healAmount = adjustedAmount + (targetActorId === nextState.player.id && hasCinderOrb ? 1 : 0);
+                    if (targetActorId === nextState.player.id && hasCinderOrb) {
+                        nextState.message = [...(nextState.message || []), 'Cinder Orb amplifies the absorption.'].slice(-50);
+                    }
                     // Convert to Heal
                     return applyAtomicEffect(nextState, {
                         type: 'Heal',
                         target: targetActorId,
-                        amount: effect.amount
+                        amount: healAmount
                     });
                 }
             }
 
             if (targetActorId) {
                 if (targetActorId === nextState.player.id) {
-                    nextState.player = applyDamage(nextState.player, effect.amount);
+                    let damageAmount = effect.amount;
+                    if (isFireDamage && hasEmberWard) {
+                        damageAmount = Math.max(0, damageAmount - 1);
+                    }
+                    nextState.player = applyDamage(nextState.player, damageAmount);
+                    if (isFireDamage) {
+                        nextState.hazardBreaches = (nextState.hazardBreaches || 0) + 1;
+                    }
+                    if (isFireDamage && hasCinderOrb) {
+                        nextState.player = applyHeal(nextState.player, 1);
+                        nextState.message = [...(nextState.message || []), 'Cinder Orb restores 1 HP.'].slice(-50);
+                    }
                 } else {
                     const victim = nextState.enemies.find(e => e.id === targetActorId);
                     const victimPos = targetActorId === nextState.player.id ? nextState.player.position : victim?.position;
@@ -258,6 +281,9 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 ];
                 if (hexEquals(nextState.player.position, targetPos)) {
                     nextState.player = applyDamage(nextState.player, effect.amount);
+                    if (isFireDamage) {
+                        nextState.hazardBreaches = (nextState.hazardBreaches || 0) + 1;
+                    }
                     if (nextState.player.hp <= 0) {
                         // Game over handled by vitals check
                     }

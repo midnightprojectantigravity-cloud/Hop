@@ -2,10 +2,134 @@ import type { IStrategyProvider, Intent, IntentType } from '../types/intent';
 import type { GameState, Actor } from '../types';
 import { computeEnemyAction } from '../systems/ai';
 import { SkillRegistry } from '../skillRegistry';
-import { hexEquals } from '../hex';
+import { getNeighbors, hexDistance, hexEquals } from '../hex';
+import { getActorAt } from '../helpers';
+import { UnifiedTileService } from '../systems/unified-tile-service';
+import { SpatialSystem } from '../systems/SpatialSystem';
 
 export class WildStrategy implements IStrategyProvider {
+    private getFalconIntent(gameState: GameState, actor: Actor): Intent {
+        const mode = actor.companionState?.mode || 'roost';
+        const hunter = actor.companionOf === gameState.player.id
+            ? gameState.player
+            : gameState.enemies.find(e => e.id === actor.companionOf);
+
+        const baseMetadata = {
+            expectedValue: 0,
+            reasoningCode: `FALCON_${mode.toUpperCase()}`,
+            isGhost: false,
+            rngConsumption: 0
+        };
+
+        if (mode === 'scout') {
+            return {
+                type: 'USE_SKILL',
+                actorId: actor.id,
+                skillId: 'FALCON_SCOUT',
+                targetHex: actor.position,
+                priority: 10,
+                metadata: baseMetadata
+            };
+        }
+
+        if (mode === 'predator' && typeof actor.companionState?.markTarget === 'string') {
+            const prey = gameState.enemies.find(e => e.id === actor.companionState!.markTarget && e.hp > 0);
+            if (!prey) {
+                return {
+                    type: 'USE_SKILL',
+                    actorId: actor.id,
+                    skillId: 'FALCON_AUTO_ROOST',
+                    targetHex: actor.position,
+                    priority: 9,
+                    metadata: { ...baseMetadata, reasoningCode: 'FALCON_AUTO_ROOST' }
+                };
+            }
+
+            const dist = hexDistance(actor.position, prey.position);
+            if (dist <= 4) {
+                return {
+                    type: 'USE_SKILL',
+                    actorId: actor.id,
+                    skillId: 'FALCON_APEX_STRIKE',
+                    targetHex: prey.position,
+                    primaryTargetId: prey.id,
+                    priority: 10,
+                    metadata: baseMetadata
+                };
+            }
+            if (dist <= 1) {
+                return {
+                    type: 'USE_SKILL',
+                    actorId: actor.id,
+                    skillId: 'FALCON_PECK',
+                    targetHex: prey.position,
+                    primaryTargetId: prey.id,
+                    priority: 9,
+                    metadata: baseMetadata
+                };
+            }
+            return {
+                type: 'MOVE',
+                actorId: actor.id,
+                skillId: 'BASIC_MOVE',
+                targetHex: this.findStepToward(gameState, actor, prey.position),
+                primaryTargetId: prey.id,
+                priority: 7,
+                metadata: baseMetadata
+            };
+        }
+
+        if (hunter) {
+            const distToHunter = hexDistance(actor.position, hunter.position);
+            if (distToHunter <= 1) {
+                return {
+                    type: 'USE_SKILL',
+                    actorId: actor.id,
+                    skillId: 'FALCON_HEAL',
+                    targetHex: hunter.position,
+                    primaryTargetId: hunter.id,
+                    priority: 10,
+                    metadata: baseMetadata
+                };
+            }
+            return {
+                type: 'MOVE',
+                actorId: actor.id,
+                skillId: 'BASIC_MOVE',
+                targetHex: this.findStepToward(gameState, actor, hunter.position),
+                primaryTargetId: hunter.id,
+                priority: 7,
+                metadata: baseMetadata
+            };
+        }
+
+        return {
+            type: 'WAIT',
+            actorId: actor.id,
+            skillId: 'WAIT_SKILL',
+            priority: 1,
+            metadata: { ...baseMetadata, reasoningCode: 'FALCON_WAIT' }
+        };
+    }
+
+    private findStepToward(gameState: GameState, actor: Actor, target: { q: number; r: number; s: number }) {
+        const neighbors = getNeighbors(actor.position)
+            .filter(p => SpatialSystem.isWithinBounds(gameState, p))
+            .filter(p => UnifiedTileService.isWalkable(gameState, p))
+            .filter(p => {
+                const occ = getActorAt(gameState, p);
+                return !occ || occ.id === actor.id;
+            });
+
+        if (neighbors.length === 0) return actor.position;
+        return neighbors.sort((a, b) => hexDistance(a, target) - hexDistance(b, target))[0];
+    }
+
     getIntent(gameState: GameState, actor: Actor): Intent {
+        if (actor.subtype === 'falcon') {
+            return this.getFalconIntent(gameState, actor);
+        }
+
         // 1. Prepare inputs for legacy AI
         // computeEnemyAction expects the player's *current* position (after they moved)
         // In the new turn order, the player might have already moved.
@@ -54,6 +178,14 @@ export class WildStrategy implements IStrategyProvider {
             type = 'USE_SKILL';
             skillId = 'SPEAR_THROW';
             targetHex = plannedActor.intentPosition;
+        } else if (legacyIntent === 'DASH') {
+            type = 'USE_SKILL';
+            skillId = 'DASH';
+            targetHex = plannedActor.intentPosition;
+        } else if (legacyIntent === 'GRAPPLE_HOOK') {
+            type = 'USE_SKILL';
+            skillId = 'GRAPPLE_HOOK';
+            targetHex = plannedActor.intentPosition;
         } else if (legacyIntent === 'Bombing') {
             type = 'USE_SKILL';
             skillId = 'BOMB_TOSS'; // Assuming skill ID
@@ -62,6 +194,10 @@ export class WildStrategy implements IStrategyProvider {
             type = 'USE_SKILL';
             skillId = 'SENTINEL_BLAST';
             targetHex = plannedActor.intentPosition;
+        } else if (legacyIntent === 'SENTINEL_TELEGRAPH') {
+            type = 'USE_SKILL';
+            skillId = 'SENTINEL_TELEGRAPH';
+            targetHex = plannedActor.intentPosition;
         } else if (legacyIntent === 'Charging Power' || legacyIntent === 'Preparing') {
             type = 'WAIT';
             skillId = 'WAIT_SKILL';
@@ -69,7 +205,6 @@ export class WildStrategy implements IStrategyProvider {
 
         // Validate intent against skill loadout + valid targets to avoid zero-effect loops.
         const hasSkill = skillId === 'WAIT_SKILL'
-            || skillId === 'BASIC_MOVE'
             || actor.activeSkills?.some(s => s.id === skillId);
 
         if (!hasSkill) {

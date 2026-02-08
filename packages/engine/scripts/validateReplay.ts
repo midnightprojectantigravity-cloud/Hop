@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import fs from 'fs';
 import path from 'path';
-import { generateInitialState, gameReducer } from '../src/logic.js';
-import { safeParse } from '../src/serialize.js';
+import { generateInitialState, gameReducer } from '../src/logic.ts';
+import { safeParse } from '../src/systems/serialization.ts';
 
 const usage = () => {
   console.log('Usage: validateReplay <replay.json>');

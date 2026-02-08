@@ -11,6 +11,7 @@ import { JUMP } from './skills/jump';
 import { BULWARK_CHARGE } from './skills/bulwark_charge';
 import { BASIC_ATTACK } from './skills/basic_attack';
 import { AUTO_ATTACK } from './skills/auto_attack';
+import { SENTINEL_TELEGRAPH } from './skills/sentinel_telegraph';
 import { SENTINEL_BLAST } from './skills/sentinel_blast';
 import { THEME_HAZARDS } from './skills/theme_hazard';
 import { SHIELD_THROW } from './skills/shield_throw';
@@ -35,6 +36,7 @@ import { FALCON_PECK } from './skills/falcon_peck';
 import { FALCON_APEX_STRIKE } from './skills/falcon_apex_strike';
 import { FALCON_HEAL } from './skills/falcon_heal';
 import { FALCON_SCOUT } from './skills/falcon_scout';
+import { FALCON_AUTO_ROOST } from './skills/falcon_auto_roost';
 import { KINETIC_TRI_TRAP } from './skills/kinetic_tri_trap';
 import { WITHDRAWAL } from './skills/withdrawal';
 import { ABSORB_FIRE } from './skills/absorb_fire';
@@ -54,6 +56,7 @@ export const COMPOSITIONAL_SKILLS = {
     BULWARK_CHARGE,
     BASIC_ATTACK,
     AUTO_ATTACK,
+    SENTINEL_TELEGRAPH,
     SENTINEL_BLAST,
     THEME_HAZARDS,
     BASIC_MOVE,
@@ -76,6 +79,7 @@ export const COMPOSITIONAL_SKILLS = {
     FALCON_APEX_STRIKE,
     FALCON_HEAL,
     FALCON_SCOUT,
+    FALCON_AUTO_ROOST,
     KINETIC_TRI_TRAP,
     WITHDRAWAL,
     ABSORB_FIRE,

@@ -135,7 +135,7 @@ export function hasClearLineToActor(
     });
     return result.obstacle === 'actor'
         && result.actor?.id === targetActorId
-        && result.position
+        && !!result.position
         && hexEquals(result.position, target);
 }
 

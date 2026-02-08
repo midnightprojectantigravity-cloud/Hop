@@ -20,6 +20,13 @@ import { kineticTriTrapScenarios } from './kinetic_tri_trap';
 import { withdrawalScenarios } from './withdrawal';
 import { absorbFireScenarios } from './absorb_fire';
 import { tileInteractionScenarios } from './tile_interactions';
+import { telegraphProjectionScenarios } from './telegraph_projection';
+import { raiderDashScenarios } from './raider_dash';
+import { pouncerHookScenarios } from './pouncer_hook';
+import { iceScenarios } from './ice';
+import { snareScenarios } from './snare';
+import { relicScenarios } from './relics';
+import { objectiveScenarios } from './objectives';
 
 /**
  * Central registry for all test scenarios
@@ -48,6 +55,13 @@ export const SCENARIO_COLLECTIONS: ScenarioCollection[] = [
     withdrawalScenarios,
     absorbFireScenarios,
     tileInteractionScenarios,
+    telegraphProjectionScenarios,
+    raiderDashScenarios,
+    pouncerHookScenarios,
+    iceScenarios,
+    snareScenarios,
+    relicScenarios,
+    objectiveScenarios,
 ];
 
 // Flat list of all scenarios for easy iteration

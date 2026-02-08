@@ -11,7 +11,6 @@ import { applyAutoAttack } from '../skills/auto_attack';
 import { getTurnStartNeighborIds } from './initiative';
 import { SkillRegistry } from '../skillRegistry';
 import { applyEffects } from './effect-engine';
-import { resolveFalconTurn } from './falcon';
 import { isStunned, tickStatuses, handleStunReset } from './status';
 import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from './juice-manifest';
 import { TileResolver } from './tile-effects';
@@ -162,11 +161,6 @@ export const resolveSingleEnemyTurn = (
     nextEnemy = { ...enemy, intent: undefined, intentPosition: undefined };
   } else if (enemy.intent === 'Casting' && enemy.intentPosition) {
     nextEnemy = { ...enemy, intent: undefined, intentPosition: undefined };
-  } else if (enemy.subtype === 'falcon') {
-    const { state: falconState, messages: falconMsgs } = resolveFalconTurn(curState, enemy);
-    curState = falconState;
-    messages.push(...falconMsgs);
-    nextEnemy = curState.enemies.find(e => e.id === enemy.id) || enemy;
   } else {
     // Normal AI turn
     const { entity, nextState: aiState, message } = computeEnemyAction(enemy, state.player.position, curState);

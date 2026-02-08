@@ -1,13 +1,12 @@
 import type { Action, GameState, Point, Entity, VisualEvent } from './types';
-import { SkillRegistry } from './skillRegistry';
 import { gameReducer, generateInitialState } from './logic';
 import { ENEMY_STATS } from './constants';
 import { hexEquals } from './hex';
 import { isPlayerTurn } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
-import { type PhysicsComponent, type ArchetypeComponent, type GameComponent } from './systems/components';
 import { addStatus } from './systems/actor';
 import { pointToKey, UnifiedTileService } from './systems/unified-tile-service';
+import { createEnemy, createFalcon, createPlayer } from './systems/entity-factory';
 
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
@@ -22,108 +21,45 @@ export class ScenarioEngine {
     }
 
     setPlayer(pos: Point, skillIds: string[], archetype: 'VANGUARD' | 'SKIRMISHER' = 'VANGUARD') {
+        const player = createPlayer({
+            position: { ...pos },
+            skills: skillIds,
+            archetype
+        });
+        player.previousPosition = { ...pos };
         this.state.player = {
             ...this.state.player,
-            id: 'player',
-            type: 'player',
-            factionId: 'player',
-            speed: 1,
-            archetype: archetype,
-            position: { ...pos },
-            previousPosition: { ...pos },
-            hp: 3,
-            maxHp: 3,
-            activeSkills: skillIds.map(id => {
-                const def = SkillRegistry.get(id);
-                return {
-                    id,
-                    name: def?.name || id,
-                    description: typeof def?.description === 'function' ? def.description({} as any) : (def?.description || ''),
-                    slot: def?.slot || 'offensive',
-                    cooldown: def?.baseVariables.cooldown || 0,
-                    currentCooldown: 0,
-                    range: def?.baseVariables.range || 0,
-                    upgrades: Object.keys(def?.upgrades || {}),
-                    activeUpgrades: []
-                } as any;
-            }),
-            components: new Map<string, GameComponent>([
-                ['physics', { type: 'physics', weightClass: 'Standard' } as PhysicsComponent],
-                ['archetype', { type: 'archetype', archetype } as ArchetypeComponent]
-            ])
+            ...player
         };
     }
 
     spawnEnemy(type: string, pos: Point, id: string) {
         const stats = (ENEMY_STATS as any)[type] || { hp: 1, maxHp: 1, speed: 1, weightClass: 'Standard' };
-        this.state.enemies.push({
+        const entity = createEnemy({
             id,
-            type: 'enemy',
             subtype: type,
-            factionId: 'enemy',
-            speed: stats.speed || 1,
-            weightClass: stats.weightClass || 'Standard',
             position: { ...pos },
-            previousPosition: { ...pos },
             hp: stats.hp,
             maxHp: stats.maxHp,
-            statusEffects: [],
-            temporaryArmor: 0,
-            activeSkills: [{
-                id: 'BASIC_ATTACK',
-                name: 'Basic Attack',
-                description: 'Melee strike',
-                slot: 'offensive',
-                cooldown: 0,
-                currentCooldown: 0,
-                range: 1,
-                upgrades: [],
-                activeUpgrades: []
-            }],
-            components: new Map<string, GameComponent>([
-                ['physics', { type: 'physics', weightClass: stats.weightClass || 'Standard' } as PhysicsComponent]
-            ])
+            speed: stats.speed || 1,
+            skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
+            weightClass: stats.weightClass || 'Standard'
         });
+        entity.previousPosition = { ...pos };
+        this.state.enemies.push(entity);
     }
 
     spawnFalcon(pos: Point, id: string) {
-        // We use the player as the owner for these tests
-        const falcon = {
-            id,
-            type: 'enemy' as const,
-            subtype: 'falcon',
-            factionId: 'player',
-            speed: 95, // High speed, acts after player
-            position: { ...pos },
-            previousPosition: { ...pos },
-            hp: 1,
-            maxHp: 1,
-            statusEffects: [],
-            temporaryArmor: 0,
-            activeSkills: [
-                SkillRegistry.get('FALCON_PECK')!,
-                SkillRegistry.get('FALCON_HEAL')!,
-                SkillRegistry.get('FALCON_APEX_STRIKE')!,
-                SkillRegistry.get('FALCON_SCOUT')!
-            ].map(s => ({
-                id: s.id,
-                name: typeof s.name === 'function' ? s.name({} as any) : s.name,
-                description: typeof s.description === 'function' ? s.description({} as any) : s.description,
-                slot: s.slot,
-                cooldown: s.baseVariables.cooldown,
-                currentCooldown: 0,
-                range: s.baseVariables.range,
-                upgrades: Object.keys(s.upgrades),
-                activeUpgrades: []
-            })),
-            isFlying: true,
-            companionOf: 'player',
-            companionState: {
-                mode: 'roost',
-                orbitStep: 0,
-                apexStrikeCooldown: 0,
-            }
-        } as Entity;
+        // We use the player as the owner for these tests.
+        const falcon = createFalcon({ ownerId: 'player', position: { ...pos } }) as Entity;
+        falcon.id = id;
+        falcon.position = { ...pos };
+        falcon.previousPosition = { ...pos };
+        falcon.companionState = {
+            mode: falcon.companionState?.mode || 'roost',
+            orbitStep: falcon.companionState?.orbitStep,
+            apexStrikeCooldown: 0
+        };
 
         this.state.enemies.push(falcon);
         if (!this.state.companions) this.state.companions = [];

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    "apps/web": {
+      "entry": [
+        "src/main.tsx",
+        "src/scripts/*.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,jsx}"
+      ],
+      "ignoreDependencies": [
+        "@eslint/js",
+        "eslint-plugin-react-hooks",
+        "eslint-plugin-react-refresh",
+        "globals",
+        "typescript-eslint",
+        "gh-pages"
+      ]
+    },
+    "apps/server": {
+      "project": [
+        "**/*.{ts,tsx,js,jsx}"
+      ]
+    },
+    "packages/engine": {
+      "entry": [
+        "scripts/*.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js,jsx}",
+        "scripts/*.ts"
+      ]
+    }
+  }
+}

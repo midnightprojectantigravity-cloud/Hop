@@ -1,0 +1,37 @@
+import { describe, expect, it } from 'vitest';
+import { runBatch, summarizeBatch } from '../systems/balance-harness';
+
+describe('Balance Harness', () => {
+    it('is deterministic for the same seed set', () => {
+        const seeds = ['h-seed-1', 'h-seed-2', 'h-seed-3', 'h-seed-4'];
+        const first = runBatch(seeds, 'heuristic', 40);
+        const second = runBatch(seeds, 'heuristic', 40);
+        expect(first).toEqual(second);
+    });
+
+    it('emits required difficulty metrics', () => {
+        const seeds = ['r-seed-1', 'r-seed-2', 'r-seed-3'];
+        const results = runBatch(seeds, 'random', 30);
+        const summary = summarizeBatch(results, 'random');
+        expect(summary.games).toBe(3);
+        expect(typeof summary.winRate).toBe('number');
+        expect(typeof summary.timeoutRate).toBe('number');
+        expect(typeof summary.avgTurnsToWin).toBe('number');
+        expect(typeof summary.avgTurnsToLoss).toBe('number');
+        expect(typeof summary.avgFloor).toBe('number');
+        expect(typeof summary.hazardDeaths).toBe('number');
+    });
+
+    it('heuristic policy reduces hazard pressure versus random on fixed seeds', () => {
+        const seeds = Array.from({ length: 20 }, (_, i) => `h-compare-${i + 1}`);
+        const randomSummary = summarizeBatch(runBatch(seeds, 'random', 40), 'random');
+        const heuristicSummary = summarizeBatch(runBatch(seeds, 'heuristic', 40), 'heuristic');
+        expect(heuristicSummary.avgHazardBreaches).toBeLessThanOrEqual(randomSummary.avgHazardBreaches);
+    });
+
+    it('can run using a specific loadout/archetype', () => {
+        const seeds = ['arch-seed-1', 'arch-seed-2'];
+        const results = runBatch(seeds, 'heuristic', 25, 'HUNTER');
+        expect(results.every(r => r.loadoutId === 'HUNTER')).toBe(true);
+    });
+});

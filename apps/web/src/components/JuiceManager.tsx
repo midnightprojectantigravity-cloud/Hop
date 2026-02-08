@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { Point } from '@hop/engine';
 import { hexToPixel, TILE_SIZE } from '@hop/engine';
 
-export interface JuiceEffect {
+interface JuiceEffect {
     id: string;
     type: 'impact' | 'combat_text' | 'flash' | 'spear_trail' | 'vaporize' | 'lava_ripple' | 'explosion_ring';
     position: Point;

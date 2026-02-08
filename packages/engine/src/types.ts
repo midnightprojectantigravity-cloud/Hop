@@ -148,6 +148,33 @@ export interface VisualEvent {
     payload: any;
 }
 
+export interface TelegraphProjectionEntry {
+    actorId: string;
+    skillId: string;
+    targetHex?: Point;
+    dangerTiles: Point[];
+}
+
+export interface IntentPreview {
+    sourceTurn: number;
+    dangerTiles: Point[];
+    projections: TelegraphProjectionEntry[];
+}
+
+export interface RunObjective {
+    id: 'TURN_LIMIT' | 'HAZARD_CONSTRAINT';
+    label: string;
+    target: number;
+}
+
+export interface ObjectiveResult {
+    id: 'TURN_LIMIT' | 'HAZARD_CONSTRAINT';
+    label: string;
+    target: number;
+    value: number;
+    success: boolean;
+}
+
 export interface SkillModifier {
     id: string;
     name: string;
@@ -335,7 +362,11 @@ export interface GameState {
         actionLog?: Action[];
         score?: number;
         floor?: number;
+        objectives?: ObjectiveResult[];
     };
+    dailyRunDate?: string;
+    runObjectives?: RunObjective[];
+    hazardBreaches?: number;
 
     // Selected loadout id from the Hub (not persisted to a run unless START_RUN is called)
     selectedLoadoutId?: string;
@@ -350,6 +381,7 @@ export interface GameState {
     isShaking?: boolean;
     occupiedCurrentTurn?: Point[];
     visualEvents: VisualEvent[];
+    intentPreview?: IntentPreview;
     turnsSpent: number;
     pendingStatus?: {
         status: 'hub' | 'playing' | 'won' | 'lost' | 'choosing_upgrade';
@@ -379,7 +411,7 @@ export type Action =
     | { type: 'USE_SKILL'; payload: { skillId: string; target?: Point } }
     | { type: 'ADVANCE_TURN' }
     | { type: 'LOAD_STATE'; payload: GameState }
-    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string } }
+    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string; mode?: 'normal' | 'daily'; date?: string } }
     | { type: 'APPLY_LOADOUT'; payload: any }
     | { type: 'EXIT_TO_HUB' }
     | { type: 'RESOLVE_PENDING' };

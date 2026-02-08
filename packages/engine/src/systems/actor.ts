@@ -4,6 +4,7 @@
  */
 import type { Entity, StatusEffect } from '../types';
 import { STATUS_REGISTRY } from '../constants';
+import type { StatusID } from '../types/registry';
 
 /** Apply damage with Armor Absorption logic */
 export const applyDamage = (actor: Entity, amount: number): Entity => {
@@ -27,7 +28,7 @@ export const applyDamage = (actor: Entity, amount: number): Entity => {
  */
 export const addStatus = (
   actor: Entity,
-  type: 'stunned' | 'poisoned' | 'armored' | 'hidden',
+  type: StatusID,
   duration: number,
   stacks?: number
 ): Entity => {

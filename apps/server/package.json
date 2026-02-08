@@ -7,8 +7,7 @@
         "dev": "tsx --watch index.js"
     },
     "dependencies": {
-        "@hop/engine": "*",
-        "express": "^4.21.0"
+        "@hop/engine": "*"
     },
     "devDependencies": {
         "tsx": "^4.21.0"

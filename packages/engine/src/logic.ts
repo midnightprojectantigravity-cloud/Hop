@@ -37,6 +37,8 @@ import { createEntity } from './systems/entity-factory';
 import { consumeRandom } from './systems/rng';
 import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS } from './systems/loadout';
 import { tickTileEffects } from './systems/tile-tick';
+import { buildIntentPreview } from './systems/telegraph-projection';
+import { buildRunSummary, createDailyObjectives, createDailySeed, toDateKey } from './systems/run-objectives';
 
 
 export const generateHubState = (): GameState => {
@@ -147,10 +149,15 @@ export const generateInitialState = (
         kills: preservePlayer ? (preservePlayer as any).kills || 0 : 0,
         environmentalKills: preservePlayer ? (preservePlayer as any).environmentalKills || 0 : 0,
         turnsSpent: preservePlayer ? (preservePlayer as any).turnsSpent || 0 : 0,
+        dailyRunDate: (preservePlayer as any)?.dailyRunDate,
+        runObjectives: (preservePlayer as any)?.runObjectives || [],
+        hazardBreaches: (preservePlayer as any)?.hazardBreaches || 0,
+        completedRun: undefined,
 
         // Juice
         dyingEntities: [],
         visualEvents: [],
+        intentPreview: undefined,
 
         // Core Systems
         initiativeQueue: undefined, // Initialized below
@@ -204,10 +211,12 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
 
         // GLOBAL DEATH CHECK: If player is dead, the game is over.
         if (curState.player.hp <= 0 && curState.pendingStatus?.status !== 'lost') {
+            const completedRun = buildRunSummary(curState);
             return {
                 ...curState,
                 pendingStatus: {
-                    status: 'lost'
+                    status: 'lost',
+                    completedRun
                 },
                 message: [...curState.message, 'You have fallen...'].slice(-50)
             };
@@ -250,6 +259,20 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
             curState = sotResult.state;
             messages.push(...sotResult.messages);
 
+            if (actorId === 'player' && curState.upgrades?.includes('RELIC_STEADY_PLATES')) {
+                const boostedArmor = Math.min(2, (curState.player.temporaryArmor || 0) + 1);
+                if (boostedArmor !== (curState.player.temporaryArmor || 0)) {
+                    curState = {
+                        ...curState,
+                        player: {
+                            ...curState.player,
+                            temporaryArmor: boostedArmor
+                        }
+                    };
+                    messages.push('Steady Plates harden your stance.');
+                }
+            }
+
             const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId);
             curState = tele.state;
             messages.push(...tele.messages);
@@ -275,14 +298,20 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         messages.push(...tele.messages);
 
         // 5. THE AGENCY PIPELINE
-        const strategy = StrategyRegistry.resolve(activeActor);
-        const intentOrPromise = strategy.getIntent(curState, activeActor);
+        const actorForIntent = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
+        if (!actorForIntent || actorForIntent.hp <= 0) {
+            continue;
+        }
+        const strategy = StrategyRegistry.resolve(actorForIntent);
+        const intentOrPromise = strategy.getIntent(curState, actorForIntent);
 
         // Check if we need to wait for input (Manual Strategy)
         if (intentOrPromise instanceof Promise) {
             // HALT EXECUTION: Return state and wait for input action
+            const intentPreview = buildIntentPreview(curState);
             return {
                 ...curState,
+                intentPreview,
                 message: [...curState.message, ...messages].slice(-50),
                 dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
             };
@@ -305,10 +334,10 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         }
 
         // 6. Middleware Layer
-        intent = processIntent(intent, curState, activeActor);
+        intent = processIntent(intent, curState, actorForIntent);
 
         // 7. Tactical Execution Layer
-        const { effects, messages: tacticalMessages, consumesTurn, targetId, kills } = TacticalEngine.execute(intent, activeActor, curState);
+        const { effects, messages: tacticalMessages, consumesTurn, targetId, kills } = TacticalEngine.execute(intent, actorForIntent, curState);
         // Console log for headless debugging (Intent Fidelity)
         console.log(`[ENGINE] ${actorId} intends ${intent.type} (${intent.skillId}) onto ${targetId || (intent.targetHex ? JSON.stringify(intent.targetHex) : 'self')}`);
 
@@ -351,9 +380,10 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         if (!postActionActor || postActionActor.hp <= 0) {
             // Actor died during their own turn (e.g. walked into lava)
             if (actorId === 'player') {
+                const completedRun = buildRunSummary(curState);
                 return {
                     ...curState,
-                    pendingStatus: { status: 'lost' },
+                    pendingStatus: { status: 'lost', completedRun },
                     message: [...curState.message, ...messages, 'You have fallen...'].slice(-50)
                 };
             }
@@ -446,20 +476,14 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
             if (checkStairs(curState, curState.player.position)) {
                 const arcadeMax = 10;
                 if (curState.floor >= arcadeMax) {
-                    const baseSeed = curState.initialSeed ?? curState.rngSeed ?? '0';
-                    const score = (curState.floor * 1000);
+                    const completedRun = buildRunSummary(curState);
                     return {
                         ...curState,
                         pendingStatus: {
                             status: 'won',
-                            completedRun: {
-                                seed: baseSeed,
-                                actionLog: curState.actionLog,
-                                score,
-                                floor: curState.floor
-                            }
+                            completedRun
                         },
-                        message: [...curState.message, `Arcade Cleared! Final Score: ${score}`].slice(-50)
+                        message: [...curState.message, `Arcade Cleared! Final Score: ${completedRun.score}`].slice(-50)
                     };
                 }
 
@@ -476,8 +500,10 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         // Loop continues to next actor
     }
 
+    const intentPreview = buildIntentPreview(curState);
     return {
         ...curState,
+        intentPreview,
         message: [...curState.message, ...messages].slice(-50),
         dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
     };
@@ -607,10 +633,21 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 }
 
                 if (!chosenSkillId) {
-                    return {
-                        ...s,
-                        message: [...s.message, enemyAtTarget ? 'No valid passive attack for target.' : 'No valid passive movement for target.'].slice(-50)
-                    };
+                    // Preserve click contracts without inventing skills:
+                    // route to basic interaction only if this actor actually has it.
+                    const hasBasicAttack = playerSkills.some(sk => sk.id === 'BASIC_ATTACK');
+                    const hasBasicMove = playerSkills.some(sk => sk.id === 'BASIC_MOVE');
+
+                    if (enemyAtTarget && hasBasicAttack) {
+                        chosenSkillId = 'BASIC_ATTACK';
+                    } else if (!enemyAtTarget && hasBasicMove) {
+                        chosenSkillId = 'BASIC_MOVE';
+                    } else {
+                        return {
+                            ...s,
+                            message: [...s.message, enemyAtTarget ? 'No valid passive attack for target.' : 'No valid passive movement for target.'].slice(-50)
+                        };
+                    }
                 }
 
                 // Intent type: if targeting an enemy, mark as ATTACK; otherwise MOVE.
@@ -666,9 +703,20 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             }
 
             case 'START_RUN': {
-                const { loadoutId, seed } = a.payload;
+                const { loadoutId, seed, mode, date } = a.payload;
                 const loadout = DEFAULT_LOADOUTS[loadoutId];
                 if (!loadout) return s;
+                if (mode === 'daily') {
+                    const dateKey = toDateKey(date);
+                    const dailySeed = createDailySeed(dateKey);
+                    const next = generateInitialState(1, seed || dailySeed, undefined, undefined, loadout);
+                    return {
+                        ...next,
+                        dailyRunDate: dateKey,
+                        runObjectives: createDailyObjectives(dailySeed),
+                        hazardBreaches: 0
+                    };
+                }
                 return generateInitialState(1, seed, undefined, undefined, loadout);
             }
 
@@ -682,11 +730,17 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 if (status === 'playing' && s.gameStatus === 'playing') {
                     const baseSeed = s.initialSeed ?? s.rngSeed ?? '0';
                     const nextSeed = `${baseSeed}:${s.floor + 1}`;
-                    return generateInitialState(s.floor + 1, nextSeed, baseSeed, {
+                    const next = generateInitialState(s.floor + 1, nextSeed, baseSeed, {
                         ...s.player,
                         hp: Math.min(s.player.maxHp, s.player.hp + 1),
                         upgrades: s.upgrades,
                     });
+                    return {
+                        ...next,
+                        dailyRunDate: s.dailyRunDate,
+                        runObjectives: s.runObjectives,
+                        hazardBreaches: s.hazardBreaches || 0
+                    };
                 }
                 return {
                     ...s,

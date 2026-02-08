@@ -204,6 +204,38 @@ export const falconCommandScenarios: ScenarioCollection = {
 
                 return Object.values(checks).every(v => v === true);
             }
+        },
+        {
+            id: 'falcon_command_metadata_null_safety',
+            title: 'Command Metadata Null-Safety',
+            description: `
+                Ensures FALCON_COMMAND name/description resolution is safe
+                when player context is remapped in harness-like states.
+            `,
+            relatedSkills: ['FALCON_COMMAND'],
+            category: 'summon',
+            difficulty: 'intermediate',
+            isTutorial: false,
+            tags: ['falcon', 'null-safety', 'metadata'],
+            setup: (engine: any) => {
+                engine.setPlayer({ q: 4, r: 9, s: -13 }, ['FALCON_COMMAND']);
+                engine.state.player.id = 'hunter_remapped';
+            },
+            run: (engine: any) => {
+                engine.wait();
+            },
+            verify: (state: GameState, logs: string[]) => {
+                const checks = {
+                    playerIdRemapped: state.player.id === 'hunter_remapped',
+                    noRuntimeReferenceError: !logs.some(l => l.toLowerCase().includes('cannot read properties')),
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('Falcon Command Metadata Null-Safety Failed:', checks);
+                }
+
+                return Object.values(checks).every(v => v === true);
+            }
         }
     ]
 };

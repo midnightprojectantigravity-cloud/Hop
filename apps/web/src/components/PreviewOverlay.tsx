@@ -13,7 +13,7 @@ interface PreviewOverlayProps {
     hoveredTile: Point | null;
 }
 
-export const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkillId, showMovementRange, hoveredTile }) => {
+const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkillId, showMovementRange, hoveredTile }) => {
     const playerPos = gameState.player.position;
 
     // Tier 1: Movement Selection (Base State) - Aggregate primary movement skills (Walk / Dash)

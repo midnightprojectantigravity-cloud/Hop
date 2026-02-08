@@ -170,5 +170,3 @@ export const SpatialSystem = {
         return this.getAxialTargets(state, origin, range, options);
     }
 };
-
-export default SpatialSystem;

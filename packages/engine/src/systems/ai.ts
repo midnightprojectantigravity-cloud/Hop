@@ -6,7 +6,7 @@
 import type { Entity, Point, GameState } from '../types';
 import { hexDistance, hexEquals, hexAdd, hexDirection } from '../hex';
 import { consumeRandom } from './rng';
-import { isRooted } from './status';
+import { isRooted, isStunned } from './status';
 import { TileResolver } from './tile-effects';
 import { pointToKey } from '../hex';
 import { SpatialSystem } from './SpatialSystem';
@@ -278,17 +278,65 @@ const computeAssassinAction = (enemy: Entity, playerPos: Point, state: GameState
 /**
  * Sentinel AI: Boss logic
  */
-const computeSentinelAction = (enemy: Entity, playerPos: Point, state: GameState): { entity: Entity; nextState: GameState; message?: string } => {
-    const dist = hexDistance(enemy.position, playerPos);
+type PlaylistSpec = {
+    telegraphSkillId: string;
+    executeSkillId: string;
+    triggerRange: number;
+    telegraphMessage: string;
+};
 
-    if (dist <= 5) {
+const PLAYLIST_SPECS: Record<string, PlaylistSpec> = {
+    sentinel: {
+        telegraphSkillId: 'SENTINEL_TELEGRAPH',
+        executeSkillId: 'SENTINEL_BLAST',
+        triggerRange: 3,
+        telegraphMessage: 'The Sentinel marks the blast zone...'
+    }
+};
+
+const computePlaylistAction = (
+    enemy: Entity,
+    playerPos: Point,
+    state: GameState,
+    spec: PlaylistSpec
+): { entity: Entity; nextState: GameState; message?: string } => {
+    const dist = hexDistance(enemy.position, playerPos);
+    const inRange = dist <= spec.triggerRange;
+    const telegraphTurn = (state.turnNumber % 2) === 0;
+    const executeTurn = !telegraphTurn;
+
+    if (inRange && executeTurn && isStunned(enemy)) {
         return {
-            entity: { ...enemy, intent: 'SENTINEL_BLAST', intentPosition: { ...playerPos } },
+            entity: { ...enemy, intent: 'Preparing', intentPosition: undefined },
             nextState: state,
-            message: 'The Sentinel focuses energy...'
+            message: `${enemy.subtype} loses focus!`
         };
     }
 
+    if (inRange && telegraphTurn) {
+        return {
+            entity: {
+                ...enemy,
+                intent: spec.telegraphSkillId,
+                intentPosition: { ...playerPos }
+            },
+            nextState: state,
+            message: spec.telegraphMessage
+        };
+    }
+
+    if (inRange && executeTurn) {
+        return {
+            entity: {
+                ...enemy,
+                intent: spec.executeSkillId,
+                intentPosition: { ...playerPos }
+            },
+            nextState: state
+        };
+    }
+
+    // Otherwise, close distance.
     const { position, state: newState } = findBestMove(enemy, playerPos, state, state.occupiedCurrentTurn);
     return {
         entity: { ...enemy, position, intent: 'Moving', intentPosition: undefined },
@@ -438,7 +486,56 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
             return computeGolemAction(bt, playerMovedTo, state);
 
         case 'sentinel':
-            return computeSentinelAction(bt, playerMovedTo, state);
+            return computePlaylistAction(bt, playerMovedTo, state, PLAYLIST_SPECS.sentinel);
+
+        case 'raider': {
+            const isInLine = (bt.position.q === playerMovedTo.q) || (bt.position.r === playerMovedTo.r) || (bt.position.s === playerMovedTo.s);
+            if (isInLine && dist >= 2 && dist <= 4) {
+                return {
+                    entity: { ...bt, intent: 'DASH', intentPosition: { ...playerMovedTo } },
+                    nextState: state
+                };
+            }
+
+            const { position, state: newState } = findBestMove(bt, playerMovedTo, state, state.occupiedCurrentTurn);
+            const moved = !hexEquals(position, bt.position);
+            const nextDist = hexDistance(position, playerMovedTo);
+
+            return {
+                entity: {
+                    ...bt,
+                    position,
+                    intent: moved ? 'Moving' : (nextDist === 1 ? 'BASIC_ATTACK' : 'Waiting'),
+                    intentPosition: (moved || nextDist > 1) ? undefined : { ...playerMovedTo }
+                },
+                nextState: newState,
+                message: moved ? `${bt.subtype} moves to (${position.q}, ${position.r})` : undefined
+            };
+        }
+
+        case 'pouncer': {
+            const isInLine = (bt.position.q === playerMovedTo.q) || (bt.position.r === playerMovedTo.r) || (bt.position.s === playerMovedTo.s);
+            if (isInLine && dist >= 2 && dist <= 4) {
+                return {
+                    entity: { ...bt, intent: 'GRAPPLE_HOOK', intentPosition: { ...playerMovedTo } },
+                    nextState: state
+                };
+            }
+
+            const { position, state: newState } = findBestMove(bt, playerMovedTo, state, state.occupiedCurrentTurn);
+            const moved = !hexEquals(position, bt.position);
+
+            return {
+                entity: {
+                    ...bt,
+                    position,
+                    intent: moved ? 'Moving' : 'Waiting',
+                    intentPosition: undefined
+                },
+                nextState: newState,
+                message: moved ? `${bt.subtype} moves to (${position.q}, ${position.r})` : undefined
+            };
+        }
 
         case 'archer': {
             // Archer AI
@@ -533,5 +630,3 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
         }
     }
 };
-
-export default computeEnemyAction;

@@ -38,9 +38,8 @@ export class TacticalEngine {
             return { effects: [], messages: [], consumesTurn: true };
         }
 
-        // VALIDATE LOADOUT: Skill must be in actor's activeSkills (or BASIC_MOVE / WAIT_SKILL)
+        // VALIDATE LOADOUT: Non-wait intents may only execute actor-owned skills.
         const hasSkill = intent.skillId === 'WAIT_SKILL' ||
-            intent.skillId === 'BASIC_MOVE' ||
             actor.activeSkills.some(s => s.id === intent.skillId);
 
         if (!hasSkill) {

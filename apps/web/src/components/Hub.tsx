@@ -8,7 +8,7 @@ import type { ReplayRecord } from './ReplayManager';
 interface HubProps {
   gameState: GameState;
   onSelectLoadout: (loadout: Loadout) => void;
-  onStartRun: () => void;
+  onStartRun: (mode: 'normal' | 'daily') => void;
   onLoadScenario: (state: GameState, instructions: string) => void;
   onStartReplay: (r: ReplayRecord) => void;
 }
@@ -32,13 +32,22 @@ export const Hub: React.FC<HubProps> = ({ gameState, onSelectLoadout, onStartRun
             <div className="text-sm font-bold text-indigo-400">{gameState.selectedLoadoutId || 'No Archetype Selected'}</div>
           </div>
           {gameState.selectedLoadoutId && (
-            <button
-              onClick={onStartRun}
-              className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black uppercase text-sm tracking-widest transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(79,70,229,0.3)] flex flex-col items-center justify-center leading-tight"
-            >
-              <span>Initialize Arcade</span>
-              <span className="text-[9px] opacity-50 tracking-[0.2em]">10 Floors • Boss Defeat</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => onStartRun('normal')}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black uppercase text-sm tracking-widest transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(79,70,229,0.3)] flex flex-col items-center justify-center leading-tight"
+              >
+                <span>Start Run</span>
+                <span className="text-[9px] opacity-50 tracking-[0.2em]">10 Floors | Boss Defeat</span>
+              </button>
+              <button
+                onClick={() => onStartRun('daily')}
+                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black uppercase text-sm tracking-widest transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.3)] flex flex-col items-center justify-center leading-tight"
+              >
+                <span>Daily</span>
+                <span className="text-[9px] opacity-50 tracking-[0.2em]">Seeded Challenge</span>
+              </button>
+            </div>
           )}
         </div>
       </header>

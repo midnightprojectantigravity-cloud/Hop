@@ -36,6 +36,26 @@ export interface BaseEntityConfig {
     components?: Map<string, GameComponent>;
 }
 
+export type CompanionType = 'falcon' | 'skeleton';
+
+/**
+ * Build a deterministic ActiveSkill loadout from skill IDs.
+ * Uses lightweight descriptors to avoid registry import cycles in factory bootstrapping.
+ */
+export function buildSkillLoadout(skillIds: string[]): Skill[] {
+    return skillIds.map(skillId => ({
+        id: skillId as any,
+        name: String(skillId),
+        description: String(skillId),
+        slot: 'utility',
+        cooldown: 0,
+        currentCooldown: 0,
+        range: 0,
+        upgrades: [],
+        activeUpgrades: [],
+    })) as Skill[];
+}
+
 /**
  * Core entity factory - creates a fully-formed Actor
  */
@@ -43,17 +63,7 @@ export function createEntity(config: BaseEntityConfig): Actor {
     // Build skill loadout
     const activeSkills: Skill[] = config.activeSkills
         ? [...config.activeSkills]
-        : (config.skills || []).map(skillId => ({
-            id: skillId as any,
-            name: String(skillId),
-            description: String(skillId),
-            slot: 'utility',
-            cooldown: 0,
-            currentCooldown: 0,
-            range: 0,
-            upgrades: [],
-            activeUpgrades: [],
-        })) as Skill[];
+        : buildSkillLoadout(config.skills || []);
 
     // Build components map
     const components = new Map(config.components || []);
@@ -157,41 +167,66 @@ export function createEnemy(config: {
 }
 
 /**
+ * Create a companion entity (falcon today; extensible for future companions).
+ */
+export function createCompanion(config: {
+    companionType: CompanionType;
+    ownerId: string;
+    position: Point;
+    id?: string;
+}): Actor {
+    if (config.companionType === 'falcon') {
+        const entity = createEntity({
+            id: config.id || `falcon-${config.ownerId}`,
+            type: 'enemy', // Type is 'enemy' but factionId is 'player'
+            subtype: 'falcon',
+            position: config.position,
+            hp: 1,
+            maxHp: 1,
+            speed: 95, // High speed, acts after player (100)
+            factionId: 'player',
+            skills: ['BASIC_MOVE', 'FALCON_PECK', 'FALCON_APEX_STRIKE', 'FALCON_HEAL', 'FALCON_SCOUT', 'FALCON_AUTO_ROOST'],
+            weightClass: 'Light' as WeightClass,
+            isFlying: true,
+            companionOf: config.ownerId,
+        });
+
+        // Initialize companion state
+        entity.companionState = {
+            mode: 'roost',
+            orbitStep: 0,
+        };
+
+        return entity;
+    }
+
+    return createEntity({
+        id: config.id || `${config.companionType}-${config.ownerId}`,
+        type: 'enemy',
+        subtype: config.companionType,
+        position: config.position,
+        hp: 1,
+        maxHp: 1,
+        speed: 80,
+        factionId: 'player',
+        skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
+        companionOf: config.ownerId,
+        weightClass: 'Standard'
+    });
+}
+
+/**
  * Create a Falcon companion entity
  */
 export function createFalcon(config: {
     ownerId: string;
     position: Point;
 }): Actor {
-    const falconSkills: Skill[] = [
-        { id: 'BASIC_MOVE', name: 'BASIC_MOVE', description: 'BASIC_MOVE', slot: 'utility', cooldown: 0, currentCooldown: 0, range: 1, upgrades: [], activeUpgrades: [] },
-        { id: 'FALCON_PECK', name: 'FALCON_PECK', description: 'FALCON_PECK', slot: 'offensive', cooldown: 0, currentCooldown: 0, range: 1, upgrades: [], activeUpgrades: [] },
-        { id: 'FALCON_APEX_STRIKE', name: 'FALCON_APEX_STRIKE', description: 'FALCON_APEX_STRIKE', slot: 'offensive', cooldown: 0, currentCooldown: 0, range: 4, upgrades: [], activeUpgrades: [] },
-        { id: 'FALCON_HEAL', name: 'FALCON_HEAL', description: 'FALCON_HEAL', slot: 'utility', cooldown: 0, currentCooldown: 0, range: 1, upgrades: [], activeUpgrades: [] },
-        { id: 'FALCON_SCOUT', name: 'FALCON_SCOUT', description: 'FALCON_SCOUT', slot: 'utility', cooldown: 0, currentCooldown: 0, range: 3, upgrades: [], activeUpgrades: [] },
-    ];
-    const entity = createEntity({
-        id: `falcon-${config.ownerId}`,
-        type: 'enemy', // Type is 'enemy' but factionId is 'player'
-        subtype: 'falcon',
-        position: config.position,
-        hp: 1,
-        maxHp: 1,
-        speed: 95, // High speed, acts after player (100)
-        factionId: 'player',
-        activeSkills: falconSkills,
-        weightClass: 'Light' as WeightClass,
-        isFlying: true,
-        companionOf: config.ownerId,
+    return createCompanion({
+        companionType: 'falcon',
+        ownerId: config.ownerId,
+        position: config.position
     });
-
-    // Initialize companion state
-    entity.companionState = {
-        mode: 'roost',
-        orbitStep: 0,
-    };
-
-    return entity;
 }
 
 /**
@@ -205,11 +240,13 @@ export function getEnemySkillLoadout(enemyType: string): string[] {
     const typeSkills: Record<string, string[]> = {
         footman: ['AUTO_ATTACK'],
         sprinter: [],
+        raider: ['DASH'],
+        pouncer: ['GRAPPLE_HOOK'],
         shieldBearer: ['SHIELD_BASH'],
         archer: ['SPEAR_THROW'],
         bomber: ['BOMB_TOSS'],
         warlock: [],
-        sentinel: ['SENTINEL_BLAST'],
+        sentinel: ['SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'],
     };
 
     return [...baseSkills, ...(typeSkills[enemyType] || [])];

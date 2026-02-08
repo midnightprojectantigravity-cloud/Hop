@@ -1,6 +1,6 @@
 import type { GameState } from '../types';
 import type { ScenarioCollection } from './types';
-import { hexEquals } from '../hex';
+import { hexDistance, hexEquals } from '../hex';
 
 /**
  * Basic Move Scenarios
@@ -99,6 +99,79 @@ export const basicMoveScenarios: ScenarioCollection = {
                     console.log('❌ Free Move Scenario Failed:', checks);
                     console.log('Final Position:', state.player.position);
                     console.log('Logs found:', logs);
+                }
+
+                return Object.values(checks).every(v => v === true);
+            }
+        },
+        {
+            id: 'invalid_enemy_move_intent_is_rejected_pre_execution',
+            title: 'Move Intent Rejected Before Execution',
+            description: 'Enemy AI may decide to move, but execution must not run a skill the actor does not own.',
+            relatedSkills: ['BASIC_MOVE'],
+            category: 'movement',
+            difficulty: 'intermediate',
+            isTutorial: false,
+            tags: ['movement', 'validation', 'intent'],
+
+            setup: (engine: any) => {
+                engine.setPlayer({ q: 4, r: 5, s: -9 }, []);
+                engine.spawnEnemy('footman', { q: 7, r: 5, s: -12 }, 'attacker_without_move');
+                const enemy = engine.getEnemy('attacker_without_move');
+                if (enemy) {
+                    enemy.activeSkills = (enemy.activeSkills || []).filter((s: any) => s.id !== 'BASIC_MOVE');
+                }
+            },
+            run: (engine: any) => {
+                engine.wait();
+            },
+            verify: (state: GameState, logs: string[]) => {
+                const enemy = state.enemies.find(e => e.id === 'attacker_without_move');
+                const checks = {
+                    enemyDidNotMove: !!enemy && hexEquals(enemy.position, { q: 7, r: 5, s: -12 }),
+                    noMissingSkillRuntimeError: !logs.some(l => l.includes('does not have skill BASIC_MOVE')),
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('Invalid Enemy Move Intent Rejection Failed:', checks);
+                    console.log('Enemy:', enemy);
+                    console.log('Logs:', logs);
+                }
+
+                return Object.values(checks).every(v => v === true);
+            }
+        },
+        {
+            id: 'single_enemy_single_action_per_turn',
+            title: 'Single Action Per Actor Turn',
+            description: 'Each actor resolves exactly one action per turn in normal flow.',
+            relatedSkills: ['BASIC_MOVE'],
+            category: 'movement',
+            difficulty: 'intermediate',
+            isTutorial: false,
+            tags: ['turn-loop', 'movement', 'integrity'],
+
+            setup: (engine: any) => {
+                engine.setPlayer({ q: 4, r: 5, s: -9 }, []);
+                engine.spawnEnemy('footman', { q: 7, r: 5, s: -12 }, 'single_actor');
+            },
+            run: (engine: any) => {
+                engine.wait();
+            },
+            verify: (state: GameState, logs: string[]) => {
+                const start = { q: 7, r: 5, s: -12 };
+                const enemy = state.enemies.find(e => e.id === 'single_actor');
+                const movedDistance = enemy ? hexDistance(start, enemy.position) : -1;
+                const checks = {
+                    enemyExists: !!enemy,
+                    movedExactlyOneTile: movedDistance === 1,
+                    noZeroEffectMoveWarning: !logs.some(l => l.includes('produced ZERO effects')),
+                };
+
+                if (Object.values(checks).some(v => v === false)) {
+                    console.log('Single Action Per Actor Turn Failed:', checks);
+                    console.log('Enemy:', enemy);
+                    console.log('Logs:', logs);
                 }
 
                 return Object.values(checks).every(v => v === true);

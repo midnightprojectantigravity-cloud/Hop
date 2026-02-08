@@ -45,7 +45,7 @@ const loadLeaderboard = (): LeaderboardEntry[] => {
   }
 };
 
-export const ReplayManager: React.FC<{
+const ReplayManager: React.FC<{
   gameState: GameState;
   onStartReplay: (r: ReplayRecord) => void;
 }> = ({ onStartReplay }) => {

@@ -29,7 +29,8 @@ export type TileEffectID =
     | 'ICE_WALL'
     | 'SMOKE'
     | 'BOMB_TICK'
-    | 'TRI_TRAP';
+    | 'TRI_TRAP'
+    | 'SNARE';
 
 /** All known Skill IDs */
 export type SkillID =
@@ -43,6 +44,7 @@ export type SkillID =
     | 'VAULT'
     | 'GRAPPLE_HOOK'
     | 'SHIELD_THROW'
+    | 'SENTINEL_TELEGRAPH'
     | 'SENTINEL_BLAST'
     | 'FIREBALL'
     | 'SPEAR_THROW'
@@ -64,6 +66,7 @@ export type SkillID =
     | 'FALCON_APEX_STRIKE'
     | 'FALCON_HEAL'
     | 'FALCON_SCOUT'
+    | 'FALCON_AUTO_ROOST'
     | 'KINETIC_TRI_TRAP'
     | 'WITHDRAWAL'
     | 'ABSORB_FIRE';

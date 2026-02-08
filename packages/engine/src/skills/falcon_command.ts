@@ -19,7 +19,9 @@ import { createFalcon } from '../systems/entity-factory';
 export const FALCON_COMMAND: SkillDefinition = {
     id: 'FALCON_COMMAND',
     name: (state: GameState) => {
-        const falcon = getFalconForHunter(state, state.player.id);
+        const hunterId = state?.player?.id;
+        if (!hunterId) return 'Summon Falcon';
+        const falcon = getFalconForHunter(state, hunterId);
         if (!falcon) return 'Summon Falcon';
         const mode = falcon.companionState?.mode || 'roost';
         return mode === 'scout' ? 'Falcon: Scout'
@@ -27,7 +29,9 @@ export const FALCON_COMMAND: SkillDefinition = {
                 : 'Falcon: Roost';
     },
     description: (state: GameState) => {
-        const falcon = getFalconForHunter(state, state.player.id);
+        const hunterId = state?.player?.id;
+        if (!hunterId) return 'Call your Falcon companion.';
+        const falcon = getFalconForHunter(state, hunterId);
         if (!falcon) return 'Call your Falcon companion.';
         const mode = falcon.companionState?.mode || 'roost';
         return mode === 'scout'

@@ -29,5 +29,3 @@ export const getAxialTargets = (state: GameState, origin: Point, range: number, 
 
     return valid;
 };
-
-export default getAxialTargets;

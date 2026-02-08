@@ -68,6 +68,8 @@ export const ENEMY_STATS = {
     // Melee enemies (Standard weight)
     footman: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'], actionCooldown: 2, weightClass: 'Standard', speed: 1 },
     sprinter: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_MOVE', 'BASIC_ATTACK'], actionCooldown: 1, weightClass: 'Standard', speed: 2 },
+    raider: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'DASH'], actionCooldown: 1, weightClass: 'Standard', speed: 1 },
+    pouncer: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'GRAPPLE_HOOK'], actionCooldown: 1, weightClass: 'Standard', speed: 1 },
 
     // Heavy enemies
     shieldBearer: { hp: 2, maxHp: 2, range: 1, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'SHIELD_BASH'], actionCooldown: 2, weightClass: 'Heavy', speed: 1 },
@@ -130,11 +132,11 @@ export const FLOOR_ENEMY_TYPES: Record<number, string[]> = {
     1: ['footman'],
     2: ['footman', 'sprinter'],
     3: ['footman', 'archer'],
-    4: ['footman', 'archer', 'bomber'],
-    5: ['footman', 'archer', 'bomber', 'shieldBearer'],
-    6: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock'],
-    7: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter'],
-    8: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter'],
-    9: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter'],
+    4: ['footman', 'archer', 'bomber', 'raider'],
+    5: ['footman', 'archer', 'bomber', 'shieldBearer', 'raider'],
+    6: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'pouncer'],
+    7: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter', 'pouncer'],
+    8: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter', 'pouncer'],
+    9: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter', 'pouncer'],
     10: ['sentinel']
 };

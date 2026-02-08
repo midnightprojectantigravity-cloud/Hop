@@ -1,211 +1,351 @@
-# Next Level: Arcade Tactical RPG Expansion (Updated)
+# NEXT_LEVEL Milestone Checklist
 
-## Vision (High-Level)
-Turn Hop into a deep, replayable arcade tactical RPG. The engine stays deterministic and headless; the client amplifies intent and impact. This version prioritizes a lean architecture so the scope remains manageable and testable.
+## Debt Triage Snapshot (February 8, 2026)
 
-## Guiding Constraints
-- Golden Standard: determinism and headless-first simulation are non-negotiable.
-- Enemy parity: enemies use the same skill system as players.
-- Simplified logic: consolidate mechanics into a unified effect system.
+### Priority 1 - Critical Regressions
+- [x] **Fix Agency Parity Regression** (`packages/engine/src/__tests__/agency_swap.test.ts`)
+  - Acceptance:
+    - [x] `npx vitest run packages/engine/src/__tests__/agency_swap.test.ts --silent` passes.
+    - [x] Ghost replay intent queue initializes from recorded intents and consumes actor-matched intents deterministically (`packages/engine/src/strategy/ghost.ts`).
+- [x] **Widen `addStatus` Signature** (`packages/engine/src/systems/actor.ts`)
+  - Acceptance:
+    - [x] `addStatus` now accepts `StatusID` from registry types.
+    - [x] TypeScript build remains green after signature change.
+- [x] **Restore Run Mode Selection** (`apps/web/src/App.tsx`, `apps/web/src/components/Hub.tsx`)
+  - Acceptance:
+    - [x] Hub can start a normal run and a daily run explicitly (`onStartRun('normal' | 'daily')`).
+    - [x] `START_RUN` dispatch receives selected mode.
 
-## Core Technical Architecture
-### 1) Trinity of Stats (Attributes)
-Use Body, Mind, and Instinct as raw scalers. Avoid secondary stats on base entities; model those via effects.
-Code fit: `packages/engine/src/types.ts`, `packages/engine/src/systems/combat.ts`, `packages/engine/src/systems/status.ts`.
+### Priority 2 - ECS Lite Consistency Review (against `docs/ECS_REFACTOR_PLAN.md`)
+- [x] **Entity Factory Coverage**
+  - Acceptance:
+    - [x] `createPlayer` and `createEnemy` exist in `packages/engine/src/systems/entity-factory.ts`.
+    - [x] `createCompanion` abstraction exists (`packages/engine/src/systems/entity-factory.ts`).
+- [x] **Unify Stats/Loadouts**
+  - Acceptance:
+    - [x] Enemy creation in map flow uses factory + skill loadouts (`packages/engine/src/systems/map.ts`).
+    - [x] Falcon and companion mode transitions are represented through loadout + skill effects (including `FALCON_AUTO_ROOST`) without logic-loop special casing.
+- [x] **Falcon Refactor Completion**
+  - Acceptance:
+    - [x] Remove falcon-specific turn branch from combat loop (`packages/engine/src/systems/combat.ts`).
+    - [x] Drive falcon behavior through generic skill execution pipeline only.
+- [x] **Skill Injection Everywhere**
+  - Acceptance:
+    - [x] Main runtime entity creation uses factory loadouts.
+    - [x] Scenario helper enemy/companion spawning uses factory creation (`packages/engine/src/skillTests.ts`).
+    - [x] Tutorial/test helper paths standardized to factory creation + `buildSkillLoadout()` usage.
 
-### 2) Unified Effect System
-Use a single `Effect` structure where Traits are permanent, Statuses are temporary, and Counters are stackable.
-Implementation pattern:
-- Trait: effect with `duration: -1`.
-- Status: effect with `duration: >0`.
-- Counter: effect with `stacks: number`.
-Code fit: `packages/engine/src/types.ts`, `packages/engine/src/systems/status.ts`, `packages/engine/src/systems/effect-engine.ts`.
+### Priority 3 - Arcade Loop Polish
+- [x] **Objective-Score Wiring**
+  - Acceptance:
+    - [x] `run-objectives` computes objective outcomes for run summary.
+    - [x] `computeScore` in `packages/engine/src/systems/score.ts` includes objective contribution.
+- [x] **Objective Scenario Pass (Turn Limit boundaries)**
+  - Acceptance:
+    - [x] Boundary scenario exists in `packages/engine/src/scenarios/objectives.ts`.
 
-### 3) Archetypes as Skill Tags (Soft Gate)
-Archetypes are defined by skill tags and playstyle loops, not hard classes.
-- First pick grants a small core set of signature skills.
-- Off-archetype skills remain available but limited by slots, cost, or rarity.
-- UI surfaces when a build drifts into a new archetype identity.
-Examples: Vanguard (Body + Shield counters), Skirmisher (Momentum), Fire Mage (Tile hazards), Necromancer (Summons).
-Code fit: `packages/engine/src/skills/`, `packages/engine/src/systems/loadout.ts`, `packages/engine/src/types.ts`, `apps/web/src/components/UpgradeOverlay.tsx`.
+### Priority 4 - Design/Balance Continuation
+- [x] **Bot Strategy Tuning**
+  - Acceptance:
+    - [x] Heuristic bot improvements validated by harness deltas (`packages/engine/src/__tests__/balance_harness.test.ts`).
+- [x] **UPA Outlier Analysis (1000+ sims)**
+  - Acceptance:
+    - [x] Ran and documented 1000 deterministic simulation outcomes (`docs/UPA_OUTLIER_REPORT_2026-02-08.json`).
+  - Snapshot:
+    - `random`: `944 lost / 56 timeout`, `avgHazardBreaches=0.944`, `UPA=0.4811`.
+    - `heuristic`: `81 lost / 919 timeout`, `avgHazardBreaches=0.019`, `UPA=0.4996`.
 
-### 4) Logic-Light Entities (Parity)
-Players and enemies are containers for Attributes and Effects. Behavior is driven by skills and effects, not entity type.
-Code fit: `packages/engine/src/systems/entity-factory.ts`, `packages/engine/src/systems/ai.ts`, `packages/engine/src/types.ts`.
+## Baseline (as of February 7, 2026)
+- [x] `scenarios_runner` baseline captured: `31 passed / 11 failed`.
+- [x] High-risk regression list confirmed in code and tests:
+  - `packages/engine/src/logic.ts` (`MOVE` routing/flow regressions)
+  - `packages/engine/src/skills/falcon_command.ts` (`state.player.id` crash path)
+  - `packages/engine/src/skills/spear_throw.ts` + `packages/engine/src/scenarios/spear_throw.ts` (contract mismatch)
+  - `packages/engine/src/scenarios/absorb_fire.ts` + `packages/engine/src/systems/validation.ts` (hazard pass/land mismatch)
+  - `packages/engine/src/scenarios/jump.ts` (stun/event expectation drift)
 
-### 5) Testing Advantage
-Use headless simulation to stress test combinations and counter thresholds (e.g., 3-stack Freeze).
-Code fit: `packages/engine/src/__tests__`, `packages/engine/scripts/validateReplay.ts`.
+### Progress Snapshot (February 7, 2026)
+- `scenarios_runner` current state: `60 passed / 0 failed`.
+- Phase 0 stabilization fixes landed across `logic.ts`, `falcon_command.ts`, `spear_throw` scenarios, hazard movement behavior, and scenario harness loadouts.
+- Added targeted regression scenarios for move-intent validation and turn-integrity checks in `packages/engine/src/scenarios/basic_move.ts`.
+- Added remapped-player null-safety scenario for Falcon command in `packages/engine/src/scenarios/falcon_command.ts`.
+- Added deterministic telegraph projection output on `GameState.intentPreview` with scenario coverage in `packages/engine/src/scenarios/telegraph_projection.ts`.
+- Added one data-driven boss playlist (`SENTINEL_TELEGRAPH` -> `SENTINEL_BLAST`) with timing and interruption scenarios in `packages/engine/src/scenarios/sentinel_blast.ts`.
+- Added `raider` archetype reuse slice (enemy `DASH` loadout + AI + intent mapping) with parity scenarios in `packages/engine/src/scenarios/raider_dash.ts`.
+- Added `pouncer` archetype reuse slice (enemy `GRAPPLE_HOOK` loadout + AI + intent mapping) with deterministic scenario coverage in `packages/engine/src/scenarios/pouncer_hook.ts`.
+- Added `ice` terrain scenarios for pass-through momentum and landing slide behavior in `packages/engine/src/scenarios/ice.ts`.
+- Added `snare` terrain effect with movement interruption/rooting behavior and scenario coverage in `packages/engine/src/scenarios/snare.ts`.
+- Added three passive relic slices (`RELIC_EMBER_WARD`, `RELIC_CINDER_ORB`, `RELIC_STEADY_PLATES`) with scenario coverage in `packages/engine/src/scenarios/relics.ts`.
+- Added daily-run seed/objective plumbing and run summary payload (`packages/engine/src/systems/run-objectives.ts`) with test coverage in `packages/engine/src/__tests__/daily_run.test.ts` and scenario coverage in `packages/engine/src/scenarios/objectives.ts`.
+- Added deterministic balance harness (`packages/engine/src/systems/balance-harness.ts`) plus script entrypoint (`packages/engine/scripts/runBalanceHarness.ts`) and UPA telemetry module (`packages/engine/src/systems/upa.ts`) with tests.
 
-## Pillars to Improve Playability
-### 1) Enemy Parity and Skill Reuse
-Enemies should use the same skills as players to create fair, learnable threats.
-Examples: Shield Bearer uses `SHIELD_BASH`, Bomber uses `BOMB_TOSS`, Archer uses `SPEAR_THROW`.
-Code fit: `packages/engine/src/systems/ai.ts`, `packages/engine/src/strategy/wild.ts`, `packages/engine/src/skillRegistry.ts`.
+### Progress Snapshot (February 8, 2026)
+- Removed remaining falcon turn special-case orchestration from `processNextTurn`; predator fallback now resolves through `FALCON_AUTO_ROOST` skill execution.
+- Added `createCompanion` + `buildSkillLoadout` in `packages/engine/src/systems/entity-factory.ts` and standardized scenario helper actor creation to factories.
+- Extended objective scenario coverage to include score-impact validation for turn-limit failures in `packages/engine/src/scenarios/objectives.ts`.
+- Tuned heuristic bot pathing in `packages/engine/src/systems/balance-harness.ts` (hazard-aware movement + stair-seeking fallback).
+- Added 1000-run deterministic outlier analysis artifact: `docs/UPA_OUTLIER_REPORT_2026-02-08.json`.
+- Firemage heuristic switched to one-ply utility simulation in `packages/engine/src/systems/balance-harness.ts` with explicit stairs/floor progress rewards and `WAIT` penalty.
+- Firemage harness delta on fixed 200-seed sample (`maxTurns=100`):
+  - Before utility score fix: `winRate=0`, `timeoutRate=1.0`, `avgFloor=1.0`.
+  - After utility score fix: `winRate=0.09`, `timeoutRate=0.355`, `avgFloor=6.53`.
+- Message-log audit sample (`80` seeds, `maxTurns=80`) now shows no player no-op spam:
+  - `playerZeroEffects=0`
+  - Player intent mix includes `FIREBALL`, `FIREWALL`, and `FIREWALK` (not only `BASIC_ATTACK`).
 
-### 2) Bosses with Multi-Turn Patterns
-Prefer defining boss patterns as multi-turn skill sequences (telegraph + execution) so intent is dictated by skill patterns. AI selects the pattern/skill, then the skill drives telegraph and execution. Validate with a multi-turn scenario.
-Code fit: `packages/engine/src/systems/ai.ts`, `packages/engine/src/systems/combat.ts`, `packages/engine/src/scenarios/`.
+---
 
-### 3) Tactical Terrain and Traps
-Add terrain that rewards positioning and risk.
-Examples: Ice slide, snare trap, shrines with temporary buffs.
-Code fit: `packages/engine/src/systems/tile-effects.ts`, `packages/engine/src/systems/tile-registry.ts`, `packages/engine/src/systems/unified-tile-service.ts`.
+## Phase 0 - Stability Gate (Release Blocker)
+Goal: restore core tactical contract and trust in scenario tests before feature work.
 
-### 4) Loot, Treasures, and Loadout Evolution
-Run-defining choices that alter tactical identity.
-Examples: Relics that add range or ignite, one-off items like teleport scrolls, skill shards as upgrades.
-Code fit: `packages/engine/src/systems/serialization.ts`, `packages/engine/src/systems/loadout.ts`, `apps/web/src/components/UpgradeOverlay.tsx`.
+### P0.PR1 - `falcon_command` null-safe actor resolution
+- Scope:
+  - [x] Remove unsafe `state.player.id` dependency in non-player scenario contexts.
+  - [x] Make name/description resolution null-safe for harness-owned actors.
+- Acceptance tests:
+  - [x] `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts` no longer throws runtime reference/type errors tied to `falcon_command`.
+  - [x] Add/adjust a targeted scenario test proving `falcon_command` works when player actor is absent or remapped.
+- Done when:
+  - [x] No crash path remains from `falcon_command` under scenario harness execution.
 
-### 5) Quests and Run Objectives
-Light objectives add decision variety and replay value.
-Examples: "Defeat 3 elites without taking lava damage", "Clear floor in under 10 turns".
-Code fit: `packages/engine/src/types.ts`, `packages/engine/src/logic.ts`, `apps/web/src/components/UI.tsx`.
+### P0.PR2 - Reconcile `MOVE` intent routing with passive skill scanning
+- Scope:
+  - [x] Restore expected movement action flow for `MOVE` without breaking passive valid-target checks.
+  - [x] Preserve `BASIC_MOVE` behavior/log contracts.
+  - [x] Ensure legal move intents do not silently die between AI intent and execution.
+- Acceptance tests:
+  - [x] `BASIC_MOVE` scenarios pass with expected logs/events.
+  - [x] Add/adjust regression scenario: legal `MOVE` intent generated by AI executes successfully.
+  - [x] Add/adjust regression scenario: invalid move intent is rejected at validation (not execution crash).
+- Done when:
+  - [x] No "intent succeeded in AI, failed in execution" for legal movement targets.
 
-### 6) Action Economy and Momentum Systems
-Reward smart sequencing with chained effects and initiative play.
-Examples: kill resets dash cooldown, momentum carryover into shove, stun breaks telegraphs.
-Code fit: `packages/engine/src/systems/status.ts`, `packages/engine/src/systems/tactical-engine.ts`, `packages/engine/src/skills/`.
+### P0.PR3 - Lock Spear contract and align skill + scenarios
+- Decision (must be explicit in PR description):
+  - [x] Choose one contract and freeze it:
+    - `enemy-only axial + LoS` (selected)
+    - `allow miss/ground throw`.
+- Scope:
+  - [x] Align `packages/engine/src/skills/spear_throw.ts` to chosen contract.
+  - [x] Align `packages/engine/src/scenarios/spear_throw.ts` to same contract.
+  - [x] Remove contradictory expectations (wall/miss/enemy-only conflict).
+- Acceptance tests:
+  - [x] Scenario coverage includes at least: clear LoS hit, blocked LoS, non-enemy target behavior.
+  - [x] No test asserts behavior outside the chosen contract.
+- Done when:
+  - [x] Spear targeting/execution behavior is single-source-of-truth across skill + scenarios.
 
-### 7) Replay and Meta Challenges
-Make the arcade loop competitive and shareable.
-Examples: daily seeds with leaderboards, challenge modifiers, replay gallery.
-Code fit: `apps/web/src/components/ReplayManager.tsx`, `apps/server/index.js`, `packages/engine/scripts/validateReplay.ts`.
+### P0.PR4 - Hazard pass/land consistency across movement skills
+- Scope:
+  - [x] Normalize hazard policy for `BASIC_MOVE`, `JUMP`, `VAULT`, `DASH`, `GRAPPLE_HOOK`, `ABSORB_FIRE`.
+  - [x] Ensure pass-through and landing checks match `TileResolver` + validation contracts.
+- Acceptance tests:
+  - [x] Add/adjust scenario matrix covering pass-vs-land outcomes for each movement type.
+  - [x] `absorb_fire` scenario expectations match enforced hazard policy.
+  - [x] No movement skill bypasses required `onPass`/`onEnter` hooks.
+- Done when:
+  - [x] Hazard outcomes are deterministic and consistent regardless of movement source.
 
-## Expanded Systems from Brainstorm
-### A) Five-Color Hex Topology (Domain-Driven Map Gen)
-Each "color" controls tile traits, hazards, and tactical patterns.
-Examples: White (snare, hallowed heals), Blue (ice, fog LoS breaks), Black (poison, corpse economy), Red (lava, crumble), Green (vines, overgrowth).
-Code fit: `packages/engine/src/systems/map.ts`, `packages/engine/src/systems/tile-registry.ts`, `packages/engine/src/scenarios/hazards.ts`.
+### P0.PR5 - Turn integrity and no-op loop guards
+- Scope:
+  - [x] Verify occupancy mask refresh timing at execution-phase start.
+  - [x] Prevent extra actor actions per turn from loop/routing regressions.
+  - [x] Reject invalid zero-effect loops for legal intents unless explicitly allowed as no-op.
+- Acceptance tests:
+  - [x] Add/adjust scenario asserting exactly one action resolution per actor per turn under normal flow.
+  - [x] Add/adjust scenario asserting legal intents produce meaningful effects or explicit, validated no-op events.
+- Done when:
+  - [x] Turn loop contract is stable with no accidental action duplication.
 
-MTG keyword integration:
-- Define each keyword in Hop terms, then map it to colors and concrete mechanics.
-- Implement keywords as reusable effects, then map colors and skills to them.
-Code fit: `packages/engine/src/systems/status.ts`, `packages/engine/src/types.ts`, `packages/engine/src/skills/`, `packages/engine/src/scenarios/`.
+### Phase 0 Exit Criteria
+- [x] `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts` is fully green.
+- [x] No runtime reference errors in scenario harness execution.
+- [x] No AI-valid intent fails execution for legal targets.
 
-Keyword definition exercise (Hop-appropriate semantics):
-- Flying: ignores ground hazards and ground-only blockers for pass/land; still blocked by walls or anti-air traits.
-- Trample: excess damage carries to the next target in the same line, or spills into a trailing AoE.
-- Haste: act immediately on spawn or reduce cooldown/initiative cost this turn.
-- First Strike: resolves damage before the target in the same combat exchange.
-- Vigilance: can act and still retain a defensive reaction or overwatch posture.
-- Lifelink: converts a portion of damage dealt to healing or shield.
-- Regenerate: prevents lethal damage once per turn and applies a debuff.
-- Hexproof: immune to targeted skills but not AoE or ground effects.
-- Menace: requires two adjacent blockers to stop movement or targeting.
+---
 
-Color mapping (draft, adjust per balance):
-- White: Vigilance, First Strike, Lifelink, protection auras.
-- Blue: Flying, Hexproof, control and LoS manipulation.
-- Black: Lifelink, Regenerate, Menace, sacrifice/corpse economy.
-- Red: Haste, Trample, burst damage, self-risk.
-- Green: Regenerate, Trample, high HP, terrain mastery.
+## Phase 1 - Combat Readability Gate
+Goal: improve decision clarity with deterministic previews, minimal scope increase.
 
-### B) Trinity of Stats (Body, Mind, Instinct)
-Three universal scalers reduce RPG bloat and map cleanly to skills.
-Examples: Body affects displacement resistance, Mind affects range and elemental damage, Instinct affects initiative and reactions.
-Code fit: `packages/engine/src/types.ts`, `packages/engine/src/systems/combat.ts`, `packages/engine/src/systems/status.ts`.
+### P1.PR1 - Deterministic telegraph projection output
+- Scope:
+  - [x] Add intent preview output for next-turn danger tiles.
+  - [x] Keep projection deterministic and replay-safe.
+- Acceptance tests:
+  - [x] Scenario proving projection tiles are deterministic for fixed seed/state.
+  - [x] Scenario proving projection mirrors actual execute turn footprint.
+- Done when:
+  - [x] Engine emits stable telegraph projection consumable by UI.
 
-### C) Tension Gauge and Organic Growth
-Growth based on high-pressure moments rather than XP.
-Examples: surviving at low HP increases Tension; when full, grant a stat point in the most used category.
-Code fit: `packages/engine/src/logic.ts`, `packages/engine/src/systems/status.ts`, `packages/engine/src/systems/telemetry.ts`.
+### P1.PR2 - Boss skill playlist (2-turn telegraph -> execute)
+- Scope:
+  - [x] Implement one boss behavior as skill-definition playlist, no hardcoded AI branch tree.
+  - [x] Turn 1 telegraph, turn 2 execute via same skill pipeline.
+- Acceptance tests:
+  - [x] Scenario verifies exact two-turn pattern timing.
+  - [x] Scenario verifies interruption/cancel rules.
+- Done when:
+  - [x] Boss flow is data-driven through skills and fully scenario-covered.
 
-### D) Legacy and Guilds (Meta Progression)
-Determinism makes legacy and sharing powerful.
-Examples: past run "Ghost Strategy" appears as ally or mentor, player-written quests via seed sharing.
-Code fit: `packages/engine/src/strategy/ghost.ts`, `packages/engine/src/systems/serialization.ts`, `apps/server/index.js`.
+### Phase 1 Exit Criteria
+- [x] Player-visible next-turn danger tiles are available via deterministic projection.
+- [x] Boss playlist behavior is scenario-tested end-to-end.
 
-## Mode Split: Arcade and Persistent World
-### Arcade Mode: The Crucible
-Deterministic proving ground with precise positioning and replay validation.
-Examples: leaderboards via replay IDs, perfect-execution rewards, procedural combat puzzle rooms.
-Code fit: `packages/engine/scripts/validateReplay.ts`, `apps/server/index.js`, `apps/web/src/components/ReplayManager.tsx`.
+---
 
-### Persistent World: The MMO Layer
-Shared world that builds on the same rules but uses persistent storage.
-Examples: crafting and trading, territory influence, shared relic economy.
-Code fit: `apps/server/index.js`, database layer, scheduled validation tasks.
+## Phase 2 - Content Through Reuse (Parity-First)
+Goal: add challenge by recombining existing mechanics only.
 
-## Unified Power Assessment (UPA)
-A single power formula to balance encounters across Arcade and MMO.
-Arcade: score multiplier from power vs success. MMO: tiering for access and economy.
-Code fit: `packages/engine/src/systems/combat.ts`, `packages/engine/src/types.ts`, `packages/engine/src/logic.ts`.
+### P2.PR1 - Enemy archetype A using existing player skills
+- Scope:
+  - [x] Add enemy loadout using only existing player skills.
+  - [x] No new core combat subsystem.
+- Acceptance tests:
+  - [x] Scenario verifies targeting + execution parity against player-owned version of same skill.
 
-## Mini Framework for Adding Content
-### New Skill
-Implement in `packages/engine/src/skills/`, register in `packages/engine/src/skillRegistry.ts`, add scenarios in `packages/engine/src/scenarios/`, validate determinism with replay tests.
+### P2.PR2 - Enemy archetype B using existing player skills
+- Scope:
+  - [x] Add second enemy archetype with distinct tactical role via loadout/AI config only.
+- Acceptance tests:
+  - [x] Scenario verifies deterministic behavior and no special-case engine path.
 
-### New Enemy
-Define stats in `packages/engine/src/constants.ts`, add loadout in `packages/engine/src/systems/entity-factory.ts`, extend AI in `packages/engine/src/systems/ai.ts`, add scenario coverage.
+### P2.PR3 - Terrain pack: `ice` trait
+- Scope:
+  - [x] Add `ice` tile trait/effects via existing tile systems.
+- Acceptance tests:
+  - [x] Scenario covers pass behavior.
+  - [x] Scenario covers land behavior.
 
-### New Tile Effect
-Define trait in `packages/engine/src/systems/tile-types.ts`, add effect in `packages/engine/src/systems/tile-registry.ts`, hook behavior in `packages/engine/src/systems/tile-effects.ts`, add scenarios for pass and land behavior.
+### P2.PR4 - Terrain pack: `snare` trait
+- Scope:
+  - [x] Add `snare` tile trait/effects via existing tile systems.
+- Acceptance tests:
+  - [x] Scenario covers movement restriction/interaction rules.
 
-### New Boss Pattern
-Prefer defining boss patterns as multi-turn skill sequences (telegraph + execution) so intent is dictated by skill patterns. AI selects the pattern/skill, then the skill drives telegraph and execution. Validate with a multi-turn scenario.
+### P2.PR5 - Relic 1 (passive-only)
+- Scope:
+  - [x] Add passive relic with no new subsystem.
+- Acceptance tests:
+  - [x] Scenario validates trigger conditions and deterministic effect output.
 
-## Concrete Next Steps (The Lean Path)
-1. Refactor the effect system into a single structure with traits, statuses, and counters.
-2. Add counter thresholds (e.g., 3 stacks of Chill triggers Frozen for 1 turn).
-3. Implement a boss as a skill playlist with telegraph and execute turns.
-4. Build the 5-minute daily seed loop before expanding meta progression.
+### P2.PR6 - Relic 2 (passive-only)
+- Scope:
+  - [x] Add second passive relic.
+- Acceptance tests:
+  - [x] Scenario validates stacking/conflict behavior with existing effects.
 
-## Stretch Ideas
-1. Procedural room modifiers (low gravity, fog of war).
-2. Synergy systems (burn + oil, ice + shove).
-3. Companion archetypes with shared skills and upgrades.
-4. Narrative arc in arcade mode with light story beats.
+### P2.PR7 - Relic 3 (passive-only)
+- Scope:
+  - [x] Add third passive relic.
+- Acceptance tests:
+  - [x] Scenario validates end-to-end equip -> trigger -> resolution path.
 
-## Decision Hooks for the Next Phase
-- Define the UPA formula first to balance both modes.
-- Choose a first "color domain" set for map gen to anchor tile variety.
-- Pick one boss pattern to establish the multi-turn intent pipeline.
+### Phase 2 Exit Criteria
+- [x] 2 enemy archetypes shipped using existing skills only.
+- [x] `ice` + `snare` terrain traits scenario-covered.
+- [x] 3 passive relics scenario-covered.
+- [x] No new engine architecture introduced.
 
-## Difficulty and Simplification Strategy
-Goal: keep the Golden Standard intact while reducing scope, coupling, and implementation risk. Difficulty is estimated for the current codebase.
+---
 
-### Core Technical Architecture
-- Trinity of Stats: Low. Keep only scaling hooks in combat math, no new subsystems.
-- Unified Effect System: Medium-High. Mitigate by doing it in two passes:
-  - Pass 1: alias existing traits/statuses/counters into one interface with adapters.
-  - Pass 2: migrate callers and remove legacy shapes.
-- Archetypes as Skill Tags: Medium. Keep it UI-light and mostly data-driven (tags on skills + soft gate config).
-- Logic-Light Entities: Medium. Keep entity shape stable; shift behavior via skill/effect helpers only.
-- Testing Advantage: Low. Expand existing scenarios incrementally; avoid new infra.
+## Phase 3 - Arcade Loop Layer
+Goal: ship a replayable daily loop with minimal backend coupling.
 
-### Pillars to Improve Playability
-- Enemy Parity and Skill Reuse: Medium. Start with 1 enemy using existing player skills end-to-end.
-- Bosses with Multi-Turn Patterns: Medium. Implement one boss pattern using two existing skills and a telegraph effect.
-- Tactical Terrain and Traps: Medium. Add 1 terrain effect with pass and land rules; reuse hazard checks.
-- Loot, Treasures, Loadout Evolution: Medium-High. Start with 3 relics as passive effects only.
-- Quests and Run Objectives: Medium. Start with 2 objectives and evaluate via existing event hooks.
-- Action Economy and Momentum: Medium. Add 1 chain rule and validate in scenarios.
-- Replay and Meta Challenges: High if server-side. Start with local daily seed only; leaderboard later.
+### P3.PR1 - Local daily seed loop
+- Scope:
+  - [x] Implement local daily seed generation/selection.
+  - [x] Preserve determinism and replay compatibility.
+- Acceptance tests:
+  - [x] Scenario/test proving same date -> same seed -> same deterministic outcomes.
 
-### Expanded Systems from Brainstorm
-- Five-Color Hex Topology: Medium-High. Start with a single domain (Red) and 1-2 traits.
-- MTG Keywords: High if broad. Start with 3 keywords (Flying, Trample, Lifelink) and map to effects.
-- Tension Gauge: Medium-High. Start as a single counter with one trigger and one reward.
-- Legacy and Guilds: High. Defer until replay validation is stable.
+### P3.PR2 - Objective type 1: turn limit
+- Scope:
+  - [x] Add turn-limit objective evaluation.
+- Acceptance tests:
+  - [x] Scenario validates pass/fail boundaries and scoring impact.
 
-### Mode Split: Arcade and MMO
-- Arcade Mode: Medium. Keep it single-player deterministic first.
-- MMO Layer: Very High. Defer; keep an interface boundary only.
+### P3.PR3 - Objective type 2: hazard constraint
+- Scope:
+  - [x] Add hazard-constraint objective evaluation.
+- Acceptance tests:
+  - [x] Scenario validates failure on prohibited hazard interaction.
 
-### UPA (Unified Power Assessment)
-- Medium-High. Start with a simple formula used only in tests and tuning, not gameplay.
+### P3.PR4 - End-run summary payload
+- Scope:
+  - [x] Emit end-run summary containing seed, score, and objective outcomes.
+- Acceptance tests:
+  - [x] Scenario/test validates summary payload schema and deterministic values.
 
-## Simplification Playbook
-- Prefer fewer mechanics with deeper interactions over many shallow systems.
-- Use the Unified Effect System as the single axis of complexity, not multiple parallel subsystems.
-- Ship one representative example per pillar before expanding.
-- Keep everything data-driven (skill tags, effect tags, tile traits).
-- Avoid new UI until engine behavior is stable and test-covered.
+### Phase 3 Exit Criteria
+- [x] One deterministic ~5-minute local daily loop is playable.
+- [x] Replay validation remains deterministic.
 
-## Minimal Viable "Next Level" Slice
-- Unified Effect System pass 1 (adapters only).
-- 1 new terrain trait + 1 new keyword + 1 relic.
-- 1 enemy using a player skill end-to-end.
-- 1 boss pattern built as a two-turn skill playlist.
-- 2 scenarios that validate the above.
+---
+
+## Phase 4 - Balance Automation
+Goal: tune difficulty using measurable simulation outputs.
+
+### P4.PR1 - Bot harness: random vs heuristic
+- Scope:
+  - [x] Build headless harness to run random bot vs heuristic bot.
+  - [x] Output repeatable metrics per seed batch.
+- Acceptance tests:
+  - [x] Harness run is deterministic for same seed set.
+  - [x] Metrics include win rate, turns-to-win/loss, and hazard deaths.
+
+### P4.PR2 - Initial UPA telemetry formula (non-gating)
+- Scope:
+  - [x] Implement first UPA calculation for telemetry/tuning only.
+  - [x] Explicitly avoid gameplay gating with UPA at this stage.
+- Acceptance tests:
+  - [x] Test validates UPA output stability for fixed simulated inputs.
+  - [x] Test validates no runtime branch uses UPA as a hard gate.
+
+### Phase 4 Exit Criteria
+- [x] Stable difficulty signals available from simulation runs.
+- [x] Balance changes can be justified by measurable harness outcomes.
+
+---
+
+## Phase 4.1 - Aggressive AI Pilot (Firemage)
+Goal: validate Firemage power ceiling with deterministic, simulation-aware policy.
+
+### P4.1.PR1 - Virtual step scoring in harness
+- Scope:
+  - [x] Add one-ply virtual execution path for heuristic Firemage policy in `packages/engine/src/systems/balance-harness.ts`.
+  - [x] Score simulated next-state utility from HP delta, enemy damage, kills, distance pressure, stairs progress, and floor progress.
+  - [x] Penalize `WAIT` to reduce idle loops.
+- Acceptance tests:
+  - [x] `npx vitest run packages/engine/src/__tests__/balance_harness.test.ts --silent` remains green.
+  - [x] Deterministic 200-seed Firemage harness run improves over pre-fix timeout trap.
+
+### P4.1.PR2 - Message-log quality audit
+- Scope:
+  - [x] Use engine message logs to verify player action quality (skill mix and no-op warnings).
+- Acceptance tests:
+  - [x] Fixed-seed audit confirms `playerZeroEffects=0`.
+  - [x] Intent distribution shows regular use of Firemage kit (`FIREBALL`, `FIREWALL`, `FIREWALK`) rather than melee-only fallback.
+
+### P4.1.PR3 - Full outlier rerun with tuned heuristic
+- Scope:
+  - [ ] Re-run 1000+ Firemage simulations with tuned utility policy and publish refreshed report artifact.
+- Acceptance tests:
+  - [ ] New report committed under `docs/` with result histogram + strongest/weakest seed slices.
+
+---
+
+## Deferred (Intentionally Out of Scope)
+- [ ] MMO layer
+- [ ] Guild systems
+- [ ] Persistent economy
+- [ ] Legacy ghosts as progression systems
+
+Reason: high coupling, lower leverage before core arcade loop is stable, deterministic, and balanced.
+
+---
+
+## Execution Rules (Per PR)
+- [ ] One mechanic slice per PR: engine rule + scenario(s) + minimal UI reflection.
+- [ ] No new large system before current phase exit criteria are green.
+- [ ] Prefer data-driven additions (`skills`, `tile traits`, `loadouts`) over core abstractions.
+- [ ] Treat `scenarios_runner` as release gate for each milestone.
