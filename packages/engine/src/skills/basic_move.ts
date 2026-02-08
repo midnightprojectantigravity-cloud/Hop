@@ -13,8 +13,8 @@ import { UnifiedTileService } from '../systems/unified-tile-service';
 
 // 1. Extract the shared logic
 const getEffectiveMoveRange = (state: GameState, actor: Actor): number => {
-    const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
-    if (noEnemies) return 20;
+    const hostileCount = state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy').length;
+    if (hostileCount === 0) return 20;
     return Math.max(actor.speed || 1, 1);
 };
 

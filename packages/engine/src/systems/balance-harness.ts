@@ -97,16 +97,25 @@ const distanceToStairs = (state: GameState): number => {
     return hexDistance(state.player.position, state.stairsPosition);
 };
 
+const distanceToShrine = (state: GameState): number => {
+    if (!state.shrinePosition) return 0;
+    return hexDistance(state.player.position, state.shrinePosition);
+};
+
 const AGGRESSIVE_WEIGHTS = {
-    HAZARD_DAMAGE: -1.0,
-    HEALING_RECEIVED: 2.0,
-    DAMAGE_DEALT: 5.0,
-    KILL_SHOT: 50.0,
-    DISTANCE_TO_ENEMY: -0.5,
-    ENEMY_CLEARED: 12.0,
-    STAIRS_PROGRESS: 2.5,
-    FLOOR_PROGRESS: 200.0,
-    WAIT_PENALTY: -1.5
+    HAZARD_DAMAGE: -0.5,
+    HEALING_RECEIVED: 2.5,
+    DAMAGE_DEALT: 12.0,
+    KILL_SHOT: 200.0,
+    DISTANCE_TO_ENEMY: -0.2,
+    ENEMY_APPROACH_PROGRESS: 4.0,
+    ENEMY_CLEARED: 90.0,
+    STAIRS_PROGRESS: 1.2,
+    SHRINE_PROGRESS: 1.5,
+    FLOOR_PROGRESS: 600.0,
+    WAIT_PENALTY: -5.0,
+    NO_PROGRESS_PENALTY: -8.0,
+    FIREWALK_NO_PROGRESS_PENALTY: -20.0
 } as const;
 
 const buildSkillActions = (state: GameState): Action[] => {
@@ -115,6 +124,8 @@ const buildSkillActions = (state: GameState): Action[] => {
     for (const skill of (state.player.activeSkills || [])) {
         if ((skill.currentCooldown || 0) > 0) continue;
         if (skill.id === 'AUTO_ATTACK') continue;
+        // FIREWALK creates frequent low-value loops in harness policy; keep focus on kill/progress actions.
+        if (skill.id === 'FIREWALK') continue;
         const def = SkillRegistry.get(skill.id);
         if (!def?.getValidTargets) continue;
         const targets = def.getValidTargets(state, origin);
@@ -143,42 +154,139 @@ const virtualStep = (state: GameState, action: Action): GameState => {
     return resolvePending(progressed);
 };
 
-const scoreStateTransition = (prev: GameState, next: GameState, action: Action): number => {
+type TransitionMetrics = {
+    hazardDamage: number;
+    healingReceived: number;
+    enemyDamage: number;
+    killShot: number;
+    distanceToEnemy: number;
+    enemyApproachProgress: number;
+    enemiesCleared: number;
+    stairsProgress: number;
+    shrineProgress: number;
+    floorProgress: number;
+    waitPenalty: number;
+    noProgressPenalty: number;
+    firewalkNoProgressPenalty: number;
+};
+
+const transitionMetrics = (prev: GameState, next: GameState, action: Action): TransitionMetrics => {
     const hpDiff = (next.player.hp || 0) - (prev.player.hp || 0);
     const hazardDamage = Math.max(0, -hpDiff);
     const healingReceived = Math.max(0, hpDiff);
     const enemyDamage = Math.max(0, sumEnemyHp(prev) - sumEnemyHp(next));
     const killShot = Math.max(0, (next.kills || 0) - (prev.kills || 0));
-    const distance = nearestHostileDistance(next);
+    const prevDistanceToEnemy = nearestHostileDistance(prev);
+    const distanceToEnemy = nearestHostileDistance(next);
+    const enemyApproachProgress = Math.max(0, prevDistanceToEnemy - distanceToEnemy);
+    const previousHostiles = aliveHostiles(prev);
     const enemiesCleared = Math.max(0, aliveHostiles(prev) - aliveHostiles(next));
-    const stairsProgress = Math.max(0, distanceToStairs(prev) - distanceToStairs(next));
+    const isCombatOngoing = previousHostiles > 0;
+    const stairsProgressRaw = Math.max(0, distanceToStairs(prev) - distanceToStairs(next));
+    const shrineProgressRaw = Math.max(0, distanceToShrine(prev) - distanceToShrine(next));
+    // Prioritize killing while enemies remain; prioritize progression once floor is clear.
+    const stairsProgress = isCombatOngoing ? 0 : stairsProgressRaw;
+    const shrineProgress = isCombatOngoing ? 0 : shrineProgressRaw;
     const floorProgress = Math.max(0, (next.floor || 0) - (prev.floor || 0));
     const waitPenalty = action.type === 'WAIT' ? 1 : 0;
+    const noProgress = enemyDamage === 0
+        && killShot === 0
+        && enemiesCleared === 0
+        && enemyApproachProgress === 0
+        && stairsProgress === 0
+        && shrineProgress === 0
+        && floorProgress === 0;
+    const noProgressPenalty = noProgress ? 1 : 0;
+    const firewalkNoProgressPenalty = action.type === 'USE_SKILL'
+        && action.payload.skillId === 'FIREWALK'
+        && noProgress
+        ? 1
+        : 0;
 
+    return {
+        hazardDamage,
+        healingReceived,
+        enemyDamage,
+        killShot,
+        distanceToEnemy,
+        enemyApproachProgress,
+        enemiesCleared,
+        stairsProgress,
+        shrineProgress,
+        floorProgress,
+        waitPenalty,
+        noProgressPenalty,
+        firewalkNoProgressPenalty
+    };
+};
+
+const scoreStateTransition = (m: TransitionMetrics): number => {
     return (
-        AGGRESSIVE_WEIGHTS.HAZARD_DAMAGE * hazardDamage
-        + AGGRESSIVE_WEIGHTS.HEALING_RECEIVED * healingReceived
-        + AGGRESSIVE_WEIGHTS.DAMAGE_DEALT * enemyDamage
-        + AGGRESSIVE_WEIGHTS.KILL_SHOT * killShot
-        + AGGRESSIVE_WEIGHTS.DISTANCE_TO_ENEMY * distance
-        + AGGRESSIVE_WEIGHTS.ENEMY_CLEARED * enemiesCleared
-        + AGGRESSIVE_WEIGHTS.STAIRS_PROGRESS * stairsProgress
-        + AGGRESSIVE_WEIGHTS.FLOOR_PROGRESS * floorProgress
-        + AGGRESSIVE_WEIGHTS.WAIT_PENALTY * waitPenalty
+        AGGRESSIVE_WEIGHTS.HAZARD_DAMAGE * m.hazardDamage
+        + AGGRESSIVE_WEIGHTS.HEALING_RECEIVED * m.healingReceived
+        + AGGRESSIVE_WEIGHTS.DAMAGE_DEALT * m.enemyDamage
+        + AGGRESSIVE_WEIGHTS.KILL_SHOT * m.killShot
+        + AGGRESSIVE_WEIGHTS.DISTANCE_TO_ENEMY * m.distanceToEnemy
+        + AGGRESSIVE_WEIGHTS.ENEMY_APPROACH_PROGRESS * m.enemyApproachProgress
+        + AGGRESSIVE_WEIGHTS.ENEMY_CLEARED * m.enemiesCleared
+        + AGGRESSIVE_WEIGHTS.STAIRS_PROGRESS * m.stairsProgress
+        + AGGRESSIVE_WEIGHTS.SHRINE_PROGRESS * m.shrineProgress
+        + AGGRESSIVE_WEIGHTS.FLOOR_PROGRESS * m.floorProgress
+        + AGGRESSIVE_WEIGHTS.WAIT_PENALTY * m.waitPenalty
+        + AGGRESSIVE_WEIGHTS.NO_PROGRESS_PENALTY * m.noProgressPenalty
+        + AGGRESSIVE_WEIGHTS.FIREWALK_NO_PROGRESS_PENALTY * m.firewalkNoProgressPenalty
     );
 };
 
 const selectByOnePlySimulation = (state: GameState, simSeed: string, decisionCounter: number): Action => {
     const moveActions: Action[] = legalMoves(state).map(m => ({ type: 'MOVE', payload: m }));
     const skillActions = buildSkillActions(state);
-    const candidates: Action[] = [{ type: 'WAIT' }, ...moveActions, ...skillActions];
+    const rawCandidates: Action[] = [{ type: 'WAIT' }, ...moveActions, ...skillActions];
+    const hasHostiles = aliveHostiles(state) > 0;
+    const candidates = hasHostiles
+        ? rawCandidates.filter(a => a.type !== 'WAIT' || rawCandidates.length === 1)
+        : rawCandidates;
 
     if (candidates.length === 0) return { type: 'WAIT' };
 
-    const scored = candidates.map(action => ({
-        action,
-        value: scoreStateTransition(state, virtualStep(state, action), action)
-    }));
+    const scored = candidates.map(action => {
+        const next = virtualStep(state, action);
+        const metrics = transitionMetrics(state, next, action);
+        return { action, value: scoreStateTransition(metrics), metrics };
+    });
+    const pickBest = (entries: typeof scored): Action => {
+        entries.sort((a, b) => b.value - a.value);
+        const best = entries[0].value;
+        const ties = entries.filter(s => s.value === best).map(s => s.action);
+        return chooseFrom(ties, `${simSeed}:sim`, decisionCounter);
+    };
+
+    // Hard tactical bias: if any action kills, choose among killers.
+    const killers = scored.filter(s => s.metrics.killShot > 0 || s.metrics.enemiesCleared > 0);
+    if (killers.length > 0) {
+        return pickBest(killers);
+    }
+
+    // In-combat policy: force immediate damage before setup/dancing.
+    if (hasHostiles) {
+        const damaging = scored.filter(s => s.metrics.enemyDamage > 0);
+        if (damaging.length > 0) {
+            return pickBest(damaging);
+        }
+
+        // If no immediate damage is available, force distance closing moves.
+        const advancing = scored
+            .filter(s => s.action.type === 'MOVE' && s.metrics.enemyApproachProgress > 0)
+            .sort((a, b) => {
+                if (b.metrics.enemyApproachProgress !== a.metrics.enemyApproachProgress) {
+                    return b.metrics.enemyApproachProgress - a.metrics.enemyApproachProgress;
+                }
+                return b.value - a.value;
+            });
+        if (advancing.length > 0) {
+            return pickBest(advancing);
+        }
+    }
 
     scored.sort((a, b) => b.value - a.value);
     const best = scored[0].value;
@@ -217,14 +325,14 @@ const chooseSkillAction = (state: GameState, simSeed: string, decisionCounter: n
         const def = SkillRegistry.get('FIREBALL');
         const targets = def?.getValidTargets ? def.getValidTargets(state, origin) : [];
         const best = pickBestTarget(targets, (t) => {
-            const direct = enemyAt(state, t) ? 2 : 0;
+            const direct = enemyAt(state, t) ? 10 : 0;
             const splash = state.enemies.filter(e => e.hp > 0 && hexDistance(e.position, t) <= 1).length;
             return direct + splash;
         }, simSeed, decisionCounter);
         const bestScore = best
-            ? ((enemyAt(state, best) ? 2 : 0) + state.enemies.filter(e => e.hp > 0 && hexDistance(e.position, best) <= 1).length)
+            ? ((enemyAt(state, best) ? 10 : 0) + state.enemies.filter(e => e.hp > 0 && hexDistance(e.position, best) <= 1).length)
             : 0;
-        if (best && bestScore >= 2) {
+        if (best && bestScore >= 1) {
             return { type: 'USE_SKILL', payload: { skillId: 'FIREBALL', target: best } };
         }
     }
@@ -258,22 +366,18 @@ const chooseSkillAction = (state: GameState, simSeed: string, decisionCounter: n
 
 const selectAction = (state: GameState, policy: BotPolicy, simSeed: string, decisionCounter: number): Action => {
     const moves = legalMoves(state);
-    if (moves.length === 0) {
-        return { type: 'WAIT' };
-    }
 
     if (policy === 'random') {
         const options: Action[] = [{ type: 'WAIT' }, ...moves.map(m => ({ type: 'MOVE' as const, payload: m }))];
         return chooseFrom(options, simSeed, decisionCounter);
     }
 
-    if (isFiremageLoadout(state)) {
-        return selectByOnePlySimulation(state, simSeed, decisionCounter);
-    }
-
     const skillAction = chooseSkillAction(state, simSeed, decisionCounter);
     if (skillAction) {
         return skillAction;
+    }
+    if (moves.length === 0) {
+        return { type: 'WAIT' };
     }
 
     const nearestEnemy = state.enemies
@@ -281,11 +385,13 @@ const selectAction = (state: GameState, policy: BotPolicy, simSeed: string, deci
         .sort((a, b) => hexDistance(state.player.position, a.position) - hexDistance(state.player.position, b.position))[0];
 
     if (!nearestEnemy) {
-        if (state.stairsPosition) {
+        const progressionTarget = state.shrinePosition ?? state.stairsPosition;
+        if (progressionTarget) {
             const towardStairs = moves
                 .map(move => ({
                     move,
-                    score: (hexDistance(move, state.stairsPosition as Point) * 10)
+                    score: (hexDistance(move, progressionTarget as Point) * 10)
+                        + (state.player.previousPosition && hexEquals(move, state.player.previousPosition) ? 20 : 0)
                         + (isHazardTile(state, move) ? 120 : 0)
                         + (adjacentHostileCount(state, move) * 4)
                 }))
@@ -300,21 +406,29 @@ const selectAction = (state: GameState, policy: BotPolicy, simSeed: string, deci
     }
 
     const currentHazard = isHazardTile(state, state.player.position) ? 1 : 0;
-    const candidates: Array<{ action: Action; score: number }> = [
-        {
-            action: { type: 'WAIT' },
-            score: (hexDistance(state.player.position, nearestEnemy.position) * 10)
-                + (currentHazard * 120)
-                + (adjacentHostileCount(state, state.player.position) * 6)
-        },
-        ...moves.map(move => {
+    if (isFiremageLoadout(state)) {
+        const chaseMoves = moves
+            .map(move => ({
+                move,
+                score: (hexDistance(move, nearestEnemy.position) * 10)
+                    + (state.player.previousPosition && hexEquals(move, state.player.previousPosition) ? 5 : 0)
+            }))
+            .sort((a, b) => a.score - b.score);
+        const best = chaseMoves[0]?.score;
+        const ties = chaseMoves.filter(m => m.score === best).map(m => m.move);
+        if (ties.length > 0) {
+            return { type: 'MOVE', payload: chooseFrom(ties, simSeed, decisionCounter) };
+        }
+    }
+
+    const candidates: Array<{ action: Action; score: number }> = moves.map(move => {
             const distanceScore = hexDistance(move, nearestEnemy.position) * 10;
             const hazardPenalty = isHazardTile(state, move) ? 120 : 0;
             const pressurePenalty = adjacentHostileCount(state, move) * 6;
-            const score = distanceScore + hazardPenalty + pressurePenalty;
+            const backtrackPenalty = state.player.previousPosition && hexEquals(move, state.player.previousPosition) ? 20 : 0;
+            const score = distanceScore + hazardPenalty + pressurePenalty + backtrackPenalty;
             return { action: { type: 'MOVE', payload: move } as Action, score };
-        })
-    ];
+        });
 
     candidates.sort((a, b) => a.score - b.score);
     const bestScore = candidates[0].score;
@@ -332,10 +446,17 @@ export const simulateRun = (
     let decisionCounter = 0;
     let guard = 0;
 
-    while (state.gameStatus === 'playing' && guard < 2000) {
+    while (state.gameStatus !== 'won' && state.gameStatus !== 'lost' && guard < 4000) {
         guard++;
         if (state.turnsSpent >= maxTurns) {
             break;
+        }
+
+        if (state.gameStatus === 'choosing_upgrade') {
+            const option = state.shrineOptions?.[0] || 'EXTRA_HP';
+            state = gameReducer(state, { type: 'SELECT_UPGRADE', payload: option });
+            state = resolvePending(state);
+            continue;
         }
 
         if (isPlayerTurn(state)) {

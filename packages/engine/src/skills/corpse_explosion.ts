@@ -1,7 +1,23 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexDistance, getNeighbors, hexEquals } from '../hex';
+import { hexDistance, getNeighbors } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
+import { pointToKey } from '../hex';
+
+const hasCorpseAt = (state: GameState, target: Point): boolean => {
+    const tile = state.tiles.get(pointToKey(target));
+    return !!tile?.traits?.has('CORPSE');
+};
+
+const getCorpseTargetsInRange = (state: GameState, origin: Point, range: number): Point[] => {
+    const targets: Point[] = [];
+    state.tiles.forEach(tile => {
+        if (tile.traits.has('CORPSE') && hexDistance(origin, tile.position) <= range) {
+            targets.push(tile.position);
+        }
+    });
+    return targets;
+};
 
 /**
  * CORPSE_EXPLOSION Skill
@@ -24,8 +40,7 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
-        const corpses = state.dyingEntities || [];
-        const hasCorpse = corpses.some(cp => hexEquals(cp.position, target));
+        const hasCorpse = hasCorpseAt(state, target);
         if (!hasCorpse) {
             return { effects, messages: ['A corpse is required!'], consumesTurn: false };
         }
@@ -56,7 +71,7 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
         };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        return (state.dyingEntities || []).filter(cp => hexDistance(origin, cp.position) <= 4).map(e => e.position);
+        return getCorpseTargetsInRange(state, origin, 4);
     },
     upgrades: {},
     scenarios: getSkillScenarios('CORPSE_EXPLOSION')

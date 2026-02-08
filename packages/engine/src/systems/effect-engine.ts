@@ -11,6 +11,52 @@ import { SpatialSystem } from './SpatialSystem';
 import { stableIdFromSeed } from './rng';
 import { createEntity } from './entity-factory';
 
+const addCorpseTraitAt = (state: GameState, position: Point): GameState => {
+    const key = pointToKey(position);
+    let nextState = state;
+    if (nextState.tiles === state.tiles) {
+        nextState = { ...nextState, tiles: new Map(nextState.tiles) };
+    }
+
+    let tile = nextState.tiles.get(key);
+    if (!tile) {
+        tile = {
+            baseId: 'STONE',
+            position,
+            traits: new Set(BASE_TILES.STONE!.defaultTraits),
+            effects: []
+        };
+    } else {
+        tile = {
+            ...tile,
+            traits: new Set(tile.traits),
+            effects: [...tile.effects]
+        };
+    }
+    tile.traits.add('CORPSE');
+    nextState.tiles.set(key, tile);
+    return nextState;
+};
+
+const removeCorpseTraitAt = (state: GameState, position: Point): GameState => {
+    const key = pointToKey(position);
+    const existing = state.tiles.get(key);
+    if (!existing || !existing.traits.has('CORPSE')) return state;
+
+    let nextState = state;
+    if (nextState.tiles === state.tiles) {
+        nextState = { ...nextState, tiles: new Map(nextState.tiles) };
+    }
+    const updatedTile = {
+        ...existing,
+        traits: new Set(existing.traits),
+        effects: [...existing.effects]
+    };
+    updatedTile.traits.delete('CORPSE');
+    nextState.tiles.set(key, updatedTile);
+    return nextState;
+};
+
 
 /**
  * Apply a single atomic effect to the game state.
@@ -221,6 +267,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 } else {
                     const victim = nextState.enemies.find(e => e.id === targetActorId);
                     const victimPos = targetActorId === nextState.player.id ? nextState.player.position : victim?.position;
+                    const corpsePositions: Point[] = [];
 
                     if (victim && victim.hp <= effect.amount) {
                         nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'freeze', payload: { duration: 80 } }];
@@ -230,6 +277,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                             const updated = applyDamage(e, effect.amount);
                             if (updated.hp <= 0) {
                                 nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
+                                corpsePositions.push(e.position);
                             }
                             return updated;
                         }
@@ -239,6 +287,9 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     if (nextState.companions) {
                         nextState.companions = nextState.companions.map(updateDamage).filter((e: Actor) => e.hp > 0);
                     }
+                    corpsePositions.forEach(pos => {
+                        nextState = addCorpseTraitAt(nextState, pos);
+                    });
 
                     nextState.visualEvents = [...(nextState.visualEvents || []),
                     { type: 'shake', payload: { intensity: effect.amount > 1 ? 'medium' : 'low' } },
@@ -293,15 +344,20 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         const updated = applyDamage(e, effect.amount);
                         if (updated.hp <= 0) {
                             nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
+                            killedAtPositions.push(e.position);
                         }
                         return updated;
                     }
                     return e;
                 };
+                const killedAtPositions: Point[] = [];
                 nextState.enemies = nextState.enemies.map(updateDamageAt).filter((e: Actor) => e.hp > 0);
                 if (nextState.companions) {
                     nextState.companions = nextState.companions.map(updateDamageAt).filter((e: Actor) => e.hp > 0);
                 }
+                killedAtPositions.forEach(pos => {
+                    nextState = addCorpseTraitAt(nextState, pos);
+                });
             }
             break;
         }
@@ -450,17 +506,18 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         case 'LavaSink': {
             const targetId = effect.target;
             const actor = targetId === nextState.player.id ? nextState.player : nextState.enemies.find(e => e.id === targetId);
-            if (actor) {
-                if (targetId === nextState.player.id) {
-                    nextState.player = applyDamage(nextState.player, 99);
-                } else {
-                    nextState.enemies = nextState.enemies.filter(e => e.id !== targetId);
-                    nextState.dyingEntities = [...(nextState.dyingEntities || []), actor];
+                if (actor) {
+                    if (targetId === nextState.player.id) {
+                        nextState.player = applyDamage(nextState.player, 99);
+                    } else {
+                        nextState.enemies = nextState.enemies.filter(e => e.id !== targetId);
+                        nextState.dyingEntities = [...(nextState.dyingEntities || []), actor];
+                        nextState = addCorpseTraitAt(nextState, actor.position);
+                    }
+                    nextState.visualEvents = [...(nextState.visualEvents || []),
+                    { type: 'vfx', payload: { type: 'vaporize', position: actor.position } }
+                    ];
                 }
-                nextState.visualEvents = [...(nextState.visualEvents || []),
-                { type: 'vfx', payload: { type: 'vaporize', position: actor.position } }
-                ];
-            }
             break;
         }
 
@@ -539,6 +596,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         if (nextState.companions) {
                             nextState.companions = nextState.companions.filter((e: Actor) => !hexEquals(e.position, targetPos));
                         }
+                        nextState = addCorpseTraitAt(nextState, targetPos);
                         nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'vaporize', position: targetPos } }];
                     }
                 }
@@ -593,10 +651,12 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             break;
         }
         case 'SpawnCorpse': {
-            // Corpses now represented by dead actors in dyingEntities or tile data if we add it
+            nextState = addCorpseTraitAt(nextState, effect.position);
             break;
         }
         case 'RemoveCorpse': {
+            nextState = removeCorpseTraitAt(nextState, effect.position);
+            nextState.dyingEntities = (nextState.dyingEntities || []).filter(cp => !hexEquals(cp.position, effect.position));
             break;
         }
         case 'SpawnActor': {

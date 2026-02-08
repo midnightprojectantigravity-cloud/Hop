@@ -157,12 +157,20 @@ export const ENTITY_VISUALS: Record<string, EntityVisualConfig> = {
         showTimer: true,
     },
     falcon: {
-        icon: '🦅',
+        icon: '\u{1F985}',
         shape: 'circle',
         color: '#3b82f6', // Player blue (friendly)
         borderColor: '#ffffff',
         isRanged: false,
         size: 0.8, // Smaller, flying creature
+    },
+    skeleton: {
+        icon: '\u{1F480}',
+        shape: 'circle',
+        color: '#3b82f6', // Companion/friendly visual language (same family as falcon)
+        borderColor: '#ffffff',
+        isRanged: false,
+        size: 0.8,
     },
 
     // Boss
@@ -261,3 +269,5 @@ export function getCompanionModeVisual(mode: 'scout' | 'predator' | 'roost' | un
 
     return modes[mode];
 }
+
+

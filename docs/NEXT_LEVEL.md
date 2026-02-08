@@ -92,6 +92,12 @@
 - Message-log audit sample (`80` seeds, `maxTurns=80`) now shows no player no-op spam:
   - `playerZeroEffects=0`
   - Player intent mix includes `FIREBALL`, `FIREWALL`, and `FIREWALK` (not only `BASIC_ATTACK`).
+- Necromancer engine contract hardening landed:
+  - Corpses now persist as tile trait state (`CORPSE`) and are consumed by necromancy skills (`packages/engine/src/systems/effect-engine.ts`, `packages/engine/src/skills/raise_dead.ts`, `packages/engine/src/skills/corpse_explosion.ts`).
+  - Summoned allies linked by `companionOf` now migrate across floor transitions in `RESOLVE_PENDING` (`packages/engine/src/logic.ts`).
+  - Raised skeletons now spawn with companion ownership and baseline combat loadout (`BASIC_MOVE`, `BASIC_ATTACK`, `AUTO_ATTACK`) and collision-safe deterministic IDs (`packages/engine/src/skills/raise_dead.ts`).
+  - Exploration free-move now ignores friendly companions (hostile-only gating in `packages/engine/src/skills/basic_move.ts`), with scenario coverage.
+  - Added scenario coverage in `packages/engine/src/scenarios/necromancer.ts`.
 
 ---
 
@@ -248,6 +254,67 @@ Goal: add challenge by recombining existing mechanics only.
 
 ---
 
+## Phase 2.1 - Necromancer Archetype Refactor
+Goal: stabilize corpse persistence and summon migration.
+
+### P2.1.PR1 - Corpse as Tile Trait
+- Scope:
+  - [x] Death resolution writes persistent `CORPSE` tile trait.
+  - [x] `RAISE_DEAD`/`CORPSE_EXPLOSION` validate and consume `CORPSE` tiles.
+- Acceptance tests:
+  - [x] New scenario `necromancer_corpse_persistence` passes (`packages/engine/src/scenarios/necromancer.ts`).
+
+### P2.1.PR2 - Summon Persistence
+- Scope:
+  - [x] Summons are owner-linked through `companionOf` and migrated on floor transition.
+  - [x] Transition rebuilds initiative/occupancy after migration.
+- Acceptance tests:
+  - [x] New scenario `summon_floor_transition` passes (`packages/engine/src/scenarios/necromancer.ts`).
+
+### P2.1.PR3 - Decay Policy
+- Scope:
+  - [x] Corpse marker persists until explicitly consumed (`RemoveCorpse`).
+- Acceptance tests:
+  - [x] Corpse remains valid after waiting multiple turns before cast (`necromancer_corpse_persistence`).
+
+### Phase 2.1 Exit Criteria
+- [x] `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent` passes with necromancer scenarios.
+- [x] Full suite remains green (`npx vitest run --silent`).
+
+---
+
+## Phase 2.2 - Summoner QoL (Formation + Flow)
+Goal: prevent ally clogging and enforce deterministic summon occupancy behavior.
+
+### P2.2.PR1 - Occupancy Enforcement + Raise Dead Push
+- Scope:
+  - [x] `RAISE_DEAD` now enforces one-entity-per-hex at summon destination.
+  - [x] If corpse tile is occupied by a pushable ally, ally is displaced to nearest valid neighbor before summon.
+- Acceptance tests:
+  - [x] New scenario `raise_dead_pushes_ally_from_target_hex` passes (`packages/engine/src/scenarios/necromancer.ts`).
+  - [x] No skeleton overlap after summon resolution.
+
+### P2.2.PR2 - Ally Phasing for Movement
+- Scope:
+  - [x] Movement pathing can traverse allied occupied tiles.
+  - [x] Ending move on allied occupied tile remains invalid.
+  - [x] Exploration free-move gating counts hostiles only.
+- Acceptance tests:
+  - [x] Existing scenario `companion_does_not_block_free_move` passes (`packages/engine/src/scenarios/necromancer.ts`).
+  - [x] Full scenario suite remains green.
+
+### P2.2.PR3 - Companion Visual Parity
+- Scope:
+  - [x] Skeleton companion visual configured as circle token with skull icon (falcon-like companion style).
+- Acceptance tests:
+  - [x] Visual registry contains dedicated `skeleton` companion mapping (`packages/engine/src/systems/visual-registry.ts`).
+
+### Phase 2.2 Exit Criteria
+- [x] `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent` passes.
+- [x] `npx vitest run --silent` passes.
+
+---
+
 ## Phase 3 - Arcade Loop Layer
 Goal: ship a replayable daily loop with minimal backend coupling.
 
@@ -325,6 +392,19 @@ Goal: validate Firemage power ceiling with deterministic, simulation-aware polic
 - Acceptance tests:
   - [x] Fixed-seed audit confirms `playerZeroEffects=0`.
   - [x] Intent distribution shows regular use of Firemage kit (`FIREBALL`, `FIREWALL`, `FIREWALK`) rather than melee-only fallback.
+
+### P4.1.PR2.1 - Firemage Priority Retune (Kill/Floor Progress)
+- Scope:
+  - [x] Fix harness run-loop classification bug: auto-resolve `choosing_upgrade` via deterministic `SELECT_UPGRADE` so shrine interactions continue run progression.
+  - [x] Enforce stronger Firemage tactical ordering in harness policy:
+    - direct-hit `FIREBALL` prioritized over setup casts,
+    - `FIREWALL` gated to multi-target pressure only,
+    - anti-backtrack movement penalty, shrine-before-stairs progression target.
+- Acceptance tests:
+  - [x] `npx vitest run packages/engine/src/__tests__/balance_harness.test.ts --silent` passes after policy updates.
+  - [x] 200-seed Firemage batch (`maxTurns=100`) shows improved progression versus random:
+    - `random`: `winRate=0`, `timeoutRate=0.31`, `avgFloor=1.11`
+    - `heuristic`: `winRate=0.015`, `timeoutRate=0.64`, `avgFloor=6.29`
 
 ### P4.1.PR3 - Full outlier rerun with tuned heuristic
 - Scope:

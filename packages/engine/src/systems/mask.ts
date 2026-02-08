@@ -14,6 +14,8 @@ export const createOccupancyMask = (_width: number, height: number): bigint[] =>
 };
 
 export const setOccupancy = (mask: bigint[], p: Point, value: boolean): bigint[] => {
+    if (!Number.isInteger(p.q) || !Number.isInteger(p.r)) return [...mask];
+    if (p.r < 0 || p.r >= mask.length || p.q < 0) return [...mask];
     const newMask = [...mask];
     if (value) {
         newMask[p.r] |= (1n << BigInt(p.q));

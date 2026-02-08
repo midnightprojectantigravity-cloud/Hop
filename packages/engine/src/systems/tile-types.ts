@@ -38,6 +38,7 @@ export type TileTrait =
     | 'BLOCKS_MOVEMENT'
     | 'ANCHOR'         // Can be grappled
     | 'DAMAGING'       // Causes damage (Generic)
+    | 'CORPSE'         // Persistent corpse marker for necromancy interactions
     | 'LAVA'           // Specific: Damaging + Liquid
     | 'FIRE'           // Specific: Damaging + Flammable
     | 'VOID'           // Specific: Eternal vacuum

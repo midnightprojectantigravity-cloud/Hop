@@ -80,6 +80,7 @@ export const SpatialSystem = {
         const visited = new Map<string, number>();
         const out: Point[] = [];
         const key = (p: Point) => `${p.q},${p.r}`;
+        const movingActor = getActorAt(state, origin);
 
         const q: Array<{ p: Point; cost: number }> = [{ p: origin, cost: 0 }];
         visited.set(key(origin), 0);
@@ -93,14 +94,21 @@ export const SpatialSystem = {
                 if (!UnifiedTileService.isWalkable(state, n)) continue;
 
                 const occupant = getActorAt(state, n);
-                if (occupant && !hexEquals(n, origin)) continue;
+                const occupiedByOther = occupant && !hexEquals(n, origin);
+                const isAlliedOccupant = occupiedByOther
+                    && movingActor
+                    && occupant.factionId === movingActor.factionId;
+                if (occupiedByOther && !isAlliedOccupant) continue;
 
                 const nk = key(n);
                 const newCost = cur.cost + 1;
 
                 if (!visited.has(nk) || visited.get(nk)! > newCost) {
                     visited.set(nk, newCost);
-                    out.push(n);
+                    // Ally-phasing: movement can path through allies, but cannot end on their occupied tile.
+                    if (!isAlliedOccupant) {
+                        out.push(n);
+                    }
                     q.push({ p: n, cost: newCost });
                 }
             }

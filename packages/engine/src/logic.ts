@@ -39,6 +39,7 @@ import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS } from './systems/
 import { tickTileEffects } from './systems/tile-tick';
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { buildRunSummary, createDailyObjectives, createDailySeed, toDateKey } from './systems/run-objectives';
+import { UnifiedTileService } from './systems/unified-tile-service';
 
 
 export const generateHubState = (): GameState => {
@@ -730,11 +731,43 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 if (status === 'playing' && s.gameStatus === 'playing') {
                     const baseSeed = s.initialSeed ?? s.rngSeed ?? '0';
                     const nextSeed = `${baseSeed}:${s.floor + 1}`;
+                    const migratingSummons = s.enemies
+                        .filter(e => e.hp > 0 && e.factionId === 'player' && e.companionOf === s.player.id)
+                        .sort((a, b) => a.id.localeCompare(b.id));
                     const next = generateInitialState(s.floor + 1, nextSeed, baseSeed, {
                         ...s.player,
                         hp: Math.min(s.player.maxHp, s.player.hp + 1),
                         upgrades: s.upgrades,
                     });
+                    if (migratingSummons.length > 0) {
+                        const candidates = [next.player.position, ...getNeighbors(next.player.position)];
+                        const occupied: Entity[] = [next.player, ...next.enemies];
+                        const migrated: Entity[] = [];
+
+                        for (let i = 0; i < migratingSummons.length; i++) {
+                            const summon = migratingSummons[i];
+                            const fallback = candidates[candidates.length - 1] || next.player.position;
+                            const spawnPos = candidates.find(pos => {
+                                const unoccupied = !occupied.some(a => hexEquals(a.position, pos));
+                                return unoccupied && UnifiedTileService.isWalkable(next, pos);
+                            }) || fallback;
+                            const migratedSummon: Entity = {
+                                ...summon,
+                                position: spawnPos,
+                                previousPosition: spawnPos
+                            };
+                            occupied.push(migratedSummon);
+                            migrated.push(migratedSummon);
+                        }
+
+                        next.enemies = [...next.enemies, ...migrated];
+                        next.companions = [
+                            ...(next.companions || []),
+                            ...migrated.filter(e => e.companionOf === s.player.id)
+                        ];
+                        next.initiativeQueue = buildInitiativeQueue(next);
+                        next.occupancyMask = SpatialSystem.refreshOccupancyMask(next);
+                    }
                     return {
                         ...next,
                         dailyRunDate: s.dailyRunDate,
