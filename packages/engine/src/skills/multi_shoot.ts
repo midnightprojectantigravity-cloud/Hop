@@ -1,8 +1,11 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getNeighbors } from '../hex';
+import { pointToKey } from '../hex';
+import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/SpatialSystem';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
 
 /**
  * MULTI_SHOOT Skill
@@ -34,8 +37,21 @@ export const MULTI_SHOOT: SkillDefinition = {
 
         // Damage target and neighbors
         const affected = [target, ...getNeighbors(target)];
+        const trinity = extractTrinityStats(attacker);
         for (const p of affected) {
-            effects.push({ type: 'Damage', target: p, amount: 1, reason: 'multi_shoot' });
+            const actorAtPoint = getActorAt(_state, p);
+            const combat = calculateCombat({
+                attackerId: attacker.id,
+                targetId: actorAtPoint?.id || pointToKey(p),
+                skillId: 'MULTI_SHOOT',
+                basePower: 1,
+                trinity,
+                targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
+                damageClass: 'physical',
+                scaling: [{ attribute: 'instinct', coefficient: 0.1 }, { attribute: 'mind', coefficient: 0.1 }],
+                statusMultipliers: []
+            });
+            effects.push({ type: 'Damage', target: p, amount: combat.finalPower, reason: 'multi_shoot', scoreEvent: combat.scoreEvent });
         }
 
         effects.push({ type: 'Juice', effect: 'flash', target, color: '#ffff00' });

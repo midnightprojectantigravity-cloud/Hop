@@ -4,6 +4,7 @@ import { getActorAt, getEnemyAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange, validateAxialDirection, hasClearLineToActor } from '../systems/validation';
 import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
 
 /**
  * Implementation of the Spear Throw skill using the Compositional Skill Framework.
@@ -26,6 +27,7 @@ export const SPEAR_THROW: SkillDefinition = {
     execute: (state: GameState, shooter: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
+        const trinity = extractTrinityStats(shooter);
 
         // 1. Upgrade Detection
         const hasRange = activeUpgrades.includes('SPEAR_RANGE');
@@ -45,15 +47,37 @@ export const SPEAR_THROW: SkillDefinition = {
             if (hasLunge && hexDistance(shooter.position, target) === 2) {
                 const enemy = getActorAt(state, target);
                 if (enemy && enemy.id !== shooter.id) {
+                    const lungeCombat = calculateCombat({
+                        attackerId: shooter.id,
+                        targetId: enemy.id,
+                        skillId: 'SPEAR_THROW',
+                        basePower: 99,
+                        trinity,
+                        targetTrinity: extractTrinityStats(enemy),
+                        damageClass: 'physical',
+                        scaling: [{ attribute: 'body', coefficient: 0.1 }, { attribute: 'instinct', coefficient: 0.2 }],
+                        statusMultipliers: []
+                    });
                     effects.push({ type: 'Displacement', target: 'self', destination: target, simulatePath: true });
-                    effects.push({ type: 'Damage', target: enemy.id, amount: 99 });
+                    effects.push({ type: 'Damage', target: enemy.id, amount: lungeCombat.finalPower, scoreEvent: lungeCombat.scoreEvent });
                     messages.push(`Lunged and killed ${enemy.subtype || 'enemy'} !`);
 
                     if (hasLungeArc) {
                         getNeighbors(target).forEach((n: Point) => {
                             const e = getActorAt(state, n);
                             if (e && e.id !== shooter.id && e.id !== enemy.id) {
-                                effects.push({ type: 'Damage', target: e.id, amount: 1 });
+                                const arcCombat = calculateCombat({
+                                    attackerId: shooter.id,
+                                    targetId: e.id,
+                                    skillId: 'SPEAR_THROW',
+                                    basePower: 1,
+                                    trinity,
+                                    targetTrinity: extractTrinityStats(e),
+                                    damageClass: 'physical',
+                                    scaling: [{ attribute: 'instinct', coefficient: 0.15 }],
+                                    statusMultipliers: []
+                                });
+                                effects.push({ type: 'Damage', target: e.id, amount: arcCombat.finalPower, scoreEvent: arcCombat.scoreEvent });
                             }
                         });
                     }
@@ -97,8 +121,19 @@ export const SPEAR_THROW: SkillDefinition = {
             effects.push(...SKILL_JUICE_SIGNATURES.SPEAR_THROW.execution(getHexLine(shooter.position, hitPos)));
 
             if (hitEnemy) {
+                const throwCombat = calculateCombat({
+                    attackerId: shooter.id,
+                    targetId: hitEnemy.id,
+                    skillId: 'SPEAR_THROW',
+                    basePower: 99,
+                    trinity,
+                    targetTrinity: extractTrinityStats(hitEnemy),
+                    damageClass: 'physical',
+                    scaling: [{ attribute: 'body', coefficient: 0.1 }, { attribute: 'instinct', coefficient: 0.2 }],
+                    statusMultipliers: []
+                });
                 effects.push(...SKILL_JUICE_SIGNATURES.SPEAR_THROW.impact(hitPos, true));
-                effects.push({ type: 'Damage', target: hitEnemy.id, amount: 99 });
+                effects.push({ type: 'Damage', target: hitEnemy.id, amount: throwCombat.finalPower, scoreEvent: throwCombat.scoreEvent });
                 messages.push(`Spear killed ${hitEnemy.subtype || 'enemy'} !`);
                 if (hasDeepBreath) {
                     effects.push({ type: 'ModifyCooldown', skillId: 'JUMP', amount: 0, setExact: true });
@@ -126,7 +161,18 @@ export const SPEAR_THROW: SkillDefinition = {
                 returnLine.forEach(p => {
                     const enemy = getEnemyAt(state.enemies, p);
                     if (enemy) {
-                        effects.push({ type: 'Damage', target: p, amount: 1 });
+                        const recallCombat = calculateCombat({
+                            attackerId: shooter.id,
+                            targetId: enemy.id,
+                            skillId: 'SPEAR_THROW',
+                            basePower: 1,
+                            trinity,
+                            targetTrinity: extractTrinityStats(enemy),
+                            damageClass: 'physical',
+                            scaling: [{ attribute: 'instinct', coefficient: 0.15 }],
+                            statusMultipliers: []
+                        });
+                        effects.push({ type: 'Damage', target: enemy.id, amount: recallCombat.finalPower, scoreEvent: recallCombat.scoreEvent });
                         messages.push(`Spear recall hit ${enemy.subtype || 'enemy'} !`);
                     }
                 });

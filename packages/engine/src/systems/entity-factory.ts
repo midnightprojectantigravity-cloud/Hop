@@ -1,5 +1,7 @@
 import type { Actor, Point, Skill, WeightClass } from '../types';
 import type { GameComponent } from './components';
+import type { TrinityStats } from './trinity-resolver';
+import { getTrinityProfile } from './trinity-profiles';
 
 /**
  * ENTITY FACTORY SYSTEM
@@ -34,9 +36,69 @@ export interface BaseEntityConfig {
 
     // Components
     components?: Map<string, GameComponent>;
+    trinity?: TrinityStats;
 }
 
 export type CompanionType = 'falcon' | 'skeleton';
+
+const cloneTrinity = (trinity: TrinityStats): TrinityStats => ({
+    body: trinity.body,
+    mind: trinity.mind,
+    instinct: trinity.instinct,
+});
+
+const resolveDefaultTrinity = (config: BaseEntityConfig): TrinityStats => {
+    if (config.trinity) return cloneTrinity(config.trinity);
+    const profile = getTrinityProfile();
+    const defaultTrinity = profile.default;
+
+    if (config.type === 'player') {
+        const archetype = (config.archetype || 'VANGUARD').toUpperCase();
+        return cloneTrinity(profile.archetype[archetype] || defaultTrinity);
+    }
+
+    if (config.companionOf && config.subtype) {
+        const companionType = config.subtype as CompanionType;
+        if (profile.companionSubtype[companionType]) {
+            return cloneTrinity(profile.companionSubtype[companionType]);
+        }
+    }
+
+    if (config.subtype) {
+        return cloneTrinity(profile.enemySubtype[config.subtype] || defaultTrinity);
+    }
+
+    return cloneTrinity(defaultTrinity);
+};
+
+export const ensureActorTrinity = (actor: Actor): Actor => {
+    const components = new Map(actor.components || []);
+    if (components.has('trinity')) return actor;
+
+    const resolved = resolveDefaultTrinity({
+        id: actor.id,
+        type: actor.type,
+        subtype: actor.subtype,
+        position: actor.position,
+        hp: actor.hp,
+        maxHp: actor.maxHp,
+        speed: actor.speed,
+        factionId: actor.factionId,
+        archetype: actor.archetype,
+        companionOf: actor.companionOf,
+        components,
+    });
+
+    components.set('trinity', {
+        type: 'trinity',
+        ...resolved,
+    });
+
+    return {
+        ...actor,
+        components,
+    };
+};
 
 /**
  * Build a deterministic ActiveSkill loadout from skill IDs.
@@ -67,6 +129,14 @@ export function createEntity(config: BaseEntityConfig): Actor {
 
     // Build components map
     const components = new Map(config.components || []);
+
+    // Ensure all runtime actors have canonical trinity stats.
+    if (!components.has('trinity')) {
+        components.set('trinity', {
+            type: 'trinity',
+            ...resolveDefaultTrinity(config),
+        });
+    }
 
     // Add physics component if weightClass is specified
     if (config.weightClass) {
@@ -118,6 +188,7 @@ export function createPlayer(config: {
     speed?: number;
     skills: string[];
     archetype?: string;
+    trinity?: TrinityStats;
 }): Actor {
     return createEntity({
         id: 'player',
@@ -130,6 +201,7 @@ export function createPlayer(config: {
         skills: config.skills,
         weightClass: 'Standard',
         archetype: config.archetype || 'VANGUARD',
+        trinity: config.trinity,
     });
 }
 
@@ -146,6 +218,7 @@ export function createEnemy(config: {
     skills: string[];
     weightClass?: WeightClass;
     enemyType?: 'melee' | 'ranged' | 'boss';
+    trinity?: TrinityStats;
 }): Actor {
     const entity = createEntity({
         id: config.id,
@@ -158,6 +231,7 @@ export function createEnemy(config: {
         factionId: 'enemy',
         skills: config.skills,
         weightClass: config.weightClass || 'Standard',
+        trinity: config.trinity,
     });
 
     // Add enemy-specific fields
@@ -174,6 +248,7 @@ export function createCompanion(config: {
     ownerId: string;
     position: Point;
     id?: string;
+    trinity?: TrinityStats;
 }): Actor {
     if (config.companionType === 'falcon') {
         const entity = createEntity({
@@ -189,6 +264,7 @@ export function createCompanion(config: {
             weightClass: 'Light' as WeightClass,
             isFlying: true,
             companionOf: config.ownerId,
+            trinity: config.trinity,
         });
 
         // Initialize companion state
@@ -211,7 +287,8 @@ export function createCompanion(config: {
         factionId: 'player',
         skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
         companionOf: config.ownerId,
-        weightClass: 'Standard'
+        weightClass: 'Standard',
+        trinity: config.trinity,
     });
 }
 

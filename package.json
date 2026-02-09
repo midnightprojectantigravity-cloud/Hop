@@ -22,7 +22,19 @@
     "upa:health:check": "npx tsx packages/engine/scripts/runSkillHealthReport.ts 80 60 docs/UPA_SKILL_HEALTH.json 0 0 2",
     "upa:calibration": "npx tsx packages/engine/scripts/runUpaCalibration.ts 300 80 heuristic docs/UPA_CALIBRATION_BASELINE.json",
     "upa:calibration:check": "npx tsx packages/engine/scripts/runUpaCalibration.ts 300 80 heuristic docs/UPA_CALIBRATION_BASELINE.json \"\" 1",
-    "upa:matrix": "npx tsx packages/engine/scripts/runUpaMatchupMatrix.ts 30 60 docs/UPA_PVP_MATCHUP_MATRIX.json heuristic"
+    "upa:calibration:gate": "npx tsx packages/engine/scripts/runUpaCalibration.ts 120 80 heuristic docs/UPA_CALIBRATION_BASELINE.json \"\" 1",
+    "upa:matrix": "npx tsx packages/engine/scripts/runUpaMatchupMatrix.ts 30 60 docs/UPA_PVP_MATCHUP_MATRIX.json heuristic",
+    "upa:evaluators": "npx tsx packages/engine/scripts/runEvaluatorBaselines.ts docs/UPA_EVALUATOR_BASELINES.json uel-v1 cal-v1",
+    "upa:calibration:snapshot": "npx tsx packages/engine/scripts/runCalibrationSnapshot.ts docs/UPA_CALIBRATION_SNAPSHOT.json cal-v1 uel-v1",
+    "upa:calibration:diff": "npx tsx packages/engine/scripts/runCalibrationDiff.ts docs/UPA_CALIBRATION_SNAPSHOT_BEFORE.json docs/UPA_CALIBRATION_SNAPSHOT_AFTER.json docs/UPA_CALIBRATION_DIFF.json",
+    "upa:calibration:compare": "npx tsx packages/engine/scripts/runCalibrationCompare.ts cal-v1 cal-v1-firemage-baseline uel-v1 docs/UPA_CALIBRATION_COMPARE.json",
+    "upa:challenge:design": "npx tsx packages/engine/scripts/runChallengeDesign.ts 72 5 cal-v1-firemage-baseline uel-v1 docs/UPA_CHALLENGE_DESIGN_REPORT.json",
+    "upa:encounter:validate": "npx tsx packages/engine/scripts/runEncounterValidation.ts 72 5 cal-v1-firemage-baseline uel-v1 40 60 docs/UPA_ENCOUNTER_VALIDATION.json",
+    "upa:policy:compare": "npx tsx packages/engine/scripts/runPolicyProfileCompare.ts 120 60 VANGUARD sp-v1-default sp-v1-aggro",
+    "upa:skills:audit": "npx tsx packages/engine/scripts/runSkillFormulaAudit.ts docs/UPA_SKILL_FORMULA_AUDIT.json",
+    "upa:skills:migration:audit": "npx tsx packages/engine/scripts/runSkillMigrationAudit.ts docs/UPA_SKILL_MIGRATION_AUDIT.json",
+    "upa:trinity:report": "npx tsx packages/engine/scripts/runTrinityContributionReport.ts 24 50 docs/UPA_TRINITY_CONTRIBUTIONS.json",
+    "upa:trinity:profiles:compare": "npx tsx packages/engine/scripts/runTrinityProfileComparison.ts 12 40 docs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

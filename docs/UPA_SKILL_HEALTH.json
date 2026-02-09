@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-09T13:20:46.632Z",
+  "generatedAt": "2026-02-09T16:28:51.923Z",
   "params": {
     "count": 80,
     "maxTurns": 60,
@@ -12,44 +12,44 @@
     {
       "loadoutId": "VANGUARD",
       "winRate": 0,
-      "timeoutRate": 0.1375,
-      "avgFloor": 3.4375,
-      "avgHazardBreaches": 0.425
+      "timeoutRate": 0.05,
+      "avgFloor": 4.25,
+      "avgHazardBreaches": 0
     },
     {
       "loadoutId": "SKIRMISHER",
       "winRate": 0,
-      "timeoutRate": 0.2125,
-      "avgFloor": 1.325,
-      "avgHazardBreaches": 0.0375
+      "timeoutRate": 0.025,
+      "avgFloor": 2.6,
+      "avgHazardBreaches": 0.5375
     },
     {
       "loadoutId": "FIREMAGE",
-      "winRate": 0.0625,
+      "winRate": 0.05,
       "timeoutRate": 0,
-      "avgFloor": 8.25,
+      "avgFloor": 8.3625,
       "avgHazardBreaches": 0
     },
     {
       "loadoutId": "NECROMANCER",
       "winRate": 0,
-      "timeoutRate": 0.05,
-      "avgFloor": 2.625,
-      "avgHazardBreaches": 0.875
+      "timeoutRate": 0.1375,
+      "avgFloor": 6.475,
+      "avgHazardBreaches": 0
     },
     {
       "loadoutId": "HUNTER",
       "winRate": 0,
-      "timeoutRate": 0.0375,
-      "avgFloor": 2.4625,
+      "timeoutRate": 0.025,
+      "avgFloor": 2.45,
       "avgHazardBreaches": 0.8125
     },
     {
       "loadoutId": "ASSASSIN",
       "winRate": 0,
-      "timeoutRate": 0.075,
-      "avgFloor": 2.7,
-      "avgHazardBreaches": 0.625
+      "timeoutRate": 0.0625,
+      "avgFloor": 2.7125,
+      "avgHazardBreaches": 0.6125
     }
   ],
   "failures": [],
@@ -57,14 +57,16 @@
     {
       "skillId": "ABSORB_FIRE",
       "staticNumericGrade": 61.75,
-      "dynamicNumericGrade": 4.4998,
-      "casts": 99,
-      "castRate": 1.2375,
-      "damagePerCast": 0.0303,
-      "killContribution": 0,
-      "objectiveDelta": 0,
+      "dynamicNumericGrade": 8.5419,
+      "casts": 829,
+      "castRate": 3.4542,
+      "damagePerCast": 0.3463,
+      "killContribution": 0.0042,
+      "objectiveDelta": 0.075,
       "archetypesObserved": [
-        "FIREMAGE"
+        "VANGUARD",
+        "FIREMAGE",
+        "NECROMANCER"
       ],
       "labels": [
         "underutilized"
@@ -87,14 +89,15 @@
     {
       "skillId": "BASIC_ATTACK",
       "staticNumericGrade": 37.85,
-      "dynamicNumericGrade": 19.6031,
-      "casts": 766,
-      "castRate": 2.3937,
-      "damagePerCast": 1.2347,
-      "killContribution": 0.4375,
-      "objectiveDelta": 0.0219,
+      "dynamicNumericGrade": 19.701,
+      "casts": 1081,
+      "castRate": 2.7025,
+      "damagePerCast": 1.4476,
+      "killContribution": 0.41,
+      "objectiveDelta": 0.0625,
       "archetypesObserved": [
         "VANGUARD",
+        "SKIRMISHER",
         "FIREMAGE",
         "NECROMANCER",
         "HUNTER"
@@ -148,12 +151,12 @@
     {
       "skillId": "CORPSE_EXPLOSION",
       "staticNumericGrade": 158.6171,
-      "dynamicNumericGrade": 6.9944,
-      "casts": 72,
-      "castRate": 0.9,
-      "damagePerCast": 1.7639,
+      "dynamicNumericGrade": 20.1971,
+      "casts": 444,
+      "castRate": 5.55,
+      "damagePerCast": 2.7432,
       "killContribution": 0,
-      "objectiveDelta": 0,
+      "objectiveDelta": 0.5625,
       "archetypesObserved": [
         "NECROMANCER"
       ],
@@ -164,13 +167,14 @@
     {
       "skillId": "DASH",
       "staticNumericGrade": 51.55,
-      "dynamicNumericGrade": 62.3684,
-      "casts": 147,
-      "castRate": 1.8375,
-      "damagePerCast": 0.1837,
-      "killContribution": 0,
-      "objectiveDelta": 6.1125,
+      "dynamicNumericGrade": 229.0577,
+      "casts": 1298,
+      "castRate": 8.1125,
+      "damagePerCast": 0.3422,
+      "killContribution": 1.6563,
+      "objectiveDelta": 20.7875,
       "archetypesObserved": [
+        "VANGUARD",
         "SKIRMISHER"
       ],
       "labels": [
@@ -208,10 +212,10 @@
     {
       "skillId": "FALCON_COMMAND",
       "staticNumericGrade": 116.85,
-      "dynamicNumericGrade": 18.062,
-      "casts": 707,
-      "castRate": 8.8375,
-      "damagePerCast": 0.215,
+      "dynamicNumericGrade": 18.116,
+      "casts": 709,
+      "castRate": 8.8625,
+      "damagePerCast": 0.2172,
       "killContribution": 0,
       "objectiveDelta": 0,
       "archetypesObserved": [
@@ -266,28 +270,28 @@
     {
       "skillId": "FIREBALL",
       "staticNumericGrade": 117.7243,
-      "dynamicNumericGrade": 66.5618,
-      "casts": 2212,
-      "castRate": 27.65,
-      "damagePerCast": 2.2911,
+      "dynamicNumericGrade": 41.2587,
+      "casts": 1327,
+      "castRate": 16.5875,
+      "damagePerCast": 2.4145,
       "killContribution": 0,
-      "objectiveDelta": 1.5125,
+      "objectiveDelta": 0.4,
       "archetypesObserved": [
         "FIREMAGE"
       ],
       "labels": [
-        "effective"
+        "underutilized"
       ]
     },
     {
       "skillId": "FIREWALK",
       "staticNumericGrade": 27.95,
-      "dynamicNumericGrade": 137.9762,
-      "casts": 192,
-      "castRate": 2.4,
-      "damagePerCast": 0.0573,
+      "dynamicNumericGrade": 149.734,
+      "casts": 213,
+      "castRate": 2.6625,
+      "damagePerCast": 0.0516,
       "killContribution": 0,
-      "objectiveDelta": 13.625,
+      "objectiveDelta": 14.775,
       "archetypesObserved": [
         "FIREMAGE"
       ],
@@ -299,28 +303,28 @@
     {
       "skillId": "FIREWALL",
       "staticNumericGrade": 145.2,
-      "dynamicNumericGrade": 37.6008,
-      "casts": 873,
-      "castRate": 10.9125,
-      "damagePerCast": 3.1684,
+      "dynamicNumericGrade": 59.2912,
+      "casts": 1922,
+      "castRate": 24.025,
+      "damagePerCast": 2.5536,
       "killContribution": 0,
-      "objectiveDelta": 0.75,
+      "objectiveDelta": 1.425,
       "archetypesObserved": [
         "FIREMAGE"
       ],
       "labels": [
-        "underutilized"
+        "effective"
       ]
     },
     {
       "skillId": "GRAPPLE_HOOK",
       "staticNumericGrade": 42,
-      "dynamicNumericGrade": 79.019,
-      "casts": 695,
-      "castRate": 8.6875,
-      "damagePerCast": 0.1252,
+      "dynamicNumericGrade": 98.7657,
+      "casts": 520,
+      "castRate": 6.5,
+      "damagePerCast": 0.1942,
       "killContribution": 0,
-      "objectiveDelta": 6.2875,
+      "objectiveDelta": 8.8625,
       "archetypesObserved": [
         "SKIRMISHER"
       ],
@@ -331,26 +335,26 @@
     {
       "skillId": "JUMP",
       "staticNumericGrade": 19.5833,
-      "dynamicNumericGrade": 371.9614,
-      "casts": 1231,
-      "castRate": 15.3875,
-      "damagePerCast": 0.3144,
-      "killContribution": 4.55,
-      "objectiveDelta": 31.7125,
+      "dynamicNumericGrade": 22.6763,
+      "casts": 56,
+      "castRate": 0.7,
+      "damagePerCast": 0.1071,
+      "killContribution": 0,
+      "objectiveDelta": 2.1375,
       "archetypesObserved": [
         "VANGUARD"
       ],
       "labels": [
-        "effective"
+        "underutilized"
       ]
     },
     {
       "skillId": "KINETIC_TRI_TRAP",
       "staticNumericGrade": 82.0388,
-      "dynamicNumericGrade": 2.7152,
-      "casts": 33,
-      "castRate": 0.4125,
-      "damagePerCast": 0.9394,
+      "dynamicNumericGrade": 2.6767,
+      "casts": 36,
+      "castRate": 0.45,
+      "damagePerCast": 0.8889,
       "killContribution": 0,
       "objectiveDelta": 0,
       "archetypesObserved": [
@@ -377,12 +381,12 @@
     {
       "skillId": "RAISE_DEAD",
       "staticNumericGrade": 76.95,
-      "dynamicNumericGrade": 8.0235,
-      "casts": 239,
-      "castRate": 2.9875,
-      "damagePerCast": 1.1381,
+      "dynamicNumericGrade": 24.0435,
+      "casts": 698,
+      "castRate": 8.725,
+      "damagePerCast": 2.0186,
       "killContribution": 0,
-      "objectiveDelta": 0,
+      "objectiveDelta": 0.4625,
       "archetypesObserved": [
         "NECROMANCER"
       ],
@@ -451,12 +455,12 @@
     {
       "skillId": "SHIELD_BASH",
       "staticNumericGrade": 41.5833,
-      "dynamicNumericGrade": 22.2,
-      "casts": 120,
-      "castRate": 1.5,
-      "damagePerCast": 0.8417,
-      "killContribution": 1.7125,
-      "objectiveDelta": 0.0875,
+      "dynamicNumericGrade": 42.2443,
+      "casts": 230,
+      "castRate": 2.875,
+      "damagePerCast": 1.1913,
+      "killContribution": 3.275,
+      "objectiveDelta": 0.25,
       "archetypesObserved": [
         "VANGUARD"
       ],
@@ -467,10 +471,10 @@
     {
       "skillId": "SHIELD_THROW",
       "staticNumericGrade": 80.325,
-      "dynamicNumericGrade": 2.6314,
-      "casts": 117,
-      "castRate": 1.4625,
-      "damagePerCast": 0.1368,
+      "dynamicNumericGrade": 4.4303,
+      "casts": 187,
+      "castRate": 2.3375,
+      "damagePerCast": 0.2888,
       "killContribution": 0,
       "objectiveDelta": 0,
       "archetypesObserved": [
@@ -483,10 +487,10 @@
     {
       "skillId": "SMOKE_SCREEN",
       "staticNumericGrade": 39.5666,
-      "dynamicNumericGrade": 3.5179,
-      "casts": 7,
-      "castRate": 0.0875,
-      "damagePerCast": 1.8571,
+      "dynamicNumericGrade": 3.35,
+      "casts": 8,
+      "castRate": 0.1,
+      "damagePerCast": 1.75,
       "killContribution": 0,
       "objectiveDelta": 0,
       "archetypesObserved": [
@@ -499,9 +503,9 @@
     {
       "skillId": "SNEAK_ATTACK",
       "staticNumericGrade": 51.15,
-      "dynamicNumericGrade": 17.552,
-      "casts": 587,
-      "castRate": 7.3375,
+      "dynamicNumericGrade": 17.6345,
+      "casts": 590,
+      "castRate": 7.375,
       "damagePerCast": 1.0068,
       "killContribution": 0,
       "objectiveDelta": 0,
@@ -515,12 +519,12 @@
     {
       "skillId": "SOUL_SWAP",
       "staticNumericGrade": 45.55,
-      "dynamicNumericGrade": 53.4154,
-      "casts": 270,
-      "castRate": 3.375,
-      "damagePerCast": 0.5333,
+      "dynamicNumericGrade": 214.3702,
+      "casts": 895,
+      "castRate": 11.1875,
+      "damagePerCast": 0.9296,
       "killContribution": 0,
-      "objectiveDelta": 4.7625,
+      "objectiveDelta": 19.8375,
       "archetypesObserved": [
         "NECROMANCER"
       ],
@@ -531,12 +535,12 @@
     {
       "skillId": "SPEAR_THROW",
       "staticNumericGrade": 70.85,
-      "dynamicNumericGrade": 31.1173,
-      "casts": 294,
-      "castRate": 3.675,
-      "damagePerCast": 1.2925,
-      "killContribution": 0.8125,
-      "objectiveDelta": 0.0625,
+      "dynamicNumericGrade": 48.8976,
+      "casts": 368,
+      "castRate": 4.6,
+      "damagePerCast": 1.4973,
+      "killContribution": 1.4125,
+      "objectiveDelta": 0.0875,
       "archetypesObserved": [
         "VANGUARD"
       ],
@@ -575,12 +579,12 @@
     {
       "skillId": "VAULT",
       "staticNumericGrade": 26.25,
-      "dynamicNumericGrade": 5.6463,
-      "casts": 15,
-      "castRate": 0.1875,
+      "dynamicNumericGrade": 15.26,
+      "casts": 37,
+      "castRate": 0.4625,
       "damagePerCast": 0,
       "killContribution": 0,
-      "objectiveDelta": 0.5375,
+      "objectiveDelta": 1.45,
       "archetypesObserved": [
         "SKIRMISHER"
       ],
@@ -591,13 +595,14 @@
     {
       "skillId": "WITHDRAWAL",
       "staticNumericGrade": 27.3833,
-      "dynamicNumericGrade": 6.1275,
-      "casts": 51,
-      "castRate": 0.6375,
-      "damagePerCast": 1,
+      "dynamicNumericGrade": 6.5129,
+      "casts": 86,
+      "castRate": 0.5375,
+      "damagePerCast": 0.9659,
       "killContribution": 0,
-      "objectiveDelta": 0.35,
+      "objectiveDelta": 0.4188,
       "archetypesObserved": [
+        "SKIRMISHER",
         "HUNTER"
       ],
       "labels": [

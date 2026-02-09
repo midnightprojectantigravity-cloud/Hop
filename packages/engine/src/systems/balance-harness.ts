@@ -8,6 +8,11 @@ import { randomFromSeed } from './rng';
 import { computeScore } from './score';
 import { SkillRegistry } from '../skillRegistry';
 import { computeDynamicSkillGrades, type DynamicSkillMetric, type SkillTelemetryTotals } from './skill-grading';
+import {
+    getStrategicPolicyProfile,
+    type StrategicIntent,
+    type StrategicPolicyProfile
+} from './strategic-policy';
 
 export type BotPolicy = 'random' | 'heuristic';
 export type ArchetypeLoadoutId = keyof typeof DEFAULT_LOADOUTS;
@@ -23,9 +28,25 @@ export interface SkillTelemetry {
     floorProgress: number;
 }
 
+export interface TriangleSignalSummary {
+    samples: number;
+    avgHitPressure: number;
+    avgMitigationPressure: number;
+    avgCritPressure: number;
+    avgResistancePressure: number;
+}
+
+export interface TrinityContributionSummary {
+    samples: number;
+    bodyContribution: number;
+    mindContribution: number;
+    instinctContribution: number;
+}
+
 export interface RunResult {
     seed: string;
     policy: BotPolicy;
+    policyProfileId: string;
     loadoutId: ArchetypeLoadoutId;
     result: 'won' | 'lost' | 'timeout';
     turnsSpent: number;
@@ -35,12 +56,16 @@ export interface RunResult {
     score: number;
     playerActionCounts: Record<string, number>;
     playerSkillUsage: Record<string, number>;
+    strategicIntentCounts: Record<StrategicIntent, number>;
     totalPlayerSkillCasts: number;
     playerSkillTelemetry: Record<string, SkillTelemetry>;
+    triangleSignal: TriangleSignalSummary;
+    trinityContribution: TrinityContributionSummary;
 }
 
 export interface BatchSummary {
     policy: BotPolicy;
+    policyProfileId: string;
     loadoutId: ArchetypeLoadoutId;
     games: number;
     winRate: number;
@@ -53,8 +78,12 @@ export interface BatchSummary {
     actionTypeTotals: Record<string, number>;
     skillUsageTotals: Record<string, number>;
     avgSkillUsagePerRun: Record<string, number>;
+    strategicIntentTotals: Record<StrategicIntent, number>;
+    avgStrategicIntentPerRun: Record<StrategicIntent, number>;
     avgPlayerSkillCastsPerRun: number;
     skillTelemetryTotals: SkillTelemetryTotals;
+    triangleSignal: TriangleSignalSummary;
+    trinityContribution: TrinityContributionSummary;
     dynamicSkillGrades: Record<string, DynamicSkillMetric>;
 }
 
@@ -187,6 +216,29 @@ const distanceToShrine = (state: GameState, from = state.player.position): numbe
 const targetEnemyDensity = (state: GameState, target: Point): number =>
     state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy' && hexDistance(e.position, target) <= 1).length;
 
+const hasReadyTagSkill = (state: GameState, tag: string): boolean => {
+    for (const skill of (state.player.activeSkills || [])) {
+        if ((skill.currentCooldown || 0) > 0) continue;
+        const profile = SkillRegistry.get(skill.id)?.intentProfile;
+        if (!profile) continue;
+        if (profile.intentTags.includes(tag as any)) return true;
+    }
+    return false;
+};
+
+const chooseStrategicIntent = (state: GameState, profile: StrategicPolicyProfile): StrategicIntent => {
+    const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
+    const hostiles = aliveHostiles(state);
+
+    if (hpRatio < profile.thresholds.defenseHpRatio) return 'defense';
+    if (hostiles <= 0) return 'positioning';
+
+    const adjacentThreat = adjacentHostileCount(state, state.player.position);
+    if (adjacentThreat >= profile.thresholds.defensePressureAdjacentHostiles && hpRatio < profile.thresholds.defensePressureHpRatio) return 'defense';
+    if (hasReadyTagSkill(state, 'control') && hostiles >= profile.thresholds.controlMinHostiles) return 'control';
+    return 'offense';
+};
+
 const legalMoves = (state: GameState): Point[] => {
     const origin = state.player.position;
     const moveDef = SkillRegistry.get('BASIC_MOVE');
@@ -271,6 +323,9 @@ const preRankAction = (state: GameState, action: Action, profile?: SkillIntentPr
     score -= tagWeight(profile, 'hazard') * (hpRatio < 0.5 ? 0.6 : -0.2);
     if (action.payload.skillId === 'FIREWALK' && inCombat && directHit === 0 && density <= 1) {
         score -= 6;
+    }
+    if (action.payload.skillId === 'JUMP' && inCombat && directHit === 0 && density === 0) {
+        score -= 4;
     }
 
     return score;
@@ -364,24 +419,15 @@ const transitionMetrics = (prev: GameState, next: GameState, action: Action): Tr
     };
 };
 
-const utilityWeights = (state: GameState) => {
-    const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
-    const hostiles = aliveHostiles(state);
-    const inCombat = hostiles > 0;
-
-    return {
-        survival: hpRatio < 0.5 ? 4.2 : 2.3,
-        lethality: inCombat ? 4.8 : 1.2,
-        position: inCombat ? 2.4 : 1.1,
-        objective: inCombat ? 0.6 : 4.6,
-        tempo: 1.6,
-        resource: 1.0
-    };
+const utilityWeights = (_state: GameState, strategicIntent: StrategicIntent, profile: StrategicPolicyProfile) => {
+    return profile.weightsByIntent[strategicIntent];
 };
 
 const evaluateAction = (
     state: GameState,
     candidate: ActionCandidate,
+    strategicIntent: StrategicIntent,
+    profile: StrategicPolicyProfile,
     memo: Map<string, { value: number; metrics: TransitionMetrics; next: GameState }>
 ): { value: number; metrics: TransitionMetrics; next: GameState } => {
     const key = `${stateHash(state)}|${state.player.id}|${actionKey(candidate.action)}`;
@@ -390,7 +436,7 @@ const evaluateAction = (
 
     const next = resolvePending(gameReducer(state, candidate.action));
     const metrics = transitionMetrics(state, next, candidate.action);
-    const w = utilityWeights(state);
+    const w = utilityWeights(state, strategicIntent, profile);
 
     let value = 0;
     value += (metrics.healingReceived - metrics.hazardDamage) * w.survival;
@@ -404,7 +450,7 @@ const evaluateAction = (
         value += (p.estimates.damage || 0) * tagWeight(p, 'damage') * 0.8;
         value += (p.estimates.healing || 0) * tagWeight(p, 'heal') * (w.survival * 0.3);
         value += (p.estimates.movement || 0) * tagWeight(p, 'move') * 0.4;
-        value += (p.estimates.control || 0) * tagWeight(p, 'control') * 0.5;
+        value += (p.estimates.control || 0) * tagWeight(p, 'control') * (0.3 + (w.status * 0.2));
         value += (p.estimates.summon || 0) * tagWeight(p, 'summon') * 0.9;
         value -= (p.economy.cooldown || 0) * 0.12;
         value -= (p.economy.cost || 0) * 0.08 * w.resource;
@@ -417,6 +463,14 @@ const evaluateAction = (
             }
         }
     }
+    if (candidate.action.type === 'USE_SKILL' && candidate.action.payload.skillId === 'JUMP') {
+        if (metrics.enemyDamage === 0 && metrics.killShot === 0 && metrics.floorProgress === 0) {
+            value -= 6;
+            if ((metrics.stairsProgress + metrics.shrineProgress) > 0) {
+                value += 2;
+            }
+        }
+    }
 
     const evaluated = { value, metrics, next };
     memo.set(key, evaluated);
@@ -425,6 +479,8 @@ const evaluateAction = (
 
 export const selectByOnePlySimulation = (
     state: GameState,
+    strategicIntent: StrategicIntent,
+    profile: StrategicPolicyProfile,
     simSeed: string,
     decisionCounter: number,
     topK = 6
@@ -447,7 +503,7 @@ export const selectByOnePlySimulation = (
 
     const memo = new Map<string, { value: number; metrics: TransitionMetrics; next: GameState }>();
     const scored = shortlist.map(candidate => {
-        const evald = evaluateAction(state, candidate, memo);
+        const evald = evaluateAction(state, candidate, strategicIntent, profile, memo);
         return { candidate, ...evald };
     });
 
@@ -473,14 +529,25 @@ export const selectByOnePlySimulation = (
     return chooseFrom(ties, `${simSeed}:sim`, decisionCounter);
 };
 
-const selectAction = (state: GameState, policy: BotPolicy, simSeed: string, decisionCounter: number): Action => {
+const selectAction = (
+    state: GameState,
+    policy: BotPolicy,
+    profile: StrategicPolicyProfile,
+    simSeed: string,
+    decisionCounter: number
+): { action: Action; strategicIntent: StrategicIntent } => {
+    const strategicIntent = chooseStrategicIntent(state, profile);
+
     if (policy === 'random') {
         const moves = legalMoves(state);
         const options: Action[] = [{ type: 'WAIT' }, ...moves.map(m => ({ type: 'MOVE' as const, payload: m }))];
-        return chooseFrom(options, simSeed, decisionCounter);
+        return { action: chooseFrom(options, simSeed, decisionCounter), strategicIntent };
     }
 
-    return selectByOnePlySimulation(state, simSeed, decisionCounter);
+    return {
+        action: selectByOnePlySimulation(state, strategicIntent, profile, simSeed, decisionCounter),
+        strategicIntent
+    };
 };
 
 const zeroSkillTelemetry = (): SkillTelemetry => ({
@@ -494,18 +561,41 @@ const zeroSkillTelemetry = (): SkillTelemetry => ({
     floorProgress: 0
 });
 
+const zeroTriangleSignal = (): TriangleSignalSummary => ({
+    samples: 0,
+    avgHitPressure: 0,
+    avgMitigationPressure: 0,
+    avgCritPressure: 0,
+    avgResistancePressure: 0
+});
+
+const zeroTrinityContribution = (): TrinityContributionSummary => ({
+    samples: 0,
+    bodyContribution: 0,
+    mindContribution: 0,
+    instinctContribution: 0
+});
+
 export const simulateRun = (
     seed: string,
     policy: BotPolicy,
     maxTurns = 80,
-    loadoutId: ArchetypeLoadoutId = 'VANGUARD'
+    loadoutId: ArchetypeLoadoutId = 'VANGUARD',
+    policyProfileId = 'sp-v1-default'
 ): RunResult => {
+    const profile = getStrategicPolicyProfile(policyProfileId);
     let state = generateInitialState(1, seed, seed, undefined, DEFAULT_LOADOUTS[loadoutId]);
     let decisionCounter = 0;
     let guard = 0;
     let stagnantPlayerActions = 0;
     const playerActionCounts: Record<string, number> = {};
     const playerSkillUsage: Record<string, number> = {};
+    const strategicIntentCounts: Record<StrategicIntent, number> = {
+        offense: 0,
+        defense: 0,
+        positioning: 0,
+        control: 0
+    };
     const playerSkillTelemetry: Record<string, SkillTelemetry> = {};
     let totalPlayerSkillCasts = 0;
 
@@ -526,7 +616,9 @@ export const simulateRun = (
         if (isPlayerTurn(state)) {
             const prev = state;
             const prevTurnsSpent = state.turnsSpent || 0;
-            const action = selectAction(state, policy, `${seed}:${policy}`, decisionCounter++);
+            const selection = selectAction(state, policy, profile, `${seed}:${policy}`, decisionCounter++);
+            const action = selection.action;
+            strategicIntentCounts[selection.strategicIntent] += 1;
             incrementHistogram(playerActionCounts, action.type);
             if (action.type === 'USE_SKILL') {
                 incrementHistogram(playerSkillUsage, action.payload.skillId);
@@ -571,9 +663,31 @@ export const simulateRun = (
         ? 'won'
         : (state.gameStatus === 'lost' ? 'lost' : 'timeout');
 
+    const playerId = state.player.id;
+    const combatEvents = ((state.combatScoreEvents || []) as any[])
+        .filter(e => e && e.attackerId === playerId);
+    const triangleSignal = combatEvents.length > 0
+        ? {
+            samples: combatEvents.length,
+            avgHitPressure: combatEvents.reduce((acc, e) => acc + (e.hitPressure || 0), 0) / combatEvents.length,
+            avgMitigationPressure: combatEvents.reduce((acc, e) => acc + (e.mitigationPressure || 0), 0) / combatEvents.length,
+            avgCritPressure: combatEvents.reduce((acc, e) => acc + (e.critPressure || 0), 0) / combatEvents.length,
+            avgResistancePressure: combatEvents.reduce((acc, e) => acc + (e.resistancePressure || 0), 0) / combatEvents.length,
+        }
+        : zeroTriangleSignal();
+    const trinityContribution = combatEvents.length > 0
+        ? {
+            samples: combatEvents.length,
+            bodyContribution: combatEvents.reduce((acc, e) => acc + (e.bodyContribution || 0), 0) / combatEvents.length,
+            mindContribution: combatEvents.reduce((acc, e) => acc + (e.mindContribution || 0), 0) / combatEvents.length,
+            instinctContribution: combatEvents.reduce((acc, e) => acc + (e.instinctContribution || 0), 0) / combatEvents.length,
+        }
+        : zeroTrinityContribution();
+
     return {
         seed,
         policy,
+        policyProfileId: profile.version,
         loadoutId,
         result,
         turnsSpent: state.turnsSpent || 0,
@@ -583,8 +697,11 @@ export const simulateRun = (
         score: computeScore(state),
         playerActionCounts,
         playerSkillUsage,
+        strategicIntentCounts,
         totalPlayerSkillCasts,
-        playerSkillTelemetry
+        playerSkillTelemetry,
+        triangleSignal,
+        trinityContribution
     };
 };
 
@@ -592,9 +709,10 @@ export const runBatch = (
     seeds: string[],
     policy: BotPolicy,
     maxTurns = 80,
-    loadoutId: ArchetypeLoadoutId = 'VANGUARD'
+    loadoutId: ArchetypeLoadoutId = 'VANGUARD',
+    policyProfileId = 'sp-v1-default'
 ): RunResult[] => {
-    return seeds.map(seed => simulateRun(seed, policy, maxTurns, loadoutId));
+    return seeds.map(seed => simulateRun(seed, policy, maxTurns, loadoutId, policyProfileId));
 };
 
 export const summarizeBatch = (
@@ -608,12 +726,33 @@ export const summarizeBatch = (
     const avg = (arr: number[]) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
     const actionTypeTotals: Record<string, number> = {};
     const skillUsageTotals: Record<string, number> = {};
+    const strategicIntentTotals: Record<StrategicIntent, number> = {
+        offense: 0,
+        defense: 0,
+        positioning: 0,
+        control: 0
+    };
     const skillTelemetryTotals: SkillTelemetryTotals = {};
+    const triangleSignalTotals = zeroTriangleSignal();
+    const trinityContributionTotals = zeroTrinityContribution();
 
     for (const run of results) {
         mergeHistogram(actionTypeTotals, run.playerActionCounts || {});
         mergeHistogram(skillUsageTotals, run.playerSkillUsage || {});
+        strategicIntentTotals.offense += run.strategicIntentCounts?.offense || 0;
+        strategicIntentTotals.defense += run.strategicIntentCounts?.defense || 0;
+        strategicIntentTotals.positioning += run.strategicIntentCounts?.positioning || 0;
+        strategicIntentTotals.control += run.strategicIntentCounts?.control || 0;
         mergeSkillTelemetry(skillTelemetryTotals, run.playerSkillTelemetry || {});
+        triangleSignalTotals.samples += run.triangleSignal?.samples || 0;
+        triangleSignalTotals.avgHitPressure += run.triangleSignal?.avgHitPressure || 0;
+        triangleSignalTotals.avgMitigationPressure += run.triangleSignal?.avgMitigationPressure || 0;
+        triangleSignalTotals.avgCritPressure += run.triangleSignal?.avgCritPressure || 0;
+        triangleSignalTotals.avgResistancePressure += run.triangleSignal?.avgResistancePressure || 0;
+        trinityContributionTotals.samples += run.trinityContribution?.samples || 0;
+        trinityContributionTotals.bodyContribution += run.trinityContribution?.bodyContribution || 0;
+        trinityContributionTotals.mindContribution += run.trinityContribution?.mindContribution || 0;
+        trinityContributionTotals.instinctContribution += run.trinityContribution?.instinctContribution || 0;
     }
 
     const avgSkillUsagePerRun: Record<string, number> = {};
@@ -621,9 +760,29 @@ export const summarizeBatch = (
     for (const [skillId, total] of Object.entries(skillUsageTotals)) {
         avgSkillUsagePerRun[skillId] = total / divisor;
     }
+    const avgStrategicIntentPerRun: Record<StrategicIntent, number> = {
+        offense: strategicIntentTotals.offense / divisor,
+        defense: strategicIntentTotals.defense / divisor,
+        positioning: strategicIntentTotals.positioning / divisor,
+        control: strategicIntentTotals.control / divisor
+    };
+    const triangleSignal: TriangleSignalSummary = {
+        samples: triangleSignalTotals.samples,
+        avgHitPressure: triangleSignalTotals.avgHitPressure / divisor,
+        avgMitigationPressure: triangleSignalTotals.avgMitigationPressure / divisor,
+        avgCritPressure: triangleSignalTotals.avgCritPressure / divisor,
+        avgResistancePressure: triangleSignalTotals.avgResistancePressure / divisor
+    };
+    const trinityContribution: TrinityContributionSummary = {
+        samples: trinityContributionTotals.samples,
+        bodyContribution: trinityContributionTotals.bodyContribution / divisor,
+        mindContribution: trinityContributionTotals.mindContribution / divisor,
+        instinctContribution: trinityContributionTotals.instinctContribution / divisor
+    };
 
     const summary: BatchSummary = {
         policy,
+        policyProfileId: results[0]?.policyProfileId || 'sp-v1-default',
         loadoutId,
         games: results.length,
         winRate: results.length ? wins.length / results.length : 0,
@@ -636,8 +795,12 @@ export const summarizeBatch = (
         actionTypeTotals,
         skillUsageTotals,
         avgSkillUsagePerRun,
+        strategicIntentTotals,
+        avgStrategicIntentPerRun,
         avgPlayerSkillCastsPerRun: avg(results.map(r => r.totalPlayerSkillCasts || 0)),
         skillTelemetryTotals,
+        triangleSignal,
+        trinityContribution,
         dynamicSkillGrades: {}
     };
 
@@ -673,11 +836,13 @@ export const runHeadToHeadBatch = (
     seeds: string[],
     left: MatchupSide,
     right: MatchupSide,
-    maxTurns = 80
+    maxTurns = 80,
+    leftPolicyProfileId = 'sp-v1-default',
+    rightPolicyProfileId = 'sp-v1-default'
 ): MatchupRun[] => {
     return seeds.map(seed => {
-        const leftRun = simulateRun(seed, left.policy, maxTurns, left.loadoutId);
-        const rightRun = simulateRun(seed, right.policy, maxTurns, right.loadoutId);
+        const leftRun = simulateRun(seed, left.policy, maxTurns, left.loadoutId, leftPolicyProfileId);
+        const rightRun = simulateRun(seed, right.policy, maxTurns, right.loadoutId, rightPolicyProfileId);
         return {
             seed,
             left: leftRun,

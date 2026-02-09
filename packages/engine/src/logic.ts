@@ -28,7 +28,7 @@ import {
     isPlayerTurn,
 } from './systems/initiative';
 import { tickStatuses } from './systems/status';
-import { createEntity } from './systems/entity-factory';
+import { createEntity, ensureActorTrinity } from './systems/entity-factory';
 
 
 /**
@@ -561,6 +561,11 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                         }
                     ])
                 );
+            }
+            loaded.player = ensureActorTrinity(loaded.player);
+            loaded.enemies = (loaded.enemies || []).map(ensureActorTrinity);
+            if (loaded.companions) {
+                loaded.companions = loaded.companions.map(ensureActorTrinity);
             }
             return loaded;
         }

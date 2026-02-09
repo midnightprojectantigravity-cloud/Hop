@@ -2,7 +2,7 @@ import type { GameState, Actor, Point } from '../types';
 import type { ArchetypeLoadoutId, BotPolicy } from './balance-harness';
 import { generateInitialState } from '../logic';
 import { DEFAULT_LOADOUTS, applyLoadoutToPlayer } from './loadout';
-import { createEntity } from './entity-factory';
+import { createEntity, ensureActorTrinity } from './entity-factory';
 import { SkillRegistry } from '../skillRegistry';
 import { applyEffects } from './effect-engine';
 import { tickActorSkills } from './actor';
@@ -326,19 +326,24 @@ const buildDuelState = (seed: string, leftLoadoutId: ArchetypeLoadoutId, rightLo
 
     const left = state.player as Actor;
     const leftApplied = applyLoadoutToPlayer(leftLoadout);
-    const leftActor: Actor = {
-        ...left,
+    const leftActor: Actor = ensureActorTrinity(createEntity({
+        id: left.id,
+        type: 'player',
         position: LEFT_POS,
-        previousPosition: LEFT_POS,
         hp: left.maxHp,
+        maxHp: left.maxHp,
+        speed: left.speed || 1,
+        factionId: 'player',
         activeSkills: leftApplied.activeSkills,
         archetype: leftLoadout.id as any,
-        statusEffects: [],
-        temporaryArmor: 0
-    };
+        weightClass: 'Standard',
+    }));
+    leftActor.previousPosition = LEFT_POS;
+    leftActor.statusEffects = [];
+    leftActor.temporaryArmor = 0;
 
     const rightApplied = applyLoadoutToPlayer(rightLoadout);
-    const rightActor: Actor = {
+    const rightActor: Actor = ensureActorTrinity({
         ...createEntity({
             id: 'duelist-right',
             type: 'enemy',
@@ -356,7 +361,7 @@ const buildDuelState = (seed: string, leftLoadoutId: ArchetypeLoadoutId, rightLo
         previousPosition: RIGHT_POS,
         statusEffects: [],
         temporaryArmor: 0
-    } as Actor;
+    } as Actor);
 
     state = {
         ...state,

@@ -1,0 +1,151 @@
+{
+  "generatedAt": "2026-02-09T17:15:04.289Z",
+  "profile": "live",
+  "count": 12,
+  "maxTurns": 40,
+  "byArchetype": [
+    {
+      "loadoutId": "VANGUARD",
+      "games": 12,
+      "winRate": 0,
+      "timeoutRate": 0,
+      "avgFloor": 2.6666666666666665,
+      "trinityContribution": {
+        "samples": 47,
+        "bodyContribution": 0.5473495670995671,
+        "mindContribution": 0,
+        "instinctContribution": 0.11931709956709956
+      }
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "games": 12,
+      "winRate": 0,
+      "timeoutRate": 0,
+      "avgFloor": 1.3333333333333333,
+      "trinityContribution": {
+        "samples": 7,
+        "bodyContribution": 0.32208333333333333,
+        "mindContribution": 0,
+        "instinctContribution": 0.09458333333333334
+      }
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "games": 12,
+      "winRate": 0,
+      "timeoutRate": 0,
+      "avgFloor": 6.333333333333333,
+      "trinityContribution": {
+        "samples": 108,
+        "bodyContribution": 0,
+        "mindContribution": 0.7458086328976038,
+        "instinctContribution": 0.08752470043572985
+      }
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "games": 12,
+      "winRate": 0,
+      "timeoutRate": 0,
+      "avgFloor": 4,
+      "trinityContribution": {
+        "samples": 105,
+        "bodyContribution": 0.06241666666666667,
+        "mindContribution": 0.7416562499999998,
+        "instinctContribution": 0.11259374999999999
+      }
+    },
+    {
+      "loadoutId": "HUNTER",
+      "games": 12,
+      "winRate": 0,
+      "timeoutRate": 0.08333333333333333,
+      "avgFloor": 3.0833333333333335,
+      "trinityContribution": {
+        "samples": 74,
+        "bodyContribution": 0.5071666666666668,
+        "mindContribution": 0,
+        "instinctContribution": 0.49283333333333323
+      }
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "games": 12,
+      "winRate": 0,
+      "timeoutRate": 0.08333333333333333,
+      "avgFloor": 2.4166666666666665,
+      "trinityContribution": {
+        "samples": 28,
+        "bodyContribution": 0.05056666666666667,
+        "mindContribution": 0,
+        "instinctContribution": 0.8660999999999999
+      }
+    }
+  ],
+  "byMatchup": [
+    {
+      "pair": "VANGUARD_vs_HUNTER",
+      "left": {
+        "loadoutId": "VANGUARD",
+        "trinityContribution": {
+          "samples": 47,
+          "bodyContribution": 0.5473495670995671,
+          "mindContribution": 0,
+          "instinctContribution": 0.11931709956709956
+        }
+      },
+      "right": {
+        "loadoutId": "HUNTER",
+        "trinityContribution": {
+          "samples": 74,
+          "bodyContribution": 0.5071666666666668,
+          "mindContribution": 0,
+          "instinctContribution": 0.49283333333333323
+        }
+      }
+    },
+    {
+      "pair": "FIREMAGE_vs_NECROMANCER",
+      "left": {
+        "loadoutId": "FIREMAGE",
+        "trinityContribution": {
+          "samples": 108,
+          "bodyContribution": 0,
+          "mindContribution": 0.7458086328976038,
+          "instinctContribution": 0.08752470043572985
+        }
+      },
+      "right": {
+        "loadoutId": "NECROMANCER",
+        "trinityContribution": {
+          "samples": 105,
+          "bodyContribution": 0.06241666666666667,
+          "mindContribution": 0.7416562499999998,
+          "instinctContribution": 0.11259374999999999
+        }
+      }
+    },
+    {
+      "pair": "ASSASSIN_vs_SKIRMISHER",
+      "left": {
+        "loadoutId": "ASSASSIN",
+        "trinityContribution": {
+          "samples": 28,
+          "bodyContribution": 0.05056666666666667,
+          "mindContribution": 0,
+          "instinctContribution": 0.8660999999999999
+        }
+      },
+      "right": {
+        "loadoutId": "SKIRMISHER",
+        "trinityContribution": {
+          "samples": 7,
+          "bodyContribution": 0.32208333333333333,
+          "mindContribution": 0,
+          "instinctContribution": 0.09458333333333334
+        }
+      }
+    }
+  ]
+}

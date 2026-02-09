@@ -4,6 +4,7 @@ import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { isBlockedByWall, validateRange, canLandOnHazard } from '../systems/validation';
 import { SpatialSystem } from '../systems/SpatialSystem';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
 
 /**
  * Implementation of the Jump skill using the Compositional Skill Framework.
@@ -61,7 +62,18 @@ export const JUMP: SkillDefinition = {
 
         // 4. Execution: Displacement & Impact
         if (obstacle && hasMeteor) {
-            effects.push({ type: 'Damage', target: obstacle.id, amount: 99 });
+            const combat = calculateCombat({
+                attackerId: attacker.id,
+                targetId: obstacle.id,
+                skillId: 'JUMP',
+                basePower: 99,
+                trinity: extractTrinityStats(attacker),
+                targetTrinity: extractTrinityStats(obstacle),
+                damageClass: 'physical',
+                scaling: [{ attribute: 'body', coefficient: 0.15 }],
+                statusMultipliers: []
+            });
+            effects.push({ type: 'Damage', target: obstacle.id, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
             messages.push(`Meteor Impact killed ${obstacle.subtype || 'enemy'}!`);
         }
 

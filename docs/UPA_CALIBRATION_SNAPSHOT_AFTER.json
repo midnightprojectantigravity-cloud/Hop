@@ -1,0 +1,765 @@
+{
+  "calibration": {
+    "version": "cal-v1-firemage-baseline",
+    "entity": {
+      "hpSurvivabilityCoeff": 4,
+      "armorSurvivabilityCoeff": 4,
+      "speedMobilityCoeff": 0.8,
+      "speedEconomyCoeff": 0.4,
+      "skillPowerCoeff": 1,
+      "skillControlCoeff": 1,
+      "skillMobilityCoeff": 1
+    },
+    "skill": {
+      "staticWeight": 0.5,
+      "powerCoeff": 1,
+      "reachCoeff": 1,
+      "safetyCoeff": 1,
+      "tempoCoeff": 1,
+      "complexityCoeff": 1,
+      "perSkillScalar": {
+        "FIREBALL": 1.05,
+        "FIREWALL": 1.05,
+        "FIREWALK": 1.02
+      }
+    },
+    "policy": {
+      "offenseWeight": 1.1,
+      "defenseWeight": 1,
+      "positioningWeight": 1.05,
+      "statusWeight": 1,
+      "riskPenaltyWeight": 1
+    },
+    "encounter": {
+      "hazardWeight": 1,
+      "spawnPressureWeight": 1,
+      "objectiveWeight": 1,
+      "pathFrictionWeight": 1,
+      "lowBandMax": 30,
+      "mediumBandMax": 60
+    }
+  },
+  "evaluatorBaselines": {
+    "modelVersion": "uel-v1",
+    "calibrationVersion": "cal-v1-firemage-baseline",
+    "tileGrades": [
+      {
+        "id": "GRASS@0,0",
+        "kind": "tile",
+        "envelope": {
+          "power": 0,
+          "survivability": 0,
+          "control": 0,
+          "mobility": 8,
+          "economy": 10,
+          "risk": 0,
+          "complexity": 4,
+          "objectivePressure": 0
+        },
+        "numericGrade": 9.8,
+        "efficiencyGrade": 19.6,
+        "difficultyGrade": 0,
+        "rationale": [
+          "Tile trait and effect weighting"
+        ]
+      },
+      {
+        "id": "STONE@0,0",
+        "kind": "tile",
+        "envelope": {
+          "power": 0,
+          "survivability": 0,
+          "control": 0,
+          "mobility": 8,
+          "economy": 10,
+          "risk": 0,
+          "complexity": 2,
+          "objectivePressure": 0
+        },
+        "numericGrade": 9.8,
+        "efficiencyGrade": 19.6,
+        "difficultyGrade": 0,
+        "rationale": [
+          "Tile trait and effect weighting"
+        ]
+      },
+      {
+        "id": "LAVA@0,0",
+        "kind": "tile",
+        "envelope": {
+          "power": 45,
+          "survivability": 0,
+          "control": 0,
+          "mobility": 0,
+          "economy": 0,
+          "risk": 65,
+          "complexity": 4,
+          "objectivePressure": 20
+        },
+        "numericGrade": 84,
+        "efficiencyGrade": 16,
+        "difficultyGrade": 100,
+        "rationale": [
+          "Tile trait and effect weighting"
+        ]
+      },
+      {
+        "id": "WALL@0,0",
+        "kind": "tile",
+        "envelope": {
+          "power": 0,
+          "survivability": 0,
+          "control": 36,
+          "mobility": 6,
+          "economy": 0,
+          "risk": 0,
+          "complexity": 6,
+          "objectivePressure": 12
+        },
+        "numericGrade": 53.4,
+        "efficiencyGrade": 46.8,
+        "difficultyGrade": 60,
+        "rationale": [
+          "Tile trait and effect weighting"
+        ]
+      },
+      {
+        "id": "ICE@0,0",
+        "kind": "tile",
+        "envelope": {
+          "power": 0,
+          "survivability": 0,
+          "control": 0,
+          "mobility": 26,
+          "economy": 10,
+          "risk": 12,
+          "complexity": 4,
+          "objectivePressure": 0
+        },
+        "numericGrade": 19.4,
+        "efficiencyGrade": 29.2,
+        "difficultyGrade": 9.6,
+        "rationale": [
+          "Tile trait and effect weighting"
+        ]
+      },
+      {
+        "id": "VOID@0,0",
+        "kind": "tile",
+        "envelope": {
+          "power": 45,
+          "survivability": 0,
+          "control": 0,
+          "mobility": 0,
+          "economy": 0,
+          "risk": 65,
+          "complexity": 2,
+          "objectivePressure": 20
+        },
+        "numericGrade": 84,
+        "efficiencyGrade": 16,
+        "difficultyGrade": 100,
+        "rationale": [
+          "Tile trait and effect weighting"
+        ]
+      },
+      {
+        "id": "STAIRS@0,0",
+        "kind": "tile",
+        "envelope": {
+          "power": 0,
+          "survivability": 0,
+          "control": 0,
+          "mobility": 8,
+          "economy": 10,
+          "risk": 0,
+          "complexity": 2,
+          "objectivePressure": 0
+        },
+        "numericGrade": 9.8,
+        "efficiencyGrade": 19.6,
+        "difficultyGrade": 0,
+        "rationale": [
+          "Tile trait and effect weighting"
+        ]
+      },
+      {
+        "id": "SHRINE@0,0",
+        "kind": "tile",
+        "envelope": {
+          "power": 0,
+          "survivability": 0,
+          "control": 6,
+          "mobility": 14,
+          "economy": 10,
+          "risk": 0,
+          "complexity": 4,
+          "objectivePressure": 0
+        },
+        "numericGrade": 20.3,
+        "efficiencyGrade": 33.4,
+        "difficultyGrade": 7.2,
+        "rationale": [
+          "Tile trait and effect weighting"
+        ]
+      },
+      {
+        "id": "GATE@0,0",
+        "kind": "tile",
+        "envelope": {
+          "power": 0,
+          "survivability": 0,
+          "control": 30,
+          "mobility": 0,
+          "economy": 0,
+          "risk": 0,
+          "complexity": 4,
+          "objectivePressure": 12
+        },
+        "numericGrade": 42.9,
+        "efficiencyGrade": 33,
+        "difficultyGrade": 52.8,
+        "rationale": [
+          "Tile trait and effect weighting"
+        ]
+      },
+      {
+        "id": "BRIDGE@0,0",
+        "kind": "tile",
+        "envelope": {
+          "power": 0,
+          "survivability": 0,
+          "control": 0,
+          "mobility": 8,
+          "economy": 10,
+          "risk": 0,
+          "complexity": 2,
+          "objectivePressure": 0
+        },
+        "numericGrade": 9.8,
+        "efficiencyGrade": 19.6,
+        "difficultyGrade": 0,
+        "rationale": [
+          "Tile trait and effect weighting"
+        ]
+      }
+    ],
+    "entityGrades": {
+      "loadouts": [
+        {
+          "id": "player_vanguard",
+          "kind": "entity",
+          "envelope": {
+            "power": 42,
+            "survivability": 27,
+            "control": 8,
+            "mobility": 9.8,
+            "economy": 18.4,
+            "risk": 0,
+            "complexity": 36,
+            "objectivePressure": 6
+          },
+          "numericGrade": 87.045,
+          "efficiencyGrade": 100,
+          "difficultyGrade": 74.09,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "vanguard",
+            "skillCount": 6
+          }
+        },
+        {
+          "id": "player_skirmisher",
+          "kind": "entity",
+          "envelope": {
+            "power": 18,
+            "survivability": 27,
+            "control": 12,
+            "mobility": 21.8,
+            "economy": 12.4,
+            "risk": 0,
+            "complexity": 24,
+            "objectivePressure": 0
+          },
+          "numericGrade": 65.345,
+          "efficiencyGrade": 100,
+          "difficultyGrade": 30.69,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "skirmisher",
+            "skillCount": 4
+          }
+        },
+        {
+          "id": "player_firemage",
+          "kind": "entity",
+          "envelope": {
+            "power": 37.2,
+            "survivability": 27,
+            "control": 12,
+            "mobility": 12.8,
+            "economy": 18.4,
+            "risk": 0,
+            "complexity": 36,
+            "objectivePressure": 6
+          },
+          "numericGrade": 85.557,
+          "efficiencyGrade": 100,
+          "difficultyGrade": 71.114,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "firemage",
+            "skillCount": 6
+          }
+        },
+        {
+          "id": "player_necromancer",
+          "kind": "entity",
+          "envelope": {
+            "power": 50,
+            "survivability": 27,
+            "control": 12,
+            "mobility": 9.8,
+            "economy": 15.4,
+            "risk": 0,
+            "complexity": 30,
+            "objectivePressure": 6
+          },
+          "numericGrade": 96.1384,
+          "efficiencyGrade": 100,
+          "difficultyGrade": 92.2767,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "necromancer",
+            "skillCount": 5
+          }
+        },
+        {
+          "id": "player_hunter",
+          "kind": "entity",
+          "envelope": {
+            "power": 37,
+            "survivability": 27,
+            "control": 24,
+            "mobility": 9.8,
+            "economy": 15.4,
+            "risk": 0,
+            "complexity": 30,
+            "objectivePressure": 6
+          },
+          "numericGrade": 92.8316,
+          "efficiencyGrade": 100,
+          "difficultyGrade": 85.6633,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "hunter",
+            "skillCount": 5
+          }
+        },
+        {
+          "id": "player_assassin",
+          "kind": "entity",
+          "envelope": {
+            "power": 39,
+            "survivability": 27,
+            "control": 12,
+            "mobility": 15.8,
+            "economy": 15.4,
+            "risk": 0,
+            "complexity": 30,
+            "objectivePressure": 6
+          },
+          "numericGrade": 87.045,
+          "efficiencyGrade": 100,
+          "difficultyGrade": 74.09,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "assassin",
+            "skillCount": 5
+          }
+        }
+      ],
+      "enemies": [
+        {
+          "id": "enemy_footman",
+          "kind": "entity",
+          "envelope": {
+            "power": 18,
+            "survivability": 19,
+            "control": 0,
+            "mobility": 3.8,
+            "economy": 9.4,
+            "risk": 0,
+            "complexity": 18,
+            "objectivePressure": 6
+          },
+          "numericGrade": 51.1741,
+          "efficiencyGrade": 73.7248,
+          "difficultyGrade": 28.6233,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "footman",
+            "skillCount": 3
+          }
+        },
+        {
+          "id": "enemy_sprinter",
+          "kind": "entity",
+          "envelope": {
+            "power": 12,
+            "survivability": 19,
+            "control": 0,
+            "mobility": 4.6,
+            "economy": 6.8,
+            "risk": 0,
+            "complexity": 12,
+            "objectivePressure": 6
+          },
+          "numericGrade": 39.7608,
+          "efficiencyGrade": 60.8182,
+          "difficultyGrade": 18.7033,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "sprinter",
+            "skillCount": 2
+          }
+        },
+        {
+          "id": "enemy_raider",
+          "kind": "entity",
+          "envelope": {
+            "power": 18,
+            "survivability": 19,
+            "control": 0,
+            "mobility": 9.8,
+            "economy": 9.4,
+            "risk": 0,
+            "complexity": 18,
+            "objectivePressure": 6
+          },
+          "numericGrade": 54.9091,
+          "efficiencyGrade": 81.1948,
+          "difficultyGrade": 28.6233,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "raider",
+            "skillCount": 3
+          }
+        },
+        {
+          "id": "enemy_pouncer",
+          "kind": "entity",
+          "envelope": {
+            "power": 12,
+            "survivability": 19,
+            "control": 8,
+            "mobility": 12.8,
+            "economy": 9.4,
+            "risk": 0,
+            "complexity": 18,
+            "objectivePressure": 6
+          },
+          "numericGrade": 55.739,
+          "efficiencyGrade": 82.8548,
+          "difficultyGrade": 28.6233,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "pouncer",
+            "skillCount": 3
+          }
+        },
+        {
+          "id": "enemy_shieldBearer",
+          "kind": "entity",
+          "envelope": {
+            "power": 21,
+            "survivability": 23,
+            "control": 8,
+            "mobility": 3.8,
+            "economy": 9.4,
+            "risk": 0,
+            "complexity": 18,
+            "objectivePressure": 6
+          },
+          "numericGrade": 67.6445,
+          "efficiencyGrade": 93.8522,
+          "difficultyGrade": 41.4367,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "shieldBearer",
+            "skillCount": 3
+          }
+        },
+        {
+          "id": "enemy_archer",
+          "kind": "entity",
+          "envelope": {
+            "power": 27,
+            "survivability": 19,
+            "control": 0,
+            "mobility": 3.8,
+            "economy": 9.4,
+            "risk": 0,
+            "complexity": 18,
+            "objectivePressure": 6
+          },
+          "numericGrade": 67.0178,
+          "efficiencyGrade": 90.5323,
+          "difficultyGrade": 43.5033,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "archer",
+            "skillCount": 3
+          }
+        },
+        {
+          "id": "enemy_bomber",
+          "kind": "entity",
+          "envelope": {
+            "power": 12,
+            "survivability": 19,
+            "control": 0,
+            "mobility": 3.8,
+            "economy": 6.4,
+            "risk": 0,
+            "complexity": 12,
+            "objectivePressure": 6
+          },
+          "numericGrade": 39.0553,
+          "efficiencyGrade": 59.4073,
+          "difficultyGrade": 18.7033,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "bomber",
+            "skillCount": 2
+          }
+        },
+        {
+          "id": "enemy_warlock",
+          "kind": "entity",
+          "envelope": {
+            "power": 12,
+            "survivability": 19,
+            "control": 0,
+            "mobility": 3.8,
+            "economy": 6.4,
+            "risk": 0,
+            "complexity": 12,
+            "objectivePressure": 6
+          },
+          "numericGrade": 39.0553,
+          "efficiencyGrade": 59.4073,
+          "difficultyGrade": 18.7033,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "warlock",
+            "skillCount": 2
+          }
+        },
+        {
+          "id": "enemy_sentinel",
+          "kind": "entity",
+          "envelope": {
+            "power": 33,
+            "survivability": 100,
+            "control": 0,
+            "mobility": 3.8,
+            "economy": 9.4,
+            "risk": 0,
+            "complexity": 18,
+            "objectivePressure": 6
+          },
+          "numericGrade": 55.7867,
+          "efficiencyGrade": 100,
+          "difficultyGrade": 11.5733,
+          "rationale": [
+            "Actor stats + loadout intent profile aggregation"
+          ],
+          "metadata": {
+            "subtype": "sentinel",
+            "skillCount": 3
+          }
+        }
+      ]
+    },
+    "mapGrades": [
+      {
+        "id": "map_floor_1",
+        "kind": "map",
+        "envelope": {
+          "power": 7.0886,
+          "survivability": 46.4557,
+          "control": 28.3544,
+          "mobility": 31.0127,
+          "economy": 35.8228,
+          "risk": 26.3291,
+          "complexity": 18.2278,
+          "objectivePressure": 49.0506
+        },
+        "numericGrade": 100,
+        "efficiencyGrade": 100,
+        "difficultyGrade": 100,
+        "rationale": [
+          "Map density analysis (hazard, blocked, walkable)"
+        ],
+        "metadata": {
+          "totalTiles": 79,
+          "hazardDensity": 0.1013,
+          "blockedDensity": 0.3544
+        }
+      },
+      {
+        "id": "map_floor_3",
+        "kind": "map",
+        "envelope": {
+          "power": 7.0886,
+          "survivability": 46.4557,
+          "control": 28.3544,
+          "mobility": 31.0127,
+          "economy": 35.8228,
+          "risk": 26.3291,
+          "complexity": 18.2278,
+          "objectivePressure": 49.0506
+        },
+        "numericGrade": 100,
+        "efficiencyGrade": 100,
+        "difficultyGrade": 100,
+        "rationale": [
+          "Map density analysis (hazard, blocked, walkable)"
+        ],
+        "metadata": {
+          "totalTiles": 79,
+          "hazardDensity": 0.1013,
+          "blockedDensity": 0.3544
+        }
+      },
+      {
+        "id": "map_floor_5",
+        "kind": "map",
+        "envelope": {
+          "power": 7.0886,
+          "survivability": 46.4557,
+          "control": 28.3544,
+          "mobility": 31.0127,
+          "economy": 35.8228,
+          "risk": 26.3291,
+          "complexity": 18.2278,
+          "objectivePressure": 49.0506
+        },
+        "numericGrade": 100,
+        "efficiencyGrade": 100,
+        "difficultyGrade": 100,
+        "rationale": [
+          "Map density analysis (hazard, blocked, walkable)"
+        ],
+        "metadata": {
+          "totalTiles": 79,
+          "hazardDensity": 0.1013,
+          "blockedDensity": 0.3544
+        }
+      }
+    ],
+    "encounterGrades": [
+      {
+        "id": "encounter_floor_1",
+        "kind": "encounter",
+        "envelope": {
+          "power": 14.181,
+          "survivability": 19,
+          "control": 11.3418,
+          "mobility": 24.8102,
+          "economy": 46,
+          "risk": 23.1481,
+          "complexity": 25.2911,
+          "objectivePressure": 23.2202
+        },
+        "numericGrade": 92.8046,
+        "efficiencyGrade": 100,
+        "difficultyGrade": 85.6091,
+        "rationale": [
+          "Encounter blend from map + enemy aggregate pressure"
+        ],
+        "metadata": {
+          "enemyCount": 2,
+          "difficultyBand": "high"
+        }
+      },
+      {
+        "id": "encounter_floor_3",
+        "kind": "encounter",
+        "envelope": {
+          "power": 18.861,
+          "survivability": 19,
+          "control": 11.3418,
+          "mobility": 24.8102,
+          "economy": 40,
+          "risk": 33.1681,
+          "complexity": 37.2911,
+          "objectivePressure": 23.2202
+        },
+        "numericGrade": 100,
+        "efficiencyGrade": 100,
+        "difficultyGrade": 100,
+        "rationale": [
+          "Encounter blend from map + enemy aggregate pressure"
+        ],
+        "metadata": {
+          "enemyCount": 5,
+          "difficultyBand": "high"
+        }
+      },
+      {
+        "id": "encounter_floor_5",
+        "kind": "encounter",
+        "envelope": {
+          "power": 16.131,
+          "survivability": 23.5,
+          "control": 12.5418,
+          "mobility": 24.8102,
+          "economy": 34,
+          "risk": 39.1981,
+          "complexity": 49.2911,
+          "objectivePressure": 23.2202
+        },
+        "numericGrade": 98.9779,
+        "efficiencyGrade": 97.9559,
+        "difficultyGrade": 100,
+        "rationale": [
+          "Encounter blend from map + enemy aggregate pressure"
+        ],
+        "metadata": {
+          "enemyCount": 8,
+          "difficultyBand": "high"
+        }
+      }
+    ]
+  }
+}

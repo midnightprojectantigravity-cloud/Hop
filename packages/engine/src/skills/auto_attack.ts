@@ -2,6 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexEquals, getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
 
 import { getSkillScenarios } from '../scenarios';
 
@@ -88,7 +89,18 @@ export const AUTO_ATTACK: SkillDefinition = {
 
             if (isPersistent) {
                 // HIT!
-                effects.push({ type: 'Damage', target: neighborPos, amount: damage });
+                const combat = calculateCombat({
+                    attackerId: attacker.id,
+                    targetId: targetActor.id,
+                    skillId: 'AUTO_ATTACK',
+                    basePower: damage,
+                    trinity: extractTrinityStats(attacker),
+                    targetTrinity: extractTrinityStats(targetActor),
+                    damageClass: 'physical',
+                    scaling: [{ attribute: 'body', coefficient: 0.2 }],
+                    statusMultipliers: []
+                });
+                effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
 
                 const attackerName = attacker.factionId === 'player' ? 'You' : (attacker.subtype || 'Enemy');
                 const targetName = targetActor.factionId === 'player' ? 'you' : (targetActor.subtype || 'enemy');
@@ -118,7 +130,18 @@ export const AUTO_ATTACK: SkillDefinition = {
                 const isEnemy = attacker.factionId !== targetActor.factionId;
                 if (!isEnemy) continue;
 
-                effects.push({ type: 'Damage', target: neighborPos, amount: damage });
+                const combat = calculateCombat({
+                    attackerId: attacker.id,
+                    targetId: targetActor.id,
+                    skillId: 'AUTO_ATTACK',
+                    basePower: damage,
+                    trinity: extractTrinityStats(attacker),
+                    targetTrinity: extractTrinityStats(targetActor),
+                    damageClass: 'physical',
+                    scaling: [{ attribute: 'body', coefficient: 0.2 }],
+                    statusMultipliers: []
+                });
+                effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
 
                 const attackerName = attacker.factionId === 'player' ? 'You' : (attacker.subtype || 'Enemy');
                 const targetName = targetActor.factionId === 'player' ? 'you' : (targetActor.subtype || 'enemy');

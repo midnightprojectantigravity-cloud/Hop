@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-02-09T13:27:24.098Z",
+  "generatedAt": "2026-02-09T15:04:43.074Z",
   "policy": "heuristic",
-  "count": 300,
+  "count": 120,
   "maxTurns": 80,
   "guardrails": {
     "timeoutRateMax": 0.95,
@@ -14,11 +14,11 @@
       "loadoutId": "VANGUARD",
       "summary": {
         "winRate": 0,
-        "timeoutRate": 0.07333333333333333,
-        "avgFloor": 3.5766666666666667,
-        "avgHazardBreaches": 0.4866666666666667,
-        "avgKills": 4.733333333333333,
-        "upa": 0.2435
+        "timeoutRate": 0.075,
+        "avgFloor": 3.5833333333333335,
+        "avgHazardBreaches": 0.48333333333333334,
+        "avgKills": 4.841666666666667,
+        "upa": 0.2433
       },
       "guardrails": {
         "timeoutRateMax": 0.95,
@@ -33,11 +33,11 @@
       "loadoutId": "SKIRMISHER",
       "summary": {
         "winRate": 0,
-        "timeoutRate": 0.25,
-        "avgFloor": 1.43,
-        "avgHazardBreaches": 0.006666666666666667,
+        "timeoutRate": 0.325,
+        "avgFloor": 1.4333333333333333,
+        "avgHazardBreaches": 0.008333333333333333,
         "avgKills": 0,
-        "upa": 0.166
+        "upa": 0.1472
       },
       "guardrails": {
         "timeoutRateMax": 0.95,
@@ -51,12 +51,12 @@
     {
       "loadoutId": "FIREMAGE",
       "summary": {
-        "winRate": 0.07333333333333333,
-        "timeoutRate": 0.01,
-        "avgFloor": 8.44,
+        "winRate": 0.06666666666666667,
+        "timeoutRate": 0.008333333333333333,
+        "avgFloor": 8.358333333333333,
         "avgHazardBreaches": 0,
         "avgKills": 0,
-        "upa": 0.5636
+        "upa": 0.5602
       },
       "guardrails": {
         "timeoutRateMax": 0.95,
@@ -71,11 +71,11 @@
       "loadoutId": "NECROMANCER",
       "summary": {
         "winRate": 0,
-        "timeoutRate": 0.04666666666666667,
-        "avgFloor": 2.7666666666666666,
-        "avgHazardBreaches": 0.8966666666666666,
+        "timeoutRate": 0.05,
+        "avgFloor": 2.875,
+        "avgHazardBreaches": 0.875,
         "avgKills": 0,
-        "upa": 0.2257
+        "upa": 0.2275
       },
       "guardrails": {
         "timeoutRateMax": 0.95,
@@ -90,11 +90,11 @@
       "loadoutId": "HUNTER",
       "summary": {
         "winRate": 0,
-        "timeoutRate": 0.023333333333333334,
-        "avgFloor": 2.4033333333333333,
-        "avgHazardBreaches": 0.8166666666666667,
+        "timeoutRate": 0.025,
+        "avgFloor": 2.25,
+        "avgHazardBreaches": 0.8583333333333333,
         "avgKills": 0,
-        "upa": 0.2259
+        "upa": 0.2216
       },
       "guardrails": {
         "timeoutRateMax": 0.95,
@@ -109,11 +109,11 @@
       "loadoutId": "ASSASSIN",
       "summary": {
         "winRate": 0,
-        "timeoutRate": 0.07,
+        "timeoutRate": 0.06666666666666667,
         "avgFloor": 2.7333333333333334,
-        "avgHazardBreaches": 0.5733333333333334,
+        "avgHazardBreaches": 0.6416666666666667,
         "avgKills": 0,
-        "upa": 0.2257
+        "upa": 0.2252
       },
       "guardrails": {
         "timeoutRateMax": 0.95,

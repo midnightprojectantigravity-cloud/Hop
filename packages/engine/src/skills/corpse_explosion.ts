@@ -66,6 +66,8 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
                 skillId: 'CORPSE_EXPLOSION',
                 basePower: 2,
                 trinity,
+                targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
+                damageClass: 'magical',
                 scaling: [{ attribute: 'mind', coefficient: 0.25 }],
                 statusMultipliers: [],
                 inDangerPreviewHex,

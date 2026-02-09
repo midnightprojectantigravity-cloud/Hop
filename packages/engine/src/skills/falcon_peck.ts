@@ -2,6 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getNeighbors, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
 
 /**
  * FALCON_PECK Skill
@@ -40,12 +41,25 @@ export const FALCON_PECK: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
+        const combat = calculateCombat({
+            attackerId: attacker.id,
+            targetId: targetActor.id,
+            skillId: 'FALCON_PECK',
+            basePower: 1,
+            trinity: extractTrinityStats(attacker),
+            targetTrinity: extractTrinityStats(targetActor),
+            damageClass: 'physical',
+            scaling: [{ attribute: 'instinct', coefficient: 0.15 }],
+            statusMultipliers: []
+        });
+
         // Apply damage
         effects.push({
             type: 'Damage',
             target: targetActor.id,
-            amount: 1,
-            reason: 'falcon_peck'
+            amount: combat.finalPower,
+            reason: 'falcon_peck',
+            scoreEvent: combat.scoreEvent
         });
 
         effects.push({

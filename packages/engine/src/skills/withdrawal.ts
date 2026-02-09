@@ -4,6 +4,7 @@ import { getSkillScenarios } from '../scenarios';
 import { SpatialSystem } from '../systems/SpatialSystem';
 import { UnifiedTileService } from '../systems/unified-tile-service';
 import { getActorAt } from '../helpers';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
 // import { isBlockedByWall, isBlockedByLava, isBlockedByActor } from '../systems/validation';
 
 /**
@@ -110,8 +111,20 @@ export const WITHDRAWAL: SkillDefinition = {
             return { effects, messages: ['Cannot target allies!'], consumesTurn: false };
         }
 
+        const combat = calculateCombat({
+            attackerId: attacker.id,
+            targetId: targetActor.id,
+            skillId: 'WITHDRAWAL',
+            basePower: SHOT_DAMAGE,
+            trinity: extractTrinityStats(attacker),
+            targetTrinity: extractTrinityStats(targetActor),
+            damageClass: 'physical',
+            scaling: [{ attribute: 'instinct', coefficient: 0.2 }],
+            statusMultipliers: []
+        });
+
         // 1. Quick shot
-        effects.push({ type: 'Damage', target: targetActor.id, amount: SHOT_DAMAGE });
+        effects.push({ type: 'Damage', target: targetActor.id, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
         effects.push({ type: 'Juice', effect: 'impact', target: target });
         messages.push(`Withdrawal shot hits ${targetActor.subtype || 'enemy'}!`);
 

@@ -1,6 +1,7 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
 
 /**
  * FALCON_APEX_STRIKE Skill
@@ -34,11 +35,24 @@ export const FALCON_APEX_STRIKE: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
+        const combat = calculateCombat({
+            attackerId: attacker.id,
+            targetId: targetActor.id,
+            skillId: 'FALCON_APEX_STRIKE',
+            basePower: 40,
+            trinity: extractTrinityStats(attacker),
+            targetTrinity: extractTrinityStats(targetActor),
+            damageClass: 'physical',
+            scaling: [{ attribute: 'instinct', coefficient: 0.2 }],
+            statusMultipliers: []
+        });
+
         effects.push({
             type: 'Damage',
             target: targetActor.id,
-            amount: 40,
-            reason: 'apex_strike'
+            amount: combat.finalPower,
+            reason: 'apex_strike',
+            scoreEvent: combat.scoreEvent
         });
 
         effects.push({

@@ -13,72 +13,175 @@
 - Balance strategy: reinforce weak archetypes/skills before nerfing strong ones.
 - Current balancing baseline: `FIREMAGE` performance envelope.
 
+## Current Phase: Trinity Runtime Contract (Top Priority)
+Goal: fully align runtime combat behavior with the Body/Instinct/Mind GDD contract using one deterministic resolver.
+
+### Now
+- [x] Add a centralized Trinity resolver module that computes canonical runtime levers from `{body, mind, instinct}`.
+- [x] Route Grand Calculator helper methods through the resolver (damage multiplier, status duration bonus, initiative bonus, critical multiplier, spark discount).
+- [x] Add deterministic unit tests for resolver outputs and clamps.
+- [x] Hook deterministic trinity defaults into entity creation for player/enemy/companion paths.
+- [x] Add profile-based trinity activation (`neutral` default, `live` opt-in) for safe A/B calibration runs.
+
+### PR Plan (Execution Order)
+
+#### TRT.PR1 - Trinity Resolver + Calculator Wiring
+- Scope:
+  - [x] Add `trinity-resolver.ts` with canonical formulas and clamps.
+  - [x] Wire `combat-calculator.ts` to use resolver outputs for runtime helper functions.
+  - [x] Export resolver from engine public index.
+- Acceptance:
+  - [x] Existing combat calculator tests stay green (no unintended drift).
+  - [x] New resolver tests verify deterministic values and clamp behavior.
+
+#### TRT.PR2 - Full Skill Damage Path Migration
+- Scope:
+  - [x] Migrate all direct skill damage/status math to Grand Calculator/Trinity resolver path.
+  - [x] Remove ad hoc per-skill stat math that bypasses centralized formulas.
+- Acceptance:
+  - [x] Skill audit report shows no direct inline trinity math in `packages/engine/src/skills`.
+  - [x] Scenario suite remains green after migration.
+
+#### TRT.PR3 - Triangle of Strength Runtime Rule
+- Scope:
+  - [x] Implement attacker-vs-defender formula interactions so `Body > Instinct > Mind > Body` emerges from stat equations rather than explicit rock-paper-scissors multipliers.
+  - [x] Add mixed-stat combat resolution (units are not single-classed by one stat): all three trinity stats contribute simultaneously to offense and defense checks.
+  - [x] Encode these interaction expectations in formulas:
+  physical offense (`Body + Instinct`) vs physical defense (`Body + Instinct` mitigation), magical offense (`Mind + Instinct` accuracy/potency) vs magical defense (`Mind + Instinct` resistance), and crit pressure (`Instinct` attack) vs crit resilience (`Body`/`Mind` defense by damage class).
+  - [x] Add trinity interaction telemetry terms from equation outputs (not forced multipliers), e.g. effective hit pressure, mitigation pressure, crit pressure, and resistance pressure.
+- Acceptance:
+  - [x] Unit tests validate emergent advantage across all three arcs plus neutral mixed-stat cases.
+  - [x] UPA artifacts include triangle-effect signal per matchup.
+
+#### TRT.PR3.5 - Entity Trinity Hookup
+- Scope:
+  - [x] Ensure all newly created entities receive a canonical `trinity` component in `entity-factory`.
+  - [x] Add deterministic trinity defaults by archetype, enemy subtype, and companion subtype (currently neutral baseline `0/0/0` to avoid unintended balance drift).
+  - [x] Preserve explicit trinity overrides for scripted/test actors.
+- Acceptance:
+  - [x] Unit tests cover player/enemy/companion trinity assignment and override behavior.
+  - [x] `generateInitialState(...)` creates player and spawned enemies with trinity stats.
+
+#### TRT.PR4 - Telemetry + UPA Lever Surfacing
+- Scope:
+  - [x] Emit per-run trinity leverage metrics (`bodyContribution`, `instinctContribution`, `mindContribution`).
+  - [x] Add UPA report outputs for trinity contribution by archetype and matchup.
+- Acceptance:
+  - [x] `docs/` telemetry artifacts include trinity contribution tables.
+  - [x] At least one CI check validates deterministic trinity telemetry generation.
+  - [x] Neutral-vs-live profile comparison artifacts generated for trinity, matchup matrix, and skill health telemetry.
+
+#### TRT.PR5 - Entity Runtime Enforcement
+- Scope:
+  - [x] Add `ensureActorTrinity(...)` normalization helper for externally created/loaded actors.
+  - [x] Normalize actors on `LOAD_STATE` hydration to backfill missing trinity components.
+  - [x] Normalize `SpawnActor` effects before queue insertion and companion registration.
+- Acceptance:
+  - [x] Unit tests cover manual actor backfill behavior.
+  - [x] Continue replacing non-factory actor construction in remaining runtime paths.
+
+#### TRT.PR6 - Skill Migration Gate
+- Scope:
+  - [x] Add deterministic migration audit for skills (`Damage` effects must route through `calculateCombat`).
+  - [x] Add static check for direct trinity math pattern leakage in `packages/engine/src/skills`.
+  - [x] Wire migration audit as a runnable UPA command.
+- Acceptance:
+  - [x] `docs/UPA_SKILL_MIGRATION_AUDIT.json` generated from repository root.
+  - [x] Migration audit returns non-zero exit on violations.
+
+## Current Phase: Strategic Intent Contract (Top Priority)
+Goal: separate strategic decision intent (offense/defense/positioning/control) from low-level calculator payloads.
+
+### Now
+- [x] Add `StrategicIntent` policy dimension to heuristic runtime (`offense`, `defense`, `positioning`, `control`).
+- [x] Add strategic-intent telemetry counters to UPA run summaries.
+- [x] Add explicit `StrategicIntent -> ActionIntent` policy profile configs in calibration surfaces.
+
+### PR Plan (Execution Order)
+
+#### SIC.PR1 - Heuristic Intent Layer + Telemetry
+- Scope:
+  - [x] Introduce deterministic strategic intent selection in balance harness.
+  - [x] Keep `CombatIntent` as math payload only; no strategy coupling.
+  - [x] Emit strategic intent usage totals per run/batch.
+- Acceptance:
+  - [x] Balance harness tests remain deterministic.
+  - [x] Matchup output includes strategic intent usage metrics.
+
+#### SIC.PR2 - Policy Profiles by Intent
+- Scope:
+  - [x] Move intent-weight tuning into versioned profile config.
+  - [x] Enable per-archetype/preset policy comparison without branching logic.
+- Acceptance:
+  - [x] One command can compare at least two intent-policy profiles on fixed seeds.
+  - [x] No regression in loop-risk / no-progress guard metrics.
+
 ## Current Phase: Unified Evaluation Layer (Top Priority)
 Goal: create a single numeric grading framework for skills, entities, tiles, maps, and encounters so challenge balance can be designed before manual tuning.
 
 ### Now
-- [ ] Define `GradeEnvelope` and evaluation contracts shared across object types (`power`, `survivability`, `control`, `mobility`, `economy`, `risk`, `complexity`, `objectivePressure`).
-- [ ] Implement `evaluateTile(...)` and `evaluateEntity(...)` as first-class evaluators.
-- [ ] Add deterministic artifact output for evaluator baselines under `docs/` (tile and entity grade snapshots).
-- [ ] Add tests proving determinism and monotonic sanity for tile/entity evaluators.
+- [x] Define `GradeEnvelope` and evaluation contracts shared across object types (`power`, `survivability`, `control`, `mobility`, `economy`, `risk`, `complexity`, `objectivePressure`).
+- [x] Implement `evaluateTile(...)` and `evaluateEntity(...)` as first-class evaluators.
+- [x] Add deterministic artifact output for evaluator baselines under `docs/` (tile and entity grade snapshots).
+- [x] Add tests proving determinism and monotonic sanity for tile/entity evaluators.
 
 ### PR Plan (Execution Order)
 
 #### UEL.PR1 - Grade Contract + Registry
 - Scope:
-  - [ ] Add shared `GradeEnvelope` type and evaluator interface.
-  - [ ] Add evaluator registry with deterministic output contract.
+  - [x] Add shared `GradeEnvelope` type and evaluator interface.
+  - [x] Add evaluator registry with deterministic output contract.
 - Acceptance:
-  - [ ] Unit tests confirm deterministic output for identical inputs.
-  - [ ] Contract supports `skill`, `entity`, `tile`, `map`, `encounter`.
+  - [x] Unit tests confirm deterministic output for identical inputs.
+  - [x] Contract supports `skill`, `entity`, `tile`, `map`, `encounter`.
 
 #### UEL.PR2 - Tile + Entity Evaluators
 - Scope:
-  - [ ] Implement `evaluateTile(...)` and `evaluateEntity(...)`.
-  - [ ] Add baseline grade snapshots in `docs/` for both.
+  - [x] Implement `evaluateTile(...)` and `evaluateEntity(...)`.
+  - [x] Add baseline grade snapshots in `docs/` for both.
 - Acceptance:
-  - [ ] Monotonic sanity tests pass (stronger inputs increase expected dimensions).
-  - [ ] Snapshot artifacts regenerate deterministically.
+  - [x] Monotonic sanity tests pass (stronger inputs increase expected dimensions).
+  - [x] Snapshot artifacts regenerate deterministically.
 
 #### UEL.PR3 - Map + Encounter Evaluators
 - Scope:
-  - [ ] Implement `evaluateMap(...)` (topology, hazard density, path friction).
-  - [ ] Implement `evaluateEncounter(...)` (map + spawn + objective pressure).
+  - [x] Implement `evaluateMap(...)` (topology, hazard density, path friction).
+  - [x] Implement `evaluateEncounter(...)` (map + spawn + objective pressure).
 - Acceptance:
-  - [ ] Encounter output includes explicit difficulty band field.
-  - [ ] Deterministic test suite covers fixed seed/map inputs.
+  - [x] Encounter output includes explicit difficulty band field.
+  - [x] Deterministic test suite covers fixed seed/map inputs.
 
 #### UEL.PR4 - UPA Integration + Artifacts
 - Scope:
-  - [ ] Link evaluator outputs into UPA scripts/workflow.
-  - [ ] Emit unified evaluator artifacts for all object classes.
+  - [x] Link evaluator outputs into UPA scripts/workflow.
+  - [x] Emit unified evaluator artifacts for all object classes.
 - Acceptance:
-  - [ ] One command regenerates all evaluator artifacts.
-  - [ ] `docs/UPA_GUIDE.md` includes evaluator runbook.
+  - [x] One command regenerates all evaluator artifacts.
+  - [x] `docs/UPA_GUIDE.md` includes evaluator runbook.
 
 #### CAL.PR1 - Calibration Surfaces (Entity/Skill/Policy/Encounter)
 - Scope:
-  - [ ] Create versioned calibration configs for all four lever groups.
-  - [ ] Add before/after diff generator for lever changes.
+  - [x] Create versioned calibration configs for all four lever groups.
+  - [x] Add before/after diff generator for lever changes.
 - Acceptance:
-  - [ ] Any lever change produces comparable artifact deltas.
-  - [ ] No non-deterministic drift in repeated runs.
+  - [x] Any lever change produces comparable artifact deltas.
+  - [x] No non-deterministic drift in repeated runs.
 
 #### CAL.PR2 - Difficulty-Targeted Challenge Design
 - Scope:
-  - [ ] Add workflow to design/validate encounters by target difficulty band.
-  - [ ] Add reinforce-first recommendations against `FIREMAGE` baseline.
+  - [x] Add workflow to design/validate encounters by target difficulty band.
+  - [x] Add reinforce-first recommendations against `FIREMAGE` baseline.
 - Acceptance:
-  - [ ] New encounter can be generated and validated to a chosen numeric band.
-  - [ ] Weaker archetype uplift report is produced without mandatory firemage nerf.
+  - [x] New encounter can be generated and validated to a chosen numeric band.
+  - [x] Weaker archetype uplift report is produced without mandatory firemage nerf.
 
 #### CAL.PR3 - CI Gate Promotion
 - Scope:
-  - [ ] Promote at least one stable calibration threshold from warn-only to fail-gate.
-  - [ ] Keep existing health gates green.
+  - [x] Promote at least one stable calibration threshold from warn-only to fail-gate.
+  - [x] Keep existing health gates green.
 - Acceptance:
-  - [ ] CI fails on threshold breach for promoted rule.
-  - [ ] Threshold stability shown across 3 consecutive runs.
+  - [x] CI fails on threshold breach for promoted rule.
+  - [x] Threshold stability shown across 3 consecutive runs.
 
 ## Next Top Priority: Calibration Framework (Post-Evaluator)
 Goal: apply evaluator outputs to a deterministic calibration loop with explicit lever ownership and measurable target bands.
@@ -90,29 +193,29 @@ Goal: apply evaluator outputs to a deterministic calibration loop with explicit 
 - [x] Map/encounter generation parameters are in-scope for iteration.
 
 ### Calibration Lever A: Entity
-- [ ] Define canonical calibration surface for entities (`Body`, `Mind`, `Instinct` + formula coefficients).
-- [ ] Add baseline archetype/entity calibration tables and versioned config.
-- [ ] Add tests for formula monotonicity and non-regression across key combat/mobility/status outputs.
+- [x] Define canonical calibration surface for entities (`Body`, `Mind`, `Instinct` + formula coefficients).
+- [x] Add baseline archetype/entity calibration tables and versioned config.
+- [x] Add tests for formula monotonicity and non-regression across key combat/mobility/status outputs.
 
 ### Calibration Lever B: Skill
-- [ ] Define per-skill calibration surface (base values, multipliers, scaling coefficients, cooldown/cost, targeting constraints).
-- [ ] Add skill tuning profiles that can be applied in simulation without changing engine contracts.
-- [ ] Add artifact diff report for skill coefficient changes vs resulting grade/outcome deltas.
+- [x] Define per-skill calibration surface (base values, multipliers, scaling coefficients, cooldown/cost, targeting constraints).
+- [x] Add skill tuning profiles that can be applied in simulation without changing engine contracts.
+- [x] Add artifact diff report for skill coefficient changes vs resulting grade/outcome deltas.
 
 ### Calibration Lever C: Policy (AI)
-- [ ] Formalize layered policy scoring (`offense`, `defense`, `positioning`, `control/status`) with deterministic weights.
-- [ ] Add policy profile presets and side-by-side simulation comparison tooling.
-- [ ] Add guard tests preventing policy regressions (loop-risk spikes, no-progress action inflation).
+- [x] Formalize layered policy scoring (`offense`, `defense`, `positioning`, `control/status`) with deterministic weights.
+- [x] Add policy profile presets and side-by-side simulation comparison tooling.
+- [x] Add guard tests preventing policy regressions (loop-risk spikes, no-progress action inflation).
 
 ### Calibration Lever D: Encounter/Map
-- [ ] Define encounter/map calibration surface (hazard density, spawn pressure, objective pressure, path friction).
-- [ ] Add map/encounter target difficulty bands and generator constraints.
-- [ ] Validate calibrated encounter outputs against evaluator + simulation outcomes.
+- [x] Define encounter/map calibration surface (hazard density, spawn pressure, objective pressure, path friction).
+- [x] Add map/encounter target difficulty bands and generator constraints.
+- [x] Validate calibrated encounter outputs against evaluator + simulation outcomes.
 
 ### Exit Criteria
-- [ ] Calibration runs can adjust entity/skill/policy/encounter levers independently with deterministic outputs.
-- [ ] Every calibration change produces comparable artifacts (before/after grades + outcome metrics).
-- [ ] At least one calibration threshold is promoted to fail-gate in CI based on stable signal.
+- [x] Calibration runs can adjust entity/skill/policy/encounter levers independently with deterministic outputs.
+- [x] Every calibration change produces comparable artifacts (before/after grades + outcome metrics).
+- [x] At least one calibration threshold is promoted to fail-gate in CI based on stable signal.
 
 ## Secondary Phase: Balance Execution
 Goal: apply evaluator-guided tuning to matchup dominance and hazard-discipline issues.

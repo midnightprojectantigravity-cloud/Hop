@@ -50,6 +50,8 @@ export const FIREBALL: SkillDefinition = {
                 skillId: 'FIREBALL',
                 basePower: 1,
                 trinity,
+                targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
+                damageClass: 'magical',
                 scaling: [{ attribute: 'mind', coefficient: 0.2 }],
                 statusMultipliers: [],
                 inDangerPreviewHex,

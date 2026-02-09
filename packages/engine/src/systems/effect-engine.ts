@@ -9,7 +9,7 @@ import { BASE_TILES } from './tile-registry';
 import { UnifiedTileService } from './unified-tile-service';
 import { SpatialSystem } from './SpatialSystem';
 import { stableIdFromSeed } from './rng';
-import { createEntity } from './entity-factory';
+import { createEntity, ensureActorTrinity } from './entity-factory';
 import { computeStatusDuration, extractTrinityStats } from './combat-calculator';
 
 const addCorpseTraitAt = (state: GameState, position: Point): GameState => {
@@ -848,12 +848,13 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             break;
         }
         case 'SpawnActor': {
-            nextState.enemies = [...nextState.enemies, effect.actor];
-            if (effect.actor.companionOf) {
-                nextState.companions = [...(nextState.companions || []), effect.actor];
+            const normalizedActor = ensureActorTrinity(effect.actor);
+            nextState.enemies = [...nextState.enemies, normalizedActor];
+            if (normalizedActor.companionOf) {
+                nextState.companions = [...(nextState.companions || []), normalizedActor];
             }
             if (nextState.initiativeQueue) {
-                nextState.initiativeQueue = addToQueue(nextState.initiativeQueue, effect.actor);
+                nextState.initiativeQueue = addToQueue(nextState.initiativeQueue, normalizedActor);
             }
             break;
         }

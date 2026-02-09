@@ -21,16 +21,20 @@ const leftLoadout = (process.argv[4] || 'VANGUARD') as ArchetypeLoadoutId;
 const rightLoadout = (process.argv[5] || 'FIREMAGE') as ArchetypeLoadoutId;
 const leftPolicy = (process.argv[6] || 'heuristic') as BotPolicy;
 const rightPolicy = (process.argv[7] || 'heuristic') as BotPolicy;
+const leftPolicyProfileId = process.argv[8] || 'sp-v1-default';
+const rightPolicyProfileId = process.argv[9] || 'sp-v1-default';
 
 const seeds = Array.from({ length: count }, (_, i) => `upa-matchup-${i + 1}`);
 
-const leftRuns = runBatch(seeds, leftPolicy, maxTurns, leftLoadout);
-const rightRuns = runBatch(seeds, rightPolicy, maxTurns, rightLoadout);
+const leftRuns = runBatch(seeds, leftPolicy, maxTurns, leftLoadout, leftPolicyProfileId);
+const rightRuns = runBatch(seeds, rightPolicy, maxTurns, rightLoadout, rightPolicyProfileId);
 const matchupRuns = runHeadToHeadBatch(
     seeds,
     { policy: leftPolicy, loadoutId: leftLoadout },
     { policy: rightPolicy, loadoutId: rightLoadout },
-    maxTurns
+    maxTurns,
+    leftPolicyProfileId,
+    rightPolicyProfileId
 );
 
 const leftSummary = summarizeBatch(leftRuns, leftPolicy, leftLoadout);
@@ -52,6 +56,7 @@ originalLog(
             left: {
                 loadoutId: leftLoadout,
                 policy: leftPolicy,
+                policyProfileId: leftPolicyProfileId,
                 summary: leftSummary,
                 upa: computeUPAFromSummary(leftSummary),
                 strongest: topByMargin(leftRuns, 5)
@@ -59,6 +64,7 @@ originalLog(
             right: {
                 loadoutId: rightLoadout,
                 policy: rightPolicy,
+                policyProfileId: rightPolicyProfileId,
                 summary: rightSummary,
                 upa: computeUPAFromSummary(rightSummary),
                 strongest: topByMargin(rightRuns, 5)

@@ -4,6 +4,7 @@ import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, isBlockedByWall } from '../systems/validation';
 import { SpatialSystem } from '../systems/SpatialSystem';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
 
 /**
  * FIREWALL Skill
@@ -56,7 +57,18 @@ export const FIREWALL: SkillDefinition = {
                 // If an actor is there, damage them immediately
                 const actor = getActorAt(state, p);
                 if (actor) {
-                    effects.push({ type: 'Damage', target: actor.id, amount: 1, reason: 'firewall_impact' });
+                    const combat = calculateCombat({
+                        attackerId: attacker.id,
+                        targetId: actor.id,
+                        skillId: 'FIREWALL',
+                        basePower: 1,
+                        trinity: extractTrinityStats(attacker),
+                        targetTrinity: extractTrinityStats(actor),
+                        damageClass: 'magical',
+                        scaling: [{ attribute: 'mind', coefficient: 0.15 }],
+                        statusMultipliers: []
+                    });
+                    effects.push({ type: 'Damage', target: actor.id, amount: combat.finalPower, reason: 'firewall_impact', scoreEvent: combat.scoreEvent });
                 }
             }
         }

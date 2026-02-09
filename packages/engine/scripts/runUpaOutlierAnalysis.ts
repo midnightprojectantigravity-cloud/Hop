@@ -10,6 +10,7 @@ if (process.env.VERBOSE_ANALYSIS !== '1') {
 const count = Number(process.argv[2] || 1000);
 const maxTurns = Number(process.argv[3] || 80);
 const loadoutId = (process.argv[4] || 'VANGUARD') as ArchetypeLoadoutId;
+const policyProfileId = process.argv[5] || 'sp-v1-default';
 const seeds = Array.from({ length: count }, (_, i) => `upa-seed-${i + 1}`);
 const policies: BotPolicy[] = ['random', 'heuristic'];
 
@@ -26,7 +27,13 @@ const bottomN = (results: RunResult[], n: number) =>
         .map(r => ({ seed: r.seed, score: r.score, result: r.result, turnsSpent: r.turnsSpent }));
 
 const report = policies.map(policy => {
-    const results = runBatch(seeds, policy, maxTurns, loadoutId);
+    const results = runBatch(
+        seeds,
+        policy,
+        maxTurns,
+        loadoutId,
+        policy === 'heuristic' ? policyProfileId : 'sp-v1-default'
+    );
     const summary = summarizeBatch(results, policy, loadoutId);
     const upa = computeUPAFromSummary(summary);
     const resultCounts = results.reduce<Record<string, number>>((acc, run) => {
@@ -47,4 +54,4 @@ const report = policies.map(policy => {
     };
 });
 
-originalLog(JSON.stringify({ count, maxTurns, loadoutId, generatedAt: new Date().toISOString(), report }, null, 2));
+originalLog(JSON.stringify({ count, maxTurns, loadoutId, policyProfileId, generatedAt: new Date().toISOString(), report }, null, 2));

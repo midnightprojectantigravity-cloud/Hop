@@ -24,6 +24,10 @@ describe('Balance Harness', () => {
         expect(typeof summary.actionTypeTotals).toBe('object');
         expect(typeof summary.skillUsageTotals).toBe('object');
         expect(typeof summary.avgSkillUsagePerRun).toBe('object');
+        expect(typeof summary.trinityContribution).toBe('object');
+        expect(typeof summary.trinityContribution.bodyContribution).toBe('number');
+        expect(typeof summary.trinityContribution.mindContribution).toBe('number');
+        expect(typeof summary.trinityContribution.instinctContribution).toBe('number');
     });
 
     it('heuristic policy improves progression versus random on fixed seeds', () => {
@@ -37,6 +41,13 @@ describe('Balance Harness', () => {
         const seeds = ['arch-seed-1', 'arch-seed-2'];
         const results = runBatch(seeds, 'heuristic', 25, 'HUNTER');
         expect(results.every(r => r.loadoutId === 'HUNTER')).toBe(true);
+    });
+
+    it('produces deterministic trinity contribution telemetry', () => {
+        const seeds = ['trinity-seed-1', 'trinity-seed-2', 'trinity-seed-3'];
+        const first = summarizeBatch(runBatch(seeds, 'heuristic', 35, 'FIREMAGE'), 'heuristic', 'FIREMAGE');
+        const second = summarizeBatch(runBatch(seeds, 'heuristic', 35, 'FIREMAGE'), 'heuristic', 'FIREMAGE');
+        expect(first.trinityContribution).toEqual(second.trinityContribution);
     });
 
     it('supports deterministic head-to-head matchup summaries', () => {

@@ -28,6 +28,7 @@ Arguments:
 - `count` (default: `1000`)
 - `maxTurns` (default: `80`)
 - `loadoutId` (default: `VANGUARD`)
+- `policyProfileId` (optional, default: `sp-v1-default`; heuristic runs only)
 
 Behavior:
 - Runs both policies (`random`, `heuristic`) on same loadout.
@@ -46,13 +47,14 @@ Script: `packages/engine/scripts/runBalanceHarness.ts`
 
 Command:
 ```bash
-npx tsx packages/engine/scripts/runBalanceHarness.ts <count> <maxTurns> <loadoutId>
+npx tsx packages/engine/scripts/runBalanceHarness.ts <count> <maxTurns> <loadoutId> [policyProfileId]
 ```
 
 Arguments:
 - `count` (default: `20`)
 - `maxTurns` (default: `80`)
 - `loadoutId` (default: `VANGUARD`)
+- `policyProfileId` (optional, default: `sp-v1-default`; heuristic side only)
 
 Behavior:
 - Runs `random` and `heuristic`.
@@ -63,7 +65,7 @@ Script: `packages/engine/scripts/runUpaMatchup.ts`
 
 Command:
 ```bash
-npx tsx packages/engine/scripts/runUpaMatchup.ts <count> <maxTurns> <leftLoadoutId> <rightLoadoutId> <leftPolicy> <rightPolicy>
+npx tsx packages/engine/scripts/runUpaMatchup.ts <count> <maxTurns> <leftLoadoutId> <rightLoadoutId> <leftPolicy> <rightPolicy> [leftPolicyProfileId] [rightPolicyProfileId]
 ```
 
 Arguments:
@@ -73,6 +75,8 @@ Arguments:
 - `rightLoadoutId` (default: `FIREMAGE`)
 - `leftPolicy` (default: `heuristic`)
 - `rightPolicy` (default: `heuristic`)
+- `leftPolicyProfileId` (optional, default: `sp-v1-default`)
+- `rightPolicyProfileId` (optional, default: `sp-v1-default`)
 
 Behavior:
 - Runs both sides on identical seeds.
@@ -81,9 +85,42 @@ Behavior:
   - `matchup.summary` with `leftWins/rightWins/ties`
 - seed sample with per-seed winner
 
+### 3.1) Strategic policy profile compare (fixed-seed A/B)
+Script: `packages/engine/scripts/runPolicyProfileCompare.ts`
+
+Command:
+```bash
+npx tsx packages/engine/scripts/runPolicyProfileCompare.ts <count> <maxTurns> <loadoutId> <profileA> <profileB>
+```
+
+NPM shortcut:
+```bash
+npm run upa:policy:compare
+```
+
+Default profile IDs:
+- `sp-v1-default`
+- `sp-v1-aggro`
+
 Quiet mode:
 - Default is quiet.
 - Set `VERBOSE_ANALYSIS=1` for verbose logs.
+
+Triangle interaction telemetry mode:
+- Set `HOP_COMBAT_INTERACTION_MODEL=triangle` to enable attacker-vs-defender trinity interaction formulas.
+- Example (PowerShell):
+```powershell
+$env:HOP_COMBAT_INTERACTION_MODEL='triangle'; npx tsx packages/engine/scripts/runUpaMatchup.ts 120 60 VANGUARD HUNTER heuristic heuristic sp-v1-default sp-v1-aggro
+```
+- In this mode, matchup summaries include non-zero `summary.triangleSignal` fields:
+  - `avgHitPressure`
+  - `avgMitigationPressure`
+  - `avgCritPressure`
+  - `avgResistancePressure`
+
+Trinity profile mode:
+- `HOP_TRINITY_PROFILE=neutral` (default) keeps baseline-neutral trinity values.
+- `HOP_TRINITY_PROFILE=live` enables role-tuned trinity defaults for player/enemy/companion.
 
 ### 4) Dedicated PvP UPA system (duel arena)
 Script: `packages/engine/scripts/runPvpUpa.ts`
@@ -147,6 +184,127 @@ Behavior:
 - Runs all ordered archetype pairs (`A vs B`) under one policy.
 - Emits matrix cell stats and top imbalance candidates.
 
+### 7) Unified evaluator baselines (`skill`, `entity`, `tile`, `map`, `encounter`)
+Script: `packages/engine/scripts/runEvaluatorBaselines.ts`
+
+Command:
+```bash
+npx tsx packages/engine/scripts/runEvaluatorBaselines.ts <outFile> <modelVersion>
+```
+
+Recommended:
+```bash
+npm run upa:evaluators
+```
+
+Behavior:
+- Emits deterministic baseline grades for:
+  - tile definitions (from tile registry),
+  - loadout entities,
+  - enemy archetypes,
+  - sample generated maps,
+  - sample encounters.
+- Default artifact: `docs/UPA_EVALUATOR_BASELINES.json`
+
+### 8) Calibration snapshots and diffs
+Scripts:
+- `packages/engine/scripts/runCalibrationSnapshot.ts`
+- `packages/engine/scripts/runCalibrationDiff.ts`
+- `packages/engine/scripts/runCalibrationCompare.ts`
+
+Commands:
+```bash
+npx tsx packages/engine/scripts/runCalibrationSnapshot.ts docs/UPA_CALIBRATION_SNAPSHOT_BEFORE.json cal-v1 uel-v1
+npx tsx packages/engine/scripts/runCalibrationSnapshot.ts docs/UPA_CALIBRATION_SNAPSHOT_AFTER.json cal-v1-firemage-baseline uel-v1
+npx tsx packages/engine/scripts/runCalibrationDiff.ts docs/UPA_CALIBRATION_SNAPSHOT_BEFORE.json docs/UPA_CALIBRATION_SNAPSHOT_AFTER.json docs/UPA_CALIBRATION_DIFF.json
+npx tsx packages/engine/scripts/runCalibrationCompare.ts cal-v1 cal-v1-firemage-baseline uel-v1 docs/UPA_CALIBRATION_COMPARE.json
+```
+
+NPM shortcuts:
+```bash
+npm run upa:calibration:snapshot
+npm run upa:calibration:diff
+npm run upa:calibration:compare
+```
+
+### 9) Challenge design and encounter validation
+Scripts:
+- `packages/engine/scripts/runChallengeDesign.ts`
+- `packages/engine/scripts/runEncounterValidation.ts`
+
+NPM shortcuts:
+```bash
+npm run upa:challenge:design
+npm run upa:encounter:validate
+```
+
+Artifacts:
+- `docs/UPA_CHALLENGE_DESIGN_REPORT.json`
+- `docs/UPA_ENCOUNTER_VALIDATION.json`
+
+### 10) Skill formula-path audit
+Script: `packages/engine/scripts/runSkillFormulaAudit.ts`
+
+Command:
+```bash
+npx tsx packages/engine/scripts/runSkillFormulaAudit.ts docs/UPA_SKILL_FORMULA_AUDIT.json
+```
+
+NPM shortcut:
+```bash
+npm run upa:skills:audit
+```
+
+### 10.1) Skill migration audit (`Damage -> calculateCombat` contract)
+Script: `packages/engine/scripts/runSkillMigrationAudit.ts`
+
+Command:
+```bash
+npx tsx packages/engine/scripts/runSkillMigrationAudit.ts docs/UPA_SKILL_MIGRATION_AUDIT.json
+```
+
+NPM shortcut:
+```bash
+npm run upa:skills:migration:audit
+```
+
+Behavior:
+- Fails if a skill emits direct `Damage` without `calculateCombat`.
+- Fails if direct trinity math patterns are found in skill files.
+
+### 11) Trinity contribution report (archetype + matchup tables)
+Script: `packages/engine/scripts/runTrinityContributionReport.ts`
+
+Command:
+```bash
+npx tsx packages/engine/scripts/runTrinityContributionReport.ts <count> <maxTurns> <outFile>
+```
+
+NPM shortcut:
+```bash
+npm run upa:trinity:report
+```
+
+Default artifact:
+- `docs/UPA_TRINITY_CONTRIBUTIONS.json`
+
+### 12) Trinity profile A/B artifact compare (`neutral` vs `live`)
+Script: `packages/engine/scripts/runTrinityProfileComparison.ts`
+
+NPM shortcut:
+```bash
+npm run upa:trinity:profiles:compare
+```
+
+Artifacts:
+- `docs/UPA_TRINITY_CONTRIBUTIONS_NEUTRAL.json`
+- `docs/UPA_TRINITY_CONTRIBUTIONS_LIVE.json`
+- `docs/UPA_PVP_MATCHUP_MATRIX_NEUTRAL.json`
+- `docs/UPA_PVP_MATCHUP_MATRIX_LIVE.json`
+- `docs/UPA_SKILL_HEALTH_NEUTRAL.json`
+- `docs/UPA_SKILL_HEALTH_LIVE.json`
+- `docs/UPA_TRINITY_PROFILE_COMPARE.json`
+
 ## Allowed Values
 
 ### Policies
@@ -200,6 +358,12 @@ Key fields in `summary`:
 - `skillUsageTotals`: total casts per skill ID across all runs.
 - `avgSkillUsagePerRun`: average casts per run per skill.
 - `avgPlayerSkillCastsPerRun`: overall average number of skill casts per run.
+- `strategicIntentTotals`: total intent posture counts (`offense`, `defense`, `positioning`, `control`).
+- `avgStrategicIntentPerRun`: average intent posture counts per run.
+- `trinityContribution`: averaged trinity leverage terms from combat events:
+  - `bodyContribution`
+  - `mindContribution`
+  - `instinctContribution`
 
 Use these to validate whether a loadout is truly using its kit, or over-indexing on fallback actions like `MOVE` and `BASIC_ATTACK`.
 
@@ -277,6 +441,11 @@ NPM shortcut:
 npm run upa:grades:all
 ```
 
+Evaluator baseline generation:
+```bash
+npm run upa:evaluators
+```
+
 ## Skill Health Report
 
 Generate skill health labels (`effective`, `underutilized`, `loop-risk`, `spam-inflated`, `policy-blocked`, `no-data`):
@@ -314,3 +483,4 @@ Nightly refresh:
   - `docs/UPA_SKILL_HEALTH.json`
   - `docs/UPA_CALIBRATION_BASELINE.json`
   - `docs/UPA_PVP_MATCHUP_MATRIX.json`
+  - `docs/UPA_EVALUATOR_BASELINES.json`
