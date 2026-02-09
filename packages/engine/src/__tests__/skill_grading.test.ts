@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeSkillNumericGrade } from '../systems/skill-grading';
+import { computeDynamicSkillGrades, computeSkillNumericGrade } from '../systems/skill-grading';
 import type { SkillIntentProfile } from '../types';
 
 const baseProfile: SkillIntentProfile = {
@@ -36,5 +36,47 @@ describe('Skill Numeric Grading', () => {
         }).numericGrade;
         expect(long).toBeGreaterThan(short);
     });
-});
 
+    it('assigns mobility role preset for movement-first skills in dynamic grading', () => {
+        const grades = computeDynamicSkillGrades({
+            games: 10,
+            winRate: 0.2,
+            skillTelemetryTotals: {
+                DASH: {
+                    casts: 10,
+                    enemyDamage: 0,
+                    killShots: 0,
+                    healingReceived: 0,
+                    hazardDamage: 0,
+                    stairsProgress: 8,
+                    shrineProgress: 2,
+                    floorProgress: 1
+                }
+            }
+        });
+        expect(grades.DASH.rolePreset).toBe('mobility');
+        expect(typeof grades.DASH.roleAdjustedGrade).toBe('number');
+    });
+
+    it('keeps dynamic grading deterministic', () => {
+        const input = {
+            games: 15,
+            winRate: 0.35,
+            skillTelemetryTotals: {
+                FIREBALL: {
+                    casts: 20,
+                    enemyDamage: 120,
+                    killShots: 8,
+                    healingReceived: 0,
+                    hazardDamage: 5,
+                    stairsProgress: 1,
+                    shrineProgress: 0,
+                    floorProgress: 0
+                }
+            }
+        };
+        const a = computeDynamicSkillGrades(input);
+        const b = computeDynamicSkillGrades(input);
+        expect(a).toEqual(b);
+    });
+});

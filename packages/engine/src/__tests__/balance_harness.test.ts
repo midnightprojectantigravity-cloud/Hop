@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runBatch, runHeadToHeadBatch, summarizeBatch, summarizeMatchup } from '../systems/balance-harness';
+import { runBatch, runHeadToHeadBatch, simulateRun, summarizeBatch, summarizeMatchup } from '../systems/balance-harness';
 
 describe('Balance Harness', () => {
     it('is deterministic for the same seed set', () => {
@@ -57,5 +57,21 @@ describe('Balance Harness', () => {
         const summary = summarizeMatchup(first);
         expect(summary.games).toBe(3);
         expect(summary.leftWins + summary.rightWins + summary.ties).toBe(3);
+    });
+
+    it('does not crash hunter heuristic on previously failing seed', () => {
+        expect(() => simulateRun('upa-seed-13', 'heuristic', 60, 'HUNTER')).not.toThrow();
+    });
+
+    it('uses representative starting-kit skills under heuristic policy', () => {
+        const seeds = Array.from({ length: 20 }, (_, i) => `kit-usage-${i + 1}`);
+        const skirmisher = summarizeBatch(runBatch(seeds, 'heuristic', 50, 'SKIRMISHER'), 'heuristic', 'SKIRMISHER');
+        const firemage = summarizeBatch(runBatch(seeds, 'heuristic', 50, 'FIREMAGE'), 'heuristic', 'FIREMAGE');
+        const hunter = summarizeBatch(runBatch(seeds, 'heuristic', 50, 'HUNTER'), 'heuristic', 'HUNTER');
+
+        expect((skirmisher.skillUsageTotals.VAULT || 0)).toBeGreaterThan(0);
+        expect((firemage.skillUsageTotals.ABSORB_FIRE || 0)).toBeGreaterThan(0);
+        expect((hunter.skillUsageTotals.FALCON_COMMAND || 0)).toBeGreaterThan(0);
+        expect((hunter.skillUsageTotals.WITHDRAWAL || 0)).toBeGreaterThan(0);
     });
 });

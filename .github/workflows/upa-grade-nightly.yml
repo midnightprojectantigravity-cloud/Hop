@@ -33,6 +33,15 @@ jobs:
       - name: Generate drift report
         run: npm run upa:grades:drift
 
+      - name: Generate skill health report
+        run: npm run upa:health:ci
+
+      - name: Generate calibration baseline
+        run: npm run upa:calibration
+
+      - name: Generate PvP matchup matrix
+        run: npm run upa:matrix
+
       - name: Upload grade artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -41,4 +50,6 @@ jobs:
             docs/UPA_SKILL_GRADES_STATIC.json
             docs/UPA_SKILL_GRADES_DYNAMIC.json
             docs/UPA_SKILL_GRADE_DRIFT.json
-
+            docs/UPA_SKILL_HEALTH.json
+            docs/UPA_CALIBRATION_BASELINE.json
+            docs/UPA_PVP_MATCHUP_MATRIX.json

@@ -1,75 +1,52 @@
-# 🏆 The Hop Engine: Gold Standard Manifesto
+# The Hop Engine: Gold Standard Manifesto
 
-## I. The Core Philosophy: "The Referee & The Juice"
+## Purpose
+This document defines the non-negotiable architecture and quality rules for Hop.
+Use it as the decision filter for engine, client, and balance changes.
 
-The engine is divided into two immutable domains:
+## 1) Engine and Client Contract
+1. Referee (`packages/engine`): deterministic game truth only.
+2. Juice (`apps/web`): presentation only (animation, VFX, input UX).
+3. No gameplay logic is implemented in the client.
 
-1. **The Referee (Engine)**: Headless, pure TypeScript. It handles the "Truth." It must run identically in Node.js (for balancing/validation) and the Browser (for gameplay).
-2. **The Juice (Client)**: The React/PixiJS wrapper. It handles "Perception." It translates the Referee's dry data into animations, screenshake, and sounds.
+## 2) Intent and Execution Contract
+1. Intent is validated against current `GameState` before mutation.
+2. Execution emits `AtomicEffect[]`; no direct state mutation from skills.
+3. Turn consumption happens only on valid execution outcomes.
+4. Simulation/preview must remain deterministic and side-effect free.
 
----
+## 3) Determinism Rules
+1. Use engine RNG only (`rngCounter`); no `Math.random()` in logic.
+2. Spatial tie-breakers must be deterministic.
+3. Replays must produce identical outcomes for same seed + inputs.
 
-## II. Strategic Logic: Intent vs. Execution
+## 4) Grid and Tile Rules
+1. Single source of truth for world state is `state.tiles` with `UnifiedTileService`.
+2. Movement must pass through tile hooks (`onPass`, `onEnter`) via `TileResolver`.
+3. Occupancy mask is refreshed at execution-phase boundaries.
+4. One hex, one entity.
 
-To ensure a robust UI and valid turn accounting, we strictly separate "asking" from "doing."
+## 5) Entity and Skill Rules
+1. All actor creation goes through `EntityFactory`.
+2. Actor behavior is defined by skill loadout IDs and skill definitions.
+3. Skill targeting (`getValidTargets`) must mirror execution rules.
+4. Skill files should provide intent and effects, not isolated combat math.
 
-### 1. The Intent Phase (Validation)
+## 6) Combat Math and Telemetry Rules
+1. Combat calculations are centralized through the calculator pipeline.
+2. Trinity levers (`Body`, `Mind`, `Instinct`) are shared system inputs.
+3. UPA and grade outputs are telemetry and balancing inputs, not runtime gameplay gates.
 
-* **Definition**: A request to perform an action (e.g., `USE_SKILL`, `MOVE`).
-* **Rule**: Intent must be validated against the current `GameState` *before* any state modification occurs.
-* **Preview**: The engine must support "Ghost Executions" where an intent is simulated to return a `PotentialOutcome` (visualized by the UI) without consuming resources or turns.
+## 7) Quality Gates
+1. Scenario-first validation for behavior changes.
+2. Build must pass (`npm run build`).
+3. Scenario release gate must pass:
+   - `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent`
+4. UPA health gate must pass for balance changes:
+   - `npm run upa:health:check`
 
-### 2. The Execution Phase (Atomic Application)
-
-* **Definition**: The commitment of an intent to the state.
-* **Turn Consumption**: **Turns are only consumed upon successful execution.** If a skill fails (e.g., target moved, out of range), no turn is spent, and no "Action Log" is generated.
-* **Atomic Effects**: Execution does not "change" the state directly; it generates a list of `AtomicEffects` (Damage, Displace, Stun) which are then applied to the state.
-
----
-
-## III. The World-Class Standard of Determinism
-
-* **Flat-Top Grid Integrity**: All spatial logic must use the unified `HexCoord` factory. Tie-breaking (e.g., finding the "closest" hex) must be deterministic (e.g., sort by , then ).
-* **Seeded RNG**: Only use the provided `Mulberry32` PRNG. No `Math.random()`. The `rngCounter` must be part of the `GameState` to ensure replays are frame-perfect.
-* **Headless-First**: If a feature requires `window`, `document`, or `fs` to function, it is broken. Node-specific utilities (like balancing loggers) must be dynamically imported or guarded.
-
----
-
-## IV. The Golden Rules of the Grid
-
-To prevent "Split-Brain" state bugs:
-
-1. **Single Source of Truth**: The `state.tiles` Map is the ONLY source for world properties. NEVER use standalone arrays like `lavaPositions`.
-2. **The Movement Hook**: Any logic moving an entity MUST call `resolveEnvironment(entity)`. This ensures "Lava Sinking" or "Trap Triggers" cannot be bypassed.
-3. **Occupancy Mask**: High-speed lookups must use the **BigInt bitmask**. The bitmask must be refreshed at the start of every execution phase.
-
----
-
-## V. Skill & Entity Design (ECS-Lite)
-
-* **Universal Entity Factory**: Every Actor (Player, Enemy, Falcon) must be created via the `EntityFactory`. They must all possess a consistent `activeSkills` loadout.
-* **Skill Composition**: Behaviors (Movement, Attack, Teleport) are not hardcoded into the engine; they are defined as `Skill` objects with `validate()`, `run()`, and `juice()` signatures.
-
----
-
-## VI. Quality & Validation Standards (Definition of Done)
-
-A task is not complete until:
-
-* **Scenario-First TDD**: A `.ts` or `.json` scenario file exists that proves the mechanic works and correctly fails on illegal input.
-* **Clean Build**: `npm run build` passes with zero TypeScript errors (no `any` types allowed).
-* **Parity Check**: The `validateReplay` script confirms that the Node.js runner produces the same hash as the browser.
-
----
-
-### Interactive Exercise: Applying the Standard
-
-To put these principles into practice for your upcoming **Skill Power Assessment**, let's look at a pending feature: **Firewalk**.
-
-**The Challenge:** Based on the Feedback, Firewalk is missing from the UI and needs to teleport the player to fire/lava tiles while granting immunity.
-
-**Applying the "Gold Standard":**
-
-1. **Intent**: The `ManualStrategy` must check if the target tile has the `ON_FIRE` or `LAVA` trait.
-2. **Execution**: The skill generates a `Displacement` effect and a `StatusEffect` (Immunity).
-3. **Turn Consumption**: If the player clicks a stone tile, the UI should block the intent—no turn is spent, and the player remains active.
+## 8) Documentation Topology
+1. Active tracker: `docs/NEXT_LEVEL.md`
+2. Active balance backlog: `docs/BALANCE_BACKLOG.md`
+3. UPA operations: `docs/UPA_GUIDE.md`
+4. Historical archive: `docs/ROADMAP_HISTORY.md`

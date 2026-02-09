@@ -1,8 +1,13 @@
 # UPA Guide
 
+Roadmap docs:
+- Active tracker: `docs/NEXT_LEVEL.md`
+- Backlog: `docs/BALANCE_BACKLOG.md`
+- Historical milestones: `docs/ROADMAP_HISTORY.md`
+
 ## Purpose
 UPA (Unified Power Assessment) is the telemetry score derived from simulation summaries.  
-Use it to compare policies, loadouts, and head-to-head archetype performance under deterministic seeds.
+Use it to compare policies, loadout IDs, and head-to-head archetype performance under deterministic seeds.
 
 ## Prerequisites
 - Run commands from repo root.
@@ -53,19 +58,19 @@ Behavior:
 - Runs `random` and `heuristic`.
 - Returns compact JSON summaries for both policies, including skill-usage metrics.
 
-### 3) Head-to-head archetype matchup
+### 3) Head-to-head archetype matchup (PvE run comparison)
 Script: `packages/engine/scripts/runUpaMatchup.ts`
 
 Command:
 ```bash
-npx tsx packages/engine/scripts/runUpaMatchup.ts <count> <maxTurns> <leftLoadout> <rightLoadout> <leftPolicy> <rightPolicy>
+npx tsx packages/engine/scripts/runUpaMatchup.ts <count> <maxTurns> <leftLoadoutId> <rightLoadoutId> <leftPolicy> <rightPolicy>
 ```
 
 Arguments:
 - `count` (default: `200`)
 - `maxTurns` (default: `80`)
-- `leftLoadout` (default: `VANGUARD`)
-- `rightLoadout` (default: `FIREMAGE`)
+- `leftLoadoutId` (default: `VANGUARD`)
+- `rightLoadoutId` (default: `FIREMAGE`)
 - `leftPolicy` (default: `heuristic`)
 - `rightPolicy` (default: `heuristic`)
 
@@ -85,14 +90,14 @@ Script: `packages/engine/scripts/runPvpUpa.ts`
 
 Command:
 ```bash
-npx tsx packages/engine/scripts/runPvpUpa.ts <count> <maxRounds> <leftLoadout> <rightLoadout> <leftPolicy> <rightPolicy>
+npx tsx packages/engine/scripts/runPvpUpa.ts <count> <maxRounds> <leftLoadoutId> <rightLoadoutId> <leftPolicy> <rightPolicy>
 ```
 
 Arguments:
 - `count` (default: `200`)
 - `maxRounds` (default: `60`)
-- `leftLoadout` (default: `VANGUARD`)
-- `rightLoadout` (default: `HUNTER`)
+- `leftLoadoutId` (default: `VANGUARD`)
+- `rightLoadoutId` (default: `HUNTER`)
 - `leftPolicy` (default: `heuristic`)
 - `rightPolicy` (default: `heuristic`)
 
@@ -107,13 +112,48 @@ Quiet mode:
 - Default is quiet.
 - Set `VERBOSE_ANALYSIS=1` for verbose logs.
 
+### 5) Calibration baseline (all archetypes)
+Script: `packages/engine/scripts/runUpaCalibration.ts`
+
+Command:
+```bash
+npx tsx packages/engine/scripts/runUpaCalibration.ts <count> <maxTurns> <policy> <outFile> [waiverCsv] [strict]
+```
+
+Recommended:
+```bash
+npm run upa:calibration
+```
+
+Behavior:
+- Runs all archetypes with one fixed policy/version and emits per-archetype baseline metrics.
+- Includes guardrail checks and `unwaivedBreachCount`.
+- Use `strict=1` to return non-zero on unwaived breaches.
+
+### 6) Full archetype matchup matrix
+Script: `packages/engine/scripts/runUpaMatchupMatrix.ts`
+
+Command:
+```bash
+npx tsx packages/engine/scripts/runUpaMatchupMatrix.ts <count> <maxTurns> <outFile> <policy>
+```
+
+Recommended:
+```bash
+npm run upa:matrix
+```
+
+Behavior:
+- Runs all ordered archetype pairs (`A vs B`) under one policy.
+- Emits matrix cell stats and top imbalance candidates.
+
 ## Allowed Values
 
 ### Policies
 - `random`
 - `heuristic`
 
-### Loadouts
+### Loadout IDs
 - `VANGUARD`
 - `SKIRMISHER`
 - `FIREMAGE`
@@ -163,8 +203,14 @@ Key fields in `summary`:
 
 Use these to validate whether a loadout is truly using its kit, or over-indexing on fallback actions like `MOVE` and `BASIC_ATTACK`.
 
+Dynamic grade fields per skill:
+- `numericGradeRaw`: pre-normalization dynamic grade.
+- `rolePreset`: role context chosen from profile (`damage`, `control`, `mobility`, `sustain`).
+- `roleAdjustedGrade`: role-normalized grade (also exposed as `numericGrade`).
+
 ## Notes
 - Simulations are deterministic for the same seed list + policy + loadout.
+- Simulations are deterministic for the same seed list + policy + loadout ID.
 - UPA is telemetry-only and not used to gate gameplay outcomes.
 
 ## Numeric Skill Grades (No Ceiling)
@@ -231,13 +277,40 @@ NPM shortcut:
 npm run upa:grades:all
 ```
 
+## Skill Health Report
+
+Generate skill health labels (`effective`, `underutilized`, `loop-risk`, `spam-inflated`, `policy-blocked`, `no-data`):
+```bash
+npx tsx packages/engine/scripts/runSkillHealthReport.ts 80 60 docs/UPA_SKILL_HEALTH_2026-02-09.json
+```
+
+NPM shortcut:
+```bash
+npm run upa:health
+```
+
+Threshold mode (non-zero exit if exceeded):
+```bash
+npx tsx packages/engine/scripts/runSkillHealthReport.ts 80 60 docs/UPA_SKILL_HEALTH_2026-02-09.json 0 0 2
+```
+Where:
+- arg5 = `maxLoopRisk` (set `0` to fail if any loop-risk labels exist)
+- arg6 = `maxFailures` (set `0` to fail if any archetype run failures exist)
+- arg7 = `maxPlayerFacingNoData` (set to `2` to allow only baseline `AUTO_ATTACK` + `BASIC_MOVE` policy-blocked entries)
+
 ## CI Automation
 
 PR gate:
 - `.github/workflows/upa-grade-pr-check.yml`
 - Regenerates static grades and fails the PR if `docs/UPA_SKILL_GRADES_STATIC.json` is stale.
 - Prints static-grade diff in CI logs for review.
+- Runs health thresholds via `npm run upa:health:check` and uploads `docs/UPA_SKILL_HEALTH.json`.
+- Runs calibration threshold summary via `npm run upa:calibration:check` (warn-only in PR workflow).
 
 Nightly refresh:
 - `.github/workflows/upa-grade-nightly.yml`
 - Generates static/dynamic/drift artifacts on a schedule and uploads them as CI artifacts.
+- Also generates and uploads:
+  - `docs/UPA_SKILL_HEALTH.json`
+  - `docs/UPA_CALIBRATION_BASELINE.json`
+  - `docs/UPA_PVP_MATCHUP_MATRIX.json`

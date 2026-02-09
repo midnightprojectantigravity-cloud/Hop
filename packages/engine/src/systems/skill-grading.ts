@@ -1,5 +1,6 @@
 import type { SkillDefinition, SkillIntentProfile } from '../types';
 import type { SkillID } from '../types/registry';
+import { SkillRegistry } from '../skillRegistry';
 
 export interface SkillTelemetrySummary {
     casts: number;
@@ -110,8 +111,66 @@ export interface DynamicSkillMetric {
     survivalDelta: number;
     objectiveDelta: number;
     winImpact: number;
+    numericGradeRaw: number;
+    rolePreset: DynamicRolePreset;
+    roleAdjustedGrade: number;
     numericGrade: number;
 }
+
+export type DynamicRolePreset = 'damage' | 'control' | 'mobility' | 'sustain';
+
+type DynamicRoleWeights = {
+    damagePerCast: number;
+    killContribution: number;
+    survivalDelta: number;
+    objectiveDelta: number;
+    winImpact: number;
+    castRate: number;
+};
+
+export const DYNAMIC_ROLE_PRESETS: Record<DynamicRolePreset, DynamicRoleWeights> = {
+    damage: {
+        damagePerCast: 3.2,
+        killContribution: 26,
+        survivalDelta: 2.4,
+        objectiveDelta: 5.5,
+        winImpact: 45,
+        castRate: 1.5
+    },
+    control: {
+        damagePerCast: 2.1,
+        killContribution: 14,
+        survivalDelta: 3.1,
+        objectiveDelta: 7.2,
+        winImpact: 40,
+        castRate: 1.8
+    },
+    mobility: {
+        damagePerCast: 1.4,
+        killContribution: 8,
+        survivalDelta: 3.4,
+        objectiveDelta: 9.5,
+        winImpact: 36,
+        castRate: 2.2
+    },
+    sustain: {
+        damagePerCast: 1.8,
+        killContribution: 10,
+        survivalDelta: 4.6,
+        objectiveDelta: 6.4,
+        winImpact: 38,
+        castRate: 2.0
+    }
+};
+
+const pickRolePreset = (profile: SkillIntentProfile | undefined): DynamicRolePreset => {
+    if (!profile) return 'damage';
+    const tags = new Set(profile.intentTags || []);
+    if (tags.has('summon') || tags.has('heal') || tags.has('protect')) return 'sustain';
+    if (tags.has('move') || tags.has('objective')) return 'mobility';
+    if (tags.has('control') && !tags.has('damage')) return 'control';
+    return 'damage';
+};
 
 export const computeDynamicSkillGrades = (
     summary: DynamicGradeSummaryInput
@@ -129,12 +188,21 @@ export const computeDynamicSkillGrades = (
         const survivalDelta = ((stats.healingReceived || 0) - (stats.hazardDamage || 0)) / games;
         const objectiveDelta = ((stats.stairsProgress || 0) + (stats.shrineProgress || 0) + ((stats.floorProgress || 0) * 4)) / games;
         const winImpact = summary.winRate * Math.log1p(castRate);
-        const numericGrade = (damagePerCast * 3.2)
+        const profile = SkillRegistry.get(skillId as SkillID)?.intentProfile;
+        const rolePreset = pickRolePreset(profile);
+        const w = DYNAMIC_ROLE_PRESETS[rolePreset];
+        const numericGradeRaw = (damagePerCast * 3.2)
             + (killContribution * 26)
             + (Math.max(0, survivalDelta) * 2.4)
             + (objectiveDelta * 5.5)
             + (winImpact * 45)
             + (castRate * 1.5);
+        const roleAdjustedGrade = (damagePerCast * w.damagePerCast)
+            + (killContribution * w.killContribution)
+            + (Math.max(0, survivalDelta) * w.survivalDelta)
+            + (objectiveDelta * w.objectiveDelta)
+            + (winImpact * w.winImpact)
+            + (castRate * w.castRate);
 
         grades[skillId] = {
             casts,
@@ -144,7 +212,10 @@ export const computeDynamicSkillGrades = (
             survivalDelta: round4(survivalDelta),
             objectiveDelta: round4(objectiveDelta),
             winImpact: round4(winImpact),
-            numericGrade: round4(numericGrade)
+            numericGradeRaw: round4(numericGradeRaw),
+            rolePreset,
+            roleAdjustedGrade: round4(roleAdjustedGrade),
+            numericGrade: round4(roleAdjustedGrade)
         };
     }
 

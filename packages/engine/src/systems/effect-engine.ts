@@ -113,9 +113,17 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
             if (!targetActorId) break;
 
-            const actor = (targetActorId === nextState.player.id)
-                ? nextState.player
-                : nextState.enemies.find(e => e.id === targetActorId);
+            const resolveActor = (s: GameState, actorId: string): Actor | undefined => {
+                if (actorId === s.player.id) return s.player;
+                return s.enemies.find(e => e.id === actorId);
+            };
+
+            const actor = resolveActor(nextState, targetActorId);
+            if (!actor) {
+                // Target actor may have been removed earlier in the same effect chain.
+                // Skip displacement safely instead of crashing path simulation.
+                break;
+            }
 
             const origin = effect.source || actor?.position;
             let moveEndedEventEmitted = false;
@@ -139,9 +147,13 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 let finalDestination = effect.destination;
 
                 if (shouldSimulate && path) {
+                    const liveActor = resolveActor(nextState, targetActorId);
+                    if (!liveActor) {
+                        break;
+                    }
                     // Unified Spatial Logic: All displacements now respect tile-based momentum/hazards!
                     // We pass path.length - 1 as the "intrinsic momentum" of the displacement to ensure it finishes exactly at destination unless slippery.
-                    const pathResult = TileResolver.processPath(actor as Actor, path.slice(1), nextState, path.length - 1, {
+                    const pathResult = TileResolver.processPath(liveActor, path.slice(1), nextState, path.length - 1, {
                         ignoreActors: (effect as any).ignoreCollision,
                         ignoreGroundHazards: effect.ignoreGroundHazards
                     });
@@ -200,7 +212,11 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                             false,
                             80
                         );
-                        const entryResult = TileResolver.processEntry(actor as Actor, finalTile, nextState);
+                        const liveActorForEntry = resolveActor(nextState, targetActorId);
+                        if (!liveActorForEntry) {
+                            break;
+                        }
+                        const entryResult = TileResolver.processEntry(liveActorForEntry, finalTile, nextState);
                         if (entryResult.effects.length > 0) {
                             nextState = applyEffects(nextState, entryResult.effects, { targetId: targetActorId });
                         }

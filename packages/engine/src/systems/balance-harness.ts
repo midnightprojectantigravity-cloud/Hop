@@ -3,7 +3,6 @@ import type { Action, GameState, Point, SkillIntentProfile } from '../types';
 import { DEFAULT_LOADOUTS } from './loadout';
 import { isPlayerTurn } from './initiative';
 import { getNeighbors, hexDistance, hexEquals, pointToKey } from '../hex';
-import { getActorAt } from '../helpers';
 import { UnifiedTileService } from './unified-tile-service';
 import { randomFromSeed } from './rng';
 import { computeScore } from './score';
@@ -270,6 +269,9 @@ const preRankAction = (state: GameState, action: Action, profile?: SkillIntentPr
     score += tagWeight(profile, 'move') * (inCombat ? 0.8 : 1.1);
     score += tagWeight(profile, 'objective') * (inCombat ? 0 : 1.3);
     score -= tagWeight(profile, 'hazard') * (hpRatio < 0.5 ? 0.6 : -0.2);
+    if (action.payload.skillId === 'FIREWALK' && inCombat && directHit === 0 && density <= 1) {
+        score -= 6;
+    }
 
     return score;
 };
@@ -285,7 +287,10 @@ const buildSkillActions = (state: GameState): ActionCandidate[] => {
 
         const def = SkillRegistry.get(skill.id);
         if (!def?.getValidTargets) continue;
-        const targets = def.getValidTargets(state, origin);
+        let targets = def.getValidTargets(state, origin);
+        if ((!targets || targets.length === 0) && def.intentProfile?.target.pattern === 'self') {
+            targets = [origin];
+        }
         if (!targets?.length) continue;
 
         const profile = def.intentProfile;
@@ -293,11 +298,15 @@ const buildSkillActions = (state: GameState): ActionCandidate[] => {
             .map(target => {
                 const direct = enemyAt(state, target) ? 2 : 0;
                 const density = targetEnemyDensity(state, target);
+                if (profile?.intentTags.includes('damage') && direct === 0 && density === 0) {
+                    return null;
+                }
                 const objectiveBias = (profile?.intentTags.includes('objective') && !aliveHostiles(state))
                     ? ((distanceToStairs(state) - distanceToStairs(state, target)) + (distanceToShrine(state) - distanceToShrine(state, target)))
                     : 0;
                 return { target, score: direct + density + objectiveBias };
             })
+            .filter((x): x is { target: Point; score: number } => !!x)
             .sort((a, b) => b.score - a.score)
             .slice(0, 3)
             .map(t => t.target);
@@ -400,6 +409,14 @@ const evaluateAction = (
         value -= (p.economy.cooldown || 0) * 0.12;
         value -= (p.economy.cost || 0) * 0.08 * w.resource;
     }
+    if (candidate.action.type === 'USE_SKILL' && candidate.action.payload.skillId === 'FIREWALK') {
+        if (metrics.enemyDamage === 0 && metrics.killShot === 0 && metrics.floorProgress === 0) {
+            value -= 8;
+            if ((metrics.stairsProgress + metrics.shrineProgress) > 0) {
+                value += 3;
+            }
+        }
+    }
 
     const evaluated = { value, metrics, next };
     memo.set(key, evaluated);
@@ -423,7 +440,8 @@ export const selectByOnePlySimulation = (
     if (allCandidates.length === 0) return { type: 'WAIT' };
 
     const inCombat = aliveHostiles(state) > 0;
-    const filtered = inCombat ? allCandidates.filter(c => c.action.type !== 'WAIT') : allCandidates;
+    const filteredRaw = inCombat ? allCandidates.filter(c => c.action.type !== 'WAIT') : allCandidates;
+    const filtered = filteredRaw.length > 0 ? filteredRaw : allCandidates;
     const ranked = [...filtered].sort((a, b) => b.preScore - a.preScore);
     const shortlist = ranked.slice(0, Math.max(1, Math.min(topK, ranked.length)));
 
@@ -433,8 +451,22 @@ export const selectByOnePlySimulation = (
         return { candidate, ...evald };
     });
 
-    const killers = scored.filter(s => s.metrics.killShot > 0);
-    const bestPool = killers.length > 0 ? killers : scored;
+    const nonStallingSkillActions = scored.filter(s => {
+        if (s.candidate.action.type !== 'USE_SKILL') return true;
+        const m = s.metrics;
+        const noProgress = m.noProgressPenalty > 0
+            && m.enemyDamage === 0
+            && m.killShot === 0
+            && m.stairsProgress === 0
+            && m.shrineProgress === 0
+            && m.floorProgress === 0;
+        return !noProgress;
+    });
+
+    const candidatePool = nonStallingSkillActions.length > 0 ? nonStallingSkillActions : scored;
+    if (candidatePool.length === 0) return { type: 'WAIT' };
+    const killers = candidatePool.filter(s => s.metrics.killShot > 0);
+    const bestPool = killers.length > 0 ? killers : candidatePool;
     bestPool.sort((a, b) => b.value - a.value);
     const best = bestPool[0].value;
     const ties = bestPool.filter(x => x.value === best).map(x => x.candidate.action);
