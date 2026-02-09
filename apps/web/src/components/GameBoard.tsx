@@ -184,7 +184,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                     {gameState.enemies.map(e => <Entity key={e.id} entity={e} />)}
                     {gameState.dyingEntities?.map(e => <Entity key={`dying-${e.id}-${gameState.turnNumber}`} entity={e} isDying={true} />)}
 
-                    <JuiceManager visualEvents={gameState.visualEvents || []} onBusyStateChange={onBusyStateChange} />
+                    <JuiceManager
+                        visualEvents={gameState.visualEvents || []}
+                        timelineEvents={gameState.timelineEvents || []}
+                        onBusyStateChange={onBusyStateChange}
+                    />
                 </g>
             </svg>
         </div>

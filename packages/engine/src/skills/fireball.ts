@@ -1,8 +1,11 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { getNeighbors } from '../hex';
+import { getNeighbors, hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/SpatialSystem';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { getActorAt } from '../helpers';
+import { pointToKey } from '../hex';
 
 
 
@@ -35,10 +38,24 @@ export const FIREBALL: SkillDefinition = {
             return { effects, messages: ['Invalid target! Range 3, Axial only.'], consumesTurn: false };
         }
 
-        // Damage target and neighbors
+        // Damage target and neighbors through centralized combat calculator.
         const affected = [target, ...getNeighbors(target)];
+        const trinity = extractTrinityStats(attacker);
+        const inDangerPreviewHex = !!_state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position));
         for (const p of affected) {
-            effects.push({ type: 'Damage', target: p, amount: 1, reason: 'fireball' });
+            const actorAtPoint = getActorAt(_state, p);
+            const combat = calculateCombat({
+                attackerId: attacker.id,
+                targetId: actorAtPoint?.id || pointToKey(p),
+                skillId: 'FIREBALL',
+                basePower: 1,
+                trinity,
+                scaling: [{ attribute: 'mind', coefficient: 0.2 }],
+                statusMultipliers: [],
+                inDangerPreviewHex,
+                theoreticalMaxPower: 1
+            });
+            effects.push({ type: 'Damage', target: p, amount: combat.finalPower, reason: 'fireball', scoreEvent: combat.scoreEvent });
             effects.push({ type: 'PlaceFire', position: p, duration: 3 });
         }
 

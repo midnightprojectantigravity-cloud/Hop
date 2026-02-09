@@ -154,10 +154,12 @@ export const generateInitialState = (
         runObjectives: (preservePlayer as any)?.runObjectives || [],
         hazardBreaches: (preservePlayer as any)?.hazardBreaches || 0,
         completedRun: undefined,
+        combatScoreEvents: (preservePlayer as any)?.combatScoreEvents || [],
 
         // Juice
         dyingEntities: [],
         visualEvents: [],
+        timelineEvents: [],
         intentPreview: undefined,
 
         // Core Systems
@@ -521,7 +523,8 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         lastSpearPath: undefined,
         dyingEntities: [],
         occupiedCurrentTurn: undefined,
-        visualEvents: []
+        visualEvents: [],
+        timelineEvents: []
     };
 
     switch (action.type) {

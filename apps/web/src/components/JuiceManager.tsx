@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Point } from '@hop/engine';
+import type { Point, TimelineEvent } from '@hop/engine';
 import { hexToPixel, TILE_SIZE } from '@hop/engine';
 
 interface JuiceEffect {
@@ -12,20 +12,122 @@ interface JuiceEffect {
 
 interface JuiceManagerProps {
     visualEvents: { type: string; payload: any }[];
+    timelineEvents?: TimelineEvent[];
     onBusyStateChange?: (busy: boolean) => void;
 }
 
-export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, onBusyStateChange }) => {
+const waitMs = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const resolveEventPoint = (payload: any): Point | null => {
+    if (!payload) return null;
+    const p = payload.position || payload.destination || payload.origin || payload.target;
+    if (p && typeof p.q === 'number' && typeof p.r === 'number' && typeof p.s === 'number') {
+        return p;
+    }
+    return null;
+};
+
+export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timelineEvents = [], onBusyStateChange }) => {
     const [effects, setEffects] = useState<JuiceEffect[]>([]);
     const eventHash = useRef<string>('');
+    const processedTimelineIds = useRef<Set<string>>(new Set());
+    const timelineQueue = useRef<TimelineEvent[]>([]);
+    const isRunningQueue = useRef(false);
+    const [timelineBusy, setTimelineBusy] = useState(false);
+    const prefersReducedMotion = useRef(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.matchMedia) return;
+        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const onChange = () => { prefersReducedMotion.current = mq.matches; };
+        onChange();
+        mq.addEventListener?.('change', onChange);
+        return () => mq.removeEventListener?.('change', onChange);
+    }, []);
 
     // Notify parent of busy state
     useEffect(() => {
-        onBusyStateChange?.(effects.length > 0);
-    }, [effects.length, onBusyStateChange]);
+        onBusyStateChange?.(effects.length > 0 || timelineBusy);
+    }, [effects.length, timelineBusy, onBusyStateChange]);
 
-    // Process new events
+    const enqueueTimelineEffects = (ev: TimelineEvent) => {
+        const now = Date.now();
+        const position = resolveEventPoint(ev.payload);
+        if (!position) return;
+
+        const additions: JuiceEffect[] = [];
+        const effectId = `${ev.id}:${now}`;
+
+        if (ev.phase === 'HAZARD_CHECK') {
+            additions.push({
+                id: `${effectId}:haz`,
+                type: 'combat_text',
+                position,
+                payload: { text: '!' },
+                startTime: now
+            });
+        } else if (ev.phase === 'DAMAGE_APPLY') {
+            additions.push({
+                id: `${effectId}:impact`,
+                type: 'impact',
+                position,
+                startTime: now
+            });
+            if (typeof ev.payload?.amount === 'number') {
+                additions.push({
+                    id: `${effectId}:dmg`,
+                    type: 'combat_text',
+                    position,
+                    payload: { text: `-${ev.payload.amount}` },
+                    startTime: now
+                });
+            }
+        } else if (ev.phase === 'DEATH_RESOLVE') {
+            additions.push({
+                id: `${effectId}:vapor`,
+                type: 'vaporize',
+                position,
+                startTime: now
+            });
+        }
+
+        if (additions.length > 0) {
+            setEffects(prev => [...prev, ...additions]);
+        }
+    };
+
     useEffect(() => {
+        if (!timelineEvents.length) return;
+        const newEvents = timelineEvents.filter(ev => !processedTimelineIds.current.has(ev.id));
+        if (!newEvents.length) return;
+
+        newEvents.forEach(ev => processedTimelineIds.current.add(ev.id));
+        timelineQueue.current.push(...newEvents);
+
+        if (isRunningQueue.current) return;
+        isRunningQueue.current = true;
+        setTimelineBusy(true);
+
+        (async () => {
+            while (timelineQueue.current.length > 0) {
+                const ev = timelineQueue.current.shift()!;
+                enqueueTimelineEffects(ev);
+                const baseDuration = ev.blocking ? (ev.suggestedDurationMs ?? 140) : 0;
+                const waitDuration = prefersReducedMotion.current
+                    ? Math.min(80, Math.floor(baseDuration * 0.35))
+                    : baseDuration;
+                if (waitDuration > 0) {
+                    await waitMs(waitDuration);
+                }
+            }
+            isRunningQueue.current = false;
+            setTimelineBusy(false);
+        })();
+    }, [timelineEvents]);
+
+    // Fallback mode for legacy visual events when no timeline is present
+    useEffect(() => {
+        if (timelineEvents.length > 0) return;
         const hash = JSON.stringify(visualEvents);
         if (hash === eventHash.current) return;
         eventHash.current = hash;
@@ -104,7 +206,7 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, onBusy
         if (newEffects.length > 0) {
             setEffects(prev => [...prev, ...newEffects]);
         }
-    }, [visualEvents]);
+    }, [visualEvents, timelineEvents.length]);
 
     // Cleanup finished effects
     useEffect(() => {

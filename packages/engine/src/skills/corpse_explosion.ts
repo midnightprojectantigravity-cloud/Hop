@@ -1,8 +1,10 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexDistance, getNeighbors } from '../hex';
+import { hexDistance, getNeighbors, hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { pointToKey } from '../hex';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { getActorAt } from '../helpers';
 
 const hasCorpseAt = (state: GameState, target: Point): boolean => {
     const tile = state.tiles.get(pointToKey(target));
@@ -52,10 +54,24 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
         // 1. Remove the corpse
         effects.push({ type: 'RemoveCorpse', position: target });
 
-        // 2. Damage AoE
+        // 2. Damage AoE through centralized combat calculator.
         const affected = [target, ...getNeighbors(target)];
+        const trinity = extractTrinityStats(attacker);
+        const inDangerPreviewHex = !!state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position));
         for (const p of affected) {
-            effects.push({ type: 'Damage', target: p, amount: 2, reason: 'corpse_explosion' });
+            const actorAtPoint = getActorAt(state, p);
+            const combat = calculateCombat({
+                attackerId: attacker.id,
+                targetId: actorAtPoint?.id || pointToKey(p),
+                skillId: 'CORPSE_EXPLOSION',
+                basePower: 2,
+                trinity,
+                scaling: [{ attribute: 'mind', coefficient: 0.25 }],
+                statusMultipliers: [],
+                inDangerPreviewHex,
+                theoreticalMaxPower: 2
+            });
+            effects.push({ type: 'Damage', target: p, amount: combat.finalPower, reason: 'corpse_explosion', scoreEvent: combat.scoreEvent });
         }
 
         effects.push({ type: 'Juice', effect: 'explosion_ring', target });

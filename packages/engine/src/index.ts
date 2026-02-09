@@ -20,6 +20,7 @@ export * from './systems/score';
 export * from './systems/run-objectives';
 export * from './systems/balance-harness';
 export * from './systems/upa';
+export * from './systems/combat-calculator';
 export * from './systems/serialization';
 export * from './systems/commands';
 export * from './systems/mask';

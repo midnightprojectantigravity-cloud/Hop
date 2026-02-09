@@ -1,5 +1,6 @@
 import type { GameComponent } from './systems/components';
 import type { SkillID, StatusID, ArchetypeID, JuiceEffectID } from './types/registry';
+import type { CombatScoreEvent } from './systems/combat-calculator';
 
 /**
  * ARCHITECTURE OVERVIEW: "Gold Standard" Tech Stack
@@ -101,7 +102,7 @@ export type AtomicEffect =
         simulatePath?: boolean;
         ignoreGroundHazards?: boolean;
     }
-    | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string; source?: Point }
+    | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string; source?: Point; scoreEvent?: CombatScoreEvent }
     | { type: 'Heal'; target: 'targetActor' | string; amount: number }
     | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: StatusID; duration: number }
     | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
@@ -146,6 +147,31 @@ export type AtomicEffect =
 export interface VisualEvent {
     type: 'shake' | 'freeze' | 'combat_text' | 'vfx' | 'kinetic_trace';
     payload: any;
+}
+
+export type TimelinePhase =
+    | 'INTENT_START'
+    | 'MOVE_START'
+    | 'MOVE_END'
+    | 'ON_PASS'
+    | 'ON_ENTER'
+    | 'HAZARD_CHECK'
+    | 'STATUS_APPLY'
+    | 'DAMAGE_APPLY'
+    | 'DEATH_RESOLVE'
+    | 'INTENT_END';
+
+export interface TimelineEvent {
+    id: string;
+    turn: number;
+    actorId?: string;
+    phase: TimelinePhase;
+    type: string;
+    payload?: any;
+    blocking: boolean;
+    groupId?: string;
+    dependsOn?: string[];
+    suggestedDurationMs?: number;
 }
 
 export interface TelegraphProjectionEntry {
@@ -363,6 +389,11 @@ export interface GameState {
         score?: number;
         floor?: number;
         objectives?: ObjectiveResult[];
+        combatTelemetry?: {
+            events: number;
+            avgEfficiency: number;
+            riskBonusEvents: number;
+        };
     };
     dailyRunDate?: string;
     runObjectives?: RunObjective[];
@@ -381,6 +412,8 @@ export interface GameState {
     isShaking?: boolean;
     occupiedCurrentTurn?: Point[];
     visualEvents: VisualEvent[];
+    timelineEvents?: TimelineEvent[];
+    combatScoreEvents?: CombatScoreEvent[];
     intentPreview?: IntentPreview;
     turnsSpent: number;
     pendingStatus?: {

@@ -18,6 +18,7 @@
 import type { Actor, Point, GameState, InitiativeEntry, InitiativeQueue } from '../types';
 import { getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
+import { extractTrinityStats, computeInitiativeBonus } from './combat-calculator';
 
 /** Default initiative values by actor type */
 export const DEFAULT_INITIATIVE = {
@@ -50,6 +51,9 @@ export const getInitiativeScore = (actor: Actor): number => {
     if (isStunned) {
         initiative -= 100; // Stunned actors act last (or not at all)
     }
+
+    // Instinct lever: deterministic initiative bonus from canonical trinity stats.
+    initiative += computeInitiativeBonus(extractTrinityStats(actor));
 
     // Could add: speed boosts, slow debuffs, equipment bonuses, etc.
 

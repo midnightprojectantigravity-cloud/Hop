@@ -38,11 +38,21 @@ export const evaluateObjectives = (state: GameState): ObjectiveResult[] => {
 export const buildRunSummary = (state: GameState) => {
     const seed = state.initialSeed ?? state.rngSeed ?? '0';
     const objectives = evaluateObjectives(state);
+    const combatEvents = state.combatScoreEvents || [];
+    const avgEfficiency = combatEvents.length
+        ? Number((combatEvents.reduce((acc, e) => acc + e.efficiency, 0) / combatEvents.length).toFixed(4))
+        : 0;
+    const riskBonusEvents = combatEvents.filter(e => e.riskBonusApplied).length;
     return {
         seed,
         actionLog: state.actionLog,
         score: computeScore(state, objectives),
         floor: state.floor,
-        objectives
+        objectives,
+        combatTelemetry: {
+            events: combatEvents.length,
+            avgEfficiency,
+            riskBonusEvents
+        }
     };
 };

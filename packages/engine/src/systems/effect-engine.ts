@@ -10,6 +10,7 @@ import { UnifiedTileService } from './unified-tile-service';
 import { SpatialSystem } from './SpatialSystem';
 import { stableIdFromSeed } from './rng';
 import { createEntity } from './entity-factory';
+import { computeStatusDuration, extractTrinityStats } from './combat-calculator';
 
 const addCorpseTraitAt = (state: GameState, position: Point): GameState => {
     const key = pointToKey(position);
@@ -57,6 +58,40 @@ const removeCorpseTraitAt = (state: GameState, position: Point): GameState => {
     return nextState;
 };
 
+const appendTimelineEvent = (
+    state: GameState,
+    phase: 'MOVE_START' | 'MOVE_END' | 'ON_PASS' | 'ON_ENTER' | 'HAZARD_CHECK' | 'STATUS_APPLY' | 'DAMAGE_APPLY' | 'DEATH_RESOLVE' | 'INTENT_START' | 'INTENT_END',
+    type: string,
+    payload: any,
+    context: { targetId?: string; sourceId?: string },
+    blocking: boolean,
+    suggestedDurationMs: number
+): GameState => {
+    const events = state.timelineEvents || [];
+    const idx = events.length;
+    const turn = state.turnNumber || 0;
+    const actorId = context.sourceId || context.targetId;
+    const groupId = `${turn}:${actorId || 'system'}`;
+    const id = `${groupId}:${idx}:${phase}`;
+    return {
+        ...state,
+        timelineEvents: [
+            ...events,
+            {
+                id,
+                turn,
+                actorId,
+                phase,
+                type,
+                payload,
+                blocking,
+                groupId,
+                suggestedDurationMs
+            }
+        ]
+    };
+};
+
 
 /**
  * Apply a single atomic effect to the game state.
@@ -83,6 +118,18 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 : nextState.enemies.find(e => e.id === targetActorId);
 
             const origin = effect.source || actor?.position;
+            let moveEndedEventEmitted = false;
+            if (origin) {
+                nextState = appendTimelineEvent(
+                    nextState,
+                    'MOVE_START',
+                    'Displacement',
+                    { origin, destination: effect.destination, targetActorId },
+                    { ...context, targetId: targetActorId },
+                    true,
+                    220
+                );
+            }
 
             if (origin) {
                 const path = effect.path || (origin ? getHexLine(origin, effect.destination) : undefined);
@@ -110,7 +157,28 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     }
 
                     // Handle side-effects (Damage, Stun, etc.) from the environment
+                    if (!moveEndedEventEmitted) {
+                        nextState = appendTimelineEvent(
+                            nextState,
+                            'MOVE_END',
+                            'Displacement',
+                            { destination: finalDestination, targetActorId },
+                            { ...context, targetId: targetActorId },
+                            true,
+                            260
+                        );
+                        moveEndedEventEmitted = true;
+                    }
                     if (pathResult.result.effects.length > 0) {
+                        nextState = appendTimelineEvent(
+                            nextState,
+                            'ON_PASS',
+                            'TilePath',
+                            { path: path.slice(1), targetActorId },
+                            { ...context, targetId: targetActorId },
+                            false,
+                            80
+                        );
                         nextState = applyEffects(nextState, pathResult.result.effects, { targetId: targetActorId });
                     }
                     if (pathResult.result.messages.length > 0) {
@@ -123,6 +191,15 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
                     if (!pathResult.interrupt && isAlive) {
                         const finalTile = UnifiedTileService.getTileAt(nextState, finalDestination);
+                        nextState = appendTimelineEvent(
+                            nextState,
+                            'ON_ENTER',
+                            'TileEnter',
+                            { position: finalDestination, targetActorId, tileBaseId: finalTile?.baseId },
+                            { ...context, targetId: targetActorId },
+                            false,
+                            80
+                        );
                         const entryResult = TileResolver.processEntry(actor as Actor, finalTile, nextState);
                         if (entryResult.effects.length > 0) {
                             nextState = applyEffects(nextState, entryResult.effects, { targetId: targetActorId });
@@ -205,11 +282,46 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 // Displacement changes unit positions; we MUST refresh the bitmask so the AI/Validation 
                 // sees the new reality immediately within the same turn if multiple effects occur.
                 nextState.occupancyMask = SpatialSystem.refreshOccupancyMask(nextState);
+                if (!moveEndedEventEmitted) {
+                    nextState = appendTimelineEvent(
+                        nextState,
+                        'MOVE_END',
+                        'Displacement',
+                        { destination: finalDestination, targetActorId },
+                        { ...context, targetId: targetActorId },
+                        true,
+                        260
+                    );
+                }
             }
             break;
         }
 
         case 'Damage': {
+            if (effect.scoreEvent) {
+                nextState.combatScoreEvents = [...(nextState.combatScoreEvents || []), effect.scoreEvent].slice(-500);
+            }
+            const isHazardReason = !!effect.reason && ['lava_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage'].includes(effect.reason);
+            if (isHazardReason) {
+                nextState = appendTimelineEvent(
+                    nextState,
+                    'HAZARD_CHECK',
+                    'Damage',
+                    { reason: effect.reason, amount: effect.amount, target: effect.target },
+                    context,
+                    true,
+                    200
+                );
+            }
+            nextState = appendTimelineEvent(
+                nextState,
+                'DAMAGE_APPLY',
+                'Damage',
+                { reason: effect.reason, amount: effect.amount, target: effect.target, scoreEvent: effect.scoreEvent },
+                context,
+                true,
+                180
+            );
             let targetActorId = '';
             let targetPos: Point | null = null;
 
@@ -287,6 +399,17 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     if (nextState.companions) {
                         nextState.companions = nextState.companions.map(updateDamage).filter((e: Actor) => e.hp > 0);
                     }
+                    if (corpsePositions.length > 0) {
+                        nextState = appendTimelineEvent(
+                            nextState,
+                            'DEATH_RESOLVE',
+                            'Damage',
+                            { targetActorId, reason: effect.reason || 'damage' },
+                            { ...context, targetId: targetActorId },
+                            true,
+                            260
+                        );
+                    }
                     corpsePositions.forEach(pos => {
                         nextState = addCorpseTraitAt(nextState, pos);
                     });
@@ -344,6 +467,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         const updated = applyDamage(e, effect.amount);
                         if (updated.hp <= 0) {
                             nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
+                            killedAtIds.push(e.id);
                             killedAtPositions.push(e.position);
                         }
                         return updated;
@@ -351,10 +475,22 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     return e;
                 };
                 const killedAtPositions: Point[] = [];
+                const killedAtIds: string[] = [];
                 nextState.enemies = nextState.enemies.map(updateDamageAt).filter((e: Actor) => e.hp > 0);
                 if (nextState.companions) {
                     nextState.companions = nextState.companions.map(updateDamageAt).filter((e: Actor) => e.hp > 0);
                 }
+                killedAtIds.forEach(deadId => {
+                    nextState = appendTimelineEvent(
+                        nextState,
+                        'DEATH_RESOLVE',
+                        'Damage',
+                        { targetActorId: deadId, reason: effect.reason || 'area_damage' },
+                        { ...context, targetId: deadId },
+                        true,
+                        260
+                    );
+                });
                 killedAtPositions.forEach(pos => {
                     nextState = addCorpseTraitAt(nextState, pos);
                 });
@@ -388,6 +524,15 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'ApplyStatus': {
+            nextState = appendTimelineEvent(
+                nextState,
+                'STATUS_APPLY',
+                'ApplyStatus',
+                { status: effect.status, duration: effect.duration, target: effect.target },
+                context,
+                true,
+                160
+            );
             let targetActorId = '';
             let targetPos: Point | null = null;
             if (typeof effect.target === 'string') {
@@ -398,6 +543,15 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             }
 
             let resolvedPos = targetPos;
+
+            const sourceActor = context.sourceId
+                ? (context.sourceId === nextState.player.id
+                    ? nextState.player
+                    : nextState.enemies.find(e => e.id === context.sourceId))
+                : undefined;
+            const adjustedDuration = sourceActor
+                ? computeStatusDuration(effect.duration, extractTrinityStats(sourceActor))
+                : effect.duration;
 
             if (targetActorId) {
                 const targetActor = targetActorId === nextState.player.id
@@ -411,9 +565,9 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     nextState.message = [...(nextState.message || []), `${name} ${suffix} ${effect.status}!`].slice(-50);
 
                     if (targetActorId === nextState.player.id) {
-                        nextState.player = addStatus(nextState.player, effect.status as any, effect.duration);
+                        nextState.player = addStatus(nextState.player, effect.status as any, adjustedDuration);
                     } else {
-                        const updateStatus = (e: Actor) => (e.id === targetActorId) ? addStatus(e, effect.status as any, effect.duration) : e;
+                        const updateStatus = (e: Actor) => (e.id === targetActorId) ? addStatus(e, effect.status as any, adjustedDuration) : e;
                         nextState.enemies = nextState.enemies.map(updateStatus);
                         if (nextState.companions) {
                             nextState.companions = nextState.companions.map(updateStatus);
@@ -504,9 +658,27 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'LavaSink': {
+            nextState = appendTimelineEvent(
+                nextState,
+                'HAZARD_CHECK',
+                'LavaSink',
+                { target: effect.target },
+                context,
+                true,
+                240
+            );
             const targetId = effect.target;
             const actor = targetId === nextState.player.id ? nextState.player : nextState.enemies.find(e => e.id === targetId);
                 if (actor) {
+                    nextState = appendTimelineEvent(
+                        nextState,
+                        'DEATH_RESOLVE',
+                        'LavaSink',
+                        { targetId },
+                        { ...context, targetId },
+                        true,
+                        280
+                    );
                     if (targetId === nextState.player.id) {
                         nextState.player = applyDamage(nextState.player, 99);
                     } else {

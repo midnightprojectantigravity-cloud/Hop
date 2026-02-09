@@ -54,6 +54,8 @@ const chooseFrom = <T>(items: T[], seed: string, counter: number): T => {
 
 const isFiremageLoadout = (state: GameState): boolean =>
     !!state.player.activeSkills?.some(s => s.id === 'FIREBALL');
+const isNecromancerLoadout = (state: GameState): boolean =>
+    !!state.player.activeSkills?.some(s => s.id === 'RAISE_DEAD');
 
 const legalMoves = (state: GameState): Point[] => {
     const origin = state.player.position;
@@ -88,6 +90,12 @@ const nearestHostileDistance = (state: GameState): number => {
         .map(e => hexDistance(state.player.position, e.position))
         .sort((a, b) => a - b)[0];
 };
+
+const aliveHostilesList = (state: GameState) =>
+    state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy' && e.subtype !== 'bomb');
+
+const skeletonCount = (state: GameState): number =>
+    state.enemies.filter(e => e.hp > 0 && e.factionId === 'player' && e.subtype === 'skeleton').length;
 
 const aliveHostiles = (state: GameState): number =>
     state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy' && e.subtype !== 'bomb').length;
@@ -364,12 +372,166 @@ const chooseSkillAction = (state: GameState, simSeed: string, decisionCounter: n
     return null;
 };
 
+const chooseNecromancerAction = (state: GameState, simSeed: string, decisionCounter: number, moves: Point[]): Action | null => {
+    const origin = state.player.position;
+    const hostiles = aliveHostilesList(state);
+    const nearestHostile = hostiles
+        .slice()
+        .sort((a, b) => hexDistance(origin, a.position) - hexDistance(origin, b.position))[0];
+    const skCount = skeletonCount(state);
+    const openingPhase = (state.kills || 0) === 0;
+
+    const basicAttack = getReadySkill(state, 'BASIC_ATTACK');
+    const raiseDead = getReadySkill(state, 'RAISE_DEAD');
+    const soulSwap = getReadySkill(state, 'SOUL_SWAP');
+
+    const adjacentHostile = hostiles
+        .slice()
+        .sort((a, b) => (a.hp - b.hp) || (hexDistance(origin, a.position) - hexDistance(origin, b.position)))[0];
+    const adjacent = adjacentHostile && hexDistance(origin, adjacentHostile.position) === 1 ? adjacentHostile : null;
+
+    // 1) Open with direct basic attack pressure until first kill.
+    if (openingPhase && adjacent && basicAttack) {
+        return { type: 'USE_SKILL', payload: { skillId: 'BASIC_ATTACK', target: adjacent.position } };
+    }
+
+    // 2) Core plan: prioritize Raise Dead up to six skeletons.
+    if (skCount < 6 && raiseDead) {
+        const def = SkillRegistry.get('RAISE_DEAD');
+        const targets = def?.getValidTargets ? def.getValidTargets(state, origin) : [];
+        if (targets.length > 0) {
+            const best = pickBestTarget(
+                targets,
+                (t) => {
+                    const hostileProximity = hostiles.filter(h => hexDistance(h.position, t) <= 2).length;
+                    return (hostileProximity * 5) - hexDistance(origin, t);
+                },
+                `${simSeed}:necro-raise`,
+                decisionCounter
+            );
+            if (best) {
+                return { type: 'USE_SKILL', payload: { skillId: 'RAISE_DEAD', target: best } };
+            }
+        }
+    }
+
+    // 3) Emergency safety: swap only under real pressure.
+    const adjacentPressure = adjacentHostileCount(state, origin);
+    const pressured = (state.player.hp || 0) <= Math.max(2, Math.floor((state.player.maxHp || 1) * 0.4))
+        && (adjacentPressure >= 2 || isHazardTile(state, origin));
+    if (pressured && soulSwap) {
+        const def = SkillRegistry.get('SOUL_SWAP');
+        const targets = def?.getValidTargets ? def.getValidTargets(state, origin) : [];
+        const best = pickBestTarget(
+            targets,
+            (t) => {
+                const hazardPenalty = isHazardTile(state, t) ? 100 : 0;
+                const pressurePenalty = adjacentHostileCount(state, t) * 8;
+                const dist = nearestHostile
+                    ? hexDistance(t, nearestHostile.position)
+                    : 0;
+                return dist * 4 - hazardPenalty - pressurePenalty;
+            },
+            `${simSeed}:necro-swap`,
+            decisionCounter
+        );
+        if (best) {
+            return { type: 'USE_SKILL', payload: { skillId: 'SOUL_SWAP', target: best } };
+        }
+    }
+
+    // Optional conversion: if we already have a bone line and can clip multiple enemies, explode.
+    if (skCount >= 3 && getReadySkill(state, 'CORPSE_EXPLOSION')) {
+        const def = SkillRegistry.get('CORPSE_EXPLOSION');
+        const targets = def?.getValidTargets ? def.getValidTargets(state, origin) : [];
+        const best = pickBestTarget(
+            targets,
+            (t) => hostiles.filter(h => hexDistance(h.position, t) <= 1).length * 10 - hexDistance(origin, t),
+            `${simSeed}:necro-boom`,
+            decisionCounter
+        );
+        const density = best ? hostiles.filter(h => hexDistance(h.position, best) <= 1).length : 0;
+        if (best && density >= 2) {
+            return { type: 'USE_SKILL', payload: { skillId: 'CORPSE_EXPLOSION', target: best } };
+        }
+    }
+
+    // 4) During opener, force approach to secure first kill.
+    if (openingPhase && nearestHostile && moves.length > 0) {
+        const towardKill = moves
+            .map(move => ({
+                move,
+                score: (hexDistance(move, nearestHostile.position) * 10)
+                    + (isHazardTile(state, move) ? 120 : 0)
+                    + (adjacentHostileCount(state, move) * 5)
+            }))
+            .sort((a, b) => a.score - b.score);
+        const best = towardKill[0]?.score;
+        const ties = towardKill.filter(m => m.score === best).map(m => m.move);
+        if (ties.length > 0) {
+            return { type: 'MOVE', payload: chooseFrom(ties, `${simSeed}:necro-open`, decisionCounter) };
+        }
+    }
+
+    // 4.1) If opener is done and no summon action is available, avoid melee loops and reposition safely.
+    if (!openingPhase && moves.length > 0) {
+        const disengage = moves
+            .map(move => {
+                const hazardPenalty = isHazardTile(state, move) ? 120 : 0;
+                const pressurePenalty = adjacentHostileCount(state, move) * 12;
+                const dist = nearestHostile ? hexDistance(move, nearestHostile.position) : 0;
+                const shrineBias = state.shrinePosition ? hexDistance(move, state.shrinePosition) : 0;
+                // Lower score is better: prioritize safety and slight shrine pull.
+                const score = hazardPenalty + pressurePenalty - (dist * 6) + shrineBias;
+                return { move, score };
+            })
+            .sort((a, b) => a.score - b.score);
+        const best = disengage[0]?.score;
+        const ties = disengage.filter(m => m.score === best).map(m => m.move);
+        if (ties.length > 0) {
+            return { type: 'MOVE', payload: chooseFrom(ties, `${simSeed}:necro-disengage`, decisionCounter) };
+        }
+    }
+
+    // 5) Army phase: mostly move safely, prefer shrine when injured, then stairs.
+    if (moves.length > 0) {
+        const progressionTarget = ((state.player.hp || 0) < (state.player.maxHp || 0) && state.shrinePosition)
+            ? state.shrinePosition
+            : (state.stairsPosition ?? state.shrinePosition);
+        const hasHostiles = hostiles.length > 0;
+
+        const safeMoves = moves
+            .map(move => {
+                const hazardPenalty = isHazardTile(state, move) ? 120 : 0;
+                const pressurePenalty = adjacentHostileCount(state, move) * 10;
+                const distanceFromHostiles = nearestHostile ? hexDistance(move, nearestHostile.position) : 0;
+                const progressionPenalty = progressionTarget ? hexDistance(move, progressionTarget) * (hasHostiles ? 1 : 5) : 0;
+                // Lower score is better. Favor safety strongly, then progression.
+                const score = hazardPenalty + pressurePenalty - (distanceFromHostiles * (hasHostiles ? 2 : 1)) + progressionPenalty;
+                return { move, score };
+            })
+            .sort((a, b) => a.score - b.score);
+        const best = safeMoves[0]?.score;
+        const ties = safeMoves.filter(m => m.score === best).map(m => m.move);
+        if (ties.length > 0) {
+            return { type: 'MOVE', payload: chooseFrom(ties, `${simSeed}:necro-safe`, decisionCounter) };
+        }
+    }
+
+    return { type: 'WAIT' };
+};
+
 const selectAction = (state: GameState, policy: BotPolicy, simSeed: string, decisionCounter: number): Action => {
     const moves = legalMoves(state);
 
     if (policy === 'random') {
         const options: Action[] = [{ type: 'WAIT' }, ...moves.map(m => ({ type: 'MOVE' as const, payload: m }))];
         return chooseFrom(options, simSeed, decisionCounter);
+    }
+
+    if (isNecromancerLoadout(state)) {
+        const necroAction = chooseNecromancerAction(state, simSeed, decisionCounter, moves);
+        return necroAction || { type: 'WAIT' };
     }
 
     const skillAction = chooseSkillAction(state, simSeed, decisionCounter);
@@ -453,7 +615,10 @@ export const simulateRun = (
         }
 
         if (state.gameStatus === 'choosing_upgrade') {
-            const option = state.shrineOptions?.[0] || 'EXTRA_HP';
+            const options = state.shrineOptions || [];
+            const option = (loadoutId === 'NECROMANCER' && options.includes('EXTRA_HP'))
+                ? 'EXTRA_HP'
+                : (options[0] || 'EXTRA_HP');
             state = gameReducer(state, { type: 'SELECT_UPGRADE', payload: option });
             state = resolvePending(state);
             continue;

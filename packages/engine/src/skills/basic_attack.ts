@@ -1,8 +1,9 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { getNeighbors } from '../hex';
+import { getNeighbors, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
+import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
 
 /**
  * Basic Attack - A targeted melee attack skill.
@@ -58,12 +59,24 @@ export const BASIC_ATTACK: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
-        // Calculate damage
-        let damage = 1;
-        if (activeUpgrades.includes('POWER_STRIKE')) damage += 1;
+        // Calculate damage through the centralized combat calculator.
+        let baseDamage = 1;
+        if (activeUpgrades.includes('POWER_STRIKE')) baseDamage += 1;
+        const combat = calculateCombat({
+            attackerId: attacker.id,
+            targetId: targetActor.id,
+            skillId: 'BASIC_ATTACK',
+            basePower: baseDamage,
+            trinity: extractTrinityStats(attacker),
+            scaling: [{ attribute: 'body', coefficient: 0.25 }],
+            statusMultipliers: [],
+            inDangerPreviewHex: !!state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position)),
+            theoreticalMaxPower: baseDamage
+        });
+        const damage = combat.finalPower;
 
         // Apply damage
-        effects.push({ type: 'Damage', target: 'targetActor', amount: damage });
+        effects.push({ type: 'Damage', target: 'targetActor', amount: damage, scoreEvent: combat.scoreEvent });
         const attackerName = attacker.type === 'player' ? 'You' : (attacker.subtype || 'Enemy');
         const targetName = targetActor.type === 'player' ? 'you' : (targetActor.subtype || 'enemy');
         messages.push(`${attackerName} attacked ${targetName}!`);
@@ -76,9 +89,14 @@ export const BASIC_ATTACK: SkillDefinition = {
         return { effects, messages, consumesTurn: true };
     },
     getValidTargets: (state: GameState, origin: Point) => {
+        const attacker = getActorAt(state, origin);
+        if (!attacker) return [];
         return getNeighbors(origin).filter(n => {
             const actor = getActorAt(state, n);
-            return actor && actor.id !== state.player.id && actor.subtype !== 'bomb';
+            return !!actor
+                && actor.subtype !== 'bomb'
+                && actor.id !== attacker.id
+                && actor.factionId !== attacker.factionId;
         });
     },
     upgrades: {

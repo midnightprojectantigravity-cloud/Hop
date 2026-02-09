@@ -162,7 +162,7 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
             {/* Main Entity Group - Handles smooth movement translation */}
             <g
                 style={{
-                    transition: 'transform 0.12s linear',
+                    transition: 'transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)',
                     transform: `translate(${x}px, ${y}px)`
                 }}
                 className={isDying ? 'animate-lava-sink' : ''}

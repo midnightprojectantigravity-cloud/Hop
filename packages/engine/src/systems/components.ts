@@ -29,6 +29,16 @@ export interface StatsComponent extends Component {
 }
 
 /**
+ * Canonical Trinity stats used by centralized combat math.
+ */
+export interface TrinityComponent extends Component {
+    type: 'trinity';
+    body: number;
+    mind: number;
+    instinct: number;
+}
+
+/**
  * Visibility / Stealth Component
  */
 export interface VisibilityComponent extends Component {
@@ -59,6 +69,7 @@ export interface ArchetypeComponent extends Component {
 export type GameComponent =
     | PhysicsComponent
     | StatsComponent
+    | TrinityComponent
     | VisibilityComponent
     | VaultComponent
     | ArchetypeComponent;

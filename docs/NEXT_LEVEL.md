@@ -98,6 +98,17 @@
   - Raised skeletons now spawn with companion ownership and baseline combat loadout (`BASIC_MOVE`, `BASIC_ATTACK`, `AUTO_ATTACK`) and collision-safe deterministic IDs (`packages/engine/src/skills/raise_dead.ts`).
   - Exploration free-move now ignores friendly companions (hostile-only gating in `packages/engine/src/skills/basic_move.ts`), with scenario coverage.
   - Added scenario coverage in `packages/engine/src/scenarios/necromancer.ts`.
+  - Added deterministic Necromancer telemetry artifact: `docs/UPA_OUTLIER_REPORT_NECROMANCER_2026-02-08.json`.
+    - `random`: `998 lost / 2 timeout`, `avgFloor=1.001`, `avgHazardBreaches=0.625`, `UPA=0.207`.
+    - `heuristic`: `215 lost / 785 timeout`, `avgFloor=3.78`, `avgHazardBreaches=0.049`, `UPA=0.0784`.
+- Necromancer harness policy retuned to human-priority ordering in `packages/engine/src/systems/balance-harness.ts`:
+  - opener locked to first kill objective (`state.kills === 0`), then `RAISE_DEAD` priority until cap 6.
+  - `SOUL_SWAP` reduced to emergency-only trigger (low HP + real adjacent pressure/hazard).
+  - post-opener behavior now prefers safe disengage and shrine pathing over melee loops.
+- Retune telemetry sample (200 seeds, `maxTurns=100`, generated `2026-02-08T05:56:46.069Z`):
+  - `random`: `200 lost`, `avgFloor=1.0`, `avgHazardBreaches=0.49`, `UPA=0.2102`.
+  - `heuristic`: `15 lost / 185 timeout`, `avgFloor=1.62`, `avgHazardBreaches=0`, `UPA=0.0012`.
+  - Conclusion: survivability improved but progression remains blocked by residual zero-effect `BASIC_ATTACK` loops.
 
 ---
 
@@ -412,7 +423,121 @@ Goal: validate Firemage power ceiling with deterministic, simulation-aware polic
 - Acceptance tests:
   - [ ] New report committed under `docs/` with result histogram + strongest/weakest seed slices.
 
----
+## Phase 4.2 - Necromancer Progression Bot (In Progress)
+Goal: enforce kill -> raise -> expand army -> progress floor behavior without no-op loops.
+
+### P4.2.PR1 - Eliminate zero-effect attack loops
+- Scope:
+  - [ ] Trace and close remaining `BASIC_ATTACK` zero-effect paths during harness simulation.
+  - [ ] Ensure Necromancer action policy cannot stall on repeated non-advancing attack intents.
+- Acceptance tests:
+  - [ ] Fixed-seed message-log audit shows `playerZeroEffects=0` for Necromancer sample set.
+  - [ ] 200-seed Necromancer run reduces timeout rate from `0.925` while keeping hazard deaths near zero.
+
+### P4.2.PR2 - Generic utility weighting pass (non-archetype hardcoding)
+- Scope:
+  - [ ] Introduce role-level utility knobs (kill pressure, floor progression, shrine urgency, safety) reusable across archetypes.
+  - [ ] Keep archetype-specific policy as thin overrides only where required by skill contracts.
+- Acceptance tests:
+  - [ ] Harness config can switch role profiles without branching in core selector flow.
+  - [ ] Firemage and Necromancer both improve on timeout-heavy baseline under shared utility scaffolding.
+
+## Phase 5 - Centralized Combat Logic System (Grand Calculator)
+Goal: consolidate combat math into one deterministic calculation pipeline and stop logic leakage across skills/effects.
+
+### P5.PR1 - CombatIntent Contract + Calculator Core
+- Scope:
+  - [x] Add `CombatIntent` contract with trinity stats, scaling terms, status multipliers, and tension/risk inputs.
+  - [x] Add centralized deterministic calculator (`calculateCombat`) with formula stack:
+    - Base -> Scaling -> Status Multipliers -> Risk Multiplier -> Final Power.
+  - [x] Emit score telemetry payload (`efficiency`, `riskBonusApplied`) from the same calculation result.
+- Acceptance tests:
+  - [x] `npx vitest run packages/engine/src/__tests__/combat_calculator.test.ts --silent` passes.
+  - [x] Test covers deterministic output and non-negative final power.
+  - [x] Module exported through public engine index.
+
+### P5.PR2 - Skill Adoption Gate (No Direct Damage Math in Skill Files)
+- Scope:
+  - [x] Migrate first slice (`BASIC_ATTACK`, `FIREBALL`, `CORPSE_EXPLOSION`) to use `calculateCombat`.
+  - [x] Replace direct skill-local damage arithmetic with calculator inputs.
+  - [x] Add guard test that scans changed skill files for direct `Damage amount` arithmetic bypass patterns.
+- Acceptance tests:
+  - [x] Scenario parity remains green for migrated skills (`npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent`).
+  - [x] Guard test enforces calculator usage in migrated skills (`packages/engine/src/__tests__/combat_calculator_adoption.test.ts`).
+
+### P5.PR3 - Attribute Lever Wiring
+- Scope:
+  - [x] Define canonical Body/Mind/Instinct storage in actor components and map into calculator inputs.
+  - [x] Wire Body to raw damage leverage, Mind to status-duration leverage, Instinct to initiative/crit leverage.
+- Acceptance tests:
+  - [x] Headless tests show stat delta propagates through all migrated skills from one source of truth (`packages/engine/src/__tests__/trinity_integration.test.ts`).
+  - [x] Deterministic replay behavior remains unchanged for fixed seeds (`npx vitest run --silent` remains green).
+
+### P5.PR4 - Score/Tension Integration
+- Scope:
+  - [x] Feed calculator `scoreEvent` into run scoring pipeline as telemetry-only signal first.
+  - [x] Inject risk bonus whenever action resolves from an `intentPreview` danger tile.
+- Acceptance tests:
+  - [x] Objective/score tests confirm deterministic score-event emission (`packages/engine/src/__tests__/daily_run.test.ts`).
+  - [x] No gameplay branch hard-gates on UPA/efficiency at this phase (telemetry remains summary-only).
+
+### Phase 5 Formula Contract (Locked)
+- Combat (Body): `FinalDamage = SkillBase * (1 + Body / 20)` plus optional skill scaling + status/risk/crit multipliers in calculator.
+- Status (Mind): `FinalTurns = StatusBase + floor(Mind / 15)`.
+- Movement Economy (Instinct): `SparkCost = Fibonacci(MoveIndex) * (1 - Instinct / 100)` via `GrandCalculator.resolveSparkCost`.
+
+### Phase 5 Exit Criteria
+- [x] Grand Calculator contract exists and is exported (`packages/engine/src/systems/combat-calculator.ts`).
+- [x] First migrated skills route damage through calculator (`BASIC_ATTACK`, `FIREBALL`, `CORPSE_EXPLOSION`).
+- [x] Trinity levers wired to combat/status/initiative and covered by tests.
+- [x] Score/tension telemetry emitted without gameplay gating.
+- [x] Full suite remains green (`npx vitest run --silent`).
+
+## Phase J - Juice Sequencing (Event-Driven)
+Goal: enforce choreographed, deterministic visual sequencing so movement resolves before hazard consequence beats.
+
+### PR-J1 - Engine Timeline Queue Contract
+- Scope:
+  - [x] Add deterministic `timelineEvents` to `GameState`.
+  - [x] Emit ordered phases in effect execution (`MOVE_START`, `MOVE_END`, `ON_PASS`, `ON_ENTER`, `HAZARD_CHECK`, `DAMAGE_APPLY`, `STATUS_APPLY`, `DEATH_RESOLVE`).
+  - [x] Add suggested durations and blocking hints for client playback.
+- Acceptance tests:
+  - [x] `packages/engine/src/__tests__/timeline_sequence.test.ts` ensures move phases complete before hazard/damage on lava entry.
+
+### PR-J2 - Client Timeline Runner
+- Scope:
+  - [x] Extend `JuiceManager` to process `timelineEvents` sequentially with blocking delays.
+  - [x] Keep legacy visual-event mode as fallback when no timeline events are present.
+  - [x] Feed busy-state from timeline runner to input gating in `App.tsx`.
+- Acceptance tests:
+  - [x] Engine + web tests remain green with timeline runner active (`npx vitest run --silent`).
+
+### PR-J3 - Hazard Sequence Baseline
+- Scope:
+  - [x] Wire hazard checks and damage/death beats into timeline phases from engine.
+  - [x] Ensure sink/disaster cues are emitted after movement completion in timeline order.
+- Acceptance tests:
+  - [x] Timeline ordering test covers `MOVE -> HAZARD_CHECK -> DAMAGE_APPLY` on lava entry.
+
+### PR-J4 - Tween/Visual Language Expansion
+- Scope:
+  - [ ] Replace generic phase effects with full style language per channel (`body`, `mind`, `instinct`) and easing presets.
+  - [x] Add reduced-motion profile preserving order with shortened timing.
+- Acceptance tests:
+  - [ ] Add UI integration test for input lock until timeline drain.
+
+### Juice Progress Snapshot (Current)
+- Added deterministic timeline sequencing contract to engine state and effect resolution (`packages/engine/src/types.ts`, `packages/engine/src/systems/effect-engine.ts`).
+- Added client-side sequential timeline runner with blocking playback in `apps/web/src/components/JuiceManager.tsx`.
+- Added reduced-motion timing compression in timeline runner (`prefers-reduced-motion` support).
+- Upgraded entity movement easing toward non-linear kinetic feel in `apps/web/src/components/Entity.tsx`.
+- Added timeline ordering regression test `packages/engine/src/__tests__/timeline_sequence.test.ts`.
+
+### Phase J Exit Criteria
+- [x] Deterministic timeline queue exists in engine.
+- [x] Client consumes timeline sequentially and exposes busy/input lock behavior.
+- [x] Lava entry no longer presents consequence beats before movement completion in event order.
+- [ ] Full polish library/easing presets complete.
 
 ## Deferred (Intentionally Out of Scope)
 - [ ] MMO layer
