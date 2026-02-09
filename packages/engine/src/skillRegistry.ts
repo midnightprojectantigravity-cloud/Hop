@@ -42,6 +42,7 @@ import { WITHDRAWAL } from './skills/withdrawal';
 import { ABSORB_FIRE } from './skills/absorb_fire';
 import type { SkillDefinition } from './types';
 import type { SkillID } from './types/registry';
+import { hydrateSkillIntentProfiles } from './systems/skill-intent-profile';
 
 /**
  * A registry of all skills using the new Compositional Skill Framework.
@@ -84,6 +85,13 @@ export const COMPOSITIONAL_SKILLS = {
     WITHDRAWAL,
     ABSORB_FIRE,
 };
+
+const skillIntentCoverage = hydrateSkillIntentProfiles(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>);
+if (skillIntentCoverage.missing.length > 0 || skillIntentCoverage.invalid.length > 0) {
+    const missing = skillIntentCoverage.missing.join(', ');
+    const invalid = skillIntentCoverage.invalid.map(x => `${x.skillId}: ${x.errors.join('; ')}`).join(' | ');
+    throw new Error(`Skill intent profile validation failed. missing=[${missing}] invalid=[${invalid}]`);
+}
 
 /**
  * Creates an ActiveSkill instance from a SkillID.

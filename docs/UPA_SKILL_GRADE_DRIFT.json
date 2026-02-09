@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-02-09T03:57:20.379Z",
+  "staticFile": "docs/UPA_SKILL_GRADES_STATIC.json",
+  "dynamicFile": "docs/UPA_SKILL_GRADES_DYNAMIC.json",
+  "rows": [
+    {
+      "skillId": "JUMP",
+      "staticNumericGrade": 19.5833,
+      "dynamicNumericGrade": 243.4741,
+      "drift": 223.8908
+    },
+    {
+      "skillId": "SHIELD_BASH",
+      "staticNumericGrade": 41.5833,
+      "dynamicNumericGrade": 192.5772,
+      "drift": 150.9939
+    },
+    {
+      "skillId": "SPEAR_THROW",
+      "staticNumericGrade": 70.85,
+      "dynamicNumericGrade": 30.8274,
+      "drift": -40.0226
+    },
+    {
+      "skillId": "BASIC_ATTACK",
+      "staticNumericGrade": 37.85,
+      "dynamicNumericGrade": 35.7333,
+      "drift": -2.1167
+    }
+  ]
+}

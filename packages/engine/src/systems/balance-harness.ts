@@ -1,16 +1,28 @@
 import { gameReducer, generateInitialState } from '../logic';
-import type { Action, GameState, Point } from '../types';
+import type { Action, GameState, Point, SkillIntentProfile } from '../types';
 import { DEFAULT_LOADOUTS } from './loadout';
 import { isPlayerTurn } from './initiative';
-import { getNeighbors, hexDistance, hexEquals } from '../hex';
+import { getNeighbors, hexDistance, hexEquals, pointToKey } from '../hex';
 import { getActorAt } from '../helpers';
 import { UnifiedTileService } from './unified-tile-service';
 import { randomFromSeed } from './rng';
 import { computeScore } from './score';
 import { SkillRegistry } from '../skillRegistry';
+import { computeDynamicSkillGrades, type DynamicSkillMetric, type SkillTelemetryTotals } from './skill-grading';
 
 export type BotPolicy = 'random' | 'heuristic';
 export type ArchetypeLoadoutId = keyof typeof DEFAULT_LOADOUTS;
+
+export interface SkillTelemetry {
+    casts: number;
+    enemyDamage: number;
+    killShots: number;
+    healingReceived: number;
+    hazardDamage: number;
+    stairsProgress: number;
+    shrineProgress: number;
+    floorProgress: number;
+}
 
 export interface RunResult {
     seed: string;
@@ -22,6 +34,10 @@ export interface RunResult {
     kills: number;
     hazardBreaches: number;
     score: number;
+    playerActionCounts: Record<string, number>;
+    playerSkillUsage: Record<string, number>;
+    totalPlayerSkillCasts: number;
+    playerSkillTelemetry: Record<string, SkillTelemetry>;
 }
 
 export interface BatchSummary {
@@ -35,7 +51,55 @@ export interface BatchSummary {
     avgFloor: number;
     avgHazardBreaches: number;
     hazardDeaths: number;
+    actionTypeTotals: Record<string, number>;
+    skillUsageTotals: Record<string, number>;
+    avgSkillUsagePerRun: Record<string, number>;
+    avgPlayerSkillCastsPerRun: number;
+    skillTelemetryTotals: SkillTelemetryTotals;
+    dynamicSkillGrades: Record<string, DynamicSkillMetric>;
 }
+
+export interface MatchupSide {
+    policy: BotPolicy;
+    loadoutId: ArchetypeLoadoutId;
+}
+
+export interface MatchupRun {
+    seed: string;
+    left: RunResult;
+    right: RunResult;
+    winner: 'left' | 'right' | 'tie';
+}
+
+export interface MatchupSummary {
+    games: number;
+    leftWins: number;
+    rightWins: number;
+    ties: number;
+    leftWinRate: number;
+    rightWinRate: number;
+    tieRate: number;
+}
+
+type TransitionMetrics = {
+    hazardDamage: number;
+    healingReceived: number;
+    enemyDamage: number;
+    killShot: number;
+    stairsProgress: number;
+    shrineProgress: number;
+    floorProgress: number;
+    enemyApproachProgress: number;
+    safetyDelta: number;
+    waitPenalty: number;
+    noProgressPenalty: number;
+};
+
+type ActionCandidate = {
+    action: Action;
+    profile?: SkillIntentProfile;
+    preScore: number;
+};
 
 const resolvePending = (state: GameState): GameState => {
     let cur = state;
@@ -52,21 +116,36 @@ const chooseFrom = <T>(items: T[], seed: string, counter: number): T => {
     return items[idx];
 };
 
-const isFiremageLoadout = (state: GameState): boolean =>
-    !!state.player.activeSkills?.some(s => s.id === 'FIREBALL');
-const isNecromancerLoadout = (state: GameState): boolean =>
-    !!state.player.activeSkills?.some(s => s.id === 'RAISE_DEAD');
-
-const legalMoves = (state: GameState): Point[] => {
-    const origin = state.player.position;
-    return getNeighbors(origin)
-        .filter(p => p.q >= 0 && p.q < state.gridWidth && p.r >= 0 && p.r < state.gridHeight)
-        .filter(p => UnifiedTileService.isWalkable(state, p))
-        .filter(p => {
-            const occ = getActorAt(state, p);
-            return !occ || occ.id !== state.player.id;
-        });
+const incrementHistogram = (hist: Record<string, number>, key: string) => {
+    hist[key] = (hist[key] || 0) + 1;
 };
+
+const mergeHistogram = (target: Record<string, number>, source: Record<string, number>) => {
+    for (const [key, value] of Object.entries(source)) {
+        target[key] = (target[key] || 0) + value;
+    }
+};
+
+const mergeSkillTelemetry = (target: SkillTelemetryTotals, source: Record<string, SkillTelemetry>) => {
+    for (const [skillId, stats] of Object.entries(source)) {
+        if (!target[skillId]) {
+            target[skillId] = { ...stats };
+            continue;
+        }
+        const dst = target[skillId];
+        dst.casts += stats.casts;
+        dst.enemyDamage += stats.enemyDamage;
+        dst.killShots += stats.killShots;
+        dst.healingReceived += stats.healingReceived;
+        dst.hazardDamage += stats.hazardDamage;
+        dst.stairsProgress += stats.stairsProgress;
+        dst.shrineProgress += stats.shrineProgress;
+        dst.floorProgress += stats.floorProgress;
+    }
+};
+
+const enemyAt = (state: GameState, p: Point) =>
+    state.enemies.find(e => e.hp > 0 && e.factionId === 'enemy' && hexEquals(e.position, p));
 
 const isHazardTile = (state: GameState, p: Point): boolean => {
     const tile = UnifiedTileService.getTileAt(state, p);
@@ -77,105 +156,163 @@ const isHazardTile = (state: GameState, p: Point): boolean => {
 };
 
 const adjacentHostileCount = (state: GameState, p: Point): number => {
-    return state.enemies.filter(e => e.hp > 0 && hexDistance(e.position, p) === 1).length;
-};
-
-const sumEnemyHp = (state: GameState): number =>
-    state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy').reduce((acc, e) => acc + e.hp, 0);
-
-const nearestHostileDistance = (state: GameState): number => {
-    const hostiles = state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy' && e.subtype !== 'bomb');
-    if (hostiles.length === 0) return 0;
-    return hostiles
-        .map(e => hexDistance(state.player.position, e.position))
-        .sort((a, b) => a - b)[0];
+    return state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy' && hexDistance(e.position, p) === 1).length;
 };
 
 const aliveHostilesList = (state: GameState) =>
     state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy' && e.subtype !== 'bomb');
 
-const skeletonCount = (state: GameState): number =>
-    state.enemies.filter(e => e.hp > 0 && e.factionId === 'player' && e.subtype === 'skeleton').length;
+const aliveHostiles = (state: GameState): number => aliveHostilesList(state).length;
 
-const aliveHostiles = (state: GameState): number =>
-    state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy' && e.subtype !== 'bomb').length;
+const sumEnemyHp = (state: GameState): number =>
+    state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy').reduce((acc, e) => acc + e.hp, 0);
 
-const distanceToStairs = (state: GameState): number => {
+const nearestHostileDistance = (state: GameState, from = state.player.position): number => {
+    const hostiles = aliveHostilesList(state);
+    if (hostiles.length === 0) return 0;
+    return hostiles
+        .map(e => hexDistance(from, e.position))
+        .sort((a, b) => a - b)[0];
+};
+
+const distanceToStairs = (state: GameState, from = state.player.position): number => {
     if (!state.stairsPosition) return 0;
-    return hexDistance(state.player.position, state.stairsPosition);
+    return hexDistance(from, state.stairsPosition);
 };
 
-const distanceToShrine = (state: GameState): number => {
+const distanceToShrine = (state: GameState, from = state.player.position): number => {
     if (!state.shrinePosition) return 0;
-    return hexDistance(state.player.position, state.shrinePosition);
+    return hexDistance(from, state.shrinePosition);
 };
 
-const AGGRESSIVE_WEIGHTS = {
-    HAZARD_DAMAGE: -0.5,
-    HEALING_RECEIVED: 2.5,
-    DAMAGE_DEALT: 12.0,
-    KILL_SHOT: 200.0,
-    DISTANCE_TO_ENEMY: -0.2,
-    ENEMY_APPROACH_PROGRESS: 4.0,
-    ENEMY_CLEARED: 90.0,
-    STAIRS_PROGRESS: 1.2,
-    SHRINE_PROGRESS: 1.5,
-    FLOOR_PROGRESS: 600.0,
-    WAIT_PENALTY: -5.0,
-    NO_PROGRESS_PENALTY: -8.0,
-    FIREWALK_NO_PROGRESS_PENALTY: -20.0
-} as const;
+const targetEnemyDensity = (state: GameState, target: Point): number =>
+    state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy' && hexDistance(e.position, target) <= 1).length;
 
-const buildSkillActions = (state: GameState): Action[] => {
-    const actions: Action[] = [];
+const legalMoves = (state: GameState): Point[] => {
     const origin = state.player.position;
+    const moveDef = SkillRegistry.get('BASIC_MOVE');
+    if (moveDef?.getValidTargets) {
+        return moveDef.getValidTargets(state, origin);
+    }
+    return getNeighbors(origin)
+        .filter(p => p.q >= 0 && p.q < state.gridWidth && p.r >= 0 && p.r < state.gridHeight)
+        .filter(p => UnifiedTileService.isWalkable(state, p));
+};
+
+const stateHash = (state: GameState): string => {
+    const enemyBits = state.enemies
+        .filter(e => e.hp > 0)
+        .map(e => `${e.id}:${e.hp}:${pointToKey(e.position)}`)
+        .sort()
+        .join('|');
+    return [
+        state.turnsSpent,
+        state.floor,
+        state.rngCounter,
+        state.player.hp,
+        pointToKey(state.player.position),
+        enemyBits
+    ].join('::');
+};
+
+const actionKey = (action: Action): string => {
+    if (action.type === 'USE_SKILL') {
+        const targetKey = action.payload.target ? pointToKey(action.payload.target) : 'none';
+        return `${action.type}:${action.payload.skillId}:${targetKey}`;
+    }
+    if (action.type === 'MOVE') {
+        return `${action.type}:${pointToKey(action.payload)}`;
+    }
+    return action.type;
+};
+
+const tagWeight = (profile: SkillIntentProfile | undefined, tag: string): number => {
+    if (!profile) return 0;
+    return profile.intentTags.includes(tag as any) ? 1 : 0;
+};
+
+const preRankAction = (state: GameState, action: Action, profile?: SkillIntentProfile): number => {
+    if (action.type === 'WAIT') {
+        return -4;
+    }
+
+    const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
+    const hostileCount = aliveHostiles(state);
+    const inCombat = hostileCount > 0;
+
+    if (action.type === 'MOVE') {
+        const hazardPenalty = isHazardTile(state, action.payload) ? 8 : 0;
+        const pressurePenalty = adjacentHostileCount(state, action.payload) * 2;
+        const approach = nearestHostileDistance(state) - nearestHostileDistance(state, action.payload);
+        const shrineGain = distanceToShrine(state) - distanceToShrine(state, action.payload);
+        const stairGain = distanceToStairs(state) - distanceToStairs(state, action.payload);
+        const objectiveGain = inCombat ? 0 : (stairGain + (hpRatio < 0.6 ? shrineGain : 0));
+        return (approach * 1.2) + (objectiveGain * 1.4) - hazardPenalty - pressurePenalty;
+    }
+
+    if (action.type !== 'USE_SKILL') {
+        return -1;
+    }
+
+    const target = action.payload.target || state.player.position;
+    const directHit = enemyAt(state, target) ? 1 : 0;
+    const density = targetEnemyDensity(state, target);
+    const summonCount = state.enemies.filter(e => e.hp > 0 && e.factionId === 'player' && e.companionOf === state.player.id).length;
+
+    let score = 0;
+    score += directHit * (4 + (profile?.estimates.damage || 0));
+    score += density * (profile?.target.aoeRadius ? 1.7 : 1.0);
+    score += tagWeight(profile, 'damage') * 2.2;
+    score += tagWeight(profile, 'control') * 1.3;
+    score += tagWeight(profile, 'heal') * (hpRatio < 0.6 ? 3 : 0.6);
+    score += tagWeight(profile, 'protect') * (hpRatio < 0.5 ? 2.5 : 1);
+    score += tagWeight(profile, 'summon') * Math.max(0, 7 - summonCount) * 0.8;
+    score += tagWeight(profile, 'move') * (inCombat ? 0.8 : 1.1);
+    score += tagWeight(profile, 'objective') * (inCombat ? 0 : 1.3);
+    score -= tagWeight(profile, 'hazard') * (hpRatio < 0.5 ? 0.6 : -0.2);
+
+    return score;
+};
+
+const buildSkillActions = (state: GameState): ActionCandidate[] => {
+    const actions: ActionCandidate[] = [];
+    const origin = state.player.position;
+
     for (const skill of (state.player.activeSkills || [])) {
         if ((skill.currentCooldown || 0) > 0) continue;
         if (skill.id === 'AUTO_ATTACK') continue;
-        // FIREWALK creates frequent low-value loops in harness policy; keep focus on kill/progress actions.
-        if (skill.id === 'FIREWALK') continue;
+        if (skill.id === 'BASIC_MOVE') continue;
+
         const def = SkillRegistry.get(skill.id);
         if (!def?.getValidTargets) continue;
         const targets = def.getValidTargets(state, origin);
-        if (!targets || targets.length === 0) continue;
+        if (!targets?.length) continue;
 
-        // Keep candidate fanout bounded while preserving tactical variety.
+        const profile = def.intentProfile;
         const rankedTargets = targets
             .map(target => {
-                const adjacent = state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy' && hexDistance(e.position, target) <= 1).length;
                 const direct = enemyAt(state, target) ? 2 : 0;
-                return { target, score: direct + adjacent };
+                const density = targetEnemyDensity(state, target);
+                const objectiveBias = (profile?.intentTags.includes('objective') && !aliveHostiles(state))
+                    ? ((distanceToStairs(state) - distanceToStairs(state, target)) + (distanceToShrine(state) - distanceToShrine(state, target)))
+                    : 0;
+                return { target, score: direct + density + objectiveBias };
             })
             .sort((a, b) => b.score - a.score)
-            .slice(0, 5)
+            .slice(0, 3)
             .map(t => t.target);
 
         for (const target of rankedTargets) {
-            actions.push({ type: 'USE_SKILL', payload: { skillId: skill.id, target } });
+            const action: Action = { type: 'USE_SKILL', payload: { skillId: skill.id, target } };
+            actions.push({
+                action,
+                profile,
+                preScore: preRankAction(state, action, profile)
+            });
         }
     }
+
     return actions;
-};
-
-const virtualStep = (state: GameState, action: Action): GameState => {
-    const progressed = gameReducer(state, action);
-    return resolvePending(progressed);
-};
-
-type TransitionMetrics = {
-    hazardDamage: number;
-    healingReceived: number;
-    enemyDamage: number;
-    killShot: number;
-    distanceToEnemy: number;
-    enemyApproachProgress: number;
-    enemiesCleared: number;
-    stairsProgress: number;
-    shrineProgress: number;
-    floorProgress: number;
-    waitPenalty: number;
-    noProgressPenalty: number;
-    firewalkNoProgressPenalty: number;
 };
 
 const transitionMetrics = (prev: GameState, next: GameState, action: Action): TransitionMetrics => {
@@ -184,419 +321,146 @@ const transitionMetrics = (prev: GameState, next: GameState, action: Action): Tr
     const healingReceived = Math.max(0, hpDiff);
     const enemyDamage = Math.max(0, sumEnemyHp(prev) - sumEnemyHp(next));
     const killShot = Math.max(0, (next.kills || 0) - (prev.kills || 0));
-    const prevDistanceToEnemy = nearestHostileDistance(prev);
-    const distanceToEnemy = nearestHostileDistance(next);
-    const enemyApproachProgress = Math.max(0, prevDistanceToEnemy - distanceToEnemy);
-    const previousHostiles = aliveHostiles(prev);
-    const enemiesCleared = Math.max(0, aliveHostiles(prev) - aliveHostiles(next));
-    const isCombatOngoing = previousHostiles > 0;
-    const stairsProgressRaw = Math.max(0, distanceToStairs(prev) - distanceToStairs(next));
-    const shrineProgressRaw = Math.max(0, distanceToShrine(prev) - distanceToShrine(next));
-    // Prioritize killing while enemies remain; prioritize progression once floor is clear.
-    const stairsProgress = isCombatOngoing ? 0 : stairsProgressRaw;
-    const shrineProgress = isCombatOngoing ? 0 : shrineProgressRaw;
+    const stairsProgress = Math.max(0, distanceToStairs(prev) - distanceToStairs(next));
+    const shrineProgress = Math.max(0, distanceToShrine(prev) - distanceToShrine(next));
     const floorProgress = Math.max(0, (next.floor || 0) - (prev.floor || 0));
+    const enemyApproachProgress = Math.max(0, nearestHostileDistance(prev) - nearestHostileDistance(next));
+
+    const prevSafety = adjacentHostileCount(prev, prev.player.position) + (isHazardTile(prev, prev.player.position) ? 1 : 0);
+    const nextSafety = adjacentHostileCount(next, next.player.position) + (isHazardTile(next, next.player.position) ? 1 : 0);
+    const safetyDelta = prevSafety - nextSafety;
+
     const waitPenalty = action.type === 'WAIT' ? 1 : 0;
     const noProgress = enemyDamage === 0
         && killShot === 0
-        && enemiesCleared === 0
-        && enemyApproachProgress === 0
         && stairsProgress === 0
         && shrineProgress === 0
-        && floorProgress === 0;
+        && floorProgress === 0
+        && enemyApproachProgress === 0
+        && safetyDelta <= 0;
     const noProgressPenalty = noProgress ? 1 : 0;
-    const firewalkNoProgressPenalty = action.type === 'USE_SKILL'
-        && action.payload.skillId === 'FIREWALK'
-        && noProgress
-        ? 1
-        : 0;
 
     return {
         hazardDamage,
         healingReceived,
         enemyDamage,
         killShot,
-        distanceToEnemy,
-        enemyApproachProgress,
-        enemiesCleared,
         stairsProgress,
         shrineProgress,
         floorProgress,
+        enemyApproachProgress,
+        safetyDelta,
         waitPenalty,
-        noProgressPenalty,
-        firewalkNoProgressPenalty
+        noProgressPenalty
     };
 };
 
-const scoreStateTransition = (m: TransitionMetrics): number => {
-    return (
-        AGGRESSIVE_WEIGHTS.HAZARD_DAMAGE * m.hazardDamage
-        + AGGRESSIVE_WEIGHTS.HEALING_RECEIVED * m.healingReceived
-        + AGGRESSIVE_WEIGHTS.DAMAGE_DEALT * m.enemyDamage
-        + AGGRESSIVE_WEIGHTS.KILL_SHOT * m.killShot
-        + AGGRESSIVE_WEIGHTS.DISTANCE_TO_ENEMY * m.distanceToEnemy
-        + AGGRESSIVE_WEIGHTS.ENEMY_APPROACH_PROGRESS * m.enemyApproachProgress
-        + AGGRESSIVE_WEIGHTS.ENEMY_CLEARED * m.enemiesCleared
-        + AGGRESSIVE_WEIGHTS.STAIRS_PROGRESS * m.stairsProgress
-        + AGGRESSIVE_WEIGHTS.SHRINE_PROGRESS * m.shrineProgress
-        + AGGRESSIVE_WEIGHTS.FLOOR_PROGRESS * m.floorProgress
-        + AGGRESSIVE_WEIGHTS.WAIT_PENALTY * m.waitPenalty
-        + AGGRESSIVE_WEIGHTS.NO_PROGRESS_PENALTY * m.noProgressPenalty
-        + AGGRESSIVE_WEIGHTS.FIREWALK_NO_PROGRESS_PENALTY * m.firewalkNoProgressPenalty
-    );
+const utilityWeights = (state: GameState) => {
+    const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
+    const hostiles = aliveHostiles(state);
+    const inCombat = hostiles > 0;
+
+    return {
+        survival: hpRatio < 0.5 ? 4.2 : 2.3,
+        lethality: inCombat ? 4.8 : 1.2,
+        position: inCombat ? 2.4 : 1.1,
+        objective: inCombat ? 0.6 : 4.6,
+        tempo: 1.6,
+        resource: 1.0
+    };
 };
 
-const selectByOnePlySimulation = (state: GameState, simSeed: string, decisionCounter: number): Action => {
-    const moveActions: Action[] = legalMoves(state).map(m => ({ type: 'MOVE', payload: m }));
-    const skillActions = buildSkillActions(state);
-    const rawCandidates: Action[] = [{ type: 'WAIT' }, ...moveActions, ...skillActions];
-    const hasHostiles = aliveHostiles(state) > 0;
-    const candidates = hasHostiles
-        ? rawCandidates.filter(a => a.type !== 'WAIT' || rawCandidates.length === 1)
-        : rawCandidates;
+const evaluateAction = (
+    state: GameState,
+    candidate: ActionCandidate,
+    memo: Map<string, { value: number; metrics: TransitionMetrics; next: GameState }>
+): { value: number; metrics: TransitionMetrics; next: GameState } => {
+    const key = `${stateHash(state)}|${state.player.id}|${actionKey(candidate.action)}`;
+    const cached = memo.get(key);
+    if (cached) return cached;
 
-    if (candidates.length === 0) return { type: 'WAIT' };
+    const next = resolvePending(gameReducer(state, candidate.action));
+    const metrics = transitionMetrics(state, next, candidate.action);
+    const w = utilityWeights(state);
 
-    const scored = candidates.map(action => {
-        const next = virtualStep(state, action);
-        const metrics = transitionMetrics(state, next, action);
-        return { action, value: scoreStateTransition(metrics), metrics };
+    let value = 0;
+    value += (metrics.healingReceived - metrics.hazardDamage) * w.survival;
+    value += (metrics.enemyDamage * 2.5 + metrics.killShot * 18) * w.lethality;
+    value += (metrics.enemyApproachProgress + metrics.safetyDelta) * w.position;
+    value += (metrics.stairsProgress + metrics.shrineProgress + metrics.floorProgress * 6) * w.objective;
+    value += (-metrics.waitPenalty - (metrics.noProgressPenalty * 2.5)) * w.tempo;
+
+    const p = candidate.profile;
+    if (p) {
+        value += (p.estimates.damage || 0) * tagWeight(p, 'damage') * 0.8;
+        value += (p.estimates.healing || 0) * tagWeight(p, 'heal') * (w.survival * 0.3);
+        value += (p.estimates.movement || 0) * tagWeight(p, 'move') * 0.4;
+        value += (p.estimates.control || 0) * tagWeight(p, 'control') * 0.5;
+        value += (p.estimates.summon || 0) * tagWeight(p, 'summon') * 0.9;
+        value -= (p.economy.cooldown || 0) * 0.12;
+        value -= (p.economy.cost || 0) * 0.08 * w.resource;
+    }
+
+    const evaluated = { value, metrics, next };
+    memo.set(key, evaluated);
+    return evaluated;
+};
+
+export const selectByOnePlySimulation = (
+    state: GameState,
+    simSeed: string,
+    decisionCounter: number,
+    topK = 6
+): Action => {
+    const moveCandidates: ActionCandidate[] = legalMoves(state).map(move => {
+        const action: Action = { type: 'MOVE', payload: move };
+        return { action, preScore: preRankAction(state, action) };
     });
-    const pickBest = (entries: typeof scored): Action => {
-        entries.sort((a, b) => b.value - a.value);
-        const best = entries[0].value;
-        const ties = entries.filter(s => s.value === best).map(s => s.action);
-        return chooseFrom(ties, `${simSeed}:sim`, decisionCounter);
-    };
+    const skillCandidates = buildSkillActions(state);
+    const waitCandidate: ActionCandidate = { action: { type: 'WAIT' }, preScore: preRankAction(state, { type: 'WAIT' }) };
 
-    // Hard tactical bias: if any action kills, choose among killers.
-    const killers = scored.filter(s => s.metrics.killShot > 0 || s.metrics.enemiesCleared > 0);
-    if (killers.length > 0) {
-        return pickBest(killers);
-    }
+    const allCandidates = [waitCandidate, ...moveCandidates, ...skillCandidates];
+    if (allCandidates.length === 0) return { type: 'WAIT' };
 
-    // In-combat policy: force immediate damage before setup/dancing.
-    if (hasHostiles) {
-        const damaging = scored.filter(s => s.metrics.enemyDamage > 0);
-        if (damaging.length > 0) {
-            return pickBest(damaging);
-        }
+    const inCombat = aliveHostiles(state) > 0;
+    const filtered = inCombat ? allCandidates.filter(c => c.action.type !== 'WAIT') : allCandidates;
+    const ranked = [...filtered].sort((a, b) => b.preScore - a.preScore);
+    const shortlist = ranked.slice(0, Math.max(1, Math.min(topK, ranked.length)));
 
-        // If no immediate damage is available, force distance closing moves.
-        const advancing = scored
-            .filter(s => s.action.type === 'MOVE' && s.metrics.enemyApproachProgress > 0)
-            .sort((a, b) => {
-                if (b.metrics.enemyApproachProgress !== a.metrics.enemyApproachProgress) {
-                    return b.metrics.enemyApproachProgress - a.metrics.enemyApproachProgress;
-                }
-                return b.value - a.value;
-            });
-        if (advancing.length > 0) {
-            return pickBest(advancing);
-        }
-    }
+    const memo = new Map<string, { value: number; metrics: TransitionMetrics; next: GameState }>();
+    const scored = shortlist.map(candidate => {
+        const evald = evaluateAction(state, candidate, memo);
+        return { candidate, ...evald };
+    });
 
-    scored.sort((a, b) => b.value - a.value);
-    const best = scored[0].value;
-    const ties = scored.filter(s => s.value === best).map(s => s.action);
+    const killers = scored.filter(s => s.metrics.killShot > 0);
+    const bestPool = killers.length > 0 ? killers : scored;
+    bestPool.sort((a, b) => b.value - a.value);
+    const best = bestPool[0].value;
+    const ties = bestPool.filter(x => x.value === best).map(x => x.candidate.action);
     return chooseFrom(ties, `${simSeed}:sim`, decisionCounter);
 };
 
-const getReadySkill = (state: GameState, skillId: string) => {
-    const skill = state.player.activeSkills?.find(s => s.id === skillId);
-    if (!skill) return undefined;
-    return (skill.currentCooldown || 0) <= 0 ? skill : undefined;
-};
-
-const enemyAt = (state: GameState, p: Point) =>
-    state.enemies.find(e => e.hp > 0 && hexEquals(e.position, p));
-
-const pickBestTarget = (targets: Point[], score: (t: Point) => number, seed: string, counter: number): Point | undefined => {
-    if (targets.length === 0) return undefined;
-    const ranked = targets.map(t => ({ t, s: score(t) })).sort((a, b) => b.s - a.s);
-    const best = ranked[0].s;
-    const ties = ranked.filter(x => x.s === best).map(x => x.t);
-    return chooseFrom(ties, seed, counter);
-};
-
-const chooseSkillAction = (state: GameState, simSeed: string, decisionCounter: number): Action | null => {
-    const origin = state.player.position;
-    const adjacentEnemy = state.enemies.find(e => e.hp > 0 && e.subtype !== 'bomb' && hexDistance(origin, e.position) === 1);
-
-    // Always convert immediate adjacency into direct attack first.
-    if (adjacentEnemy && getReadySkill(state, 'BASIC_ATTACK')) {
-        return { type: 'USE_SKILL', payload: { skillId: 'BASIC_ATTACK', target: adjacentEnemy.position } };
-    }
-
-    // Firemage priority: value AoE pressure before melee.
-    if (getReadySkill(state, 'FIREBALL')) {
-        const def = SkillRegistry.get('FIREBALL');
-        const targets = def?.getValidTargets ? def.getValidTargets(state, origin) : [];
-        const best = pickBestTarget(targets, (t) => {
-            const direct = enemyAt(state, t) ? 10 : 0;
-            const splash = state.enemies.filter(e => e.hp > 0 && hexDistance(e.position, t) <= 1).length;
-            return direct + splash;
-        }, simSeed, decisionCounter);
-        const bestScore = best
-            ? ((enemyAt(state, best) ? 10 : 0) + state.enemies.filter(e => e.hp > 0 && hexDistance(e.position, best) <= 1).length)
-            : 0;
-        if (best && bestScore >= 1) {
-            return { type: 'USE_SKILL', payload: { skillId: 'FIREBALL', target: best } };
-        }
-    }
-
-    if (getReadySkill(state, 'FIREWALL')) {
-        const def = SkillRegistry.get('FIREWALL');
-        const targets = def?.getValidTargets ? def.getValidTargets(state, origin) : [];
-        const best = pickBestTarget(targets, (t) => {
-            // Coarse value: targets with multiple enemies nearby are good firewall anchors.
-            return state.enemies.filter(e => e.hp > 0 && hexDistance(e.position, t) <= 2).length;
-        }, simSeed, decisionCounter);
-        const bestScore = best
-            ? state.enemies.filter(e => e.hp > 0 && hexDistance(e.position, best) <= 2).length
-            : 0;
-        if (best && bestScore >= 3) {
-            return { type: 'USE_SKILL', payload: { skillId: 'FIREWALL', target: best } };
-        }
-    }
-
-    if (getReadySkill(state, 'SPEAR_THROW')) {
-        const def = SkillRegistry.get('SPEAR_THROW');
-        const targets = def?.getValidTargets ? def.getValidTargets(state, origin) : [];
-        const best = pickBestTarget(targets, (t) => (enemyAt(state, t) ? 1 : 0), simSeed, decisionCounter);
-        if (best && enemyAt(state, best)) {
-            return { type: 'USE_SKILL', payload: { skillId: 'SPEAR_THROW', target: best } };
-        }
-    }
-
-    return null;
-};
-
-const chooseNecromancerAction = (state: GameState, simSeed: string, decisionCounter: number, moves: Point[]): Action | null => {
-    const origin = state.player.position;
-    const hostiles = aliveHostilesList(state);
-    const nearestHostile = hostiles
-        .slice()
-        .sort((a, b) => hexDistance(origin, a.position) - hexDistance(origin, b.position))[0];
-    const skCount = skeletonCount(state);
-    const openingPhase = (state.kills || 0) === 0;
-
-    const basicAttack = getReadySkill(state, 'BASIC_ATTACK');
-    const raiseDead = getReadySkill(state, 'RAISE_DEAD');
-    const soulSwap = getReadySkill(state, 'SOUL_SWAP');
-
-    const adjacentHostile = hostiles
-        .slice()
-        .sort((a, b) => (a.hp - b.hp) || (hexDistance(origin, a.position) - hexDistance(origin, b.position)))[0];
-    const adjacent = adjacentHostile && hexDistance(origin, adjacentHostile.position) === 1 ? adjacentHostile : null;
-
-    // 1) Open with direct basic attack pressure until first kill.
-    if (openingPhase && adjacent && basicAttack) {
-        return { type: 'USE_SKILL', payload: { skillId: 'BASIC_ATTACK', target: adjacent.position } };
-    }
-
-    // 2) Core plan: prioritize Raise Dead up to six skeletons.
-    if (skCount < 6 && raiseDead) {
-        const def = SkillRegistry.get('RAISE_DEAD');
-        const targets = def?.getValidTargets ? def.getValidTargets(state, origin) : [];
-        if (targets.length > 0) {
-            const best = pickBestTarget(
-                targets,
-                (t) => {
-                    const hostileProximity = hostiles.filter(h => hexDistance(h.position, t) <= 2).length;
-                    return (hostileProximity * 5) - hexDistance(origin, t);
-                },
-                `${simSeed}:necro-raise`,
-                decisionCounter
-            );
-            if (best) {
-                return { type: 'USE_SKILL', payload: { skillId: 'RAISE_DEAD', target: best } };
-            }
-        }
-    }
-
-    // 3) Emergency safety: swap only under real pressure.
-    const adjacentPressure = adjacentHostileCount(state, origin);
-    const pressured = (state.player.hp || 0) <= Math.max(2, Math.floor((state.player.maxHp || 1) * 0.4))
-        && (adjacentPressure >= 2 || isHazardTile(state, origin));
-    if (pressured && soulSwap) {
-        const def = SkillRegistry.get('SOUL_SWAP');
-        const targets = def?.getValidTargets ? def.getValidTargets(state, origin) : [];
-        const best = pickBestTarget(
-            targets,
-            (t) => {
-                const hazardPenalty = isHazardTile(state, t) ? 100 : 0;
-                const pressurePenalty = adjacentHostileCount(state, t) * 8;
-                const dist = nearestHostile
-                    ? hexDistance(t, nearestHostile.position)
-                    : 0;
-                return dist * 4 - hazardPenalty - pressurePenalty;
-            },
-            `${simSeed}:necro-swap`,
-            decisionCounter
-        );
-        if (best) {
-            return { type: 'USE_SKILL', payload: { skillId: 'SOUL_SWAP', target: best } };
-        }
-    }
-
-    // Optional conversion: if we already have a bone line and can clip multiple enemies, explode.
-    if (skCount >= 3 && getReadySkill(state, 'CORPSE_EXPLOSION')) {
-        const def = SkillRegistry.get('CORPSE_EXPLOSION');
-        const targets = def?.getValidTargets ? def.getValidTargets(state, origin) : [];
-        const best = pickBestTarget(
-            targets,
-            (t) => hostiles.filter(h => hexDistance(h.position, t) <= 1).length * 10 - hexDistance(origin, t),
-            `${simSeed}:necro-boom`,
-            decisionCounter
-        );
-        const density = best ? hostiles.filter(h => hexDistance(h.position, best) <= 1).length : 0;
-        if (best && density >= 2) {
-            return { type: 'USE_SKILL', payload: { skillId: 'CORPSE_EXPLOSION', target: best } };
-        }
-    }
-
-    // 4) During opener, force approach to secure first kill.
-    if (openingPhase && nearestHostile && moves.length > 0) {
-        const towardKill = moves
-            .map(move => ({
-                move,
-                score: (hexDistance(move, nearestHostile.position) * 10)
-                    + (isHazardTile(state, move) ? 120 : 0)
-                    + (adjacentHostileCount(state, move) * 5)
-            }))
-            .sort((a, b) => a.score - b.score);
-        const best = towardKill[0]?.score;
-        const ties = towardKill.filter(m => m.score === best).map(m => m.move);
-        if (ties.length > 0) {
-            return { type: 'MOVE', payload: chooseFrom(ties, `${simSeed}:necro-open`, decisionCounter) };
-        }
-    }
-
-    // 4.1) If opener is done and no summon action is available, avoid melee loops and reposition safely.
-    if (!openingPhase && moves.length > 0) {
-        const disengage = moves
-            .map(move => {
-                const hazardPenalty = isHazardTile(state, move) ? 120 : 0;
-                const pressurePenalty = adjacentHostileCount(state, move) * 12;
-                const dist = nearestHostile ? hexDistance(move, nearestHostile.position) : 0;
-                const shrineBias = state.shrinePosition ? hexDistance(move, state.shrinePosition) : 0;
-                // Lower score is better: prioritize safety and slight shrine pull.
-                const score = hazardPenalty + pressurePenalty - (dist * 6) + shrineBias;
-                return { move, score };
-            })
-            .sort((a, b) => a.score - b.score);
-        const best = disengage[0]?.score;
-        const ties = disengage.filter(m => m.score === best).map(m => m.move);
-        if (ties.length > 0) {
-            return { type: 'MOVE', payload: chooseFrom(ties, `${simSeed}:necro-disengage`, decisionCounter) };
-        }
-    }
-
-    // 5) Army phase: mostly move safely, prefer shrine when injured, then stairs.
-    if (moves.length > 0) {
-        const progressionTarget = ((state.player.hp || 0) < (state.player.maxHp || 0) && state.shrinePosition)
-            ? state.shrinePosition
-            : (state.stairsPosition ?? state.shrinePosition);
-        const hasHostiles = hostiles.length > 0;
-
-        const safeMoves = moves
-            .map(move => {
-                const hazardPenalty = isHazardTile(state, move) ? 120 : 0;
-                const pressurePenalty = adjacentHostileCount(state, move) * 10;
-                const distanceFromHostiles = nearestHostile ? hexDistance(move, nearestHostile.position) : 0;
-                const progressionPenalty = progressionTarget ? hexDistance(move, progressionTarget) * (hasHostiles ? 1 : 5) : 0;
-                // Lower score is better. Favor safety strongly, then progression.
-                const score = hazardPenalty + pressurePenalty - (distanceFromHostiles * (hasHostiles ? 2 : 1)) + progressionPenalty;
-                return { move, score };
-            })
-            .sort((a, b) => a.score - b.score);
-        const best = safeMoves[0]?.score;
-        const ties = safeMoves.filter(m => m.score === best).map(m => m.move);
-        if (ties.length > 0) {
-            return { type: 'MOVE', payload: chooseFrom(ties, `${simSeed}:necro-safe`, decisionCounter) };
-        }
-    }
-
-    return { type: 'WAIT' };
-};
-
 const selectAction = (state: GameState, policy: BotPolicy, simSeed: string, decisionCounter: number): Action => {
-    const moves = legalMoves(state);
-
     if (policy === 'random') {
+        const moves = legalMoves(state);
         const options: Action[] = [{ type: 'WAIT' }, ...moves.map(m => ({ type: 'MOVE' as const, payload: m }))];
         return chooseFrom(options, simSeed, decisionCounter);
     }
 
-    if (isNecromancerLoadout(state)) {
-        const necroAction = chooseNecromancerAction(state, simSeed, decisionCounter, moves);
-        return necroAction || { type: 'WAIT' };
-    }
-
-    const skillAction = chooseSkillAction(state, simSeed, decisionCounter);
-    if (skillAction) {
-        return skillAction;
-    }
-    if (moves.length === 0) {
-        return { type: 'WAIT' };
-    }
-
-    const nearestEnemy = state.enemies
-        .filter(e => e.hp > 0 && e.subtype !== 'bomb')
-        .sort((a, b) => hexDistance(state.player.position, a.position) - hexDistance(state.player.position, b.position))[0];
-
-    if (!nearestEnemy) {
-        const progressionTarget = state.shrinePosition ?? state.stairsPosition;
-        if (progressionTarget) {
-            const towardStairs = moves
-                .map(move => ({
-                    move,
-                    score: (hexDistance(move, progressionTarget as Point) * 10)
-                        + (state.player.previousPosition && hexEquals(move, state.player.previousPosition) ? 20 : 0)
-                        + (isHazardTile(state, move) ? 120 : 0)
-                        + (adjacentHostileCount(state, move) * 4)
-                }))
-                .sort((a, b) => a.score - b.score);
-            const best = towardStairs[0]?.score;
-            const ties = towardStairs.filter(m => m.score === best).map(m => m.move);
-            if (ties.length > 0) {
-                return { type: 'MOVE', payload: chooseFrom(ties, simSeed, decisionCounter) };
-            }
-        }
-        return { type: 'WAIT' };
-    }
-
-    const currentHazard = isHazardTile(state, state.player.position) ? 1 : 0;
-    if (isFiremageLoadout(state)) {
-        const chaseMoves = moves
-            .map(move => ({
-                move,
-                score: (hexDistance(move, nearestEnemy.position) * 10)
-                    + (state.player.previousPosition && hexEquals(move, state.player.previousPosition) ? 5 : 0)
-            }))
-            .sort((a, b) => a.score - b.score);
-        const best = chaseMoves[0]?.score;
-        const ties = chaseMoves.filter(m => m.score === best).map(m => m.move);
-        if (ties.length > 0) {
-            return { type: 'MOVE', payload: chooseFrom(ties, simSeed, decisionCounter) };
-        }
-    }
-
-    const candidates: Array<{ action: Action; score: number }> = moves.map(move => {
-            const distanceScore = hexDistance(move, nearestEnemy.position) * 10;
-            const hazardPenalty = isHazardTile(state, move) ? 120 : 0;
-            const pressurePenalty = adjacentHostileCount(state, move) * 6;
-            const backtrackPenalty = state.player.previousPosition && hexEquals(move, state.player.previousPosition) ? 20 : 0;
-            const score = distanceScore + hazardPenalty + pressurePenalty + backtrackPenalty;
-            return { action: { type: 'MOVE', payload: move } as Action, score };
-        });
-
-    candidates.sort((a, b) => a.score - b.score);
-    const bestScore = candidates[0].score;
-    const tiedBest = candidates.filter(c => c.score === bestScore).map(c => c.action);
-    return chooseFrom(tiedBest, simSeed, decisionCounter);
+    return selectByOnePlySimulation(state, simSeed, decisionCounter);
 };
+
+const zeroSkillTelemetry = (): SkillTelemetry => ({
+    casts: 0,
+    enemyDamage: 0,
+    killShots: 0,
+    healingReceived: 0,
+    hazardDamage: 0,
+    stairsProgress: 0,
+    shrineProgress: 0,
+    floorProgress: 0
+});
 
 export const simulateRun = (
     seed: string,
@@ -607,8 +471,13 @@ export const simulateRun = (
     let state = generateInitialState(1, seed, seed, undefined, DEFAULT_LOADOUTS[loadoutId]);
     let decisionCounter = 0;
     let guard = 0;
+    let stagnantPlayerActions = 0;
+    const playerActionCounts: Record<string, number> = {};
+    const playerSkillUsage: Record<string, number> = {};
+    const playerSkillTelemetry: Record<string, SkillTelemetry> = {};
+    let totalPlayerSkillCasts = 0;
 
-    while (state.gameStatus !== 'won' && state.gameStatus !== 'lost' && guard < 4000) {
+    while (state.gameStatus !== 'won' && state.gameStatus !== 'lost' && guard < 1500) {
         guard++;
         if (state.turnsSpent >= maxTurns) {
             break;
@@ -616,18 +485,50 @@ export const simulateRun = (
 
         if (state.gameStatus === 'choosing_upgrade') {
             const options = state.shrineOptions || [];
-            const option = (loadoutId === 'NECROMANCER' && options.includes('EXTRA_HP'))
-                ? 'EXTRA_HP'
-                : (options[0] || 'EXTRA_HP');
+            const option = options[0] || 'EXTRA_HP';
             state = gameReducer(state, { type: 'SELECT_UPGRADE', payload: option });
             state = resolvePending(state);
             continue;
         }
 
         if (isPlayerTurn(state)) {
+            const prev = state;
+            const prevTurnsSpent = state.turnsSpent || 0;
             const action = selectAction(state, policy, `${seed}:${policy}`, decisionCounter++);
+            incrementHistogram(playerActionCounts, action.type);
+            if (action.type === 'USE_SKILL') {
+                incrementHistogram(playerSkillUsage, action.payload.skillId);
+                totalPlayerSkillCasts += 1;
+            }
+
             state = gameReducer(state, action);
             state = resolvePending(state);
+            if ((state.turnsSpent || 0) === prevTurnsSpent) {
+                stagnantPlayerActions += 1;
+            } else {
+                stagnantPlayerActions = 0;
+            }
+            if (stagnantPlayerActions >= 3) {
+                state = gameReducer(state, { type: 'ADVANCE_TURN' });
+                state = resolvePending(state);
+                stagnantPlayerActions = 0;
+            }
+
+            if (action.type === 'USE_SKILL') {
+                const m = transitionMetrics(prev, state, action);
+                if (!playerSkillTelemetry[action.payload.skillId]) {
+                    playerSkillTelemetry[action.payload.skillId] = zeroSkillTelemetry();
+                }
+                const t = playerSkillTelemetry[action.payload.skillId];
+                t.casts += 1;
+                t.enemyDamage += m.enemyDamage;
+                t.killShots += m.killShot;
+                t.healingReceived += m.healingReceived;
+                t.hazardDamage += m.hazardDamage;
+                t.stairsProgress += m.stairsProgress;
+                t.shrineProgress += m.shrineProgress;
+                t.floorProgress += m.floorProgress;
+            }
         } else {
             state = gameReducer(state, { type: 'ADVANCE_TURN' });
             state = resolvePending(state);
@@ -647,7 +548,11 @@ export const simulateRun = (
         floor: state.floor,
         kills: state.kills || 0,
         hazardBreaches: state.hazardBreaches || 0,
-        score: computeScore(state)
+        score: computeScore(state),
+        playerActionCounts,
+        playerSkillUsage,
+        totalPlayerSkillCasts,
+        playerSkillTelemetry
     };
 };
 
@@ -669,7 +574,23 @@ export const summarizeBatch = (
     const losses = results.filter(r => r.result === 'lost');
     const timeouts = results.filter(r => r.result === 'timeout');
     const avg = (arr: number[]) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
-    return {
+    const actionTypeTotals: Record<string, number> = {};
+    const skillUsageTotals: Record<string, number> = {};
+    const skillTelemetryTotals: SkillTelemetryTotals = {};
+
+    for (const run of results) {
+        mergeHistogram(actionTypeTotals, run.playerActionCounts || {});
+        mergeHistogram(skillUsageTotals, run.playerSkillUsage || {});
+        mergeSkillTelemetry(skillTelemetryTotals, run.playerSkillTelemetry || {});
+    }
+
+    const avgSkillUsagePerRun: Record<string, number> = {};
+    const divisor = results.length || 1;
+    for (const [skillId, total] of Object.entries(skillUsageTotals)) {
+        avgSkillUsagePerRun[skillId] = total / divisor;
+    }
+
+    const summary: BatchSummary = {
         policy,
         loadoutId,
         games: results.length,
@@ -679,6 +600,73 @@ export const summarizeBatch = (
         avgTurnsToLoss: avg(losses.map(r => r.turnsSpent)),
         avgFloor: avg(results.map(r => r.floor || 0)),
         avgHazardBreaches: avg(results.map(r => r.hazardBreaches)),
-        hazardDeaths: losses.filter(r => r.hazardBreaches > 0).length
+        hazardDeaths: losses.filter(r => r.hazardBreaches > 0).length,
+        actionTypeTotals,
+        skillUsageTotals,
+        avgSkillUsagePerRun,
+        avgPlayerSkillCastsPerRun: avg(results.map(r => r.totalPlayerSkillCasts || 0)),
+        skillTelemetryTotals,
+        dynamicSkillGrades: {}
+    };
+
+    summary.dynamicSkillGrades = computeDynamicSkillGrades(summary);
+    return summary;
+};
+
+const resultRank = (result: RunResult['result']): number => {
+    switch (result) {
+        case 'won':
+            return 3;
+        case 'timeout':
+            return 2;
+        case 'lost':
+        default:
+            return 1;
+    }
+};
+
+const compareRuns = (left: RunResult, right: RunResult): 'left' | 'right' | 'tie' => {
+    if (left.score !== right.score) return left.score > right.score ? 'left' : 'right';
+    if (left.floor !== right.floor) return left.floor > right.floor ? 'left' : 'right';
+    const leftRank = resultRank(left.result);
+    const rightRank = resultRank(right.result);
+    if (leftRank !== rightRank) return leftRank > rightRank ? 'left' : 'right';
+    if (left.turnsSpent !== right.turnsSpent) return left.turnsSpent < right.turnsSpent ? 'left' : 'right';
+    if (left.kills !== right.kills) return left.kills > right.kills ? 'left' : 'right';
+    if (left.hazardBreaches !== right.hazardBreaches) return left.hazardBreaches < right.hazardBreaches ? 'left' : 'right';
+    return 'tie';
+};
+
+export const runHeadToHeadBatch = (
+    seeds: string[],
+    left: MatchupSide,
+    right: MatchupSide,
+    maxTurns = 80
+): MatchupRun[] => {
+    return seeds.map(seed => {
+        const leftRun = simulateRun(seed, left.policy, maxTurns, left.loadoutId);
+        const rightRun = simulateRun(seed, right.policy, maxTurns, right.loadoutId);
+        return {
+            seed,
+            left: leftRun,
+            right: rightRun,
+            winner: compareRuns(leftRun, rightRun)
+        };
+    });
+};
+
+export const summarizeMatchup = (runs: MatchupRun[]): MatchupSummary => {
+    const games = runs.length;
+    const leftWins = runs.filter(r => r.winner === 'left').length;
+    const rightWins = runs.filter(r => r.winner === 'right').length;
+    const ties = runs.filter(r => r.winner === 'tie').length;
+    return {
+        games,
+        leftWins,
+        rightWins,
+        ties,
+        leftWinRate: games ? leftWins / games : 0,
+        rightWinRate: games ? rightWins / games : 0,
+        tieRate: games ? ties / games : 0
     };
 };

@@ -4,7 +4,7 @@ import { ScenarioEngine } from '../skillTests';
 import { isPlayerTurn } from '../systems/initiative';
 
 describe('timeline sequencing', () => {
-    it('emits MOVE phases before hazard sink/damage phases on lava entry', () => {
+    it('rejects unsafe lava entry without emitting movement timeline phases', () => {
         const initialState = generateInitialState(1, 'timeline-seed');
         initialState.enemies = [];
         initialState.tiles.clear();
@@ -24,15 +24,9 @@ describe('timeline sequencing', () => {
         engine.useSkill('BASIC_MOVE', { q: 4, r: 6, s: -10 });
 
         const phases = (engine.state.timelineEvents || []).map(e => e.phase);
-
-        const moveStart = phases.indexOf('MOVE_START');
-        const moveEnd = phases.indexOf('MOVE_END');
-        const hazard = phases.indexOf('HAZARD_CHECK');
-        const damage = phases.indexOf('DAMAGE_APPLY');
-
-        expect(moveStart).toBeGreaterThanOrEqual(0);
-        expect(moveEnd).toBeGreaterThan(moveStart);
-        expect(hazard).toBeGreaterThan(moveEnd);
-        expect(damage).toBeGreaterThan(hazard);
+        expect(phases.includes('MOVE_START')).toBe(false);
+        expect(phases.includes('MOVE_END')).toBe(false);
+        expect(phases.includes('HAZARD_CHECK')).toBe(false);
+        expect(phases.includes('DAMAGE_APPLY')).toBe(false);
     });
 });

@@ -1,0 +1,44 @@
+name: UPA Grade Nightly
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh-dynamic-grades:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build engine
+        run: npm run build --workspace=@hop/engine
+
+      - name: Generate static grades
+        run: npm run upa:grades:static
+
+      - name: Generate dynamic grades
+        run: npm run upa:grades:dynamic
+
+      - name: Generate drift report
+        run: npm run upa:grades:drift
+
+      - name: Upload grade artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: upa-grade-artifacts
+          path: |
+            docs/UPA_SKILL_GRADES_STATIC.json
+            docs/UPA_SKILL_GRADES_DYNAMIC.json
+            docs/UPA_SKILL_GRADE_DRIFT.json
+

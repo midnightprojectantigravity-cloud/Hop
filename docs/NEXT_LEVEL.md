@@ -55,6 +55,41 @@
     - `random`: `944 lost / 56 timeout`, `avgHazardBreaches=0.944`, `UPA=0.4811`.
     - `heuristic`: `81 lost / 919 timeout`, `avgHazardBreaches=0.019`, `UPA=0.4996`.
 
+## Progress Snapshot (February 9, 2026)
+
+### User Feedback Closure (`docs/User Feedback.md`)
+- [x] **Unsafe lava traversal blocked for free move**
+  - Scope:
+    - [x] `BASIC_MOVE` now computes targets through hazard-safe pathing only (`packages/engine/src/skills/basic_move.ts`).
+    - [x] Unsafe lava tiles are rejected both as path and destination unless actor is hazard-safe (`canPassHazard` / `canLandOnHazard`).
+  - Acceptance:
+    - [x] `Walk Into Lava` scenario updated to new contract and passes (`packages/engine/src/scenarios/hazards.ts`).
+- [x] **Firewalk treated as teleport semantics**
+  - Scope:
+    - [x] `FIREWALK` displacement explicitly disables path simulation (`simulatePath: false`) in `packages/engine/src/skills/firewalk.ts`.
+  - Acceptance:
+    - [x] No path-based pass hooks are invoked for Firewalk execution.
+- [x] **Bomb timer consistency**
+  - Scope:
+    - [x] Bomb actors now execute countdown/explosion logic each initiative turn via `resolveSingleEnemyTurn` path in `processNextTurn` (`packages/engine/src/logic.ts`).
+  - Acceptance:
+    - [x] Bombs decrement from `2 -> 1 -> explode` instead of remaining stuck at 2.
+- [x] **Tile text click no longer selects tile**
+  - Scope:
+    - [x] Coordinate text now intercepts click (`stopPropagation`) in `apps/web/src/components/HexTile.tsx`.
+  - Acceptance:
+    - [x] Clicking tile label text no longer triggers move/target selection.
+- [x] **Return to Command Center / Hub fixed**
+  - Scope:
+    - [x] `EXIT_TO_HUB` is now allowed through non-playing reducer guards (`packages/engine/src/logic.ts`).
+  - Acceptance:
+    - [x] Exit action works from end-of-run and other non-playing UI states.
+
+### Verification (February 9, 2026)
+- [x] `npm run build` passes for all workspaces.
+- [x] `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts` passes.
+- [x] `npx vitest run --silent` passes (`109 passed / 14 skipped`).
+
 ## Baseline (as of February 7, 2026)
 - [x] `scenarios_runner` baseline captured: `31 passed / 11 failed`.
 - [x] High-risk regression list confirmed in code and tests:
@@ -538,6 +573,85 @@ Goal: enforce choreographed, deterministic visual sequencing so movement resolve
 - [x] Client consumes timeline sequentially and exposes busy/input lock behavior.
 - [x] Lava entry no longer presents consequence beats before movement completion in event order.
 - [ ] Full polish library/easing presets complete.
+
+---
+
+## Phase 6 - Agnostic UPA + Numeric Skill Grading
+Goal: replace archetype-specific heuristics with a generic intent framework and assign every skill an unbounded numeric grade.
+
+### P6.PR1 - `SkillIntentProfile` contract (all skills)
+- Scope:
+  - [x] Add `SkillIntentProfile` type alongside `SkillDefinition`.
+  - [x] Include profile fields needed for generic scoring only (`intentTags`, range/shape, damage/heal/protect/move/control descriptors, hazard affinity, economy metadata).
+  - [x] Add schema validation and CI enforcement for missing/invalid profiles.
+- Acceptance tests:
+  - [x] `npx vitest run packages/engine/src/__tests__/skill_intent_profile.test.ts --silent` passes.
+  - [x] Registry bootstrap fails if any registered skill has no valid profile.
+
+### P6.PR2 - Static numeric grade engine (unbounded)
+- Scope:
+  - [x] Add `computeSkillNumericGrade(profile)` that returns a pure number with no ceiling and no bands.
+  - [x] Expose sub-scores (`power`, `reach`, `safety`, `tempo`, `complexity`) plus final weighted numeric grade.
+  - [x] Generate artifact (for example `docs/UPA_SKILL_GRADES_STATIC.json`) keyed by skill id and version.
+- Acceptance tests:
+  - [x] Determinism: same inputs produce the same numeric output across runs.
+  - [x] Monotonic sanity checks: increasing base power or reach increases grade when all else is equal.
+  - [x] No stars/metals/enums appear in grade output.
+
+### P6.PR3 - Full skill migration to profile + numeric grade
+- Scope:
+  - [x] Refactor all existing skills to include `SkillIntentProfile` (registry hydration + overrides for all registered skills).
+  - [x] Ensure grade generation runs across the full registry.
+- Acceptance tests:
+  - [x] `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent` remains green after migration.
+  - [x] Grade artifact includes 100% of registered skills.
+
+### P6.PR4 - Generic intent scorer (remove archetype branches)
+- Scope:
+  - [x] Replace archetype-specific heuristic branches in `packages/engine/src/systems/balance-harness.ts` with one generic intent scoring pipeline.
+  - [x] Generate intents from legal targets only (`getValidTargets`) and score with shared utility terms (survival, lethality, position, objective, tempo, resources).
+- Acceptance tests:
+  - [x] Harness can run loadouts including `VANGUARD` and `HUNTER` under one selector path with no archetype-specific decision branch.
+  - [x] Existing balance harness tests remain green.
+
+### P6.PR5 - Top-K one-ply simulation + memoization
+- Scope:
+  - [x] Pre-rank intents, then simulate top K for final selection.
+  - [x] Add turn-local memoization on `(stateHash, actorId, skillId, target)` to avoid duplicate evaluations.
+- Acceptance tests:
+  - [x] Deterministic selected intent for fixed seed/state.
+  - [x] Runtime bounded through candidate fanout + top-K simulation.
+
+### P6.PR6 - Dynamic numeric grade from UPA telemetry
+- Scope:
+  - [x] Compute simulation-backed numeric skill grades from telemetry (`castRate`, `damagePerCast`, `killContribution`, `survivalDelta`, `objectiveDelta`, `winImpact`).
+  - [x] Emit artifact (for example `docs/UPA_SKILL_GRADES_DYNAMIC.json`) with same unbounded numeric format.
+  - [x] Add drift report between static and dynamic numeric grades.
+- Acceptance tests:
+  - [x] `runUpaOutlierAnalysis` output includes per-skill dynamic numeric grade fields.
+  - [x] Drift report generation is available (`docs/UPA_SKILL_GRADE_DRIFT.json`).
+
+### P6.PR7 - Continuous automation
+- Scope:
+  - [x] Add scripts for static grades, dynamic grades, and drift report generation.
+  - [x] Add CI/nightly job for dynamic grade refresh and PR diff for static grade changes.
+- Acceptance tests:
+  - [x] One-command local flow generates all grade artifacts.
+  - [x] CI publishes grade deltas in pull request output.
+
+### P6.PR8 - Documentation + policy enforcement
+- Scope:
+  - [x] Update `docs/UPA_GUIDE.md` with numeric-grade workflow and commands.
+  - [x] Add contribution rule: any skill stat change requires updated static grade artifact; major behavior change requires dynamic rerun.
+- Acceptance tests:
+  - [x] Docs include end-to-end runbook for grade generation and interpretation.
+  - [x] PR checklist includes grade-update gate.
+
+### Phase 6 Exit Criteria
+- [x] All skills have a validated `SkillIntentProfile`.
+- [x] Static and dynamic skill grades are numeric-only and unbounded.
+- [x] Generic intent policy runs all archetypes without archetype-specific branches.
+- [x] UPA workflow is automated enough to avoid manual one-by-one balancing loops.
 
 ## Deferred (Intentionally Out of Scope)
 - [ ] MMO layer

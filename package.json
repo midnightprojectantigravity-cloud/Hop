@@ -12,7 +12,11 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "validator": "npm start --workspace=@hop/server",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "upa:grades:static": "npx tsx packages/engine/scripts/runSkillGradesStatic.ts p6-static-v1 docs/UPA_SKILL_GRADES_STATIC.json",
+    "upa:grades:dynamic": "npx tsx packages/engine/scripts/runSkillGradesDynamic.ts 300 80 heuristic ALL docs/UPA_SKILL_GRADES_DYNAMIC.json",
+    "upa:grades:drift": "npx tsx packages/engine/scripts/runSkillGradeDrift.ts docs/UPA_SKILL_GRADES_STATIC.json docs/UPA_SKILL_GRADES_DYNAMIC.json docs/UPA_SKILL_GRADE_DRIFT.json",
+    "upa:grades:all": "npm run upa:grades:static && npm run upa:grades:dynamic && npm run upa:grades:drift"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

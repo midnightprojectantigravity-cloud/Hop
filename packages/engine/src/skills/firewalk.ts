@@ -42,8 +42,14 @@ export const FIREWALK: SkillDefinition = {
             return { effects, messages: ['Target position occupied!'], consumesTurn: false };
         }
 
-        // Teleport
-        effects.push({ type: 'Displacement', target: 'self', destination: target, source: attacker.position });
+        // Teleport movement should not process pass-through tiles.
+        effects.push({
+            type: 'Displacement',
+            target: 'self',
+            destination: target,
+            source: attacker.position,
+            simulatePath: false
+        });
 
         // Grant Immunity
         effects.push({ type: 'ApplyStatus', target: 'self', status: 'fire_immunity', duration: 2 });

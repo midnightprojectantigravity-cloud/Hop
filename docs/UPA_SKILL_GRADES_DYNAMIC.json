@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-02-09T03:57:16.997Z",
+  "modelVersion": "p6-dynamic-v1",
+  "count": 20,
+  "maxTurns": 40,
+  "policy": "heuristic",
+  "loadouts": [
+    "VANGUARD"
+  ],
+  "reports": [
+    {
+      "loadoutId": "VANGUARD",
+      "games": 20,
+      "winRate": 0,
+      "dynamicSkillGrades": {
+        "JUMP": {
+          "casts": 220,
+          "castRate": 11,
+          "damagePerCast": 0.3591,
+          "killContribution": 4,
+          "survivalDelta": -0.55,
+          "objectiveDelta": 22.15,
+          "winImpact": 0,
+          "numericGrade": 243.4741
+        },
+        "SPEAR_THROW": {
+          "casts": 62,
+          "castRate": 3.1,
+          "damagePerCast": 1.2742,
+          "killContribution": 0.85,
+          "survivalDelta": 0,
+          "objectiveDelta": 0,
+          "winImpact": 0,
+          "numericGrade": 30.8274
+        },
+        "SHIELD_BASH": {
+          "casts": 1533,
+          "castRate": 76.65,
+          "damagePerCast": 0.0241,
+          "killContribution": 2.95,
+          "survivalDelta": -0.35,
+          "objectiveDelta": 0.15,
+          "winImpact": 0,
+          "numericGrade": 192.5772
+        },
+        "BASIC_ATTACK": {
+          "casts": 24,
+          "castRate": 1.2,
+          "damagePerCast": 1.6667,
+          "killContribution": 1.1,
+          "survivalDelta": -0.2,
+          "objectiveDelta": 0,
+          "winImpact": 0,
+          "numericGrade": 35.7333
+        }
+      }
+    }
+  ]
+}

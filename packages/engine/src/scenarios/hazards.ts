@@ -33,7 +33,7 @@ export const hazardScenarios: ScenarioCollection = {
         {
             id: 'Walk Into Lava',
             title: 'Walk Into Lava',
-            description: 'Walking into lava should result in damage/sinking.',
+            description: 'Walking into lava should be invalid unless the mover is hazard-safe.',
             relatedSkills: ['BASIC_MOVE'],
             category: 'hazards',
             tags: ['lava', 'walk'],
@@ -47,8 +47,8 @@ export const hazardScenarios: ScenarioCollection = {
             verify: (state: any) => {
                 const player = state.player;
                 const checks = {
-                    playerPos: hexEquals(player.position, { q: 4, r: 8, s: -12 }),
-                    tookDamage: player.hp < 3
+                    playerPos: hexEquals(player.position, { q: 4, r: 9, s: -13 }),
+                    hpUnchanged: player.hp === 3
                 };
                 return Object.values(checks).every(v => v === true);
             }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runBatch, summarizeBatch } from '../systems/balance-harness';
+import { runBatch, runHeadToHeadBatch, summarizeBatch, summarizeMatchup } from '../systems/balance-harness';
 
 describe('Balance Harness', () => {
     it('is deterministic for the same seed set', () => {
@@ -20,18 +20,42 @@ describe('Balance Harness', () => {
         expect(typeof summary.avgTurnsToLoss).toBe('number');
         expect(typeof summary.avgFloor).toBe('number');
         expect(typeof summary.hazardDeaths).toBe('number');
+        expect(typeof summary.avgPlayerSkillCastsPerRun).toBe('number');
+        expect(typeof summary.actionTypeTotals).toBe('object');
+        expect(typeof summary.skillUsageTotals).toBe('object');
+        expect(typeof summary.avgSkillUsagePerRun).toBe('object');
     });
 
-    it('heuristic policy reduces hazard pressure versus random on fixed seeds', () => {
+    it('heuristic policy improves progression versus random on fixed seeds', () => {
         const seeds = Array.from({ length: 20 }, (_, i) => `h-compare-${i + 1}`);
         const randomSummary = summarizeBatch(runBatch(seeds, 'random', 40), 'random');
         const heuristicSummary = summarizeBatch(runBatch(seeds, 'heuristic', 40), 'heuristic');
-        expect(heuristicSummary.avgHazardBreaches).toBeLessThanOrEqual(randomSummary.avgHazardBreaches);
+        expect(heuristicSummary.avgFloor).toBeGreaterThanOrEqual(randomSummary.avgFloor);
     });
 
     it('can run using a specific loadout/archetype', () => {
         const seeds = ['arch-seed-1', 'arch-seed-2'];
         const results = runBatch(seeds, 'heuristic', 25, 'HUNTER');
         expect(results.every(r => r.loadoutId === 'HUNTER')).toBe(true);
+    });
+
+    it('supports deterministic head-to-head matchup summaries', () => {
+        const seeds = ['m-seed-1', 'm-seed-2', 'm-seed-3'];
+        const first = runHeadToHeadBatch(
+            seeds,
+            { policy: 'heuristic', loadoutId: 'FIREMAGE' },
+            { policy: 'heuristic', loadoutId: 'NECROMANCER' },
+            30
+        );
+        const second = runHeadToHeadBatch(
+            seeds,
+            { policy: 'heuristic', loadoutId: 'FIREMAGE' },
+            { policy: 'heuristic', loadoutId: 'NECROMANCER' },
+            30
+        );
+        expect(first).toEqual(second);
+        const summary = summarizeMatchup(first);
+        expect(summary.games).toBe(3);
+        expect(summary.leftWins + summary.rightWins + summary.ties).toBe(3);
     });
 });

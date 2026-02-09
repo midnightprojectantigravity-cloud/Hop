@@ -1,9 +1,9 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { getNeighbors, hexDistance, hexEquals } from '../hex';
+import { getNeighbors, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
 import { SpatialSystem } from '../systems/SpatialSystem';
 import { getSkillScenarios } from '../scenarios';
-import { canLandOnHazard, isBlockedByActor } from '../systems/validation';
+import { canLandOnHazard, canPassHazard, isBlockedByActor } from '../systems/validation';
 import { UnifiedTileService } from '../systems/unified-tile-service';
 
 /**
@@ -24,6 +24,42 @@ const isBlockedMovementTile = (state: GameState, target: Point): boolean => {
     return traits.has('BLOCKS_MOVEMENT');
 };
 
+const getSafeMovementRange = (state: GameState, actor: Actor, origin: Point, movePoints: number): Point[] => {
+    const visited = new Map<string, number>();
+    const out: Point[] = [];
+    const key = (p: Point) => `${p.q},${p.r}`;
+    const queue: Array<{ p: Point; cost: number }> = [{ p: origin, cost: 0 }];
+    visited.set(key(origin), 0);
+
+    while (queue.length > 0) {
+        const cur = queue.shift()!;
+        if (cur.cost >= movePoints) continue;
+
+        for (const next of getNeighbors(cur.p)) {
+            if (!SpatialSystem.isWithinBounds(state, next)) continue;
+            if (!UnifiedTileService.isWalkable(state, next)) continue;
+            if (!canPassHazard(state, actor, next, 'BASIC_MOVE')) continue;
+
+            const occupant = getActorAt(state, next) as Actor | undefined;
+            const occupiedByOther = !!occupant && occupant.id !== actor.id;
+            const occupiedByAlly = occupiedByOther && occupant.factionId === actor.factionId;
+            if (occupiedByOther && !occupiedByAlly) continue;
+
+            const nk = key(next);
+            const newCost = cur.cost + 1;
+            if (visited.has(nk) && visited.get(nk)! <= newCost) continue;
+
+            visited.set(nk, newCost);
+            if (!occupiedByAlly && canLandOnHazard(state, actor, next) && !isBlockedMovementTile(state, next)) {
+                out.push(next);
+            }
+            queue.push({ p: next, cost: newCost });
+        }
+    }
+
+    return out;
+};
+
 export const BASIC_MOVE: SkillDefinition = {
     id: 'BASIC_MOVE',
     name: 'Walk',
@@ -42,16 +78,10 @@ export const BASIC_MOVE: SkillDefinition = {
         if (!target) return { effects, messages, consumesTurn: false };
 
         const range = getEffectiveMoveRange(state, attacker);
-        const validTargets = SpatialSystem.getMovementRange(state, attacker.position, range);
-
+        const validTargets = getSafeMovementRange(state, attacker, attacker.position, range);
         const isTargetValid = validTargets.some((p: Point) => hexEquals(p, target));
-        const isHazardAdjacentLanding =
-            hexDistance(attacker.position, target) === 1 &&
-            canLandOnHazard(state, attacker, target) &&
-            !isBlockedMovementTile(state, target) &&
-            !isBlockedByActor(state, target, attacker.id);
 
-        if (!isTargetValid && !isHazardAdjacentLanding) {
+        if (!isTargetValid) {
             messages.push('Target out of reach or blocked!');
             return { effects, messages, consumesTurn: false };
         }
@@ -73,13 +103,8 @@ export const BASIC_MOVE: SkillDefinition = {
         if (!actor) return [];
 
         const range = getEffectiveMoveRange(state, actor);
-        const movementTargets = SpatialSystem.getMovementRange(state, origin, range);
-        const hazardNeighbors = getNeighbors(origin).filter(p =>
-            canLandOnHazard(state, actor, p) &&
-            !isBlockedMovementTile(state, p) &&
-            !isBlockedByActor(state, p, actor.id)
-        );
-        return [...movementTargets, ...hazardNeighbors.filter(h => !movementTargets.some(m => hexEquals(m, h)))];
+        const movementTargets = getSafeMovementRange(state, actor, origin, range);
+        return movementTargets.filter(p => !isBlockedByActor(state, p, actor.id));
     },
     upgrades: {},
     scenarios: getSkillScenarios('BASIC_MOVE')

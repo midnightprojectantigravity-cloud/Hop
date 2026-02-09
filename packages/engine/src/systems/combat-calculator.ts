@@ -1,5 +1,6 @@
 import type { Actor } from '../types';
 import type { StatusID } from '../types/registry';
+import type { TrinityComponent, StatsComponent } from './components';
 import { getComponent } from './components';
 
 export type CombatAttribute = 'body' | 'mind' | 'instinct';
@@ -170,7 +171,7 @@ export class GrandCalculator {
 }
 
 export const extractTrinityStats = (actor: Actor): TrinityStats => {
-    const trinity = getComponent(actor.components, 'trinity');
+    const trinity = getComponent<TrinityComponent>(actor.components, 'trinity');
     if (trinity) {
         return {
             body: trinity.body,
@@ -178,7 +179,7 @@ export const extractTrinityStats = (actor: Actor): TrinityStats => {
             instinct: trinity.instinct
         };
     }
-    const stats = getComponent(actor.components, 'stats');
+    const stats = getComponent<StatsComponent>(actor.components, 'stats');
     const body = stats?.strength ?? 0;
     const mind = stats?.defense ?? 0;
     const instinct = stats?.evasion ?? 0;

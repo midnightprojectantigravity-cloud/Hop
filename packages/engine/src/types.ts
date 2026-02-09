@@ -220,6 +220,46 @@ export interface ScenarioV2 {
     verify: (state: GameState, logs: string[], events?: import('./types').VisualEvent[]) => boolean; // The behavioral assertion
 }
 
+export type SkillIntentTag =
+    | 'damage'
+    | 'move'
+    | 'heal'
+    | 'protect'
+    | 'control'
+    | 'summon'
+    | 'hazard'
+    | 'objective'
+    | 'economy'
+    | 'utility';
+
+export interface SkillIntentProfile {
+    id: SkillID;
+    intentTags: SkillIntentTag[];
+    target: {
+        range: number;
+        pattern: 'self' | 'single' | 'line' | 'radius' | 'global';
+        aoeRadius?: number;
+    };
+    estimates: {
+        damage?: number;
+        movement?: number;
+        healing?: number;
+        shielding?: number;
+        control?: number;
+        summon?: number;
+    };
+    economy: {
+        cost: number;
+        cooldown: number;
+        consumesTurn?: boolean;
+    };
+    risk: {
+        selfExposure?: number;
+        hazardAffinity?: number;
+    };
+    complexity: number;
+}
+
 export interface SkillDefinition {
     id: SkillID;
     /** Tactical name (supports State-Shifting skills) */
@@ -244,6 +284,7 @@ export interface SkillDefinition {
     };
     /** Optional helper for UI/tests: return valid target hexes for previews (Level 1/2) */
     getValidTargets?: (state: GameState, origin: Point) => Point[];
+    intentProfile?: SkillIntentProfile;
     upgrades: Record<string, SkillModifier>;
     scenarios?: ScenarioV2[];
 }
