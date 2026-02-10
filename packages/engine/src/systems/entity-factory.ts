@@ -1,7 +1,8 @@
 import type { Actor, Point, Skill, WeightClass } from '../types';
 import type { GameComponent } from './components';
-import type { TrinityStats } from './trinity-resolver';
+import { deriveMaxHpFromTrinity, type TrinityStats } from './trinity-resolver';
 import { getTrinityProfile } from './trinity-profiles';
+import { resolveDefaultCombatProfile, type CombatProfile } from './combat-traits';
 
 /**
  * ENTITY FACTORY SYSTEM
@@ -16,8 +17,8 @@ export interface BaseEntityConfig {
     type: 'player' | 'enemy';
     subtype?: string;
     position: Point;
-    hp: number;
-    maxHp: number;
+    hp?: number;
+    maxHp?: number;
     speed: number;
     factionId: string;
 
@@ -37,6 +38,7 @@ export interface BaseEntityConfig {
     // Components
     components?: Map<string, GameComponent>;
     trinity?: TrinityStats;
+    combatProfile?: CombatProfile;
 }
 
 export type CompanionType = 'falcon' | 'skeleton';
@@ -73,7 +75,9 @@ const resolveDefaultTrinity = (config: BaseEntityConfig): TrinityStats => {
 
 export const ensureActorTrinity = (actor: Actor): Actor => {
     const components = new Map(actor.components || []);
-    if (components.has('trinity')) return actor;
+    const hasTrinity = components.has('trinity');
+    const hasCombatProfile = components.has('combat_profile');
+    if (hasTrinity && hasCombatProfile) return actor;
 
     const resolved = resolveDefaultTrinity({
         id: actor.id,
@@ -88,11 +92,25 @@ export const ensureActorTrinity = (actor: Actor): Actor => {
         companionOf: actor.companionOf,
         components,
     });
-
-    components.set('trinity', {
-        type: 'trinity',
-        ...resolved,
+    const resolvedCombatProfile = resolveDefaultCombatProfile({
+        type: actor.type,
+        archetype: actor.archetype,
+        subtype: actor.subtype,
+        companionOf: actor.companionOf,
     });
+
+    if (!hasTrinity) {
+        components.set('trinity', {
+            type: 'trinity',
+            ...resolved,
+        });
+    }
+    if (!hasCombatProfile) {
+        components.set('combat_profile', {
+            type: 'combat_profile',
+            ...resolvedCombatProfile,
+        });
+    }
 
     return {
         ...actor,
@@ -130,13 +148,26 @@ export function createEntity(config: BaseEntityConfig): Actor {
     // Build components map
     const components = new Map(config.components || []);
 
+    const resolvedTrinity = resolveDefaultTrinity(config);
+    const resolvedCombatProfile = config.combatProfile || resolveDefaultCombatProfile(config);
+
     // Ensure all runtime actors have canonical trinity stats.
     if (!components.has('trinity')) {
         components.set('trinity', {
             type: 'trinity',
-            ...resolveDefaultTrinity(config),
+            ...resolvedTrinity,
         });
     }
+    if (!components.has('combat_profile')) {
+        components.set('combat_profile', {
+            type: 'combat_profile',
+            ...resolvedCombatProfile,
+        });
+    }
+
+    const derivedMaxHp = deriveMaxHpFromTrinity(resolvedTrinity);
+    const maxHp = Math.max(1, config.maxHp ?? derivedMaxHp);
+    const hp = Math.min(maxHp, Math.max(0, config.hp ?? maxHp));
 
     // Add physics component if weightClass is specified
     if (config.weightClass) {
@@ -159,8 +190,8 @@ export function createEntity(config: BaseEntityConfig): Actor {
         type: config.type,
         subtype: config.subtype,
         position: config.position,
-        hp: config.hp,
-        maxHp: config.maxHp,
+        hp,
+        maxHp,
         speed: config.speed,
         factionId: config.factionId,
         initiative: config.initiative,
@@ -194,8 +225,8 @@ export function createPlayer(config: {
         id: 'player',
         type: 'player',
         position: config.position,
-        hp: config.hp ?? 3,
-        maxHp: config.maxHp ?? 3,
+        hp: config.hp,
+        maxHp: config.maxHp,
         speed: config.speed ?? 1,
         factionId: 'player',
         skills: config.skills,
@@ -212,8 +243,8 @@ export function createEnemy(config: {
     id: string;
     subtype: string;
     position: Point;
-    hp: number;
-    maxHp: number;
+    hp?: number;
+    maxHp?: number;
     speed: number;
     skills: string[];
     weightClass?: WeightClass;
@@ -256,8 +287,6 @@ export function createCompanion(config: {
             type: 'enemy', // Type is 'enemy' but factionId is 'player'
             subtype: 'falcon',
             position: config.position,
-            hp: 1,
-            maxHp: 1,
             speed: 95, // High speed, acts after player (100)
             factionId: 'player',
             skills: ['BASIC_MOVE', 'FALCON_PECK', 'FALCON_APEX_STRIKE', 'FALCON_HEAL', 'FALCON_SCOUT', 'FALCON_AUTO_ROOST'],
@@ -281,8 +310,6 @@ export function createCompanion(config: {
         type: 'enemy',
         subtype: config.companionType,
         position: config.position,
-        hp: 1,
-        maxHp: 1,
         speed: 80,
         factionId: 'player',
         skills: ['BASIC_MOVE', 'BASIC_ATTACK'],

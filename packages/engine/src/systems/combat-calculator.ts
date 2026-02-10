@@ -35,12 +35,15 @@ export interface CombatIntent {
     inDangerPreviewHex?: boolean;
     proximityDistance?: number;
     theoreticalMaxPower?: number;
+    attackPowerMultiplier?: number;
+    targetDamageTakenMultiplier?: number;
 }
 
 export interface CombatScoreEvent {
     skillId: string;
     attackerId: string;
     targetId: string;
+    finalPower?: number;
     efficiency: number;
     riskBonusApplied: boolean;
     damageClass: 'physical' | 'magical';
@@ -243,7 +246,9 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
         * riskMultiplier
         * hit.multiplier
         * mitigation.multiplier
-        * crit.multiplier;
+        * crit.multiplier
+        * (intent.attackPowerMultiplier ?? 1)
+        * (intent.targetDamageTakenMultiplier ?? 1);
     const finalPower = Math.max(0, Math.floor(rawFinal));
     const rawContrib = computeTrinityContributions(intent, levers, bodyScaledPower, scalingPower, criticalMultiplier);
     const contribTotal = Math.max(1e-6, rawContrib.body + rawContrib.mind + rawContrib.instinct);
@@ -271,6 +276,7 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
             skillId: intent.skillId,
             attackerId: intent.attackerId,
             targetId: intent.targetId,
+            finalPower,
             efficiency: round3(efficiency),
             riskBonusApplied: !!intent.inDangerPreviewHex,
             damageClass,

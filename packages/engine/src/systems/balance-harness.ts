@@ -26,6 +26,7 @@ export interface SkillTelemetry {
     stairsProgress: number;
     shrineProgress: number;
     floorProgress: number;
+    lavaSinks: number;
 }
 
 export interface TriangleSignalSummary {
@@ -54,11 +55,15 @@ export interface RunResult {
     kills: number;
     hazardBreaches: number;
     score: number;
+    finalPlayerHp: number;
+    finalPlayerMaxHp: number;
+    finalPlayerHpRatio: number;
     playerActionCounts: Record<string, number>;
     playerSkillUsage: Record<string, number>;
     strategicIntentCounts: Record<StrategicIntent, number>;
     totalPlayerSkillCasts: number;
     playerSkillTelemetry: Record<string, SkillTelemetry>;
+    autoAttackTriggersByActionType: Record<string, number>;
     triangleSignal: TriangleSignalSummary;
     trinityContribution: TrinityContributionSummary;
 }
@@ -75,6 +80,12 @@ export interface BatchSummary {
     avgFloor: number;
     avgHazardBreaches: number;
     hazardDeaths: number;
+    avgFloorPerTurn: number;
+    reachedFloor3Rate: number;
+    reachedFloor5Rate: number;
+    avgFinalPlayerHpRatio: number;
+    avgFinalPlayerHpRatioWhenTimeout: number;
+    timeoutWithSafeHpRate: number;
     actionTypeTotals: Record<string, number>;
     skillUsageTotals: Record<string, number>;
     avgSkillUsagePerRun: Record<string, number>;
@@ -82,6 +93,7 @@ export interface BatchSummary {
     avgStrategicIntentPerRun: Record<StrategicIntent, number>;
     avgPlayerSkillCastsPerRun: number;
     skillTelemetryTotals: SkillTelemetryTotals;
+    autoAttackTriggerTotals: Record<string, number>;
     triangleSignal: TriangleSignalSummary;
     trinityContribution: TrinityContributionSummary;
     dynamicSkillGrades: Record<string, DynamicSkillMetric>;
@@ -157,10 +169,11 @@ const mergeHistogram = (target: Record<string, number>, source: Record<string, n
 const mergeSkillTelemetry = (target: SkillTelemetryTotals, source: Record<string, SkillTelemetry>) => {
     for (const [skillId, stats] of Object.entries(source)) {
         if (!target[skillId]) {
-            target[skillId] = { ...stats };
+            target[skillId] = { ...stats, lavaSinks: stats.lavaSinks || 0 };
             continue;
         }
         const dst = target[skillId];
+        dst.lavaSinks = dst.lavaSinks || 0;
         dst.casts += stats.casts;
         dst.enemyDamage += stats.enemyDamage;
         dst.killShots += stats.killShots;
@@ -169,6 +182,7 @@ const mergeSkillTelemetry = (target: SkillTelemetryTotals, source: Record<string
         dst.stairsProgress += stats.stairsProgress;
         dst.shrineProgress += stats.shrineProgress;
         dst.floorProgress += stats.floorProgress;
+        dst.lavaSinks += stats.lavaSinks || 0;
     }
 };
 
@@ -226,6 +240,37 @@ const hasReadyTagSkill = (state: GameState, tag: string): boolean => {
     return false;
 };
 
+const hasReadySkill = (state: GameState, skillId: string): boolean =>
+    (state.player.activeSkills || []).some(s => s.id === skillId && (s.currentCooldown || 0) <= 0);
+
+const estimatedSkillDamage = (skillId: string): number =>
+    SkillRegistry.get(skillId)?.intentProfile?.estimates?.damage || 0;
+
+const adjacentHostiles = (state: GameState) =>
+    aliveHostilesList(state).filter(e => hexDistance(e.position, state.player.position) === 1);
+
+const hasImmediateBasicAttackKill = (state: GameState): boolean => {
+    if (!hasReadySkill(state, 'BASIC_ATTACK')) return false;
+    const dmg = estimatedSkillDamage('BASIC_ATTACK');
+    if (dmg <= 0) return false;
+    return adjacentHostiles(state).some(e => e.hp <= dmg);
+};
+
+const hasImmediateAutoAttackKill = (state: GameState): boolean => {
+    if (!hasReadySkill(state, 'AUTO_ATTACK')) return false;
+    const dmg = estimatedSkillDamage('AUTO_ATTACK');
+    if (dmg <= 0) return false;
+    return adjacentHostiles(state).some(e => e.hp <= dmg);
+};
+
+const isDefensiveOrControlSkill = (profile?: SkillIntentProfile): boolean => {
+    if (!profile) return false;
+    const tags = profile.intentTags || [];
+    const hasDamage = tags.includes('damage');
+    const defensiveTag = tags.includes('heal') || tags.includes('protect') || tags.includes('control') || tags.includes('summon');
+    return defensiveTag && !hasDamage;
+};
+
 const chooseStrategicIntent = (state: GameState, profile: StrategicPolicyProfile): StrategicIntent => {
     const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
     const hostiles = aliveHostiles(state);
@@ -234,8 +279,13 @@ const chooseStrategicIntent = (state: GameState, profile: StrategicPolicyProfile
     if (hostiles <= 0) return 'positioning';
 
     const adjacentThreat = adjacentHostileCount(state, state.player.position);
+    const nearestThreat = nearestHostileDistance(state);
     if (adjacentThreat >= profile.thresholds.defensePressureAdjacentHostiles && hpRatio < profile.thresholds.defensePressureHpRatio) return 'defense';
-    if (hasReadyTagSkill(state, 'control') && hostiles >= profile.thresholds.controlMinHostiles) return 'control';
+    if (hasReadyTagSkill(state, 'control')
+        && hostiles >= profile.thresholds.controlMinHostiles
+        && (adjacentThreat > 0 || nearestThreat <= 2)) {
+        return 'control';
+    }
     return 'offense';
 };
 
@@ -283,7 +333,17 @@ const tagWeight = (profile: SkillIntentProfile | undefined, tag: string): number
 };
 
 const preRankAction = (state: GameState, action: Action, profile?: SkillIntentProfile): number => {
+    const immediateBasicKill = hasImmediateBasicAttackKill(state);
+    const immediateAutoKill = hasImmediateAutoAttackKill(state);
+
     if (action.type === 'WAIT') {
+        const adjacent = adjacentHostileCount(state, state.player.position);
+        const hasAutoAttack = hasReadySkill(state, 'AUTO_ATTACK');
+        if (hasAutoAttack && immediateAutoKill) {
+            return 14 + adjacent * 2;
+        }
+        // Otherwise waiting in combat is generally stalling.
+        if (hasAutoAttack && adjacent > 0) return -3;
         return -4;
     }
 
@@ -320,12 +380,25 @@ const preRankAction = (state: GameState, action: Action, profile?: SkillIntentPr
     score += tagWeight(profile, 'summon') * Math.max(0, 7 - summonCount) * 0.8;
     score += tagWeight(profile, 'move') * (inCombat ? 0.8 : 1.1);
     score += tagWeight(profile, 'objective') * (inCombat ? 0 : 1.3);
-    score -= tagWeight(profile, 'hazard') * (hpRatio < 0.5 ? 0.6 : -0.2);
-    if (action.payload.skillId === 'FIREWALK' && inCombat && directHit === 0 && density <= 1) {
-        score -= 6;
+    score -= tagWeight(profile, 'hazard') * (hpRatio < 0.5 ? 0.6 : 0.2);
+    if (action.payload.skillId === 'BASIC_ATTACK' && immediateBasicKill) {
+        score += 20;
     }
-    if (action.payload.skillId === 'JUMP' && inCombat && directHit === 0 && density === 0) {
-        score -= 4;
+    if (immediateBasicKill && isDefensiveOrControlSkill(profile)) {
+        score -= 12;
+    }
+    if (profile?.risk?.requireEnemyContact && directHit === 0 && density === 0) {
+        score -= profile.risk.noContactPenalty ?? 4;
+    }
+    if (action.payload.skillId === 'SHIELD_BASH') {
+        const adjacent = adjacentHostileCount(state, state.player.position);
+        if (adjacent >= 2) {
+            // Prevent over-prioritizing push when passive/basic attack already has high nearby value.
+            score -= 4;
+        }
+        if (immediateBasicKill) {
+            score -= 10;
+        }
     }
 
     return score;
@@ -436,7 +509,16 @@ const evaluateAction = (
 
     const next = resolvePending(gameReducer(state, candidate.action));
     const metrics = transitionMetrics(state, next, candidate.action);
+    const prevCombatCount = (state.combatScoreEvents || []).length;
+    const newCombatEvents = ((next.combatScoreEvents || []).slice(prevCombatCount) as any[]);
+    const autoAttackEvents = newCombatEvents.filter(e =>
+        e && e.attackerId === state.player.id && e.skillId === 'AUTO_ATTACK'
+    );
+    const autoAttackDamage = autoAttackEvents.reduce((sum, e) => sum + Number(e.finalPower || 0), 0);
+    const autoAttackHits = autoAttackEvents.length;
     const w = utilityWeights(state, strategicIntent, profile);
+    const immediateBasicKill = hasImmediateBasicAttackKill(state);
+    const immediateAutoKill = hasImmediateAutoAttackKill(state);
 
     let value = 0;
     value += (metrics.healingReceived - metrics.hazardDamage) * w.survival;
@@ -455,20 +537,59 @@ const evaluateAction = (
         value -= (p.economy.cooldown || 0) * 0.12;
         value -= (p.economy.cost || 0) * 0.08 * w.resource;
     }
-    if (candidate.action.type === 'USE_SKILL' && candidate.action.payload.skillId === 'FIREWALK') {
-        if (metrics.enemyDamage === 0 && metrics.killShot === 0 && metrics.floorProgress === 0) {
+    // Passive-proc awareness: only reward setup actions if they actually proc AUTO_ATTACK.
+    if (autoAttackHits > 0) {
+        value += (autoAttackDamage * 0.8) + (autoAttackHits * 1.5);
+    } else if (
+        candidate.action.type === 'USE_SKILL'
+        && p?.risk?.requireEnemyContact
+        && metrics.enemyDamage === 0
+        && metrics.killShot === 0
+    ) {
+        value -= 4;
+    }
+    if (candidate.action.type === 'USE_SKILL' && candidate.action.payload.skillId === 'SHIELD_BASH') {
+        const passivePotential = adjacentHostileCount(state, state.player.position);
+        // If bash lowers passive throughput and provides no additional direct damage edge, down-rank it.
+        if (passivePotential >= 2 && autoAttackHits < passivePotential && metrics.enemyDamage <= autoAttackDamage) {
             value -= 8;
-            if ((metrics.stairsProgress + metrics.shrineProgress) > 0) {
-                value += 3;
-            }
+        }
+        if (immediateBasicKill && metrics.killShot === 0) {
+            value -= 18;
         }
     }
-    if (candidate.action.type === 'USE_SKILL' && candidate.action.payload.skillId === 'JUMP') {
-        if (metrics.enemyDamage === 0 && metrics.killShot === 0 && metrics.floorProgress === 0) {
-            value -= 6;
-            if ((metrics.stairsProgress + metrics.shrineProgress) > 0) {
-                value += 2;
-            }
+    if (candidate.action.type === 'USE_SKILL' && candidate.action.payload.skillId === 'BASIC_ATTACK') {
+        if (metrics.killShot > 0) {
+            value += 28 * metrics.killShot;
+        } else if (immediateBasicKill) {
+            value += 16;
+        }
+    }
+    const isOffensiveAction = candidate.action.type === 'USE_SKILL'
+        ? (candidate.action.payload.skillId === 'BASIC_ATTACK' || tagWeight(p, 'damage') > 0)
+        : (candidate.action.type === 'WAIT' && hasReadySkill(state, 'AUTO_ATTACK'));
+    if (metrics.killShot > 0 && isOffensiveAction) {
+        value += 22 * metrics.killShot;
+    }
+    const skippedImmediateKill = metrics.killShot === 0 && (immediateBasicKill || immediateAutoKill);
+    if (skippedImmediateKill) {
+        if (candidate.action.type === 'MOVE') {
+            value -= 16;
+        } else if (candidate.action.type === 'USE_SKILL' && isDefensiveOrControlSkill(p)) {
+            value -= 22;
+        }
+    }
+    if (candidate.action.type === 'USE_SKILL') {
+        const deadCast = metrics.noProgressPenalty > 0
+            && metrics.enemyDamage === 0
+            && metrics.killShot === 0
+            && metrics.stairsProgress === 0
+            && metrics.shrineProgress === 0
+            && metrics.floorProgress === 0
+            && metrics.enemyApproachProgress === 0
+            && metrics.safetyDelta <= 0;
+        if (deadCast) {
+            value -= p?.risk?.noProgressCastPenalty ?? 40;
         }
     }
 
@@ -496,7 +617,10 @@ export const selectByOnePlySimulation = (
     if (allCandidates.length === 0) return { type: 'WAIT' };
 
     const inCombat = aliveHostiles(state) > 0;
-    const filteredRaw = inCombat ? allCandidates.filter(c => c.action.type !== 'WAIT') : allCandidates;
+    const waitCanBeTactical = hasReadySkill(state, 'AUTO_ATTACK') && hasImmediateAutoAttackKill(state);
+    const filteredRaw = inCombat
+        ? allCandidates.filter(c => c.action.type !== 'WAIT' || waitCanBeTactical)
+        : allCandidates;
     const filtered = filteredRaw.length > 0 ? filteredRaw : allCandidates;
     const ranked = [...filtered].sort((a, b) => b.preScore - a.preScore);
     const shortlist = ranked.slice(0, Math.max(1, Math.min(topK, ranked.length)));
@@ -558,7 +682,8 @@ const zeroSkillTelemetry = (): SkillTelemetry => ({
     hazardDamage: 0,
     stairsProgress: 0,
     shrineProgress: 0,
-    floorProgress: 0
+    floorProgress: 0,
+    lavaSinks: 0
 });
 
 const zeroTriangleSignal = (): TriangleSignalSummary => ({
@@ -597,6 +722,7 @@ export const simulateRun = (
         control: 0
     };
     const playerSkillTelemetry: Record<string, SkillTelemetry> = {};
+    const autoAttackTriggersByActionType: Record<string, number> = {};
     let totalPlayerSkillCasts = 0;
 
     while (state.gameStatus !== 'won' && state.gameStatus !== 'lost' && guard < 1500) {
@@ -640,6 +766,11 @@ export const simulateRun = (
 
             if (action.type === 'USE_SKILL') {
                 const m = transitionMetrics(prev, state, action);
+                const prevTimelineCount = (prev.timelineEvents || []).length;
+                const newTimelineEvents = (state.timelineEvents || []).slice(prevTimelineCount) as any[];
+                const lavaSinks = newTimelineEvents.filter(e =>
+                    e && e.type === 'LavaSink' && e.actorId === prev.player.id && e.payload?.target && e.payload.target !== prev.player.id
+                ).length;
                 if (!playerSkillTelemetry[action.payload.skillId]) {
                     playerSkillTelemetry[action.payload.skillId] = zeroSkillTelemetry();
                 }
@@ -652,6 +783,26 @@ export const simulateRun = (
                 t.stairsProgress += m.stairsProgress;
                 t.shrineProgress += m.shrineProgress;
                 t.floorProgress += m.floorProgress;
+                t.lavaSinks += lavaSinks;
+            }
+
+            const prevCombatCount = (prev.combatScoreEvents || []).length;
+            const newCombatEvents = ((state.combatScoreEvents || []).slice(prevCombatCount) as any[]);
+            const autoAttackEvents = newCombatEvents.filter(e =>
+                e && e.attackerId === prev.player.id && e.skillId === 'AUTO_ATTACK'
+            );
+            if (autoAttackEvents.length > 0) {
+                const triggerKey = action.type === 'USE_SKILL'
+                    ? `USE_SKILL:${action.payload.skillId}`
+                    : action.type;
+                incrementHistogram(autoAttackTriggersByActionType, triggerKey);
+                incrementHistogram(playerSkillUsage, 'AUTO_ATTACK');
+                if (!playerSkillTelemetry.AUTO_ATTACK) {
+                    playerSkillTelemetry.AUTO_ATTACK = zeroSkillTelemetry();
+                }
+                const t = playerSkillTelemetry.AUTO_ATTACK;
+                t.casts += 1;
+                t.enemyDamage += autoAttackEvents.reduce((sum, e) => sum + Number(e.finalPower || 0), 0);
             }
         } else {
             state = gameReducer(state, { type: 'ADVANCE_TURN' });
@@ -695,11 +846,15 @@ export const simulateRun = (
         kills: state.kills || 0,
         hazardBreaches: state.hazardBreaches || 0,
         score: computeScore(state),
+        finalPlayerHp: state.player.hp || 0,
+        finalPlayerMaxHp: Math.max(1, state.player.maxHp || 1),
+        finalPlayerHpRatio: (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1),
         playerActionCounts,
         playerSkillUsage,
         strategicIntentCounts,
         totalPlayerSkillCasts,
         playerSkillTelemetry,
+        autoAttackTriggersByActionType,
         triangleSignal,
         trinityContribution
     };
@@ -733,6 +888,7 @@ export const summarizeBatch = (
         control: 0
     };
     const skillTelemetryTotals: SkillTelemetryTotals = {};
+    const autoAttackTriggerTotals: Record<string, number> = {};
     const triangleSignalTotals = zeroTriangleSignal();
     const trinityContributionTotals = zeroTrinityContribution();
 
@@ -744,6 +900,7 @@ export const summarizeBatch = (
         strategicIntentTotals.positioning += run.strategicIntentCounts?.positioning || 0;
         strategicIntentTotals.control += run.strategicIntentCounts?.control || 0;
         mergeSkillTelemetry(skillTelemetryTotals, run.playerSkillTelemetry || {});
+        mergeHistogram(autoAttackTriggerTotals, run.autoAttackTriggersByActionType || {});
         triangleSignalTotals.samples += run.triangleSignal?.samples || 0;
         triangleSignalTotals.avgHitPressure += run.triangleSignal?.avgHitPressure || 0;
         triangleSignalTotals.avgMitigationPressure += run.triangleSignal?.avgMitigationPressure || 0;
@@ -792,6 +949,14 @@ export const summarizeBatch = (
         avgFloor: avg(results.map(r => r.floor || 0)),
         avgHazardBreaches: avg(results.map(r => r.hazardBreaches)),
         hazardDeaths: losses.filter(r => r.hazardBreaches > 0).length,
+        avgFloorPerTurn: avg(results.map(r => (r.floor || 0) / Math.max(1, r.turnsSpent || 0))),
+        reachedFloor3Rate: results.length ? results.filter(r => (r.floor || 0) >= 3).length / results.length : 0,
+        reachedFloor5Rate: results.length ? results.filter(r => (r.floor || 0) >= 5).length / results.length : 0,
+        avgFinalPlayerHpRatio: avg(results.map(r => r.finalPlayerHpRatio || 0)),
+        avgFinalPlayerHpRatioWhenTimeout: avg(timeouts.map(r => r.finalPlayerHpRatio || 0)),
+        timeoutWithSafeHpRate: results.length
+            ? results.filter(r => r.result === 'timeout' && (r.finalPlayerHpRatio || 0) >= 0.5).length / results.length
+            : 0,
         actionTypeTotals,
         skillUsageTotals,
         avgSkillUsagePerRun,
@@ -799,6 +964,7 @@ export const summarizeBatch = (
         avgStrategicIntentPerRun,
         avgPlayerSkillCastsPerRun: avg(results.map(r => r.totalPlayerSkillCasts || 0)),
         skillTelemetryTotals,
+        autoAttackTriggerTotals,
         triangleSignal,
         trinityContribution,
         dynamicSkillGrades: {}

@@ -3,6 +3,7 @@ import { hexEquals, getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
 import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { getIncomingDamageMultiplier, getOutgoingDamageMultiplier } from '../systems/combat-traits';
 
 import { getSkillScenarios } from '../scenarios';
 
@@ -97,8 +98,10 @@ export const AUTO_ATTACK: SkillDefinition = {
                     trinity: extractTrinityStats(attacker),
                     targetTrinity: extractTrinityStats(targetActor),
                     damageClass: 'physical',
-                    scaling: [{ attribute: 'body', coefficient: 0.2 }],
-                    statusMultipliers: []
+                    scaling: [{ attribute: 'body', coefficient: 0.4 }],
+                    statusMultipliers: [],
+                    attackPowerMultiplier: getOutgoingDamageMultiplier(attacker, 'physical'),
+                    targetDamageTakenMultiplier: getIncomingDamageMultiplier(targetActor, 'physical')
                 });
                 effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
 
@@ -138,8 +141,10 @@ export const AUTO_ATTACK: SkillDefinition = {
                     trinity: extractTrinityStats(attacker),
                     targetTrinity: extractTrinityStats(targetActor),
                     damageClass: 'physical',
-                    scaling: [{ attribute: 'body', coefficient: 0.2 }],
-                    statusMultipliers: []
+                    scaling: [{ attribute: 'body', coefficient: 0.4 }],
+                    statusMultipliers: [],
+                    attackPowerMultiplier: getOutgoingDamageMultiplier(attacker, 'physical'),
+                    targetDamageTakenMultiplier: getIncomingDamageMultiplier(targetActor, 'physical')
                 });
                 effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
 

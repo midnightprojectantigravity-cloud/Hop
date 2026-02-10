@@ -8,6 +8,12 @@ import {
     type RunResult,
 } from '../src/systems/balance-harness';
 import { computeUPAFromSummary } from '../src/systems/upa';
+import { buildUpaEntitySnapshot } from './lib/upaEntitySnapshot';
+import { getActiveTrinityProfileId } from '../src/systems/trinity-profiles';
+
+if (!process.env.HOP_TRINITY_PROFILE) {
+    process.env.HOP_TRINITY_PROFILE = 'live';
+}
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {
@@ -25,6 +31,9 @@ const leftPolicyProfileId = process.argv[8] || 'sp-v1-default';
 const rightPolicyProfileId = process.argv[9] || 'sp-v1-default';
 
 const seeds = Array.from({ length: count }, (_, i) => `upa-matchup-${i + 1}`);
+const leftEntitySnapshot = buildUpaEntitySnapshot(leftLoadout);
+const rightEntitySnapshot = buildUpaEntitySnapshot(rightLoadout);
+const trinityProfile = getActiveTrinityProfileId();
 
 const leftRuns = runBatch(seeds, leftPolicy, maxTurns, leftLoadout, leftPolicyProfileId);
 const rightRuns = runBatch(seeds, rightPolicy, maxTurns, rightLoadout, rightPolicyProfileId);
@@ -53,8 +62,10 @@ originalLog(
             generatedAt: new Date().toISOString(),
             count,
             maxTurns,
+            trinityProfile,
             left: {
                 loadoutId: leftLoadout,
+                entitySnapshot: leftEntitySnapshot,
                 policy: leftPolicy,
                 policyProfileId: leftPolicyProfileId,
                 summary: leftSummary,
@@ -63,6 +74,7 @@ originalLog(
             },
             right: {
                 loadoutId: rightLoadout,
+                entitySnapshot: rightEntitySnapshot,
                 policy: rightPolicy,
                 policyProfileId: rightPolicyProfileId,
                 summary: rightSummary,

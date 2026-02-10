@@ -22,6 +22,7 @@ export * from './systems/balance-harness';
 export * from './systems/upa';
 export * from './systems/evaluation';
 export * from './systems/combat-calculator';
+export * from './systems/combat-traits';
 export * from './systems/trinity-resolver';
 export * from './systems/trinity-profiles';
 export * from './systems/skill-intent-profile';
@@ -38,6 +39,7 @@ export * from './systems/strategic-policy';
 export * from './systems/movement';
 export * from './systems/status';
 export * from './systems/unified-tile-service';
+export * from './systems/entity-factory';
 
 // Kinetic Pulse System
 export * from './systems/kinetic-kernel';

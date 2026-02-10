@@ -1,5 +1,11 @@
 import type { ArchetypeLoadoutId, BotPolicy } from '../src/systems/balance-harness';
 import { runPvpBatch, summarizePvpBatch } from '../src/systems/pvp-harness';
+import { buildUpaEntitySnapshot } from './lib/upaEntitySnapshot';
+import { getActiveTrinityProfileId } from '../src/systems/trinity-profiles';
+
+if (!process.env.HOP_TRINITY_PROFILE) {
+    process.env.HOP_TRINITY_PROFILE = 'live';
+}
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {
@@ -23,6 +29,9 @@ const leftPolicy = (process.argv[6] || 'heuristic') as BotPolicy;
 const rightPolicy = (process.argv[7] || 'heuristic') as BotPolicy;
 
 const seeds = Array.from({ length: count }, (_, i) => `pvp-upa-seed-${i + 1}`);
+const leftEntitySnapshot = buildUpaEntitySnapshot(leftLoadoutId);
+const rightEntitySnapshot = buildUpaEntitySnapshot(rightLoadoutId);
+const trinityProfile = getActiveTrinityProfileId();
 const runs = runPvpBatch(
     seeds,
     leftLoadoutId,
@@ -45,17 +54,19 @@ originalLog(JSON.stringify({
     generatedAt: new Date().toISOString(),
     count,
     maxRounds,
+    trinityProfile,
     left: {
         loadoutId: leftLoadoutId,
+        entitySnapshot: leftEntitySnapshot,
         policy: leftPolicy,
         pvpUpa: computePvpUpa(summary.leftWinRate, summary.drawRate, summary.avgRounds, maxRounds)
     },
     right: {
         loadoutId: rightLoadoutId,
+        entitySnapshot: rightEntitySnapshot,
         policy: rightPolicy,
         pvpUpa: computePvpUpa(summary.rightWinRate, summary.drawRate, summary.avgRounds, maxRounds)
     },
     summary,
     sample
 }, null, 2));
-

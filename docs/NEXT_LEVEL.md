@@ -220,6 +220,35 @@ Goal: apply evaluator outputs to a deterministic calibration loop with explicit 
 ## Secondary Phase: Balance Execution
 Goal: apply evaluator-guided tuning to matchup dominance and hazard-discipline issues.
 
+### Progress Checkpoint (February 9, 2026)
+- [x] Firemage vs Vanguard reinforcement slice executed on live trinity profile.
+- [x] Baseline matchup measured at `58-2` (Firemage-Vanguard over 60 seeds, 40 turns).
+- [x] Applied weak-side reinforcement levers:
+  - `VANGUARD` live trinity adjusted to `{ body: 9, mind: 6, instinct: 5 }`.
+  - Generic heuristic hazard tag pre-rank sign corrected (no high-HP bonus for hazard-tagged actions).
+  - Added no-progress `DASH` penalty in one-ply evaluator.
+- [x] Post-change matchup measured at `55-5` (Firemage still dominant; Vanguard uplift confirmed).
+- [x] Added quick behavior review tooling:
+  - `packages/engine/scripts/runQuickAiReview.ts`
+  - `npm run upa:quick:ai`
+- [x] Behavior-first AI fixes applied after short-seed review:
+  - Suppressed default engine noise in quick review output (verbose opt-in via `HOP_AI_REVIEW_VERBOSE=1`).
+  - Tightened strategic `control` intent activation to tactical-range situations.
+  - Added stronger dead-cast penalties for zero-progress skill actions.
+  - Added `SHIELD_BASH` no-target pre-rank penalty.
+- [x] Post-review matchup measured at `50-10` (Firemage-Vanguard, 60 seeds, 40 turns, live profile).
+- [x] Heuristic architecture refactor: default scorer + skill-profile overrides.
+  - Removed remaining hardcoded skill-ID branches from evaluator path.
+  - Added profile-driven risk controls:
+    - `noProgressCastPenalty`
+    - `requireEnemyContact`
+    - `noContactPenalty`
+  - Wired first overrides for `DASH`, `JUMP`, `SHIELD_BASH`, `SPEAR_THROW`, `FIREWALK`.
+- [x] 6-archetype quick smoke run (4 seeds x 20 turns, live profile) confirms shared logic path is stable and highlights next tuning targets:
+  - `VANGUARD`: `JUMP` over-selected.
+  - `HUNTER`: `FALCON_COMMAND` over-selected.
+  - `NECROMANCER`: weak opening pressure / low floor progression.
+
 ### Queue
 - [ ] Firemage dominance reduction across top 3 pairings from `docs/UPA_PVP_MATCHUP_MATRIX.json`.
 - [ ] Hazard-breach reduction for `NECROMANCER`, `HUNTER`, `ASSASSIN`, `VANGUARD`.

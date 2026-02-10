@@ -52,7 +52,7 @@ export const TRINITY_PROFILES: Record<TrinityProfileId, TrinityProfile> = {
         id: 'live',
         default: ZERO,
         archetype: withDefault({
-            VANGUARD: { body: 8, mind: 2, instinct: 4 },
+            VANGUARD: { body: 9, mind: 4, instinct: 5 },
             SKIRMISHER: { body: 4, mind: 2, instinct: 8 },
             FIREMAGE: { body: 2, mind: 9, instinct: 4 },
             NECROMANCER: { body: 3, mind: 8, instinct: 4 },
@@ -60,15 +60,15 @@ export const TRINITY_PROFILES: Record<TrinityProfileId, TrinityProfile> = {
             ASSASSIN: { body: 3, mind: 3, instinct: 9 },
         }),
         enemySubtype: withDefault({
-            footman: { body: 6, mind: 1, instinct: 3 },
-            sprinter: { body: 2, mind: 1, instinct: 8 },
-            raider: { body: 4, mind: 1, instinct: 6 },
-            pouncer: { body: 3, mind: 1, instinct: 8 },
-            shieldBearer: { body: 9, mind: 1, instinct: 2 },
-            archer: { body: 2, mind: 3, instinct: 8 },
-            bomber: { body: 2, mind: 7, instinct: 3 },
-            warlock: { body: 1, mind: 9, instinct: 3 },
-            sentinel: { body: 10, mind: 8, instinct: 6 },
+            footman: { body: 0, mind: 0, instinct: 0 },
+            sprinter: { body: 0, mind: 0, instinct: 0 },
+            raider: { body: 0.4, mind: 0, instinct: 0.2 },
+            pouncer: { body: 0.4, mind: 0, instinct: 0.2 },
+            shieldBearer: { body: 1, mind: 0, instinct: 0.4 },
+            archer: { body: 0.2, mind: 0, instinct: 0.2 },
+            bomber: { body: 0.4, mind: 0.2, instinct: 0.2 },
+            warlock: { body: 0.4, mind: 0.6, instinct: 0.2 },
+            sentinel: { body: 4, mind: 2, instinct: 2 },
         }),
         companionSubtype: withDefault({
             falcon: { body: 2, mind: 2, instinct: 9 },
@@ -78,7 +78,7 @@ export const TRINITY_PROFILES: Record<TrinityProfileId, TrinityProfile> = {
 };
 
 const normalizeProfileId = (id: string | undefined): TrinityProfileId =>
-    id?.toLowerCase() === 'live' ? 'live' : 'neutral';
+    id?.toLowerCase() === 'neutral' ? 'neutral' : 'live';
 
 const readProfileEnv = (): string | undefined => {
     const maybeProcess = (globalThis as any)?.process;

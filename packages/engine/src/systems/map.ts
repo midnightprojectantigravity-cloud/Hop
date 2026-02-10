@@ -210,21 +210,23 @@ export const generateEnemies = (
         usedPositions.push(position);
 
         const hpScale = Math.floor(floor / 5);
-        const finalHp = stats.hp + hpScale;
-        const finalMaxHp = stats.maxHp + hpScale;
-
         const weightClass = stats.weightClass || 'Standard';
-        const enemy = createEnemy({
+        const enemyBase = createEnemy({
             id: `enemy_${enemies.length}_${rng.next().toString(36).slice(2, 8)}`,
             subtype: enemyType,
             position,
-            hp: finalHp,
-            maxHp: finalMaxHp,
             speed: stats.speed || 50,
             skills: getEnemySkillLoadout(enemyType),
             weightClass: weightClass,
             enemyType: stats.type as 'melee' | 'ranged',
         });
+        const enemy = hpScale > 0
+            ? {
+                ...enemyBase,
+                hp: enemyBase.hp + hpScale,
+                maxHp: enemyBase.maxHp + hpScale,
+            }
+            : enemyBase;
         enemy.isVisible = true;
         enemies.push(enemy);
 

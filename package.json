@@ -31,6 +31,7 @@
     "upa:challenge:design": "npx tsx packages/engine/scripts/runChallengeDesign.ts 72 5 cal-v1-firemage-baseline uel-v1 docs/UPA_CHALLENGE_DESIGN_REPORT.json",
     "upa:encounter:validate": "npx tsx packages/engine/scripts/runEncounterValidation.ts 72 5 cal-v1-firemage-baseline uel-v1 40 60 docs/UPA_ENCOUNTER_VALIDATION.json",
     "upa:policy:compare": "npx tsx packages/engine/scripts/runPolicyProfileCompare.ts 120 60 VANGUARD sp-v1-default sp-v1-aggro",
+    "upa:quick:ai": "npx tsx packages/engine/scripts/runQuickAiReview.ts 8 24 VANGUARD heuristic sp-v1-default quick-ai-seed",
     "upa:skills:audit": "npx tsx packages/engine/scripts/runSkillFormulaAudit.ts docs/UPA_SKILL_FORMULA_AUDIT.json",
     "upa:skills:migration:audit": "npx tsx packages/engine/scripts/runSkillMigrationAudit.ts docs/UPA_SKILL_MIGRATION_AUDIT.json",
     "upa:trinity:report": "npx tsx packages/engine/scripts/runTrinityContributionReport.ts 24 50 docs/UPA_TRINITY_CONTRIBUTIONS.json",

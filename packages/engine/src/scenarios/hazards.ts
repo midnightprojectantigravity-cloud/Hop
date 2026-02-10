@@ -25,7 +25,7 @@ export const hazardScenarios: ScenarioCollection = {
                 const player = state.player;
                 const checks = {
                     playerPos: hexEquals(player.position, { q: 4, r: 7, s: -11 }),
-                    isAlive: player.hp === 3
+                    isAlive: player.hp === player.maxHp
                 };
                 return Object.values(checks).every(v => v === true);
             }
@@ -48,7 +48,7 @@ export const hazardScenarios: ScenarioCollection = {
                 const player = state.player;
                 const checks = {
                     playerPos: hexEquals(player.position, { q: 4, r: 9, s: -13 }),
-                    hpUnchanged: player.hp === 3
+                    hpUnchanged: player.hp === player.maxHp
                 };
                 return Object.values(checks).every(v => v === true);
             }

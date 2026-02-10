@@ -11,6 +11,7 @@ export interface SkillTelemetrySummary {
     stairsProgress: number;
     shrineProgress: number;
     floorProgress: number;
+    lavaSinks?: number;
 }
 
 export type SkillTelemetryTotals = Record<string, SkillTelemetrySummary>;

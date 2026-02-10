@@ -50,17 +50,42 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
     BASIC_MOVE: { intentTags: ['move', 'objective', 'utility'], target: { pattern: 'single' }, estimates: { movement: 1 } },
     BASIC_ATTACK: { intentTags: ['damage'], target: { pattern: 'single' }, estimates: { damage: 4 } },
     AUTO_ATTACK: { intentTags: ['damage', 'utility'], target: { pattern: 'single' }, estimates: { damage: 2 } },
-    DASH: { intentTags: ['move', 'damage', 'utility'], target: { pattern: 'line' }, estimates: { movement: 2, damage: 2 } },
-    JUMP: { intentTags: ['move', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2 } },
-    SHIELD_BASH: { intentTags: ['damage', 'control', 'protect'], target: { pattern: 'single' }, estimates: { damage: 3, control: 2 } },
+    DASH: {
+        intentTags: ['move', 'damage', 'utility'],
+        target: { pattern: 'line' },
+        estimates: { movement: 2, damage: 2 },
+        risk: { noProgressCastPenalty: 5 }
+    },
+    JUMP: {
+        intentTags: ['move', 'utility'],
+        target: { pattern: 'single' },
+        estimates: { movement: 2 },
+        risk: { noProgressCastPenalty: 6 }
+    },
+    SHIELD_BASH: {
+        intentTags: ['damage', 'control', 'protect'],
+        target: { pattern: 'single' },
+        estimates: { damage: 3, control: 2 },
+        risk: { requireEnemyContact: true, noContactPenalty: 5, noProgressCastPenalty: 7 }
+    },
     BULWARK_CHARGE: { intentTags: ['move', 'protect', 'damage'], target: { pattern: 'line' }, estimates: { movement: 2, damage: 4, shielding: 2 } },
     VAULT: { intentTags: ['move', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2 } },
     GRAPPLE_HOOK: { intentTags: ['move', 'control'], target: { pattern: 'line' }, estimates: { movement: 3, control: 2 } },
     SHIELD_THROW: { intentTags: ['damage', 'control'], target: { pattern: 'line' }, estimates: { damage: 4, control: 1 } },
-    SPEAR_THROW: { intentTags: ['damage'], target: { pattern: 'line' }, estimates: { damage: 5 } },
+    SPEAR_THROW: {
+        intentTags: ['damage'],
+        target: { pattern: 'line' },
+        estimates: { damage: 5 },
+        risk: { requireEnemyContact: true, noContactPenalty: 4, noProgressCastPenalty: 5 }
+    },
     FIREBALL: { intentTags: ['damage', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 5, control: 1 } },
     FIREWALL: { intentTags: ['hazard', 'control', 'damage'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { damage: 3, control: 2 } },
-    FIREWALK: { intentTags: ['move', 'hazard', 'utility'], target: { pattern: 'single' }, estimates: { movement: 3 } },
+    FIREWALK: {
+        intentTags: ['move', 'hazard', 'utility'],
+        target: { pattern: 'single' },
+        estimates: { movement: 3 },
+        risk: { noProgressCastPenalty: 8 }
+    },
     ABSORB_FIRE: { intentTags: ['heal', 'hazard', 'utility'], target: { pattern: 'self' }, estimates: { healing: 4 } },
     BOMB_TOSS: { intentTags: ['damage', 'control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 6, control: 2 } },
     CORPSE_EXPLOSION: { intentTags: ['damage', 'control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 6, control: 1 } },

@@ -7,9 +7,9 @@ const readTrinity = (components?: Map<string, any>): TrinityComponent | undefine
     components?.get('trinity') as TrinityComponent | undefined;
 
 describe('entity-factory trinity defaults', () => {
-    it('supports live trinity profile activation via env flag', () => {
+    it('supports neutral trinity profile activation via env flag', () => {
         const prev = process.env.HOP_TRINITY_PROFILE;
-        process.env.HOP_TRINITY_PROFILE = 'live';
+        process.env.HOP_TRINITY_PROFILE = 'neutral';
         try {
             const player = createPlayer({
                 position: { q: 0, r: 0, s: 0 },
@@ -18,10 +18,12 @@ describe('entity-factory trinity defaults', () => {
             });
             expect(readTrinity(player.components)).toEqual({
                 type: 'trinity',
-                body: 2,
-                mind: 9,
-                instinct: 4,
+                body: 0,
+                mind: 0,
+                instinct: 0,
             });
+            expect(player.maxHp).toBe(1);
+            expect(player.hp).toBe(1);
         } finally {
             if (prev === undefined) {
                 delete process.env.HOP_TRINITY_PROFILE;
@@ -31,7 +33,7 @@ describe('entity-factory trinity defaults', () => {
         }
     });
 
-    it('assigns deterministic neutral trinity to player entities by default', () => {
+    it('assigns deterministic live trinity to player entities by default', () => {
         const player = createPlayer({
             position: { q: 0, r: 0, s: 0 },
             skills: ['BASIC_MOVE'],
@@ -40,13 +42,13 @@ describe('entity-factory trinity defaults', () => {
 
         expect(readTrinity(player.components)).toEqual({
             type: 'trinity',
-            body: 0,
-            mind: 0,
-            instinct: 0,
+            body: 2,
+            mind: 9,
+            instinct: 4,
         });
     });
 
-    it('assigns deterministic neutral trinity to enemies by default', () => {
+    it('assigns deterministic live trinity to enemies by default', () => {
         const enemy = createEnemy({
             id: 'e1',
             subtype: 'footman',
@@ -65,7 +67,7 @@ describe('entity-factory trinity defaults', () => {
         });
     });
 
-    it('assigns deterministic neutral trinity for falcon and skeleton companions', () => {
+    it('assigns deterministic live trinity for falcon and skeleton companions', () => {
         const falcon = createCompanion({
             companionType: 'falcon',
             ownerId: 'player',
@@ -79,15 +81,15 @@ describe('entity-factory trinity defaults', () => {
 
         expect(readTrinity(falcon.components)).toEqual({
             type: 'trinity',
-            body: 0,
-            mind: 0,
-            instinct: 0,
+            body: 2,
+            mind: 2,
+            instinct: 9,
         });
         expect(readTrinity(skeleton.components)).toEqual({
             type: 'trinity',
-            body: 0,
-            mind: 0,
-            instinct: 0,
+            body: 5,
+            mind: 1,
+            instinct: 4,
         });
     });
 

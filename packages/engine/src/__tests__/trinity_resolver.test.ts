@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveTrinityLevers, computeSparkCostFromTrinity } from '../systems/trinity-resolver';
+import { resolveTrinityLevers, computeSparkCostFromTrinity, deriveMaxHpFromTrinity } from '../systems/trinity-resolver';
 
 describe('trinity-resolver', () => {
     it('computes deterministic lever bundle from trinity stats', () => {
@@ -25,5 +25,10 @@ describe('trinity-resolver', () => {
 
     it('computes spark cost from fibonacci base and instinct discount', () => {
         expect(computeSparkCostFromTrinity(5, { body: 0, mind: 0, instinct: 4 })).toBe(4.8);
+    });
+
+    it('derives max HP from trinity stats with a single shared formula', () => {
+        const trinity = { body: 200, mind: 100, instinct: 100 };
+        expect(deriveMaxHpFromTrinity(trinity)).toBe(1500);
     });
 });

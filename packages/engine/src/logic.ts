@@ -83,7 +83,9 @@ export const generateInitialState = (
         hp: preservePlayer.hp,
         maxHp: preservePlayer.maxHp,
         speed: (preservePlayer as any).speed || INITIAL_PLAYER_STATS.speed,
-    } : INITIAL_PLAYER_STATS;
+    } : {
+        speed: INITIAL_PLAYER_STATS.speed,
+    };
 
     const upgrades = preservePlayer?.upgrades || (loadout ? loadout.startingUpgrades : []);
     const loadoutApplied = loadout ? applyLoadoutToPlayer(loadout) : { activeSkills: createDefaultSkills(), archetype: 'VANGUARD' as const };

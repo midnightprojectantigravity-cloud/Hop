@@ -114,14 +114,14 @@ export const autoAttackScenarios: ScenarioCollection = {
                 engine.wait();
             },
             verify: (state: GameState, logs: string[]) => {
-                const playerHp = state.player.hp;
+                const player = state.player;
                 const enemyAlly = state.enemies.find(e => e.id === 'enemy_ally');
 
                 const checks = {
 
                     // VERIFICATION: Target Discrimination
                     // Player should be hit, but the Enemy Ally must be safe.
-                    playerHit: playerHp < 3, // Assuming 3 is starting HP
+                    playerHit: player.hp < player.maxHp,
                     allySafe: enemyAlly && enemyAlly.hp === enemyAlly.maxHp,
 
                     // VERIFICATION: Logs

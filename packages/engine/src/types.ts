@@ -256,6 +256,9 @@ export interface SkillIntentProfile {
     risk: {
         selfExposure?: number;
         hazardAffinity?: number;
+        noProgressCastPenalty?: number;
+        requireEnemyContact?: boolean;
+        noContactPenalty?: number;
     };
     complexity: number;
 }

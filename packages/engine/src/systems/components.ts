@@ -39,6 +39,18 @@ export interface TrinityComponent extends Component {
 }
 
 /**
+ * Combat Profile Component
+ * Data-driven weapon/trait style multipliers applied by damage class.
+ */
+export interface CombatProfileComponent extends Component {
+    type: 'combat_profile';
+    outgoingPhysical: number;
+    outgoingMagical: number;
+    incomingPhysical: number;
+    incomingMagical: number;
+}
+
+/**
  * Visibility / Stealth Component
  */
 export interface VisibilityComponent extends Component {
@@ -70,6 +82,7 @@ export type GameComponent =
     | PhysicsComponent
     | StatsComponent
     | TrinityComponent
+    | CombatProfileComponent
     | VisibilityComponent
     | VaultComponent
     | ArchetypeComponent;

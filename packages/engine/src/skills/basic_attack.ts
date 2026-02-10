@@ -4,6 +4,7 @@ import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { getIncomingDamageMultiplier, getOutgoingDamageMultiplier } from '../systems/combat-traits';
 
 /**
  * Basic Attack - A targeted melee attack skill.
@@ -70,8 +71,10 @@ export const BASIC_ATTACK: SkillDefinition = {
             trinity: extractTrinityStats(attacker),
             targetTrinity: extractTrinityStats(targetActor),
             damageClass: 'physical',
-            scaling: [{ attribute: 'body', coefficient: 0.25 }],
+            scaling: [{ attribute: 'body', coefficient: 0.5 }],
             statusMultipliers: [],
+            attackPowerMultiplier: getOutgoingDamageMultiplier(attacker, 'physical'),
+            targetDamageTakenMultiplier: getIncomingDamageMultiplier(targetActor, 'physical'),
             inDangerPreviewHex: !!state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position)),
             theoreticalMaxPower: baseDamage
         });

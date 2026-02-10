@@ -24,14 +24,14 @@ export const DEFAULT_LOADOUTS: Record<string, Loadout> = {
         name: 'Vanguard',
         description: 'Direct damage, brawling, and area denial.',
         startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK', 'SPEAR_THROW', 'SHIELD_BASH', 'JUMP', 'DASH', 'ABSORB_FIRE']
+        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK', 'SPEAR_THROW', 'SHIELD_BASH', 'JUMP']
     },
     SKIRMISHER: {
         id: 'SKIRMISHER',
         name: 'Skirmisher',
         description: 'Zero direct damage. Kinetic momentum and environmental lethality.',
         startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'DASH', 'GRAPPLE_HOOK', 'SHIELD_THROW', 'VAULT', 'WITHDRAWAL']
+        startingSkills: ['DASH', 'GRAPPLE_HOOK', 'SHIELD_THROW', 'VAULT']
     },
     FIREMAGE: {
         id: 'FIREMAGE',
@@ -45,7 +45,7 @@ export const DEFAULT_LOADOUTS: Record<string, Loadout> = {
         name: 'Necromancer',
         description: 'Utilize death and reanimation.',
         startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'CORPSE_EXPLOSION', 'RAISE_DEAD', 'SOUL_SWAP', 'ABSORB_FIRE']
+        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'CORPSE_EXPLOSION', 'RAISE_DEAD', 'SOUL_SWAP']
     },
     HUNTER: {
         id: 'HUNTER',

@@ -87,8 +87,8 @@ import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';
 import { UpgradeOverlay } from './components/UpgradeOverlay';
 import { SkillTray } from './components/SkillTray';
-import { gameReducer, generateInitialState, generateHubState, hexEquals, pointToKey } from '@hop/engine';
-import type { Point, Action, GameState } from '@hop/engine';
+import { gameReducer, generateInitialState, generateHubState, hexEquals, pointToKey, ensureActorTrinity, deriveMaxHpFromTrinity } from '@hop/engine';
+import type { Point, Action, GameState, Actor } from '@hop/engine';
 import type { ReplayRecord } from './components/ReplayManager';
 import { isPlayerTurn } from '@hop/engine';
 import { Hub } from './components/Hub';
@@ -126,6 +126,36 @@ function App() {
             typeof v === 'string' ? BigInt(v) : v
           );
         }
+
+        const toComponentMap = (components: unknown): Map<string, any> => {
+          if (components instanceof Map) return components as Map<string, any>;
+          if (Array.isArray(components)) return new Map(components as [string, any][]);
+          if (components && typeof components === 'object') return new Map(Object.entries(components as Record<string, any>));
+          return new Map();
+        };
+
+        const normalizeActor = (actor: any): Actor => {
+          const withMap = { ...actor, components: toComponentMap(actor?.components) } as Actor;
+          const withTrinity = ensureActorTrinity(withMap);
+          const components = withTrinity.components ?? new Map<string, any>();
+          const trinity = components.get('trinity') as { body: number; mind: number; instinct: number } | undefined;
+          if (!trinity) return withTrinity;
+
+          const maxHp = deriveMaxHpFromTrinity({
+            body: Number(trinity.body || 0),
+            mind: Number(trinity.mind || 0),
+            instinct: Number(trinity.instinct || 0),
+          });
+
+          return {
+            ...withTrinity,
+            maxHp,
+            hp: Math.min(maxHp, Math.max(0, Number(withTrinity.hp ?? maxHp))),
+          };
+        };
+
+        parsed.player = normalizeActor(parsed.player);
+        parsed.enemies = Array.isArray(parsed.enemies) ? parsed.enemies.map(normalizeActor) : [];
 
         return parsed;
       } catch (e) {

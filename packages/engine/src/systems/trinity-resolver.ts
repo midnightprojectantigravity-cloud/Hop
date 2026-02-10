@@ -53,3 +53,19 @@ export const computeSparkCostFromTrinity = (moveIndex: number, trinity: TrinityS
     const levers = resolveTrinityLevers(trinity);
     return round3(base * levers.instinctSparkDiscountMultiplier);
 };
+
+export const deriveMaxHpFromTrinity = (trinity: TrinityStats): number => {
+    const body = Math.max(0, trinity.body);
+    const mind = Math.max(0, trinity.mind);
+    const instinct = Math.max(0, trinity.instinct);
+
+    const cfg = { base: 0, body: 5, mind: 2, instinct: 3 };
+
+    const hp = Math.floor(
+        (body * cfg.body)
+        + (mind * cfg.mind)
+        + (instinct * cfg.instinct)
+        + cfg.base
+    );
+    return Math.max(1, hp);
+};

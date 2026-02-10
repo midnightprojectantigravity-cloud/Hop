@@ -1,5 +1,11 @@
 import { runBatch, summarizeBatch, type BotPolicy, type RunResult, type ArchetypeLoadoutId } from '../src/systems/balance-harness';
 import { computeUPAFromSummary } from '../src/systems/upa';
+import { buildUpaEntitySnapshot } from './lib/upaEntitySnapshot';
+import { getActiveTrinityProfileId } from '../src/systems/trinity-profiles';
+
+if (!process.env.HOP_TRINITY_PROFILE) {
+    process.env.HOP_TRINITY_PROFILE = 'live';
+}
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {
@@ -13,6 +19,8 @@ const loadoutId = (process.argv[4] || 'VANGUARD') as ArchetypeLoadoutId;
 const policyProfileId = process.argv[5] || 'sp-v1-default';
 const seeds = Array.from({ length: count }, (_, i) => `upa-seed-${i + 1}`);
 const policies: BotPolicy[] = ['random', 'heuristic'];
+const entitySnapshot = buildUpaEntitySnapshot(loadoutId);
+const trinityProfile = getActiveTrinityProfileId();
 
 const topN = (results: RunResult[], n: number) =>
     [...results]
@@ -54,4 +62,4 @@ const report = policies.map(policy => {
     };
 });
 
-originalLog(JSON.stringify({ count, maxTurns, loadoutId, policyProfileId, generatedAt: new Date().toISOString(), report }, null, 2));
+originalLog(JSON.stringify({ count, maxTurns, loadoutId, policyProfileId, trinityProfile, entitySnapshot, generatedAt: new Date().toISOString(), report }, null, 2));

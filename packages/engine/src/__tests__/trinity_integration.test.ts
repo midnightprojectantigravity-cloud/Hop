@@ -53,7 +53,7 @@ describe('trinity integration', () => {
 
         const out = BASIC_ATTACK.execute(state, player, targetPos, []);
         const damage = out.effects.find(e => e.type === 'Damage');
-        expect(damage && damage.type === 'Damage' ? damage.amount : 0).toBe(2);
+        expect(damage && damage.type === 'Damage' ? damage.amount : 0).toBe(3);
     });
 
     it('mind stat increases FIREBALL and CORPSE_EXPLOSION base output', () => {
