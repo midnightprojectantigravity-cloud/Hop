@@ -14,6 +14,7 @@ if (process.env.VERBOSE_ANALYSIS !== '1') {
 type SkillHealthLabel =
     | 'effective'
     | 'underutilized'
+    | 'situational'
     | 'loop-risk'
     | 'spam-inflated'
     | 'policy-blocked'
@@ -38,8 +39,12 @@ const maxFailures = Number(process.argv[6] || -1);
 const maxPlayerFacingNoData = Number(process.argv[7] || -1);
 const loadouts = Object.keys(DEFAULT_LOADOUTS) as ArchetypeLoadoutId[];
 
+const skillDefs = Array.isArray(COMPOSITIONAL_SKILLS)
+    ? (COMPOSITIONAL_SKILLS as any[])
+    : Object.values(COMPOSITIONAL_SKILLS as Record<string, any>);
 const staticArtifact = computeStaticSkillGrades(COMPOSITIONAL_SKILLS as any, 'p6-static-v1');
 const staticBySkill = staticArtifact.skills;
+const compositionalById = new Map(skillDefs.map(skill => [skill.id, skill]));
 
 const summaries: Array<{ loadoutId: ArchetypeLoadoutId; summary: BatchSummary }> = [];
 const failures: Array<{ loadoutId: ArchetypeLoadoutId; error: string }> = [];
@@ -101,14 +106,27 @@ const rows = Object.keys(staticBySkill)
         const damagePerCast = observed ? a!.damagePerCastWeighted / games : 0;
         const killContribution = observed ? a!.killContributionWeighted / games : 0;
         const objectiveDelta = observed ? a!.objectiveDeltaWeighted / games : 0;
+        const skillDef = compositionalById.get(skillId as any);
+        const intentTags = skillDef?.intentProfile?.intentTags || [];
+        const hasDamageIntent = intentTags.includes('damage');
+        const hasMoveIntent = intentTags.includes('move');
+        const hasControlIntent = intentTags.includes('control');
 
         const labels: SkillHealthLabel[] = [];
         if (!observed) labels.push(loadoutSkills.has(skillId) ? 'policy-blocked' : 'no-data');
-        if (observed && castRate < 0.05) labels.push('underutilized');
-        if (observed && casts > 300 && damagePerCast < 0.08 && killContribution < 0.4) labels.push('loop-risk');
+        if (observed && castRate < 0.02) labels.push('underutilized');
+        if (
+            observed
+            && casts > 300
+            && damagePerCast < 0.08
+            && killContribution < 0.4
+            && hasDamageIntent
+            && !hasMoveIntent
+            && !hasControlIntent
+        ) labels.push('loop-risk');
         if (observed && dynamicNumericGrade > 120 && damagePerCast < 0.1) labels.push('spam-inflated');
         if (observed && dynamicNumericGrade > 50 && (damagePerCast > 0.3 || objectiveDelta > 2)) labels.push('effective');
-        if (labels.length === 0 && observed) labels.push('underutilized');
+        if (labels.length === 0 && observed) labels.push('situational');
 
         return {
             skillId,

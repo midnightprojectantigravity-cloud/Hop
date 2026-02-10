@@ -40,7 +40,10 @@ import { tickTileEffects } from './systems/tile-tick';
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { buildRunSummary, createDailyObjectives, createDailySeed, toDateKey } from './systems/run-objectives';
 import { UnifiedTileService } from './systems/unified-tile-service';
+import { appendTaggedMessage, appendTaggedMessages } from './systems/engine-messages';
 
+const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
+const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
 
 export const generateHubState = (): GameState => {
     const base = generateInitialState();
@@ -49,7 +52,7 @@ export const generateHubState = (): GameState => {
     return {
         ...base,
         gameStatus: 'hub',
-        message: ['Welcome to the Strategic Hub. Select your loadout.'],
+        message: [appendTaggedMessage([], 'Welcome to the Strategic Hub. Select your loadout.', 'INFO', 'SYSTEM')[0]],
         player: {
             ...base.player,
             activeSkills: [],
@@ -125,8 +128,8 @@ export const generateInitialState = (
         gridHeight: GRID_HEIGHT,
         gameStatus: 'playing',
         message: floor === 1
-            ? ['Welcome to the arena. Survive.']
-            : [...(preservePlayer as any)?.message || [], `Floor ${floor} - ${theme.charAt(0).toUpperCase() + theme.slice(1)}. Be careful.`].slice(-50),
+            ? [appendTaggedMessage([], 'Welcome to the arena. Survive.', 'INFO', 'SYSTEM')[0]]
+            : appendTaggedMessage((preservePlayer as any)?.message || [], `Floor ${floor} - ${theme.charAt(0).toUpperCase() + theme.slice(1)}. Be careful.`, 'INFO', 'OBJECTIVE'),
 
         hasSpear: true,
         stairsPosition: dungeon.stairsPosition,
@@ -223,7 +226,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                     status: 'lost',
                     completedRun
                 },
-                message: [...curState.message, 'You have fallen...'].slice(-50)
+                message: appendTaggedMessage(curState.message, 'You have fallen...', 'CRITICAL', 'COMBAT')
             };
         }
         curState.occupancyMask = SpatialSystem.refreshOccupancyMask(curState);
@@ -274,7 +277,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                             temporaryArmor: boostedArmor
                         }
                     };
-                    messages.push('Steady Plates harden your stance.');
+                    messages.push(appendTaggedMessage([], 'Steady Plates harden your stance.', 'INFO', 'COMBAT')[0]);
                 }
             }
 
@@ -290,7 +293,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
             curState = {
                 ...curState,
                 initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId),
-                message: [...curState.message, ...messages].slice(-50)
+                message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM')
             };
             continue;
         }
@@ -338,7 +341,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
             return {
                 ...curState,
                 intentPreview,
-                message: [...curState.message, ...messages].slice(-50),
+                message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
                 dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
             };
         }
@@ -348,8 +351,10 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
 
         // DEEP DIAGNOSTIC: Log Loadout and Intent
         const loadoutStr = activeActor.activeSkills.map(s => s.id).join(', ');
-        console.log(`[ENGINE] Actor: ${actorId} | Loadout: [${loadoutStr}] | Pos: ${JSON.stringify(activeActor.position)}`);
-        console.log(`[ENGINE] Intent: ${intent.type} | Skill: ${intent.skillId} | TargetHex: ${intent.targetHex ? JSON.stringify(intent.targetHex) : 'none'} | TargetId: ${intent.primaryTargetId || 'none'}`);
+        if (ENGINE_DEBUG) {
+            console.log(`[ENGINE] Actor: ${actorId} | Loadout: [${loadoutStr}] | Pos: ${JSON.stringify(activeActor.position)}`);
+            console.log(`[ENGINE] Intent: ${intent.type} | Skill: ${intent.skillId} | TargetHex: ${intent.targetHex ? JSON.stringify(intent.targetHex) : 'none'} | TargetId: ${intent.primaryTargetId || 'none'}`);
+        }
 
         // Apply RNG Consumption from Strategy (if any)
         if (intent.metadata.rngConsumption) {
@@ -365,12 +370,14 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         // 7. Tactical Execution Layer
         const { effects, messages: tacticalMessages, consumesTurn, targetId, kills } = TacticalEngine.execute(intent, actorForIntent, curState);
         // Console log for headless debugging (Intent Fidelity)
-        console.log(`[ENGINE] ${actorId} intends ${intent.type} (${intent.skillId}) onto ${targetId || (intent.targetHex ? JSON.stringify(intent.targetHex) : 'self')}`);
+        if (ENGINE_DEBUG) {
+            console.log(`[ENGINE] ${actorId} intends ${intent.type} (${intent.skillId}) onto ${targetId || (intent.targetHex ? JSON.stringify(intent.targetHex) : 'self')}`);
+        }
 
 
         // WORLD-CLASS LOGIC: The "Smoking Gun" Debug Log
         // If an intent produces zero effects, we need to know why in headless mode.
-        if (effects.length === 0 && intent.type !== 'WAIT') {
+        if (ENGINE_WARN && effects.length === 0 && intent.type !== 'WAIT') {
             const warnMsg = `[ENGINE] WARNING: Intent ${intent.type} (${intent.skillId}) for actor ${actorId} produced ZERO effects!`;
             console.warn(warnMsg);
         }
@@ -391,7 +398,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
             // Revert state for non-consuming actions (except MESSAGES)
             curState = {
                 ...stateBeforeEffects,
-                message: [...curState.message, ...tacticalMessages].slice(-50)
+                message: appendTaggedMessages(curState.message, tacticalMessages, 'INFO', 'COMBAT')
             };
             skipAdvance = true;
             continue; // Loop back for SAME actor!
@@ -410,14 +417,19 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                 return {
                     ...curState,
                     pendingStatus: { status: 'lost', completedRun },
-                    message: [...curState.message, ...messages, 'You have fallen...'].slice(-50)
+                    message: appendTaggedMessage(
+                        appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
+                        'You have fallen...',
+                        'CRITICAL',
+                        'COMBAT'
+                    )
                 };
             }
             curState = {
                 ...curState,
                 enemies: curState.enemies.filter(e => e.id !== actorId),
                 initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId),
-                message: [...curState.message, ...messages].slice(-50)
+                message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM')
             };
             continue; // Next actor
         }
@@ -463,7 +475,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                     ...curState,
                     hasSpear: true,
                     spearPosition: undefined,
-                    message: [...curState.message, 'Picked up your spear.'].slice(-50)
+                    message: appendTaggedMessage(curState.message, 'Picked up your spear.', 'INFO', 'OBJECTIVE')
                 };
             }
 
@@ -495,7 +507,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                         status: 'choosing_upgrade',
                         shrineOptions: picked.length > 0 ? picked : ['EXTRA_HP']
                     },
-                    message: [...curState.message, 'A holy shrine! Choose an upgrade.'].slice(-50)
+                    message: appendTaggedMessage(curState.message, 'A holy shrine! Choose an upgrade.', 'INFO', 'OBJECTIVE')
                 };
             }
 
@@ -509,7 +521,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                             status: 'won',
                             completedRun
                         },
-                        message: [...curState.message, `Arcade Cleared! Final Score: ${completedRun.score}`].slice(-50)
+                        message: appendTaggedMessage(curState.message, `Arcade Cleared! Final Score: ${completedRun.score}`, 'INFO', 'OBJECTIVE')
                     };
                 }
 
@@ -518,7 +530,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                     pendingStatus: {
                         status: 'playing',
                     },
-                    message: [...curState.message, 'Descending to the next level...'].slice(-50)
+                    message: appendTaggedMessage(curState.message, 'Descending to the next level...', 'INFO', 'OBJECTIVE')
                 };
             }
         }
@@ -530,7 +542,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
     return {
         ...curState,
         intentPreview,
-        message: [...curState.message, ...messages].slice(-50),
+        message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
         dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
     };
 };
@@ -621,7 +633,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     gameStatus: 'playing',
                     shrinePosition: undefined,
                     shrineOptions: undefined,
-                    message: [...s.message, `Gained ${upgradeDef?.name || upgradeId}!`].slice(-50)
+                    message: appendTaggedMessage(s.message, `Gained ${upgradeDef?.name || upgradeId}!`, 'INFO', 'OBJECTIVE')
                 };
             }
 
@@ -681,7 +693,12 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     } else {
                         return {
                             ...s,
-                            message: [...s.message, enemyAtTarget ? 'No valid passive attack for target.' : 'No valid passive movement for target.'].slice(-50)
+                            message: appendTaggedMessage(
+                                s.message,
+                                enemyAtTarget ? 'No valid passive attack for target.' : 'No valid passive movement for target.',
+                                'CRITICAL',
+                                'SYSTEM'
+                            )
                         };
                     }
                 }
@@ -734,7 +751,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     hasSpear: loadout.startingSkills.includes('SPEAR_THROW'),
                     hasShield: loadout.startingSkills.includes('SHIELD_THROW') || s.hasShield,
                     selectedLoadoutId: loadout.id,
-                    message: [...s.message, `${loadout.name} selected.`].slice(-50)
+                    message: appendTaggedMessage(s.message, `${loadout.name} selected.`, 'INFO', 'SYSTEM')
                 };
             }
 

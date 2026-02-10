@@ -60,6 +60,58 @@ const getSafeMovementRange = (state: GameState, actor: Actor, origin: Point, mov
     return out;
 };
 
+const findSafePath = (state: GameState, actor: Actor, origin: Point, target: Point, movePoints: number): Point[] | null => {
+    const key = (p: Point) => `${p.q},${p.r}`;
+    const parseKey = (k: string): Point => {
+        const [q, r] = k.split(',').map(Number);
+        return { q, r, s: -q - r };
+    };
+
+    const queue: Point[] = [origin];
+    const cost = new Map<string, number>([[key(origin), 0]]);
+    const cameFrom = new Map<string, string | null>([[key(origin), null]]);
+
+    while (queue.length > 0) {
+        const cur = queue.shift()!;
+        const curKey = key(cur);
+        const curCost = cost.get(curKey)!;
+        if (curCost >= movePoints) continue;
+
+        for (const next of getNeighbors(cur)) {
+            if (!SpatialSystem.isWithinBounds(state, next)) continue;
+            if (!UnifiedTileService.isWalkable(state, next)) continue;
+            if (!canPassHazard(state, actor, next, 'BASIC_MOVE')) continue;
+
+            const occupant = getActorAt(state, next) as Actor | undefined;
+            const occupiedByOther = !!occupant && occupant.id !== actor.id;
+            const occupiedByAlly = occupiedByOther && occupant.factionId === actor.factionId;
+            if (occupiedByOther && !occupiedByAlly) continue;
+
+            const nextKey = key(next);
+            const nextCost = curCost + 1;
+            if (cost.has(nextKey) && cost.get(nextKey)! <= nextCost) continue;
+
+            cost.set(nextKey, nextCost);
+            cameFrom.set(nextKey, curKey);
+            queue.push(next);
+        }
+    }
+
+    const targetKey = key(target);
+    if (!cameFrom.has(targetKey)) return null;
+    if (isBlockedMovementTile(state, target)) return null;
+    if (!canLandOnHazard(state, actor, target)) return null;
+
+    const path: Point[] = [];
+    let cur: string | null = targetKey;
+    while (cur) {
+        path.push(parseKey(cur));
+        cur = cameFrom.get(cur) || null;
+    }
+    path.reverse();
+    return path;
+};
+
 export const BASIC_MOVE: SkillDefinition = {
     id: 'BASIC_MOVE',
     name: 'Walk',
@@ -80,8 +132,9 @@ export const BASIC_MOVE: SkillDefinition = {
         const range = getEffectiveMoveRange(state, attacker);
         const validTargets = getSafeMovementRange(state, attacker, attacker.position, range);
         const isTargetValid = validTargets.some((p: Point) => hexEquals(p, target));
+        const path = findSafePath(state, attacker, attacker.position, target, range);
 
-        if (!isTargetValid) {
+        if (!isTargetValid || !path || path.length < 2) {
             messages.push('Target out of reach or blocked!');
             return { effects, messages, consumesTurn: false };
         }
@@ -91,10 +144,14 @@ export const BASIC_MOVE: SkillDefinition = {
             target: 'self',
             destination: target,
             source: attacker.position,
+            path,
             simulatePath: true
         });
 
-        messages.push(`Moved (Range: ${range}).`);
+        const actorLabel = attacker.id === state.player.id
+            ? 'You'
+            : `${attacker.subtype || 'enemy'}#${attacker.id}`;
+        messages.push(`${actorLabel} moved to (${target.q}, ${target.r}). [Range ${range}]`);
 
         return { effects, messages, consumesTurn: true };
     },

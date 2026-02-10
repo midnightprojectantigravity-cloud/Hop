@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Actor as EntityType } from '@hop/engine';
+import type { Actor as EntityType, MovementTrace } from '@hop/engine';
 import { isStunned, hexToPixel, getDirectionFromTo, hexEquals, TILE_SIZE, getHexLine, getEntityVisual, isEntityFlying } from '@hop/engine';
 
 interface EntityProps {
     entity: EntityType;
     isSpear?: boolean;
     isDying?: boolean; // For death animations
+    movementTrace?: MovementTrace;
 }
 
 
@@ -51,57 +52,174 @@ const renderIcon = (entity: EntityType, isPlayer: boolean, size = 24) => {
     );
 };
 
-export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
+export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementTrace }) => {
     const [displayPos, setDisplayPos] = useState(entity.position);
+    const [displayPixel, setDisplayPixel] = useState(() => hexToPixel(entity.position, TILE_SIZE));
     const [animationPrevPos, setAnimationPrevPos] = useState<EntityType['position'] | undefined>(entity.previousPosition);
+    const [segmentDurationMs, setSegmentDurationMs] = useState(220);
+    const [segmentEasing, setSegmentEasing] = useState('cubic-bezier(0.22, 1, 0.36, 1)');
+    const [teleportPhase, setTeleportPhase] = useState<'none' | 'out' | 'in'>('none');
     const animationInProgress = useRef(false);
     const lastTargetPos = useRef(entity.position);
+    const animationTimers = useRef<number[]>([]);
+    const animationFrameRef = useRef<number | null>(null);
 
     const [isFlashing, setIsFlashing] = useState(false);
     const prevHp = useRef(entity.hp);
 
     const isPlayer = entity.type === 'player';
     const targetPixel = entity.intentPosition ? hexToPixel(entity.intentPosition, TILE_SIZE) : null;
+    const movementDebugEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_MOVEMENT);
 
     // Sequential Animation Logic
     useEffect(() => {
+        const clearAnimationTimers = () => {
+            for (const t of animationTimers.current) {
+                clearTimeout(t);
+            }
+            animationTimers.current = [];
+            if (animationFrameRef.current !== null) {
+                cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = null;
+            }
+        };
+
         if (!hexEquals(entity.position, lastTargetPos.current)) {
             // New position detected
             lastTargetPos.current = entity.position;
 
-            if (entity.previousPosition && !hexEquals(entity.position, entity.previousPosition)) {
-                const path = getHexLine(entity.previousPosition, entity.position);
-                if (path.length > 2) { // Only animate sequences for multi-tile jumps/dashes
-                    animationInProgress.current = true;
-                    let step = 0;
-                    const stepDuration = 120; // ms per tile
+            const hasMatchingTrace = movementTrace
+                && movementTrace.actorId === entity.id
+                && movementTrace.destination
+                && hexEquals(movementTrace.destination as any, entity.position)
+                && Array.isArray(movementTrace.path)
+                && movementTrace.path.length > 0;
+            const tracePath = hasMatchingTrace
+                ? movementTrace.path as EntityType['position'][]
+                : undefined;
 
-                    const interval = setInterval(() => {
-                        step++;
-                        if (step < path.length) {
-                            setAnimationPrevPos(path[step - 1]);
-                            setDisplayPos(path[step]);
-                        } else {
-                            clearInterval(interval);
-                            animationInProgress.current = false;
-                            setDisplayPos(entity.position);
-                            setAnimationPrevPos(entity.previousPosition);
+            const inferredMovementType = hasMatchingTrace
+                ? movementTrace.movementType
+                : undefined;
+
+            if (movementDebugEnabled) {
+                const fallbackPathLen = entity.previousPosition ? getHexLine(entity.previousPosition, entity.position).length : 0;
+                console.log('[HOP_MOVE]', {
+                    actorId: entity.id,
+                    movementType: inferredMovementType || 'fallback',
+                    usedEngineTrace: hasMatchingTrace,
+                    tracePathLength: tracePath?.length || 0,
+                    tracePath: tracePath || [],
+                    fallbackPathLength: fallbackPathLen,
+                    origin: movementTrace?.origin || entity.previousPosition,
+                    destination: entity.position
+                });
+            }
+
+            if (inferredMovementType === 'teleport' && hasMatchingTrace && movementTrace.origin) {
+                clearAnimationTimers();
+                animationInProgress.current = true;
+                const totalDuration = movementTrace.durationMs ?? 180;
+                const halfDuration = Math.max(80, Math.floor(totalDuration / 2));
+
+                setSegmentDurationMs(0);
+                setSegmentEasing('linear');
+                setAnimationPrevPos(movementTrace.origin);
+                setDisplayPos(movementTrace.origin);
+                setDisplayPixel(hexToPixel(movementTrace.origin, TILE_SIZE));
+                setTeleportPhase('out');
+
+                const t1 = window.setTimeout(() => {
+                    setDisplayPos(entity.position);
+                    setAnimationPrevPos(entity.position);
+                    setDisplayPixel(hexToPixel(entity.position, TILE_SIZE));
+                    setTeleportPhase('in');
+                }, halfDuration);
+                const t2 = window.setTimeout(() => {
+                    setTeleportPhase('none');
+                    animationInProgress.current = false;
+                }, halfDuration * 2);
+                animationTimers.current.push(t1, t2);
+                return () => {
+                    clearAnimationTimers();
+                    animationInProgress.current = false;
+                };
+            }
+
+            if (entity.previousPosition && !hexEquals(entity.position, entity.previousPosition)) {
+                const path = tracePath || getHexLine(entity.previousPosition, entity.position);
+                if (path.length > 1) {
+                    clearAnimationTimers();
+                    animationInProgress.current = true;
+                    const totalDuration = movementTrace?.durationMs ?? Math.max(220, path.length * 150);
+                    const segmentCount = Math.max(1, path.length - 1);
+                    const perSegmentBudgetMs = Math.max(130, Math.floor(totalDuration / segmentCount));
+                    const hopMoveMs = Math.max(95, Math.floor(perSegmentBudgetMs * 0.72));
+                    const hopSettleMs = Math.max(40, perSegmentBudgetMs - hopMoveMs);
+                    const hopCycleMs = hopMoveMs + hopSettleMs;
+                    const pointsPx = path.map(p => hexToPixel(p, TILE_SIZE));
+                    const startTs = performance.now();
+
+                    setTeleportPhase('none');
+                    // Frame-driven path playback must not be re-smoothed by CSS transitions.
+                    setSegmentDurationMs(0);
+                    setSegmentEasing('linear');
+                    setDisplayPos(path[0]);
+                    setAnimationPrevPos(path[0]);
+                    setDisplayPixel(pointsPx[0]);
+
+                    let lastSegmentIndex = -1;
+                    const animate = (now: number) => {
+                        const elapsed = Math.max(0, now - startTs);
+                        const segmentIndex = Math.min(segmentCount - 1, Math.floor(elapsed / hopCycleMs));
+                        const segmentStart = segmentIndex * hopCycleMs;
+                        const segmentElapsed = elapsed - segmentStart;
+                        const moveT = Math.max(0, Math.min(1, segmentElapsed / hopMoveMs));
+
+                        if (segmentIndex !== lastSegmentIndex) {
+                            setAnimationPrevPos(path[segmentIndex]);
+                            setDisplayPos(path[Math.min(path.length - 1, segmentIndex + 1)]);
+                            lastSegmentIndex = segmentIndex;
                         }
-                    }, stepDuration);
+
+                        const from = pointsPx[segmentIndex];
+                        const to = pointsPx[Math.min(pointsPx.length - 1, segmentIndex + 1)];
+                        const t = segmentElapsed <= hopMoveMs ? moveT : 1;
+                        setDisplayPixel({
+                            x: from.x + ((to.x - from.x) * t),
+                            y: from.y + ((to.y - from.y) * t)
+                        });
+
+                        if (elapsed < (segmentCount * hopCycleMs) + hopSettleMs) {
+                            animationFrameRef.current = requestAnimationFrame(animate);
+                            return;
+                        }
+
+                        animationInProgress.current = false;
+                        setDisplayPos(entity.position);
+                        setAnimationPrevPos(entity.previousPosition);
+                        setDisplayPixel(pointsPx[pointsPx.length - 1]);
+                        animationFrameRef.current = null;
+                    };
+                    animationFrameRef.current = requestAnimationFrame(animate);
 
                     return () => {
-                        clearInterval(interval);
+                        clearAnimationTimers();
                         animationInProgress.current = false;
                     };
                 }
             }
             // Fallback for 1-tile move or no previous position
+            setTeleportPhase('none');
+            setSegmentDurationMs(220);
+            setSegmentEasing('cubic-bezier(0.22, 1, 0.36, 1)');
             setDisplayPos(entity.position);
             setAnimationPrevPos(entity.previousPosition);
+            setDisplayPixel(hexToPixel(entity.position, TILE_SIZE));
         }
-    }, [entity.position]);
+    }, [entity.position, entity.previousPosition, movementTrace, entity.id]);
 
-    const { x, y } = hexToPixel(displayPos, TILE_SIZE);
+    const { x, y } = displayPixel || hexToPixel(displayPos, TILE_SIZE);
 
     // Handle damage flash
     useEffect(() => {
@@ -162,7 +280,7 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
             {/* Main Entity Group - Handles smooth movement translation */}
             <g
                 style={{
-                    transition: 'transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)',
+                    transition: `transform ${segmentDurationMs}ms ${segmentEasing}`,
                     transform: `translate(${x}px, ${y}px)`
                 }}
                 className={isDying ? 'animate-lava-sink' : ''}
@@ -170,7 +288,7 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying }) => {
                 {/* Visual Content Group - Handles idle animation, squash/stretch, and damage flash */}
                 <g
                     transform={stretchTransform}
-                    className={`${isFlashing ? 'entity-damaged' : ''} ${!isDying && !isStunned(entity) ? 'animate-idle' : ''}`}
+                    className={`${isFlashing ? 'entity-damaged' : ''} ${!isDying && !isStunned(entity) ? 'animate-idle' : ''} ${teleportPhase === 'out' ? 'entity-teleport-out' : ''} ${teleportPhase === 'in' ? 'entity-teleport-in' : ''}`}
                     opacity={isInvisible ? 0.3 : (visual.opacity || 1)}
                     style={{ filter: isInvisible ? 'blur(1px)' : 'none' }}
                 >

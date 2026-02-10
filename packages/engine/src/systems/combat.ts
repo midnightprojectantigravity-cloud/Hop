@@ -17,6 +17,7 @@ import { TileResolver } from './tile-effects';
 import { UnifiedTileService } from './unified-tile-service';
 import { applyDamage } from './actor';
 import { createEntity } from './entity-factory';
+import { addToQueue } from './initiative';
 
 export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point, targetActorId?: string): { state: GameState; messages: string[] } => {
   let curState = state;
@@ -29,18 +30,28 @@ export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point
   const nextEnemies = [...curState.enemies];
 
   actorsToProcess.forEach(e => {
-    if (e.intent && e.intentPosition) {
+    const liveEnemy = curState.enemies.find(ne => ne.id === e.id);
+    if (!liveEnemy) return;
+
+    if (isStunned(liveEnemy)) {
+      const idx = nextEnemies.findIndex(ne => ne.id === e.id);
+      if (idx !== -1) {
+        nextEnemies[idx] = { ...nextEnemies[idx], intent: undefined, intentPosition: undefined };
+      }
+      return;
+    }
+    if (liveEnemy.intent && liveEnemy.intentPosition) {
       let enemyHandled = false;
       // 1. Try to find a compositional skill that matches the intent
-      const skillDef = SkillRegistry.get(e.intent);
-      const activeSkill = e.activeSkills?.find(s => s.id === e.intent);
+      const skillDef = SkillRegistry.get(liveEnemy.intent);
+      const activeSkill = liveEnemy.activeSkills?.find(s => s.id === liveEnemy.intent);
 
       if (skillDef && activeSkill) {
         // FLEXIBLE INTENT: Reassess if player is still a valid target
-        const validTargets = skillDef.getValidTargets ? skillDef.getValidTargets(curState, e.position) : [];
+        const validTargets = skillDef.getValidTargets ? skillDef.getValidTargets(curState, liveEnemy.position) : [];
         const isPlayerStillValid = validTargets.some(p => hexEquals(p, curState.player.position));
 
-        let targetPos = e.intentPosition;
+        let targetPos = liveEnemy.intentPosition;
         if (isPlayerStillValid) {
           // If player moved but is still in range/LoS, track them!
           targetPos = curState.player.position;
@@ -55,16 +66,16 @@ export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point
         }
 
         // Execute skill AT THE REASSESSED POSITION
-        const result = skillDef.execute(curState, e, targetPos, activeSkill.activeUpgrades);
+        const result = skillDef.execute(curState, liveEnemy, targetPos, activeSkill.activeUpgrades);
         curState = applyEffects(curState, result.effects, { targetId: curState.player.id });
         messages.push(...result.messages);
         enemyHandled = true;
-      } else if (e.subtype === 'bomber') {
+      } else if (liveEnemy.subtype === 'bomber') {
         // ... (No changes here)
-      } else if (hexEquals(e.intentPosition, playerMovedTo)) {
+      } else if (hexEquals(liveEnemy.intentPosition, playerMovedTo)) {
         // Fallback to legacy damage if it was a basic attack intent
         curState = { ...curState, player: applyDamage(curState.player, 1) };
-        const name = e.subtype ? e.subtype.charAt(0).toUpperCase() + e.subtype.slice(1) : 'Enemy';
+        const name = `${liveEnemy.subtype || 'enemy'}#${liveEnemy.id}`;
         messages.push(`${name} hit you! (HP: ${curState.player.hp}/${curState.player.maxHp})`);
         enemyHandled = true;
       }
@@ -95,6 +106,20 @@ export const resolveSingleEnemyTurn = (
   let curState = state;
   let messages: string[] = [];
   let nextEnemy: Entity = enemy;
+  const stunnedAppliedThisStep = (state.timelineEvents || []).some(ev =>
+    ev.phase === 'STATUS_APPLY'
+    && ev.type === 'ApplyStatus'
+    && ev.payload?.status === 'stunned'
+    && (
+      ev.payload?.target === enemy.id
+      || (
+        typeof ev.payload?.target === 'object'
+        && ev.payload?.target
+        && hexEquals(ev.payload.target as Point, enemy.position)
+      )
+    )
+  );
+  const startedStunned = isStunned(enemy) || stunnedAppliedThisStep;
 
   // Use identity-captured neighbor IDs (set at turn start) for Auto-Attack persistence
   const persistentTargetIds = getTurnStartNeighborIds(state, enemy.id) || undefined;
@@ -154,7 +179,11 @@ export const resolveSingleEnemyTurn = (
         }),
         actionCooldown: 2,
       };
-      curState = { ...curState, enemies: [...curState.enemies, bomb] };
+      curState = {
+        ...curState,
+        enemies: [...curState.enemies, bomb],
+        initiativeQueue: curState.initiativeQueue ? addToQueue(curState.initiativeQueue, bomb as Actor) : curState.initiativeQueue
+      };
     } else {
       messages.push(`${enemy.subtype} failed to place bomb (blocked).`);
     }
@@ -202,9 +231,11 @@ export const resolveSingleEnemyTurn = (
   // 2. Auto Attack (Punch) - based on turn start position
   const prevNeighbors = getNeighbors(turnStartPosition);
   // Important: applyAutoAttack needs to know about the initiative context or we pass prevNeighbors
-  const autoAttackResult = applyAutoAttack(curState, nextEnemy, prevNeighbors, turnStartPosition, persistentTargetIds);
-  curState = autoAttackResult.state;
-  messages.push(...autoAttackResult.messages);
+  if (!startedStunned && !isStunned(nextEnemy as Actor)) {
+    const autoAttackResult = applyAutoAttack(curState, nextEnemy, prevNeighbors, turnStartPosition, persistentTargetIds);
+    curState = autoAttackResult.state;
+    messages.push(...autoAttackResult.messages);
+  }
 
   // 3. Centralized Stay Check (Lava, Fire, stay effects)
   const currentTile = UnifiedTileService.getTileAt(curState, nextEnemy.position);

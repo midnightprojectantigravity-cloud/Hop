@@ -9,11 +9,12 @@ interface HubProps {
   gameState: GameState;
   onSelectLoadout: (loadout: Loadout) => void;
   onStartRun: (mode: 'normal' | 'daily') => void;
+  onOpenArcade: () => void;
   onLoadScenario: (state: GameState, instructions: string) => void;
   onStartReplay: (r: ReplayRecord) => void;
 }
 
-export const Hub: React.FC<HubProps> = ({ gameState, onSelectLoadout, onStartRun, onLoadScenario, onStartReplay }) => {
+export const Hub: React.FC<HubProps> = ({ gameState, onSelectLoadout, onStartRun, onOpenArcade, onLoadScenario, onStartReplay }) => {
   return (
     <div className="w-full h-full flex flex-col bg-[#020617]">
       {/* Header */}
@@ -58,6 +59,12 @@ export const Hub: React.FC<HubProps> = ({ gameState, onSelectLoadout, onStartRun
         <main className="flex-1 overflow-y-auto p-12 custom-scrollbar">
           <div className="max-w-4xl mx-auto">
             <div className="mb-12">
+              <button
+                onClick={onOpenArcade}
+                className="mb-5 w-full md:w-auto px-6 py-3 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-200 font-black uppercase tracking-widest text-sm transition-all"
+              >
+                Arcade Mode
+              </button>
               <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 italic">Select Your <span className="text-indigo-500">Archetype</span></h2>
               <p className="text-white/40 max-w-xl">Choose your tactical specialty. Each archetype provides unique skills and modifies your core interaction with the engine.</p>
             </div>

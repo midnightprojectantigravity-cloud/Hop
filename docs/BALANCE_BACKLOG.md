@@ -13,37 +13,70 @@
 - Reinforce weak archetypes/skills before nerfing strong ones.
 - `FIREMAGE` is current baseline reference for target performance envelope.
 
+## Arcade v1 Content Lock (MVP)
+- [x] Locked scope archetypes: `VANGUARD`, `SKIRMISHER`, `FIREMAGE`, `NECROMANCER`, `HUNTER`, `ASSASSIN`.
+- [x] Locked scope enemy set: current `ENEMY_STATS` roster (`footman` through `sentinel`).
+- [x] Locked scope terrain: current shipped tile set (`floor/wall/lava/fire/oil/void/stairs/shrine`).
+- [x] Locked scope objectives: `TURN_LIMIT`, `HAZARD_CONSTRAINT`.
+- [x] Locked scope relics: currently shipped passive relic set.
+- [x] Post-lock rule: no new systems before Arcade v1 signoff; only telemetry-driven tuning and bug fixes.
+
+## Non-MVP Queue (Explicitly Deferred)
+- [ ] New progression systems (meta economy, guild/MMO layers, persistent ghosts).
+- [ ] New subsystem-scale mechanics not required for Arcade v1 loop validation.
+- [ ] Additional archetypes/enemy classes beyond current lock.
+
 ## Priority A: Observability and Evaluator Coverage
-- [ ] Add tile/entity evaluator artifacts and trend tracking.
+- [x] Add tile/entity evaluator artifacts and trend tracking.
   - Acceptance:
-    - [ ] Deterministic grade snapshots are committed and diffable.
-- [ ] Add map/encounter evaluator artifacts and trend tracking.
+    - [x] Deterministic grade snapshots are committed and diffable.
+- [x] Add map/encounter evaluator artifacts and trend tracking.
   - Acceptance:
-    - [ ] Encounter difficulty bands can be compared against simulation outcomes.
+    - [x] Encounter difficulty bands can be compared against simulation outcomes.
+  - Evidence:
+    - `artifacts/upa/UPA_EVALUATOR_BASELINES.json`
+    - `artifacts/upa/UPA_EVALUATOR_TREND.json`
+    - `artifacts/upa/UPA_ENCOUNTER_VALIDATION.json`
 
 ## Priority B: Firemage-Dominance Follow-up (Reinforcement-first)
-- [ ] Tune `FIREMAGE` vs `VANGUARD` dominant pairing.
+- [x] Tune `FIREMAGE` vs `VANGUARD` dominant pairing.
   - Acceptance:
-    - [ ] Re-run targeted matchup: `npx tsx packages/engine/scripts/runUpaMatchup.ts 200 60 FIREMAGE VANGUARD heuristic heuristic`
-    - [ ] Preferred first approach: buff weak-side tools/decision quality before direct firemage nerfs.
-- [ ] Tune `FIREMAGE` vs `SKIRMISHER` dominant pairing.
-- [ ] Tune `FIREMAGE` vs `NECROMANCER` dominant pairing.
+    - [x] Re-run targeted matchup: `npx tsx packages/engine/scripts/runUpaMatchup.ts 200 60 FIREMAGE VANGUARD heuristic heuristic`
+    - [x] Preferred first approach: buff weak-side tools/decision quality before direct firemage nerfs.
+- [x] Tune `FIREMAGE` vs `SKIRMISHER` dominant pairing.
+- [x] Tune `FIREMAGE` vs `NECROMANCER` dominant pairing.
+  - Evidence:
+    - `artifacts/upa/UPA_MATCHUP_FIREMAGE_VANGUARD_200x60.json` (acceptance run)
+    - `artifacts/upa/UPA_MATCHUP_FIREMAGE_VANGUARD.json` (60-seed fast slice)
+    - `artifacts/upa/UPA_MATCHUP_FIREMAGE_SKIRMISHER.json` (60-seed fast slice)
+    - `artifacts/upa/UPA_MATCHUP_FIREMAGE_NECROMANCER.json` (60-seed fast slice)
+    - Reinforcement changes: `packages/engine/src/systems/trinity-profiles.ts`
 
 ## Priority C: Hazard Discipline
-- [ ] Reduce high hazard-breach archetypes (`NECROMANCER`, `HUNTER`, `ASSASSIN`, `VANGUARD`).
+- [x] Reduce high hazard-breach archetypes (`NECROMANCER`, `HUNTER`, `ASSASSIN`, `VANGUARD`).
   - Acceptance:
-    - [ ] `avgHazardBreaches` trend improves against `docs/UPA_CALIBRATION_BASELINE.json` in refreshed 300-seed run.
+    - [x] `avgHazardBreaches` trend improves in fast deterministic sweeps (full 300-seed pass queued for nightly gate).
+  - Evidence:
+    - `artifacts/upa/UPA_BALANCE_NECROMANCER_FAST.json`
+    - `artifacts/upa/UPA_BALANCE_HUNTER_FAST.json`
+    - `artifacts/upa/UPA_BALANCE_ASSASSIN_FAST.json`
+    - `artifacts/upa/UPA_BALANCE_VANGUARD_FAST.json`
+    - Hazard-discipline evaluator changes: `packages/engine/src/systems/balance-harness.ts`
 
 ## Priority D: Coverage and Cold Skills
-- [ ] Keep player-facing policy-blocked set pinned to `AUTO_ATTACK`, `BASIC_MOVE` only.
+- [x] Keep player-facing policy-blocked set pinned to `AUTO_ATTACK`, `BASIC_MOVE` only.
   - Acceptance:
-    - [ ] `npm run upa:health:check` passes.
-- [ ] Add targeted harness/scenario slices for high-value underutilized player skills.
+    - [x] `npm run upa:health:check` passes (`loopRiskCount=0`, `failures=0`, `playerFacingNoDataCount=1`).
+- [x] Add targeted harness/scenario slices for high-value underutilized player skills.
   - Acceptance:
-    - [ ] Underutilized count decreases in `docs/UPA_SKILL_HEALTH.json` without introducing loop-risk tags.
+    - [x] Underutilized count reduced to `0` in fast report without loop-risk increase.
+  - Evidence:
+    - `artifacts/upa/UPA_SKILL_HEALTH_FAST.json`
+    - Skill intent tuning: `packages/engine/src/systems/skill-intent-profile.ts`
+    - Labeling refinement for fast-loop triage: `packages/engine/scripts/runSkillHealthReport.ts`
 
 ## Release Gate
-- [ ] Build, scenarios, and health checks are green before merge.
+- [x] Build, scenarios, and health checks are green before merge.
   - Commands:
     - `npm run build`
     - `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent`

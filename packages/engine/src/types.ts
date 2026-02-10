@@ -29,6 +29,8 @@ export interface MovementTrace {
     origin: Point;      // Start Hex
     path: Point[];      // Every hex touched during the slide/fling
     destination: Point; // Final landing hex
+    movementType?: 'slide' | 'teleport';
+    durationMs?: number;
     interruptedBy?: 'WALL' | 'ACTOR' | 'BOUNDARY' | 'LAVA';
     wasLethal: boolean;
 }

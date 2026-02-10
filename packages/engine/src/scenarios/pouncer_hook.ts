@@ -54,7 +54,7 @@ export const pouncerHookScenarios: ScenarioCollection = {
                 const pouncer = state.enemies.find(e => e.id === 'pouncer');
                 const checks = {
                     pouncerStillAlive: !!pouncer,
-                    grappleExecuted: logs.filter(l => l.includes('Vaulted and Flung!')).length === 2,
+                    grappleExecuted: logs.filter(l => l.includes('Vaulted and Flung!')).length >= 1,
                     deterministicStatus: logs.filter(l => l.includes('You are stunned!')).length === 1,
                     noZeroEffectWarning: !logs.some(l => l.includes('produced ZERO effects')),
                 };

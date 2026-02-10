@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import type { GameState, Point } from '@hop/engine';
 import {
     hexDistance, hexEquals, isTileInDiamond, hexToPixel,
@@ -20,6 +20,7 @@ interface GameBoardProps {
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selectedSkillId, showMovementRange, onBusyStateChange }) => {
     const [isShaking, setIsShaking] = useState(false);
     const [hoveredTile, setHoveredTile] = useState<Point | null>(null);
+    const traceCacheRef = useRef<Record<string, any>>({});
 
     // Filter cells based on dynamic diamond geometry
     const cells = useMemo(() => {
@@ -71,6 +72,30 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
             height: maxY - minY
         };
     }, [cells]);
+
+    const latestTraceByActor = useMemo(() => {
+        const out: Record<string, any> = { ...traceCacheRef.current };
+        for (const ev of gameState.visualEvents || []) {
+            if (ev.type !== 'kinetic_trace') continue;
+            const trace = ev.payload;
+            if (trace?.actorId) {
+                out[trace.actorId] = trace;
+            }
+        }
+        return out;
+    }, [gameState.visualEvents]);
+
+    useEffect(() => {
+        const next = { ...traceCacheRef.current };
+        for (const ev of gameState.visualEvents || []) {
+            if (ev.type !== 'kinetic_trace') continue;
+            const trace = ev.payload;
+            if (trace?.actorId) {
+                next[trace.actorId] = trace;
+            }
+        }
+        traceCacheRef.current = next;
+    }, [gameState.visualEvents]);
 
     return (
         <div className={`w-full h-full flex justify-center items-center overflow-hidden transition-transform duration-75 ${isShaking ? 'animate-shake' : ''}`}>
@@ -180,9 +205,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                         } as any} isSpear={true} />
                     )}
 
-                    <Entity entity={gameState.player} />
-                    {gameState.enemies.map(e => <Entity key={e.id} entity={e} />)}
-                    {gameState.dyingEntities?.map(e => <Entity key={`dying-${e.id}-${gameState.turnNumber}`} entity={e} isDying={true} />)}
+                    <Entity entity={gameState.player} movementTrace={latestTraceByActor[gameState.player.id]} />
+                    {gameState.enemies.map(e => <Entity key={e.id} entity={e} movementTrace={latestTraceByActor[e.id]} />)}
+                    {gameState.dyingEntities?.map(e => <Entity key={`dying-${e.id}-${gameState.turnNumber}`} entity={e} isDying={true} movementTrace={latestTraceByActor[e.id]} />)}
 
                     <JuiceManager
                         visualEvents={gameState.visualEvents || []}

@@ -73,15 +73,6 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
                 position,
                 startTime: now
             });
-            if (typeof ev.payload?.amount === 'number') {
-                additions.push({
-                    id: `${effectId}:dmg`,
-                    type: 'combat_text',
-                    position,
-                    payload: { text: `-${ev.payload.amount}` },
-                    startTime: now
-                });
-            }
         } else if (ev.phase === 'DEATH_RESOLVE') {
             additions.push({
                 id: `${effectId}:vapor`,
@@ -146,14 +137,6 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
                         startTime: now
                     });
                 }
-            } else if (ev.type === 'combat_text') {
-                newEffects.push({
-                    id,
-                    type: 'combat_text',
-                    position: ev.payload.position || { q: 0, r: 0, s: 0 },
-                    payload: ev.payload,
-                    startTime: now
-                });
             } else if (ev.type === 'vfx' && ev.payload?.type === 'flash') {
                 if (ev.payload.position) {
                     newEffects.push({

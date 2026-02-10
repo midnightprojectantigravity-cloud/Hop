@@ -245,6 +245,45 @@ body::after {
 }
 
 /* ============================================
+   JUICE: TELEPORT (DISAPPEAR / REAPPEAR)
+   ============================================ */
+@keyframes teleportOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+    filter: brightness(2);
+  }
+}
+
+@keyframes teleportIn {
+  0% {
+    opacity: 0;
+    transform: scale(1.5);
+    filter: brightness(2);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.entity-teleport-out {
+  animation: teleportOut 0.12s ease-in forwards;
+}
+
+.entity-teleport-in {
+  animation: teleportIn 0.14s ease-out forwards;
+}
+
+/* ============================================
    STUN ICON ANIMATION
    ============================================ */
 @keyframes stunIcon {

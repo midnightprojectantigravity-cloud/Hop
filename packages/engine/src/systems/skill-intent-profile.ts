@@ -69,9 +69,9 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         risk: { requireEnemyContact: true, noContactPenalty: 5, noProgressCastPenalty: 7 }
     },
     BULWARK_CHARGE: { intentTags: ['move', 'protect', 'damage'], target: { pattern: 'line' }, estimates: { movement: 2, damage: 4, shielding: 2 } },
-    VAULT: { intentTags: ['move', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2 } },
+    VAULT: { intentTags: ['move', 'utility', 'control'], target: { pattern: 'single' }, estimates: { movement: 3, control: 2 } },
     GRAPPLE_HOOK: { intentTags: ['move', 'control'], target: { pattern: 'line' }, estimates: { movement: 3, control: 2 } },
-    SHIELD_THROW: { intentTags: ['damage', 'control'], target: { pattern: 'line' }, estimates: { damage: 4, control: 1 } },
+    SHIELD_THROW: { intentTags: ['damage', 'control'], target: { pattern: 'line' }, estimates: { damage: 6, control: 2 } },
     SPEAR_THROW: {
         intentTags: ['damage'],
         target: { pattern: 'line' },
@@ -79,14 +79,19 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         risk: { requireEnemyContact: true, noContactPenalty: 4, noProgressCastPenalty: 5 }
     },
     FIREBALL: { intentTags: ['damage', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 5, control: 1 } },
-    FIREWALL: { intentTags: ['hazard', 'control', 'damage'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { damage: 3, control: 2 } },
+    FIREWALL: { intentTags: ['hazard', 'control', 'damage'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { damage: 5, control: 3 } },
     FIREWALK: {
         intentTags: ['move', 'hazard', 'utility'],
         target: { pattern: 'single' },
         estimates: { movement: 3 },
         risk: { noProgressCastPenalty: 8 }
     },
-    ABSORB_FIRE: { intentTags: ['heal', 'hazard', 'utility'], target: { pattern: 'self' }, estimates: { healing: 4 } },
+    ABSORB_FIRE: {
+        intentTags: ['heal', 'hazard', 'utility'],
+        target: { pattern: 'self' },
+        estimates: { healing: 6 },
+        risk: { noProgressCastPenalty: 2 }
+    },
     BOMB_TOSS: { intentTags: ['damage', 'control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 6, control: 2 } },
     CORPSE_EXPLOSION: { intentTags: ['damage', 'control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 6, control: 1 } },
     RAISE_DEAD: { intentTags: ['summon', 'control', 'utility'], target: { pattern: 'single' }, estimates: { summon: 5 } },
@@ -94,8 +99,13 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
     MULTI_SHOOT: { intentTags: ['damage'], target: { pattern: 'line' }, estimates: { damage: 5 } },
     SET_TRAP: { intentTags: ['control', 'hazard'], target: { pattern: 'single' }, estimates: { control: 3 } },
     SWIFT_ROLL: { intentTags: ['move', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2 } },
-    SNEAK_ATTACK: { intentTags: ['damage', 'move'], target: { pattern: 'single' }, estimates: { damage: 6, movement: 1 } },
-    SMOKE_SCREEN: { intentTags: ['control', 'protect', 'utility'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { control: 3, shielding: 2 } },
+    SNEAK_ATTACK: {
+        intentTags: ['damage', 'move'],
+        target: { pattern: 'single' },
+        estimates: { damage: 8, movement: 2 },
+        risk: { requireEnemyContact: true, noContactPenalty: 3, noProgressCastPenalty: 4 }
+    },
+    SMOKE_SCREEN: { intentTags: ['control', 'protect', 'utility'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { control: 4, shielding: 4 } },
     SHADOW_STEP: { intentTags: ['move', 'damage', 'utility'], target: { pattern: 'single' }, estimates: { movement: 3, damage: 3 } },
     FALCON_COMMAND: { intentTags: ['summon', 'control', 'utility'], target: { pattern: 'single' }, estimates: { summon: 4, control: 2 } },
     FALCON_PECK: { intentTags: ['damage'], target: { pattern: 'single' }, estimates: { damage: 3 } },
@@ -103,7 +113,7 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
     FALCON_HEAL: { intentTags: ['heal', 'utility'], target: { pattern: 'single' }, estimates: { healing: 4 } },
     FALCON_SCOUT: { intentTags: ['control', 'utility'], target: { pattern: 'self' }, estimates: { control: 3 } },
     FALCON_AUTO_ROOST: { intentTags: ['summon', 'utility'], target: { pattern: 'self' }, estimates: { summon: 2 } },
-    KINETIC_TRI_TRAP: { intentTags: ['control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { control: 3, damage: 2 } },
+    KINETIC_TRI_TRAP: { intentTags: ['control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { control: 5, damage: 4 } },
     WITHDRAWAL: { intentTags: ['move', 'control', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2, control: 1 } },
     SENTINEL_TELEGRAPH: { intentTags: ['control', 'objective'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { control: 3 } },
     SENTINEL_BLAST: { intentTags: ['damage', 'hazard'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { damage: 7 } },

@@ -50,3 +50,4 @@ Use it as the decision filter for engine, client, and balance changes.
 2. Active balance backlog: `docs/BALANCE_BACKLOG.md`
 3. UPA operations: `docs/UPA_GUIDE.md`
 4. Historical archive: `docs/ROADMAP_HISTORY.md`
+5. Generated audit/test artifacts: `artifacts/upa/` (not `docs/` root)

@@ -1,6 +1,7 @@
 import type { TrinityStats } from './trinity-resolver';
 
 export type TrinityProfileId = 'neutral' | 'live';
+export const TRINITY_PROFILE_SET_VERSION = 'mvp-v1';
 
 export interface TrinityProfile {
     id: TrinityProfileId;
@@ -53,9 +54,9 @@ export const TRINITY_PROFILES: Record<TrinityProfileId, TrinityProfile> = {
         default: ZERO,
         archetype: withDefault({
             VANGUARD: { body: 9, mind: 4, instinct: 5 },
-            SKIRMISHER: { body: 4, mind: 2, instinct: 8 },
+            SKIRMISHER: { body: 7, mind: 6, instinct: 10 },
             FIREMAGE: { body: 2, mind: 9, instinct: 4 },
-            NECROMANCER: { body: 3, mind: 8, instinct: 4 },
+            NECROMANCER: { body: 5, mind: 9, instinct: 5 },
             HUNTER: { body: 3, mind: 4, instinct: 8 },
             ASSASSIN: { body: 3, mind: 3, instinct: 9 },
         }),
@@ -72,7 +73,7 @@ export const TRINITY_PROFILES: Record<TrinityProfileId, TrinityProfile> = {
         }),
         companionSubtype: withDefault({
             falcon: { body: 2, mind: 2, instinct: 9 },
-            skeleton: { body: 5, mind: 1, instinct: 4 },
+            skeleton: { body: 15, mind: 1, instinct: 4 },
         }),
     },
 };

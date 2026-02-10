@@ -3,7 +3,7 @@ import { hexEquals, getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
 import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
-import { getIncomingDamageMultiplier, getOutgoingDamageMultiplier } from '../systems/combat-traits';
+import { isStunned } from '../systems/status';
 
 import { getSkillScenarios } from '../scenarios';
 
@@ -56,6 +56,24 @@ export const AUTO_ATTACK: SkillDefinition = {
         const messages: string[] = [];
         let kills = 0;
 
+        const stunnedThisStep = (state.timelineEvents || []).some(ev =>
+            ev.phase === 'STATUS_APPLY'
+            && ev.type === 'ApplyStatus'
+            && ev.payload?.status === 'stunned'
+            && (
+                ev.payload?.target === attacker.id
+                || (
+                    typeof ev.payload?.target === 'object'
+                    && ev.payload?.target
+                    && hexEquals(ev.payload.target as Point, attacker.position)
+                )
+            )
+        );
+
+        if (isStunned(attacker) || stunnedThisStep) {
+            return { effects, messages, kills: 0 };
+        }
+
         // Get current neighbors
         const currentNeighbors = getNeighbors(attacker.position);
 
@@ -99,14 +117,16 @@ export const AUTO_ATTACK: SkillDefinition = {
                     targetTrinity: extractTrinityStats(targetActor),
                     damageClass: 'physical',
                     scaling: [{ attribute: 'body', coefficient: 0.4 }],
-                    statusMultipliers: [],
-                    attackPowerMultiplier: getOutgoingDamageMultiplier(attacker, 'physical'),
-                    targetDamageTakenMultiplier: getIncomingDamageMultiplier(targetActor, 'physical')
+                    statusMultipliers: []
                 });
                 effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
 
-                const attackerName = attacker.factionId === 'player' ? 'You' : (attacker.subtype || 'Enemy');
-                const targetName = targetActor.factionId === 'player' ? 'you' : (targetActor.subtype || 'enemy');
+                const attackerName = attacker.factionId === 'player'
+                    ? 'You'
+                    : `${attacker.subtype || 'enemy'}#${attacker.id}`;
+                const targetName = targetActor.factionId === 'player'
+                    ? 'you'
+                    : `${targetActor.subtype || 'enemy'}#${targetActor.id}`;
                 messages.push(`${attackerName} attacked ${targetName}!`);
 
                 if (targetActor.hp <= damage) {
@@ -142,14 +162,16 @@ export const AUTO_ATTACK: SkillDefinition = {
                     targetTrinity: extractTrinityStats(targetActor),
                     damageClass: 'physical',
                     scaling: [{ attribute: 'body', coefficient: 0.4 }],
-                    statusMultipliers: [],
-                    attackPowerMultiplier: getOutgoingDamageMultiplier(attacker, 'physical'),
-                    targetDamageTakenMultiplier: getIncomingDamageMultiplier(targetActor, 'physical')
+                    statusMultipliers: []
                 });
                 effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
 
-                const attackerName = attacker.factionId === 'player' ? 'You' : (attacker.subtype || 'Enemy');
-                const targetName = targetActor.factionId === 'player' ? 'you' : (targetActor.subtype || 'enemy');
+                const attackerName = attacker.factionId === 'player'
+                    ? 'You'
+                    : `${attacker.subtype || 'enemy'}#${attacker.id}`;
+                const targetName = targetActor.factionId === 'player'
+                    ? 'you'
+                    : `${targetActor.subtype || 'enemy'}#${targetActor.id}`;
                 messages.push(`${attackerName} cleaved ${targetName}!`);
 
                 if (targetActor.hp <= damage) {

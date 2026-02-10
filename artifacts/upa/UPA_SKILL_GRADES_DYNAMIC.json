@@ -1,0 +1,384 @@
+{
+  "generatedAt": "2026-02-09T12:38:40.886Z",
+  "modelVersion": "p6-dynamic-v1",
+  "count": 300,
+  "maxTurns": 80,
+  "policy": "heuristic",
+  "loadouts": [
+    "VANGUARD",
+    "SKIRMISHER",
+    "FIREMAGE",
+    "NECROMANCER",
+    "HUNTER",
+    "ASSASSIN"
+  ],
+  "reports": [
+    {
+      "loadoutId": "VANGUARD",
+      "games": 300,
+      "winRate": 0,
+      "dynamicSkillGrades": {
+        "JUMP": {
+          "casts": 3989,
+          "castRate": 13.2967,
+          "damagePerCast": 0.3632,
+          "killContribution": 4.6233,
+          "survivalDelta": -1.1,
+          "objectiveDelta": 26.17,
+          "winImpact": 0,
+          "numericGradeRaw": 285.2491,
+          "rolePreset": "mobility",
+          "roleAdjustedGrade": 315.3629,
+          "numericGrade": 315.3629
+        },
+        "SPEAR_THROW": {
+          "casts": 1055,
+          "castRate": 3.5167,
+          "damagePerCast": 1.3422,
+          "killContribution": 0.8567,
+          "survivalDelta": -0.0967,
+          "objectiveDelta": 0.04,
+          "winImpact": 0,
+          "numericGradeRaw": 32.0633,
+          "rolePreset": "damage",
+          "roleAdjustedGrade": 32.0633,
+          "numericGrade": 32.0633
+        },
+        "SHIELD_BASH": {
+          "casts": 568,
+          "castRate": 1.8933,
+          "damagePerCast": 0.8134,
+          "killContribution": 2.49,
+          "survivalDelta": -0.2667,
+          "objectiveDelta": 0.0367,
+          "winImpact": 0,
+          "numericGradeRaw": 70.3845,
+          "rolePreset": "sustain",
+          "roleAdjustedGrade": 30.3854,
+          "numericGrade": 30.3854
+        },
+        "BASIC_ATTACK": {
+          "casts": 604,
+          "castRate": 2.0133,
+          "damagePerCast": 1.7881,
+          "killContribution": 1.7933,
+          "survivalDelta": -0.3633,
+          "objectiveDelta": 0.06,
+          "winImpact": 0,
+          "numericGradeRaw": 55.6985,
+          "rolePreset": "damage",
+          "roleAdjustedGrade": 55.6985,
+          "numericGrade": 55.6985
+        }
+      }
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "games": 300,
+      "winRate": 0,
+      "dynamicSkillGrades": {
+        "SHIELD_THROW": {
+          "casts": 1925,
+          "castRate": 6.4167,
+          "damagePerCast": 0.0364,
+          "killContribution": 0,
+          "survivalDelta": -0.1233,
+          "objectiveDelta": 0,
+          "winImpact": 0,
+          "numericGradeRaw": 9.7414,
+          "rolePreset": "damage",
+          "roleAdjustedGrade": 9.7414,
+          "numericGrade": 9.7414
+        },
+        "GRAPPLE_HOOK": {
+          "casts": 3196,
+          "castRate": 10.6533,
+          "damagePerCast": 0.1148,
+          "killContribution": 0,
+          "survivalDelta": -0.4867,
+          "objectiveDelta": 7.3567,
+          "winImpact": 0,
+          "numericGradeRaw": 56.8091,
+          "rolePreset": "mobility",
+          "roleAdjustedGrade": 93.4864,
+          "numericGrade": 93.4864
+        },
+        "DASH": {
+          "casts": 554,
+          "castRate": 1.8467,
+          "damagePerCast": 0.1516,
+          "killContribution": 0,
+          "survivalDelta": -1.86,
+          "objectiveDelta": 5.7867,
+          "winImpact": 0,
+          "numericGradeRaw": 35.0819,
+          "rolePreset": "mobility",
+          "roleAdjustedGrade": 59.2483,
+          "numericGrade": 59.2483
+        },
+        "VAULT": {
+          "casts": 78,
+          "castRate": 0.26,
+          "damagePerCast": 0,
+          "killContribution": 0,
+          "survivalDelta": 0.0267,
+          "objectiveDelta": 0.71,
+          "winImpact": 0,
+          "numericGradeRaw": 4.359,
+          "rolePreset": "mobility",
+          "roleAdjustedGrade": 7.4077,
+          "numericGrade": 7.4077
+        }
+      }
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "games": 300,
+      "winRate": 0.09333333333333334,
+      "dynamicSkillGrades": {
+        "ABSORB_FIRE": {
+          "casts": 367,
+          "castRate": 1.2233,
+          "damagePerCast": 0.049,
+          "killContribution": 0,
+          "survivalDelta": 0.0067,
+          "objectiveDelta": 0,
+          "winImpact": 0.0746,
+          "numericGradeRaw": 5.3638,
+          "rolePreset": "sustain",
+          "roleAdjustedGrade": 5.3994,
+          "numericGrade": 5.3994
+        },
+        "FIREWALL": {
+          "casts": 3533,
+          "castRate": 11.7767,
+          "damagePerCast": 3.1254,
+          "killContribution": 0,
+          "survivalDelta": -0.8967,
+          "objectiveDelta": 0.5533,
+          "winImpact": 0.2378,
+          "numericGradeRaw": 41.4096,
+          "rolePreset": "damage",
+          "roleAdjustedGrade": 41.4096,
+          "numericGrade": 41.4096
+        },
+        "FIREBALL": {
+          "casts": 8842,
+          "castRate": 29.4733,
+          "damagePerCast": 2.3328,
+          "killContribution": 0,
+          "survivalDelta": -2.11,
+          "objectiveDelta": 0.9167,
+          "winImpact": 0.3189,
+          "numericGradeRaw": 71.0675,
+          "rolePreset": "damage",
+          "roleAdjustedGrade": 71.0675,
+          "numericGrade": 71.0675
+        },
+        "FIREWALK": {
+          "casts": 860,
+          "castRate": 2.8667,
+          "damagePerCast": 0.0826,
+          "killContribution": 0,
+          "survivalDelta": 0.1767,
+          "objectiveDelta": 15.8333,
+          "winImpact": 0.1262,
+          "numericGradeRaw": 97.7516,
+          "rolePreset": "mobility",
+          "roleAdjustedGrade": 161.9836,
+          "numericGrade": 161.9836
+        },
+        "BASIC_ATTACK": {
+          "casts": 343,
+          "castRate": 1.1433,
+          "damagePerCast": 1.0641,
+          "killContribution": 0,
+          "survivalDelta": 0.0067,
+          "objectiveDelta": 0,
+          "winImpact": 0.0712,
+          "numericGradeRaw": 8.3382,
+          "rolePreset": "damage",
+          "roleAdjustedGrade": 8.3382,
+          "numericGrade": 8.3382
+        }
+      }
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "games": 300,
+      "winRate": 0,
+      "dynamicSkillGrades": {
+        "BASIC_ATTACK": {
+          "casts": 596,
+          "castRate": 1.9867,
+          "damagePerCast": 1.0789,
+          "killContribution": 0,
+          "survivalDelta": -0.05,
+          "objectiveDelta": 0.01,
+          "winImpact": 0,
+          "numericGradeRaw": 6.4873,
+          "rolePreset": "damage",
+          "roleAdjustedGrade": 6.4873,
+          "numericGrade": 6.4873
+        },
+        "RAISE_DEAD": {
+          "casts": 859,
+          "castRate": 2.8633,
+          "damagePerCast": 1.0827,
+          "killContribution": 0,
+          "survivalDelta": -0.07,
+          "objectiveDelta": 0.0233,
+          "winImpact": 0,
+          "numericGradeRaw": 7.8878,
+          "rolePreset": "sustain",
+          "roleAdjustedGrade": 7.8248,
+          "numericGrade": 7.8248
+        },
+        "SOUL_SWAP": {
+          "casts": 1382,
+          "castRate": 4.6067,
+          "damagePerCast": 0.5217,
+          "killContribution": 0,
+          "survivalDelta": -0.16,
+          "objectiveDelta": 7.1233,
+          "winImpact": 0,
+          "numericGradeRaw": 47.7578,
+          "rolePreset": "mobility",
+          "roleAdjustedGrade": 78.5367,
+          "numericGrade": 78.5367
+        },
+        "CORPSE_EXPLOSION": {
+          "casts": 332,
+          "castRate": 1.1067,
+          "damagePerCast": 1.753,
+          "killContribution": 0,
+          "survivalDelta": -0.2367,
+          "objectiveDelta": 0.07,
+          "winImpact": 0,
+          "numericGradeRaw": 7.6546,
+          "rolePreset": "damage",
+          "roleAdjustedGrade": 7.6546,
+          "numericGrade": 7.6546
+        }
+      }
+    },
+    {
+      "loadoutId": "HUNTER",
+      "games": 300,
+      "winRate": 0,
+      "dynamicSkillGrades": {
+        "FALCON_COMMAND": {
+          "casts": 2733,
+          "castRate": 9.11,
+          "damagePerCast": 0.2203,
+          "killContribution": 0,
+          "survivalDelta": -0.08,
+          "objectiveDelta": 0,
+          "winImpact": 0,
+          "numericGradeRaw": 14.3699,
+          "rolePreset": "sustain",
+          "roleAdjustedGrade": 18.6165,
+          "numericGrade": 18.6165
+        },
+        "KINETIC_TRI_TRAP": {
+          "casts": 147,
+          "castRate": 0.49,
+          "damagePerCast": 0.9864,
+          "killContribution": 0,
+          "survivalDelta": -0.0167,
+          "objectiveDelta": 0,
+          "winImpact": 0,
+          "numericGradeRaw": 3.8915,
+          "rolePreset": "control",
+          "roleAdjustedGrade": 2.9534,
+          "numericGrade": 2.9534
+        },
+        "BASIC_ATTACK": {
+          "casts": 1295,
+          "castRate": 4.3167,
+          "damagePerCast": 0.9938,
+          "killContribution": 0,
+          "survivalDelta": -0.1567,
+          "objectiveDelta": 0,
+          "winImpact": 0,
+          "numericGradeRaw": 9.6552,
+          "rolePreset": "damage",
+          "roleAdjustedGrade": 9.6552,
+          "numericGrade": 9.6552
+        },
+        "WITHDRAWAL": {
+          "casts": 194,
+          "castRate": 0.6467,
+          "damagePerCast": 0.9536,
+          "killContribution": 0,
+          "survivalDelta": -0.23,
+          "objectiveDelta": 0.22,
+          "winImpact": 0,
+          "numericGradeRaw": 5.2315,
+          "rolePreset": "mobility",
+          "roleAdjustedGrade": 4.8477,
+          "numericGrade": 4.8477
+        }
+      }
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "games": 300,
+      "winRate": 0,
+      "dynamicSkillGrades": {
+        "SNEAK_ATTACK": {
+          "casts": 2259,
+          "castRate": 7.53,
+          "damagePerCast": 1.0336,
+          "killContribution": 0,
+          "survivalDelta": -0.69,
+          "objectiveDelta": 0,
+          "winImpact": 0,
+          "numericGradeRaw": 14.6027,
+          "rolePreset": "mobility",
+          "roleAdjustedGrade": 18.0131,
+          "numericGrade": 18.0131
+        },
+        "SMOKE_SCREEN": {
+          "casts": 30,
+          "castRate": 0.1,
+          "damagePerCast": 1.5667,
+          "killContribution": 0,
+          "survivalDelta": -0.14,
+          "objectiveDelta": 0.0167,
+          "winImpact": 0,
+          "numericGradeRaw": 5.255,
+          "rolePreset": "sustain",
+          "roleAdjustedGrade": 3.1267,
+          "numericGrade": 3.1267
+        },
+        "BASIC_ATTACK": {
+          "casts": 5,
+          "castRate": 0.0167,
+          "damagePerCast": 2,
+          "killContribution": 0,
+          "survivalDelta": -0.0067,
+          "objectiveDelta": 0,
+          "winImpact": 0,
+          "numericGradeRaw": 6.425,
+          "rolePreset": "damage",
+          "roleAdjustedGrade": 6.425,
+          "numericGrade": 6.425
+        },
+        "SHADOW_STEP": {
+          "casts": 24,
+          "castRate": 0.08,
+          "damagePerCast": 0,
+          "killContribution": 0,
+          "survivalDelta": -0.01,
+          "objectiveDelta": 0.17,
+          "winImpact": 0,
+          "numericGradeRaw": 1.055,
+          "rolePreset": "mobility",
+          "roleAdjustedGrade": 1.791,
+          "numericGrade": 1.791
+        }
+      }
+    }
+  ]
+}

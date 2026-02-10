@@ -44,6 +44,13 @@ export interface TrinityContributionSummary {
     instinctContribution: number;
 }
 
+export interface CombatProfileSignalSummary {
+    samples: number;
+    avgOutgoingMultiplier: number;
+    avgIncomingMultiplier: number;
+    avgTotalMultiplier: number;
+}
+
 export interface RunResult {
     seed: string;
     policy: BotPolicy;
@@ -66,6 +73,7 @@ export interface RunResult {
     autoAttackTriggersByActionType: Record<string, number>;
     triangleSignal: TriangleSignalSummary;
     trinityContribution: TrinityContributionSummary;
+    combatProfileSignal: CombatProfileSignalSummary;
 }
 
 export interface BatchSummary {
@@ -96,6 +104,7 @@ export interface BatchSummary {
     autoAttackTriggerTotals: Record<string, number>;
     triangleSignal: TriangleSignalSummary;
     trinityContribution: TrinityContributionSummary;
+    combatProfileSignal: CombatProfileSignalSummary;
     dynamicSkillGrades: Record<string, DynamicSkillMetric>;
 }
 
@@ -352,7 +361,7 @@ const preRankAction = (state: GameState, action: Action, profile?: SkillIntentPr
     const inCombat = hostileCount > 0;
 
     if (action.type === 'MOVE') {
-        const hazardPenalty = isHazardTile(state, action.payload) ? 8 : 0;
+        const hazardPenalty = isHazardTile(state, action.payload) ? 14 : 0;
         const pressurePenalty = adjacentHostileCount(state, action.payload) * 2;
         const approach = nearestHostileDistance(state) - nearestHostileDistance(state, action.payload);
         const shrineGain = distanceToShrine(state) - distanceToShrine(state, action.payload);
@@ -509,6 +518,7 @@ const evaluateAction = (
 
     const next = resolvePending(gameReducer(state, candidate.action));
     const metrics = transitionMetrics(state, next, candidate.action);
+    const endsOnHazard = isHazardTile(next, next.player.position);
     const prevCombatCount = (state.combatScoreEvents || []).length;
     const newCombatEvents = ((next.combatScoreEvents || []).slice(prevCombatCount) as any[]);
     const autoAttackEvents = newCombatEvents.filter(e =>
@@ -521,11 +531,14 @@ const evaluateAction = (
     const immediateAutoKill = hasImmediateAutoAttackKill(state);
 
     let value = 0;
-    value += (metrics.healingReceived - metrics.hazardDamage) * w.survival;
+    value += (metrics.healingReceived - (metrics.hazardDamage * 1.8)) * w.survival;
     value += (metrics.enemyDamage * 2.5 + metrics.killShot * 18) * w.lethality;
     value += (metrics.enemyApproachProgress + metrics.safetyDelta) * w.position;
     value += (metrics.stairsProgress + metrics.shrineProgress + metrics.floorProgress * 6) * w.objective;
     value += (-metrics.waitPenalty - (metrics.noProgressPenalty * 2.5)) * w.tempo;
+    if (endsOnHazard) {
+        value -= 18 * Math.max(1, w.survival);
+    }
 
     const p = candidate.profile;
     if (p) {
@@ -701,6 +714,13 @@ const zeroTrinityContribution = (): TrinityContributionSummary => ({
     instinctContribution: 0
 });
 
+const zeroCombatProfileSignal = (): CombatProfileSignalSummary => ({
+    samples: 0,
+    avgOutgoingMultiplier: 0,
+    avgIncomingMultiplier: 0,
+    avgTotalMultiplier: 0
+});
+
 export const simulateRun = (
     seed: string,
     policy: BotPolicy,
@@ -834,6 +854,14 @@ export const simulateRun = (
             instinctContribution: combatEvents.reduce((acc, e) => acc + (e.instinctContribution || 0), 0) / combatEvents.length,
         }
         : zeroTrinityContribution();
+    const combatProfileSignal = combatEvents.length > 0
+        ? {
+            samples: combatEvents.length,
+            avgOutgoingMultiplier: combatEvents.reduce((acc, e) => acc + Number(e.traitOutgoingMultiplier || 1), 0) / combatEvents.length,
+            avgIncomingMultiplier: combatEvents.reduce((acc, e) => acc + Number(e.traitIncomingMultiplier || 1), 0) / combatEvents.length,
+            avgTotalMultiplier: combatEvents.reduce((acc, e) => acc + Number(e.traitTotalMultiplier || 1), 0) / combatEvents.length,
+        }
+        : zeroCombatProfileSignal();
 
     return {
         seed,
@@ -856,7 +884,8 @@ export const simulateRun = (
         playerSkillTelemetry,
         autoAttackTriggersByActionType,
         triangleSignal,
-        trinityContribution
+        trinityContribution,
+        combatProfileSignal
     };
 };
 
@@ -891,6 +920,7 @@ export const summarizeBatch = (
     const autoAttackTriggerTotals: Record<string, number> = {};
     const triangleSignalTotals = zeroTriangleSignal();
     const trinityContributionTotals = zeroTrinityContribution();
+    const combatProfileSignalTotals = zeroCombatProfileSignal();
 
     for (const run of results) {
         mergeHistogram(actionTypeTotals, run.playerActionCounts || {});
@@ -910,6 +940,10 @@ export const summarizeBatch = (
         trinityContributionTotals.bodyContribution += run.trinityContribution?.bodyContribution || 0;
         trinityContributionTotals.mindContribution += run.trinityContribution?.mindContribution || 0;
         trinityContributionTotals.instinctContribution += run.trinityContribution?.instinctContribution || 0;
+        combatProfileSignalTotals.samples += run.combatProfileSignal?.samples || 0;
+        combatProfileSignalTotals.avgOutgoingMultiplier += run.combatProfileSignal?.avgOutgoingMultiplier || 0;
+        combatProfileSignalTotals.avgIncomingMultiplier += run.combatProfileSignal?.avgIncomingMultiplier || 0;
+        combatProfileSignalTotals.avgTotalMultiplier += run.combatProfileSignal?.avgTotalMultiplier || 0;
     }
 
     const avgSkillUsagePerRun: Record<string, number> = {};
@@ -935,6 +969,12 @@ export const summarizeBatch = (
         bodyContribution: trinityContributionTotals.bodyContribution / divisor,
         mindContribution: trinityContributionTotals.mindContribution / divisor,
         instinctContribution: trinityContributionTotals.instinctContribution / divisor
+    };
+    const combatProfileSignal: CombatProfileSignalSummary = {
+        samples: combatProfileSignalTotals.samples,
+        avgOutgoingMultiplier: combatProfileSignalTotals.avgOutgoingMultiplier / divisor,
+        avgIncomingMultiplier: combatProfileSignalTotals.avgIncomingMultiplier / divisor,
+        avgTotalMultiplier: combatProfileSignalTotals.avgTotalMultiplier / divisor
     };
 
     const summary: BatchSummary = {
@@ -967,6 +1007,7 @@ export const summarizeBatch = (
         autoAttackTriggerTotals,
         triangleSignal,
         trinityContribution,
+        combatProfileSignal,
         dynamicSkillGrades: {}
     };
 

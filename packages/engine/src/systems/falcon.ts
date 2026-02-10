@@ -15,6 +15,7 @@ import { UnifiedTileService } from './unified-tile-service';
 import { applyEffects } from './effect-engine';
 import { SkillRegistry } from '../skillRegistry';
 import { createFalcon as createFalconEntity } from './entity-factory';
+import { appendTaggedMessage, tagMessage } from './engine-messages';
 
 // ============================================================================
 // FALCON STATS
@@ -73,7 +74,7 @@ export function removeFalcon(state: GameState, falconId: string): GameState {
     return {
         ...state,
         enemies: state.enemies.filter(e => e.id !== falconId),
-        message: [...state.message, 'The Falcon falls but will return!'].slice(-50),
+        message: appendTaggedMessage(state.message, 'The Falcon falls but will return!', 'INFO', 'AI'),
     };
 }
 
@@ -87,7 +88,7 @@ export function reviveFalcon(state: GameState, hunterId: string): { state: GameS
 
     const result = spawnFalcon(state, hunterId);
     if (result.falcon) {
-        result.state.message = [...result.state.message, 'The Falcon returns!'].slice(-50);
+        result.state.message = appendTaggedMessage(result.state.message, 'The Falcon returns!', 'INFO', 'AI');
     }
     return result;
 }
@@ -264,7 +265,7 @@ export function executePredatorBehavior(
     const markTarget = falcon.companionState?.markTarget;
     if (!markTarget || typeof markTarget === 'object') {
         // No valid enemy mark, revert to roost
-        return { effects, newPosition: falcon.position, messages: ['Falcon returns to Hunter.'] };
+        return { effects, newPosition: falcon.position, messages: [tagMessage('Falcon returns to Hunter.', 'INFO', 'AI')] };
     }
 
     const targetEnemy = findFalconTarget(state, falcon) as Actor;
@@ -276,7 +277,7 @@ export function executePredatorBehavior(
             target: falcon.id,
             mode: 'roost',
         });
-        return { effects, newPosition: falcon.position, messages: ['Target lost. Falcon returns to roost.'] };
+        return { effects, newPosition: falcon.position, messages: [tagMessage('Target lost. Falcon returns to roost.', 'INFO', 'AI')] };
     }
 
     const dist = hexDistance(falcon.position, targetEnemy.position);

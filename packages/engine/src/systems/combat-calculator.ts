@@ -54,6 +54,9 @@ export interface CombatScoreEvent {
     bodyContribution: number;
     mindContribution: number;
     instinctContribution: number;
+    traitOutgoingMultiplier?: number;
+    traitIncomingMultiplier?: number;
+    traitTotalMultiplier?: number;
 }
 
 export interface CombatCalculationResult {

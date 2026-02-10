@@ -11,6 +11,8 @@ import { SpatialSystem } from './SpatialSystem';
 import { stableIdFromSeed } from './rng';
 import { createEntity, ensureActorTrinity } from './entity-factory';
 import { computeStatusDuration, extractTrinityStats } from './combat-calculator';
+import { getIncomingDamageMultiplier, getOutgoingDamageMultiplier } from './combat-traits';
+import { appendTaggedMessage, appendTaggedMessages, tagMessage } from './engine-messages';
 
 const addCorpseTraitAt = (state: GameState, position: Point): GameState => {
     const key = pointToKey(position);
@@ -92,6 +94,39 @@ const appendTimelineEvent = (
     };
 };
 
+const resolveActorById = (state: GameState, actorId?: string): Actor | undefined => {
+    if (!actorId) return undefined;
+    if (state.player.id === actorId) return state.player;
+    return state.enemies.find(e => e.id === actorId) || state.companions?.find(e => e.id === actorId);
+};
+
+const resolveActorAt = (state: GameState, pos?: Point | null): Actor | undefined => {
+    if (!pos) return undefined;
+    if (hexEquals(state.player.position, pos)) return state.player;
+    return state.enemies.find(e => hexEquals(e.position, pos)) || state.companions?.find(e => hexEquals(e.position, pos));
+};
+
+const HAZARD_REASONS = new Set(['lava_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage', 'burning', 'oil_explosion']);
+
+const scaleCombatProfileDamage = (
+    state: GameState,
+    rawAmount: number,
+    sourceId: string | undefined,
+    target: Actor | undefined,
+    damageClass: 'physical' | 'magical',
+    reason?: string
+): { amount: number; outgoing: number; incoming: number; total: number } => {
+    if (!target) return { amount: rawAmount, outgoing: 1, incoming: 1, total: 1 };
+    if (reason && HAZARD_REASONS.has(reason)) return { amount: rawAmount, outgoing: 1, incoming: 1, total: 1 };
+    const source = resolveActorById(state, sourceId);
+    if (!source) return { amount: rawAmount, outgoing: 1, incoming: 1, total: 1 };
+    const outgoing = getOutgoingDamageMultiplier(source, damageClass);
+    const incoming = getIncomingDamageMultiplier(target, damageClass);
+    const total = outgoing * incoming;
+    const amount = Math.max(0, Math.floor(rawAmount * total));
+    return { amount, outgoing, incoming, total };
+};
+
 
 /**
  * Apply a single atomic effect to the game state.
@@ -127,6 +162,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
             const origin = effect.source || actor?.position;
             let moveEndedEventEmitted = false;
+            const isTeleportMovement = !((effect as any).simulatePath || effect.path || effect.isFling);
             if (origin) {
                 nextState = appendTimelineEvent(
                     nextState,
@@ -194,7 +230,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         nextState = applyEffects(nextState, pathResult.result.effects, { targetId: targetActorId });
                     }
                     if (pathResult.result.messages.length > 0) {
-                        nextState.message = [...nextState.message, ...pathResult.result.messages].slice(-50);
+                        nextState.message = appendTaggedMessages(nextState.message, pathResult.result.messages, 'INFO', 'HAZARD');
                     }
 
                     // Process Entry for the final destination (if we didn't die/interrupt mid-path)
@@ -221,7 +257,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                             nextState = applyEffects(nextState, entryResult.effects, { targetId: targetActorId });
                         }
                         if (entryResult.messages.length > 0) {
-                            nextState.message = [...nextState.message, ...entryResult.messages].slice(-50);
+                            nextState.message = appendTaggedMessages(nextState.message, entryResult.messages, 'INFO', 'HAZARD');
                         }
                     }
 
@@ -257,7 +293,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                                         nextState = applyEffects(nextState, transition.effects, { targetId: targetActorId });
                                     }
                                     if (transition.messages.length > 0) {
-                                        nextState.message = [...nextState.message, ...transition.messages].slice(-50);
+                                        nextState.message = appendTaggedMessages(nextState.message, transition.messages, 'INFO', 'HAZARD');
                                     }
                                     if (transition.newMomentum === 0 || transition.interrupt) break;
                                 } else {
@@ -274,8 +310,10 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 const trace: MovementTrace = {
                     actorId: targetActorId,
                     origin,
-                    path: getHexLine(origin, finalDestination),
+                    path: effect.path || (isTeleportMovement ? [origin, finalDestination] : getHexLine(origin, finalDestination)),
                     destination: finalDestination,
+                    movementType: isTeleportMovement ? 'teleport' : 'slide',
+                    durationMs: effect.animationDuration ?? (isTeleportMovement ? 180 : Math.max(120, (effect.path?.length || getHexLine(origin, finalDestination).length) * 110)),
                     wasLethal: nextState.tiles.get(pointToKey(finalDestination))?.traits.has('HAZARDOUS') || false
                 };
 
@@ -285,9 +323,15 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 }];
 
                 if (targetActorId === nextState.player.id) {
-                    nextState.player = { ...nextState.player, position: finalDestination, previousPosition: nextState.player.position };
+                    nextState.player = {
+                        ...nextState.player,
+                        position: finalDestination,
+                        previousPosition: isTeleportMovement ? finalDestination : nextState.player.position
+                    };
                 } else {
-                    const updatePos = (e: Actor) => e.id === targetActorId ? { ...e, position: finalDestination, previousPosition: e.position } : e;
+                    const updatePos = (e: Actor) => e.id === targetActorId
+                        ? { ...e, position: finalDestination, previousPosition: isTeleportMovement ? finalDestination : e.position }
+                        : e;
                     nextState.enemies = nextState.enemies.map(updatePos);
                     if (nextState.companions) {
                         nextState.companions = nextState.companions.map(updatePos);
@@ -314,9 +358,6 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'Damage': {
-            if (effect.scoreEvent) {
-                nextState.combatScoreEvents = [...(nextState.combatScoreEvents || []), effect.scoreEvent].slice(-500);
-            }
             const isHazardReason = !!effect.reason && ['lava_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage'].includes(effect.reason);
             if (isHazardReason) {
                 nextState = appendTimelineEvent(
@@ -361,13 +402,13 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
                 if (targetActorId === nextState.player.id && hasEmberWard) {
                     adjustedAmount = Math.max(0, adjustedAmount - 1);
-                    nextState.message = [...(nextState.message || []), 'Ember Ward dampens the flames.'].slice(-50);
+                    nextState.message = appendTaggedMessage(nextState.message, 'Ember Ward dampens the flames.', 'INFO', 'COMBAT');
                 }
 
                 if (hasAbsorb) {
                     const healAmount = adjustedAmount + (targetActorId === nextState.player.id && hasCinderOrb ? 1 : 0);
                     if (targetActorId === nextState.player.id && hasCinderOrb) {
-                        nextState.message = [...(nextState.message || []), 'Cinder Orb amplifies the absorption.'].slice(-50);
+                        nextState.message = appendTaggedMessage(nextState.message, 'Cinder Orb amplifies the absorption.', 'INFO', 'COMBAT');
                     }
                     // Convert to Heal
                     return applyAtomicEffect(nextState, {
@@ -380,9 +421,21 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
             if (targetActorId) {
                 if (targetActorId === nextState.player.id) {
-                    let damageAmount = effect.amount;
+                    const victim = nextState.player;
+                    const damageClass = effect.scoreEvent?.damageClass || 'physical';
+                    const traitScaled = scaleCombatProfileDamage(nextState, effect.amount, context.sourceId, victim, damageClass, effect.reason);
+                    let damageAmount = traitScaled.amount;
                     if (isFireDamage && hasEmberWard) {
                         damageAmount = Math.max(0, damageAmount - 1);
+                    }
+                    if (effect.scoreEvent) {
+                        nextState.combatScoreEvents = [...(nextState.combatScoreEvents || []), {
+                            ...effect.scoreEvent,
+                            finalPower: damageAmount,
+                            traitOutgoingMultiplier: traitScaled.outgoing,
+                            traitIncomingMultiplier: traitScaled.incoming,
+                            traitTotalMultiplier: traitScaled.total
+                        }].slice(-500);
                     }
                     nextState.player = applyDamage(nextState.player, damageAmount);
                     if (isFireDamage) {
@@ -390,19 +443,19 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     }
                     if (isFireDamage && hasCinderOrb) {
                         nextState.player = applyHeal(nextState.player, 1);
-                        nextState.message = [...(nextState.message || []), 'Cinder Orb restores 1 HP.'].slice(-50);
+                        nextState.message = appendTaggedMessage(nextState.message, 'Cinder Orb restores 1 HP.', 'INFO', 'COMBAT');
                     }
                 } else {
                     const victim = nextState.enemies.find(e => e.id === targetActorId);
                     const victimPos = targetActorId === nextState.player.id ? nextState.player.position : victim?.position;
                     const corpsePositions: Point[] = [];
+                    const damageClass = effect.scoreEvent?.damageClass || 'physical';
+                    const traitScaled = scaleCombatProfileDamage(nextState, effect.amount, context.sourceId, victim, damageClass, effect.reason);
+                    const scaledAmount = traitScaled.amount;
 
-                    if (victim && victim.hp <= effect.amount) {
-                        nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'freeze', payload: { duration: 80 } }];
-                    }
                     const updateDamage = (e: Actor) => {
                         if (e.id === targetActorId) {
-                            const updated = applyDamage(e, effect.amount);
+                            const updated = applyDamage(e, scaledAmount);
                             if (updated.hp <= 0) {
                                 nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
                                 corpsePositions.push(e.position);
@@ -411,6 +464,15 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         }
                         return e;
                     };
+                    if (effect.scoreEvent) {
+                        nextState.combatScoreEvents = [...(nextState.combatScoreEvents || []), {
+                            ...effect.scoreEvent,
+                            finalPower: scaledAmount,
+                            traitOutgoingMultiplier: traitScaled.outgoing,
+                            traitIncomingMultiplier: traitScaled.incoming,
+                            traitTotalMultiplier: traitScaled.total
+                        }].slice(-500);
+                    }
                     nextState.enemies = nextState.enemies.map(updateDamage).filter((e: Actor) => e.hp > 0);
                     if (nextState.companions) {
                         nextState.companions = nextState.companions.map(updateDamage).filter((e: Actor) => e.hp > 0);
@@ -430,11 +492,11 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         nextState = addCorpseTraitAt(nextState, pos);
                     });
 
-                    nextState.visualEvents = [...(nextState.visualEvents || []),
-                    { type: 'shake', payload: { intensity: effect.amount > 1 ? 'medium' : 'low' } },
-                    { type: 'combat_text', payload: { text: `-${effect.amount}`, targetId: targetActorId, position: victimPos } },
-                    { type: 'vfx', payload: { type: 'impact', position: victimPos } }
-                    ];
+                    if (victimPos) {
+                        nextState.visualEvents = [...(nextState.visualEvents || []),
+                        { type: 'vfx', payload: { type: 'impact', position: victimPos } }
+                        ];
+                    }
 
                     // Stealth Decay: Taking damage reduces stealth
                     if (targetActorId === nextState.player.id && (nextState.player.stealthCounter || 0) > 0) {
@@ -451,8 +513,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     if (targetActorId === nextState.player.id && nextState.player.archetype === 'HUNTER' && (effect as any).source) {
                         const rollDirIdx = getDirectionFromTo((effect as any).source, nextState.player.position);
                         if (rollDirIdx !== -1) {
-                            nextState.visualEvents.push({ type: 'combat_text', payload: { position: nextState.player.position, text: 'Auto-Roll!' } });
-                            nextState.message = [...(nextState.message || []), `You roll away!`];
+                            nextState.message = appendTaggedMessage(nextState.message, 'You roll away!', 'INFO', 'COMBAT');
                         }
                     }
 
@@ -460,17 +521,30 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     if (victim && victim.archetype === 'HUNTER' && (effect as any).source) {
                         const rollDirIdx = getDirectionFromTo((effect as any).source, victim.position);
                         if (rollDirIdx !== -1) {
-                            nextState.message = [...(nextState.message || []), `${victim.subtype || victim.id} rolls away!`];
+                            nextState.message = appendTaggedMessage(nextState.message, `${victim.subtype || victim.id} rolls away!`, 'INFO', 'COMBAT');
                         }
                     }
                 }
             } else if (targetPos) {
+                const targetAtPos = resolveActorAt(nextState, targetPos);
+                const damageClass = effect.scoreEvent?.damageClass || 'physical';
+                const traitScaled = scaleCombatProfileDamage(nextState, effect.amount, context.sourceId, targetAtPos, damageClass, effect.reason);
+                const scaledAmount = traitScaled.amount;
                 nextState.visualEvents = [...(nextState.visualEvents || []),
-                { type: 'combat_text', payload: { text: `-${effect.amount}`, position: targetPos } },
                 { type: 'vfx', payload: { type: 'impact', position: targetPos } }
                 ];
+                if (effect.scoreEvent && targetAtPos) {
+                    nextState.combatScoreEvents = [...(nextState.combatScoreEvents || []), {
+                        ...effect.scoreEvent,
+                        targetId: targetAtPos.id,
+                        finalPower: scaledAmount,
+                        traitOutgoingMultiplier: traitScaled.outgoing,
+                        traitIncomingMultiplier: traitScaled.incoming,
+                        traitTotalMultiplier: traitScaled.total
+                    }].slice(-500);
+                }
                 if (hexEquals(nextState.player.position, targetPos)) {
-                    nextState.player = applyDamage(nextState.player, effect.amount);
+                    nextState.player = applyDamage(nextState.player, scaledAmount);
                     if (isFireDamage) {
                         nextState.hazardBreaches = (nextState.hazardBreaches || 0) + 1;
                     }
@@ -480,7 +554,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 }
                 const updateDamageAt = (e: Actor) => {
                     if (hexEquals(e.position, targetPos)) {
-                        const updated = applyDamage(e, effect.amount);
+                        const updated = applyDamage(e, scaledAmount);
                         if (updated.hp <= 0) {
                             nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
                             killedAtIds.push(e.id);
@@ -521,9 +595,8 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             if (targetId) {
                 const victim = targetId === nextState.player.id ? nextState.player : (nextState.enemies.find(e => e.id === targetId) || nextState.companions?.find(e => e.id === targetId));
                 if (victim) {
-                    nextState.visualEvents = [...(nextState.visualEvents || []),
-                    { type: 'combat_text', payload: { text: `+${effect.amount}`, position: victim.position } }
-                    ];
+                    const name = targetId === nextState.player.id ? 'You' : (victim.subtype || victim.id);
+                    nextState.message = appendTaggedMessage(nextState.message, `${name} recover ${effect.amount} HP.`, 'INFO', 'COMBAT');
 
                     if (targetId === nextState.player.id) {
                         nextState.player = healActor(nextState.player);
@@ -576,9 +649,11 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
                 if (targetActor) {
                     resolvedPos = targetActor.position;
-                    const name = targetActorId === nextState.player.id ? 'You' : (targetActor.subtype || targetActor.id);
+                    const name = targetActorId === nextState.player.id
+                        ? 'You'
+                        : `${targetActor.subtype || 'enemy'}#${targetActor.id}`;
                     const suffix = targetActorId === nextState.player.id ? 'are' : 'is';
-                    nextState.message = [...(nextState.message || []), `${name} ${suffix} ${effect.status}!`].slice(-50);
+                    nextState.message = appendTaggedMessage(nextState.message, `${name} ${suffix} ${effect.status}!`, 'INFO', 'COMBAT');
 
                     if (targetActorId === nextState.player.id) {
                         nextState.player = addStatus(nextState.player, effect.status as any, adjustedDuration);
@@ -594,6 +669,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
             if (effect.status === 'stunned' && resolvedPos) {
                 nextState.visualEvents = [...(nextState.visualEvents || []),
+                { type: 'shake', payload: { intensity: 'low' } },
                 { type: 'vfx', payload: { type: 'stunBurst', position: resolvedPos } },
                 { type: 'combat_text', payload: { text: 'STUNNED', position: resolvedPos } }
                 ];
@@ -714,9 +790,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             const actor = targetId === nextState.player.id ? nextState.player : nextState.enemies.find(e => e.id === targetId);
             if (actor) {
                 nextState.visualEvents = [...(nextState.visualEvents || []),
-                { type: 'shake', payload: { intensity: 'medium', direction: effect.direction } },
-                { type: 'vfx', payload: { type: 'impact', position: actor.position } },
-                { type: 'combat_text', payload: { text: `Impact!`, position: actor.position } }
+                { type: 'vfx', payload: { type: 'impact', position: actor.position } }
                 ];
                 if (effect.damage > 0) {
                     if (targetId === nextState.player.id) {
@@ -734,23 +808,13 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'Message': {
-            nextState.message = [...nextState.message, effect.text].slice(-50);
+            nextState.message = [...nextState.message, tagMessage(effect.text, 'INFO', 'SYSTEM')].slice(-50);
             break;
         }
 
         case 'Juice': {
-            if (effect.effect === 'shake') {
-                nextState.isShaking = true;
-                nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'shake', payload: { intensity: effect.intensity || 'medium', direction: effect.direction } }];
-            }
-            if (effect.effect === 'freeze') {
-                nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'freeze', payload: { duration: 80 } }];
-            }
             if (effect.effect === 'combat_text' && effect.text) {
-                const targetPos = typeof effect.target === 'string'
-                    ? (effect.target === nextState.player.id ? nextState.player.position : nextState.enemies.find(e => e.id === effect.target)?.position)
-                    : effect.target;
-                nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'combat_text', payload: { text: effect.text, position: targetPos } }];
+                nextState.message = appendTaggedMessage(nextState.message, effect.text, 'VERBOSE', 'SYSTEM');
             }
             if (effect.effect === 'impact' && effect.target) {
                 const targetPos = typeof effect.target === 'string'
@@ -880,7 +944,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
             const result = TileResolver.applyEffect(tile, 'FIRE', effect.duration, 1, nextState, context.sourceId);
             if (result.messages.length > 0) {
-                nextState.message = [...nextState.message, ...result.messages].slice(-50);
+                nextState.message = appendTaggedMessages(nextState.message, result.messages, 'INFO', 'HAZARD');
             }
             break;
         }

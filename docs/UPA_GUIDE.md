@@ -5,6 +5,10 @@ Roadmap docs:
 - Backlog: `docs/BALANCE_BACKLOG.md`
 - Historical milestones: `docs/ROADMAP_HISTORY.md`
 
+Artifact policy:
+- Stable/reference reports can stay in `docs/`.
+- Generated test/audit run outputs should go to `artifacts/upa/`.
+
 ## Purpose
 UPA (Unified Power Assessment) is the telemetry score derived from simulation summaries.  
 Use it to compare policies, loadout IDs, and head-to-head archetype performance under deterministic seeds.
@@ -195,6 +199,7 @@ npx tsx packages/engine/scripts/runEvaluatorBaselines.ts <outFile> <modelVersion
 Recommended:
 ```bash
 npm run upa:evaluators
+npm run upa:evaluators:trend
 ```
 
 Behavior:
@@ -204,7 +209,8 @@ Behavior:
   - enemy archetypes,
   - sample generated maps,
   - sample encounters.
-- Default artifact: `docs/UPA_EVALUATOR_BASELINES.json`
+- Default artifact: `artifacts/upa/UPA_EVALUATOR_BASELINES.json`
+- Trend artifact: `artifacts/upa/UPA_EVALUATOR_TREND.json`
 
 ### 8) Calibration snapshots and diffs
 Scripts:
@@ -305,6 +311,79 @@ Artifacts:
 - `docs/UPA_SKILL_HEALTH_LIVE.json`
 - `docs/UPA_TRINITY_PROFILE_COMPARE.json`
 
+### 13) MVP baseline snapshot (`mvp-v1`)
+Script: `packages/engine/scripts/runMvpBaseline.ts`
+
+Command:
+```bash
+npx tsx packages/engine/scripts/runMvpBaseline.ts artifacts/upa/MVP_SEEDS_mvp-v1.json 80 heuristic artifacts/upa/MVP_BASELINE_mvp-v1.json
+```
+
+NPM shortcut:
+```bash
+npm run mvp:baseline
+```
+
+Artifacts:
+- `artifacts/upa/MVP_SEEDS_mvp-v1.json`
+- `artifacts/upa/MVP_BASELINE_mvp-v1.json`
+
+### 14) MVP deterministic gate
+Command:
+```bash
+npm run mvp:gate
+```
+
+Includes:
+- engine build
+- web build
+- `scenarios_runner` gate
+- replay parity gate
+- timeline sequencing/blocking-budget audit
+- skill-health smoke threshold gate
+
+### 15) Timeline sequencing audit
+Script: `packages/engine/scripts/runTimelineAudit.ts`
+
+Command:
+```bash
+npx tsx packages/engine/scripts/runTimelineAudit.ts 20 80 artifacts/upa/UPA_TIMELINE_AUDIT.json 1500 1
+```
+
+NPM shortcut:
+```bash
+npm run mvp:timeline:audit
+```
+
+Strict mode (diagnostic fail-gate):
+```bash
+npm run mvp:timeline:audit:strict
+```
+
+Checks:
+- phase ordering within each timeline group
+- `MOVE_START` -> `MOVE_END` completeness
+- no `HAZARD_CHECK`/`DAMAGE_APPLY` before `MOVE_END`
+- blocking duration budget per group
+
+### 16) Cross-archetype message consistency audit
+Script: `packages/engine/scripts/runUpaMessageAudit.ts`
+
+Command:
+```bash
+npx tsx packages/engine/scripts/runUpaMessageAudit.ts 8 60 artifacts/upa/UPA_MESSAGE_AUDIT.json 2500
+```
+
+Checks:
+- all emitted messages are tagged (`[LEVEL|CHANNEL]`)
+- jump message order vs stun messages in same step
+- stunned actor is not also reported attacking in same step
+- duplicate/spam message bursts
+- target preview mismatch errors surfacing in logs
+
+Artifact:
+- `artifacts/upa/UPA_MESSAGE_AUDIT.json`
+
 ## Allowed Values
 
 ### Policies
@@ -364,6 +443,10 @@ Key fields in `summary`:
   - `bodyContribution`
   - `mindContribution`
   - `instinctContribution`
+- `combatProfileSignal`: averaged trait multipliers applied at damage resolution:
+  - `avgOutgoingMultiplier`
+  - `avgIncomingMultiplier`
+  - `avgTotalMultiplier`
 
 Use these to validate whether a loadout is truly using its kit, or over-indexing on fallback actions like `MOVE` and `BASIC_ATTACK`.
 
@@ -483,4 +566,5 @@ Nightly refresh:
   - `docs/UPA_SKILL_HEALTH.json`
   - `docs/UPA_CALIBRATION_BASELINE.json`
   - `docs/UPA_PVP_MATCHUP_MATRIX.json`
-  - `docs/UPA_EVALUATOR_BASELINES.json`
+  - `artifacts/upa/UPA_EVALUATOR_BASELINES.json`
+  - `artifacts/upa/UPA_EVALUATOR_TREND.json`

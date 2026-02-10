@@ -79,6 +79,10 @@ export const JUMP: SkillDefinition = {
 
         // Jumps are "Airborne" - they ignore ground hazards and interim collisions
         effects.push({
+            type: 'Message',
+            text: 'Jumped!'
+        });
+        effects.push({
             type: 'Displacement',
             target: 'self',
             destination: target,
@@ -86,11 +90,11 @@ export const JUMP: SkillDefinition = {
             ignoreGroundHazards: true,
             simulatePath: true
         });
-        messages.push('Jumped!');
 
         // 5. AoE Landing Effect: Stun adjacent enemies
         if (hasStun) {
             const neighbors = getNeighbors(target);
+            let stunnedAny = false;
             for (const n of neighbors) {
                 const enemy = getActorAt(state, n);
                 if (enemy && enemy.id !== attacker.id) {
@@ -100,9 +104,10 @@ export const JUMP: SkillDefinition = {
                         status: 'stunned',
                         duration: 1
                     });
-                    messages.push(`${enemy.subtype || 'Enemy'} stunned by landing impact!`);
+                    stunnedAny = true;
                 }
             }
+            if (stunnedAny) messages.push('Enemies stunned by landing impact!');
         }
 
         effects.push({
@@ -115,13 +120,20 @@ export const JUMP: SkillDefinition = {
         return { effects, messages, consumesTurn: !isFree };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        const range = 2; // TODO: Should really check if player has upgrade here for UI preview
         const actor = getActorAt(state, origin) as Actor | undefined;
         if (!actor) return [];
+        const actorJumpSkill = actor.activeSkills?.find(s => s.id === 'JUMP');
+        const upgrades = new Set(actorJumpSkill?.activeUpgrades || []);
+        const range = 2 + (upgrades.has('JUMP_RANGE') ? 1 : 0);
+        const hasMeteor = upgrades.has('METEOR_IMPACT');
+
         return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
-            return !isBlockedByWall(state, p) && canLandOnHazard(state, actor, p);
-            // Obstacles allowed if Meteor Impact is present (but getValidTargets usually doesn't know about upgrades easily without being passed actor)
+            if (isBlockedByWall(state, p)) return false;
+            if (!canLandOnHazard(state, actor, p)) return false;
+            const occupied = getActorAt(state, p);
+            if (occupied && occupied.id !== actor.id && !hasMeteor) return false;
+            return true;
         });
     },
     upgrades: {

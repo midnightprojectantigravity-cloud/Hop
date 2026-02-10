@@ -87,13 +87,34 @@ import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';
 import { UpgradeOverlay } from './components/UpgradeOverlay';
 import { SkillTray } from './components/SkillTray';
-import { gameReducer, generateInitialState, generateHubState, hexEquals, pointToKey, ensureActorTrinity, deriveMaxHpFromTrinity } from '@hop/engine';
+import { gameReducer, generateInitialState, generateHubState, hexEquals, pointToKey, ensureActorTrinity, deriveMaxHpFromTrinity, DEFAULT_LOADOUTS } from '@hop/engine';
 import type { Point, Action, GameState, Actor } from '@hop/engine';
 import type { ReplayRecord } from './components/ReplayManager';
 import { isPlayerTurn } from '@hop/engine';
 import { Hub } from './components/Hub';
+import { ArcadeHub } from './components/ArcadeHub';
 
 function App() {
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const onPopState = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigateTo = (path: string) => {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+    setPathname(path);
+  };
+
+  const hubBase = pathname.toLowerCase().startsWith('/hop') ? '/Hop' : '';
+  const hubPath = `${hubBase || ''}` || '/';
+  const arcadePath = `${hubBase}/Arcade` || '/Arcade';
+  const isArcadeRoute = pathname.toLowerCase().endsWith('/arcade') || pathname.toLowerCase().endsWith('/arcarde');
+
   // packages/web/src/App.tsx
 
   const [gameState, dispatch] = useReducer(gameReducer, null, () => {
@@ -211,14 +232,21 @@ function App() {
     localStorage.setItem('hop_save', safeStringify(stateToSave));
   }, [gameState]);
 
+  const [isReplayMode, setIsReplayMode] = useState(false);
+  const [replayActions, setReplayActions] = useState<Action[]>([]);
+  const [replayActive, setReplayActive] = useState(false);
+  const replayIndexRef = useRef(0);
+  const lastRecordedRunRef = useRef<string | null>(null);
+
   useEffect(() => {
+    if (isReplayMode) return;
     if (gameState.gameStatus !== 'playing') return;
     const playerTurn = isPlayerTurn(gameState);
     if (!playerTurn) {
       const timer = setTimeout(() => dispatch({ type: 'ADVANCE_TURN' }), 400);
       return () => clearTimeout(timer);
     }
-  }, [gameState]);
+  }, [gameState, isReplayMode]);
 
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [showMovementRange, setShowMovementRange] = useState(false);
@@ -226,22 +254,41 @@ function App() {
 
   const lastProcessedEventsHash = useRef('');
   const currentEventsHash = JSON.stringify(gameState.visualEvents || []);
+  const lastProcessedTimelineHash = useRef('');
+  const currentTimelineHash = JSON.stringify(gameState.timelineEvents || []);
+  const pendingObservedBusy = useRef(false);
 
   // Update processed hash when animations settle
   useEffect(() => {
     if (!isBusy) {
       lastProcessedEventsHash.current = currentEventsHash;
+      lastProcessedTimelineHash.current = currentTimelineHash;
     }
-  }, [isBusy, currentEventsHash]);
+  }, [isBusy, currentEventsHash, currentTimelineHash]);
+
+  useEffect(() => {
+    pendingObservedBusy.current = false;
+  }, [gameState.pendingStatus]);
+
+  useEffect(() => {
+    if (gameState.pendingStatus && isBusy) {
+      pendingObservedBusy.current = true;
+    }
+  }, [gameState.pendingStatus, isBusy]);
 
   // Auto-resolve pending transitions when animations settle
   useEffect(() => {
-    const noPendingAnimations = !isBusy && (currentEventsHash === lastProcessedEventsHash.current);
+    const noPendingAnimations =
+      !isBusy
+      && (currentEventsHash === lastProcessedEventsHash.current)
+      && (currentTimelineHash === lastProcessedTimelineHash.current);
+    const hasBlockingTimeline = (gameState.timelineEvents || []).some(ev => ev.blocking);
+    const readyForResolve = noPendingAnimations && (!hasBlockingTimeline || pendingObservedBusy.current);
 
-    if (gameState.pendingStatus && noPendingAnimations) {
+    if (gameState.pendingStatus && readyForResolve) {
       dispatch({ type: 'RESOLVE_PENDING' });
     }
-  }, [gameState.pendingStatus, isBusy, currentEventsHash]);
+  }, [gameState.pendingStatus, gameState.timelineEvents, isBusy, currentEventsHash, currentTimelineHash]);
 
   const [tutorialInstructions, setTutorialInstructions] = useState<string | null>(null);
   const [floorIntro, setFloorIntro] = useState<{ floor: number; theme: string } | null>(null);
@@ -266,12 +313,6 @@ function App() {
       return () => clearTimeout(timer);
     }
   }, [gameState.gameStatus]);
-
-  const [isReplayMode, setIsReplayMode] = useState(false);
-  const [replayActions, setReplayActions] = useState<Action[]>([]);
-  const [replayActive, setReplayActive] = useState(false);
-  const replayIndexRef = useRef(0);
-  const lastRecordedRunRef = useRef<string | null>(null);
 
   const handleTileClick = (target: Point) => {
     if (isReplayMode || isBusy) return; // Block during replay or animations
@@ -304,7 +345,8 @@ function App() {
     replayIndexRef.current = 0;
 
     const seed = r.seed || r.id || String(Date.now());
-    const init = generateInitialState(1, seed);
+    const loadout = r.loadoutId ? (DEFAULT_LOADOUTS as any)[r.loadoutId] : undefined;
+    const init = generateInitialState(1, seed, seed, undefined, loadout);
     dispatch({ type: 'LOAD_STATE', payload: init } as Action);
   };
 
@@ -331,7 +373,7 @@ function App() {
 
   const handleLoadScenario = (state: GameState, instructions: string) => { dispatch({ type: 'LOAD_STATE', payload: state }); setTutorialInstructions(instructions); setSelectedSkillId(null); };
 
-  const handleExitToHub = () => { dispatch({ type: 'EXIT_TO_HUB' }); setSelectedSkillId(null); setIsReplayMode(false); };
+  const handleExitToHub = () => { dispatch({ type: 'EXIT_TO_HUB' }); setSelectedSkillId(null); setIsReplayMode(false); navigateTo(hubPath); };
 
   // Auto-record runs on win/loss
   useEffect(() => {
@@ -344,6 +386,7 @@ function App() {
       const rec: ReplayRecord = {
         id: `run-${Date.now()}`,
         seed,
+        loadoutId: gameState.player.archetype,
         actions: gameState.actionLog || [],
         score,
         floor: gameState.floor,
@@ -365,6 +408,7 @@ function App() {
         floor: rec.floor,
         date: rec.date,
         seed: rec.seed,
+        loadoutId: rec.loadoutId,
         actions: rec.actions // Store actions in LB for easy replay? Or just use replays list.
       });
       lb.sort((a, b) => b.score - a.score);
@@ -382,18 +426,31 @@ function App() {
     dispatch({ type: 'START_RUN', payload: { loadoutId: id, mode } });
   };
 
+  const handleStartArcadeRun = (loadoutId: string) => {
+    dispatch({ type: 'START_RUN', payload: { loadoutId, mode: 'daily' } });
+    navigateTo(hubPath);
+  };
+
   if (gameState.gameStatus === 'hub') {
     return (
       <div className="w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
-        <Hub
-          gameState={gameState}
-          onSelectLoadout={(l) => {
-            dispatch({ type: 'APPLY_LOADOUT', payload: l });
-          }}
-          onStartRun={handleStartRun}
-          onLoadScenario={handleLoadScenario}
-          onStartReplay={startReplay}
-        />
+        {isArcadeRoute ? (
+          <ArcadeHub
+            onBack={() => navigateTo(hubPath)}
+            onLaunchArcade={handleStartArcadeRun}
+          />
+        ) : (
+          <Hub
+            gameState={gameState}
+            onSelectLoadout={(l) => {
+              dispatch({ type: 'APPLY_LOADOUT', payload: l });
+            }}
+            onStartRun={handleStartRun}
+            onOpenArcade={() => navigateTo(arcadePath)}
+            onLoadScenario={handleLoadScenario}
+            onStartReplay={startReplay}
+          />
+        )}
         {/* Hub instructions overlay */}
         {
           tutorialInstructions && (

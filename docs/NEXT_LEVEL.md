@@ -250,9 +250,63 @@ Goal: apply evaluator-guided tuning to matchup dominance and hazard-discipline i
   - `NECROMANCER`: weak opening pressure / low floor progression.
 
 ### Queue
+- [x] Add cross-archetype message consistency audit and artifact (`artifacts/upa/UPA_MESSAGE_AUDIT.json`).
 - [ ] Firemage dominance reduction across top 3 pairings from `docs/UPA_PVP_MATCHUP_MATRIX.json`.
 - [ ] Hazard-breach reduction for `NECROMANCER`, `HUNTER`, `ASSASSIN`, `VANGUARD`.
 - [ ] Keep skill-health gates green (`loop-risk=0`, `failures=0`, player-facing policy-blocked <= 2).
+- [x] Fix message consistency blockers from audit:
+  - duplicate movement/system message bursts (`no_consecutive_duplicate_messages`) resolved
+  - stun/attack same-step regressions in Skirmisher control flows (`stunned_actor_does_not_attack_same_step`) resolved
+  - verification: `npm run upa:messages:audit` => `totalViolations: 0`
+
+## MVP Closeout Plan (Arcade)
+Goal: lock a stable, replay-safe, calibration-ready Arcade v1.
+Status: complete; next iterations are calibration/tuning-only unless a release blocker appears.
+
+### ARC.MVP.PR1 - Lock `mvp-v1` Balance Target
+- Scope:
+  - [x] Define target envelope for 80-turn Arcade loop (floor progression, death rate, objective completion).
+  - [x] Freeze trinity + combat-profile configs as `mvp-v1`.
+  - [x] Add seed set for repeatable calibration checks.
+- Acceptance:
+  - [x] One command reproduces `mvp-v1` baseline metrics from fixed seeds.
+  - [x] Baseline artifact saved under `docs/` with timestamp and config version.
+
+### ARC.MVP.PR2 - Complete Combat-Profile Rollout
+- Scope:
+  - [x] Route all damage-dealing skills through combat-profile multipliers (not just `BASIC_ATTACK` / `AUTO_ATTACK`).
+  - [x] Keep trait logic data-driven (`combat_profile` component), no ad hoc per-skill hacks.
+  - [x] Add per-hit telemetry terms for outgoing/incoming trait multipliers.
+- Acceptance:
+  - [x] Skill migration audit remains green.
+  - [x] UPA telemetry includes trait contribution fields per skill/event batch.
+
+### ARC.MVP.PR3 - Arcade Readability + Sequence Integrity
+- Scope:
+  - [x] Enforce full action sequencing in client timeline (`move -> hazard check -> sink/damage -> death`).
+  - [x] Ensure objective/shrine/stairs cues are visible and deterministic in flow.
+  - [x] Keep input lock until blocking timeline events complete.
+- Acceptance:
+  - [x] Sequence tests verify no hazard resolution before move completion.
+  - [x] Automated build/smoke checks confirm stable timeline-driven action consequences.
+
+### ARC.MVP.PR4 - Determinism + Replay Gate
+- Scope:
+  - [x] Add one CI-friendly command that runs: `scenarios_runner` + replay validation + core UPA smoke.
+  - [x] Ensure hydrated/load-state normalization preserves trinity/combat-profile parity.
+  - [x] Fail fast on parity drift.
+- Acceptance:
+  - [x] Gate command passes locally and in CI.
+  - [x] Seeded run replay hashes match across two consecutive executions.
+
+### ARC.MVP.PR5 - MVP Content Lock + Post-Lock Rules
+- Scope:
+  - [x] Lock Arcade v1 scope (archetypes, enemy set, terrain pack, relic set, objectives).
+  - [x] Declare post-lock policy: no new systems, only telemetry-driven tuning and bug fixes.
+  - [x] Move residual ideas to backlog with explicit non-MVP label.
+- Acceptance:
+  - [x] `docs/BALANCE_BACKLOG.md` and `docs/UPA_GUIDE.md` updated for v1 lock.
+  - [x] `docs/NEXT_LEVEL.md` marks MVP Closeout complete and opens calibration-only phase.
 
 ## Working Rules
 - One mechanic slice per PR: rule change + test coverage + telemetry rerun.

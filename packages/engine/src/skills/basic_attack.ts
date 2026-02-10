@@ -4,7 +4,7 @@ import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
-import { getIncomingDamageMultiplier, getOutgoingDamageMultiplier } from '../systems/combat-traits';
+import { isStunned } from '../systems/status';
 
 /**
  * Basic Attack - A targeted melee attack skill.
@@ -27,6 +27,25 @@ export const BASIC_ATTACK: SkillDefinition = {
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
+
+        const stunnedThisStep = (state.timelineEvents || []).some(ev =>
+            ev.phase === 'STATUS_APPLY'
+            && ev.type === 'ApplyStatus'
+            && ev.payload?.status === 'stunned'
+            && (
+                ev.payload?.target === attacker.id
+                || (
+                    typeof ev.payload?.target === 'object'
+                    && ev.payload?.target
+                    && hexEquals(ev.payload.target as Point, attacker.position)
+                )
+            )
+        );
+
+        if (isStunned(attacker) || stunnedThisStep) {
+            messages.push('Cannot attack while stunned!');
+            return { effects, messages, consumesTurn: true };
+        }
 
         if (!target) {
             messages.push('Select a target!');
@@ -73,8 +92,6 @@ export const BASIC_ATTACK: SkillDefinition = {
             damageClass: 'physical',
             scaling: [{ attribute: 'body', coefficient: 0.5 }],
             statusMultipliers: [],
-            attackPowerMultiplier: getOutgoingDamageMultiplier(attacker, 'physical'),
-            targetDamageTakenMultiplier: getIncomingDamageMultiplier(targetActor, 'physical'),
             inDangerPreviewHex: !!state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position)),
             theoreticalMaxPower: baseDamage
         });
@@ -82,8 +99,12 @@ export const BASIC_ATTACK: SkillDefinition = {
 
         // Apply damage
         effects.push({ type: 'Damage', target: 'targetActor', amount: damage, scoreEvent: combat.scoreEvent });
-        const attackerName = attacker.type === 'player' ? 'You' : (attacker.subtype || 'Enemy');
-        const targetName = targetActor.type === 'player' ? 'you' : (targetActor.subtype || 'enemy');
+        const attackerName = attacker.type === 'player'
+            ? 'You'
+            : `${attacker.subtype || 'enemy'}#${attacker.id}`;
+        const targetName = targetActor.type === 'player'
+            ? 'you'
+            : `${targetActor.subtype || 'enemy'}#${targetActor.id}`;
         messages.push(`${attackerName} attacked ${targetName}!`);
 
         // Vampiric upgrade: heal on kill (TODO: Add Heal effect type when implemented)

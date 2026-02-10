@@ -60,6 +60,7 @@ export const FALCON_SCOUT: SkillDefinition = {
                 target: attacker.id,
                 destination: nextOrbitPos,
                 source: attacker.position,
+                simulatePath: true,
             });
 
             // Update orbit step if needed (though we calculate based on position now)

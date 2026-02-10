@@ -4,6 +4,7 @@ import type { GameState } from '@hop/engine';
 export interface ReplayRecord {
   id: string;
   seed?: string;
+  loadoutId?: string;
   actions: any[]; // Changed to any[] for simplicity if Action type is tricky
   score: number;
   floor: number;
@@ -83,6 +84,7 @@ const ReplayManager: React.FC<{
               onClick={() => onStartReplay({
                 id: e.id,
                 seed: e.seed,
+                loadoutId: (e as any).loadoutId,
                 actions: (e as any).actions || [],
                 score: e.score,
                 floor: e.floor,

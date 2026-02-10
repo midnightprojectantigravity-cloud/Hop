@@ -1,0 +1,54 @@
+{
+  "targetDifficulty": 72,
+  "tolerance": 5,
+  "selectedEncounter": {
+    "seed": "challenge-1-1:enemies:1",
+    "floor": 1,
+    "difficultyGrade": 75.8265,
+    "bandMatch": true
+  },
+  "simulations": [
+    {
+      "loadoutId": "VANGUARD",
+      "winRate": 0.3,
+      "timeoutRate": 0.525,
+      "avgFloor": 7.775,
+      "avgHazardBreaches": 0.2
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "winRate": 0,
+      "timeoutRate": 0.85,
+      "avgFloor": 1.45,
+      "avgHazardBreaches": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "winRate": 0.725,
+      "timeoutRate": 0.05,
+      "avgFloor": 9.325,
+      "avgHazardBreaches": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "winRate": 0.575,
+      "timeoutRate": 0.2,
+      "avgFloor": 8.8,
+      "avgHazardBreaches": 0.175
+    },
+    {
+      "loadoutId": "HUNTER",
+      "winRate": 0,
+      "timeoutRate": 0.55,
+      "avgFloor": 6.075,
+      "avgHazardBreaches": 3.9
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "winRate": 0,
+      "timeoutRate": 0.475,
+      "avgFloor": 7.15,
+      "avgHazardBreaches": 0.175
+    }
+  ]
+}

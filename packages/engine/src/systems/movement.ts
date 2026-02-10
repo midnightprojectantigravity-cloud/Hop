@@ -7,6 +7,7 @@ import { prepareKineticSimulation, translate1DToHex } from './hex-bridge';
 import { resolveKineticDash, resolveKineticPulse } from './kinetic-kernel';
 import { TileResolver } from './tile-effects';
 import { UnifiedTileService } from './unified-tile-service';
+import { appendTaggedMessage, appendTaggedMessages, tagMessage } from './engine-messages';
 
 
 /**
@@ -35,7 +36,7 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
             const pos = path[i];
             const enemy = getEnemyAt(state.enemies, pos);
             if (UnifiedTileService.getTraitsAt(state, pos).has('BLOCKS_MOVEMENT')) {
-                return { ...state, message: [...state.message, "Blocked by wall!"].slice(-50) };
+                return { ...state, message: appendTaggedMessage(state.message, 'Blocked by wall!', 'CRITICAL', 'SYSTEM') };
             }
 
             if (enemy) {
@@ -74,12 +75,12 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
                     newState = applyAtomicEffect(newState, { type: 'ApplyStatus', target: pushDest, status: 'stunned', duration: 1 }, { targetId: enemy.id });
                     newState = applyAtomicEffect(newState, { type: 'Juice', effect: 'shake', intensity: 'medium' });
                     newState = applyAtomicEffect(newState, { type: 'Juice', effect: 'impact', target: pos }); // Impact at original enemy pos
-                    newState.message.push(`Tackled ${enemy.subtype}!`);
+                    newState.message.push(tagMessage(`Tackled ${enemy.subtype}!`, 'INFO', 'COMBAT'));
 
                     // Player stops at enemy's old position
                     return applyEffects(newState, [{ type: 'Displacement', target: actorId === 'player' ? 'self' : 'targetActor', destination: pos }], { targetId: actorId });
                 } else {
-                    return { ...state, message: [...state.message, "Blocked by enemy!"].slice(-50) };
+                    return { ...state, message: appendTaggedMessage(state.message, 'Blocked by enemy!', 'CRITICAL', 'SYSTEM') };
                 }
             }
         }
@@ -105,7 +106,7 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
 
     // 4. Standard Blocked Check (Walls/Actors)
     if (!UnifiedTileService.isWalkable(state, pathResult.lastValidPos)) {
-        return { ...state, message: [...state.message, "Blocked!"].slice(-50) };
+        return { ...state, message: appendTaggedMessage(state.message, 'Blocked!', 'CRITICAL', 'SYSTEM') };
     }
 
 
@@ -119,11 +120,11 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
             if (basicAttackDef && basicAttackSkill) {
                 const execution = basicAttackDef.execute(state, state.player, target, basicAttackSkill.activeUpgrades);
                 let newState = applyEffects(state, execution.effects, { targetId: targetEnemy.id });
-                newState.message = [...newState.message, ...execution.messages].slice(-50);
+                newState.message = appendTaggedMessages(newState.message, execution.messages, 'INFO', 'COMBAT');
                 return newState;
             }
         }
-        return { ...state, message: [...state.message, "Tile occupied!"].slice(-50) };
+        return { ...state, message: appendTaggedMessage(state.message, 'Tile occupied!', 'CRITICAL', 'SYSTEM') };
     }
 
     // 5. Apply Movement
@@ -155,7 +156,7 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
             const enterResult = TileResolver.processEntry(updatedActor, tile, newState);
             if (enterResult.effects.length > 0 || enterResult.messages.length > 0) {
                 newState = applyEffects(newState, enterResult.effects, { targetId: actorId });
-                newState.message = [...newState.message, ...enterResult.messages].slice(-50);
+                newState.message = appendTaggedMessages(newState.message, enterResult.messages, 'INFO', 'HAZARD');
             }
         }
     }
@@ -289,7 +290,7 @@ export function processKineticRequest(state: GameState, request: KineticRequest)
                 status: 'stunned',
                 duration: 1
             });
-            messages.push(`${frontUnit.actorId} hit an obstacle and was stunned!`);
+            messages.push(tagMessage(`${frontUnit.actorId} hit an obstacle and was stunned!`, 'INFO', 'COMBAT'));
         }
     }
 

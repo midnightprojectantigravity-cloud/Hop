@@ -230,8 +230,7 @@ export const HexTile: React.FC<HexTileProps> = ({
                 fill="rgba(0,0,0,0.15)"
                 fontSize="8"
                 dy=".3em"
-                pointerEvents="auto"
-                onClick={(event) => event.stopPropagation()}
+                pointerEvents="none"
             >
                 {`${hex.q},${hex.r}`}
             </text>
