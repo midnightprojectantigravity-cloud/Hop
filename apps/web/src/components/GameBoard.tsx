@@ -80,10 +80,41 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
             const trace = ev.payload;
             if (trace?.actorId) {
                 out[trace.actorId] = trace;
+                traceCacheRef.current[trace.actorId] = trace; // PERSIST THE TRACE
             }
         }
         return out;
     }, [gameState.visualEvents]);
+
+    const movementHighlightKeys = useMemo(() => {
+        if (!showMovementRange || selectedSkillId) return new Set<string>();
+        const keys = new Set<string>();
+        const movementSkillIds = ['BASIC_MOVE', 'DASH'];
+        for (const id of movementSkillIds) {
+            if (!gameState.player.activeSkills.some(s => s.id === id)) continue;
+            const def = SkillRegistry.get(id);
+            if (!def?.getValidTargets) continue;
+            const validTargets = def.getValidTargets(gameState, gameState.player.position);
+            for (const t of validTargets) keys.add(pointToKey(t));
+        }
+        return keys;
+    }, [showMovementRange, selectedSkillId, gameState]);
+
+    const skillHighlightKeys = useMemo(() => {
+        if (!selectedSkillId) return new Set<string>();
+        const def = SkillRegistry.get(selectedSkillId);
+        if (!def?.getValidTargets) return new Set<string>();
+        const validTargets = def.getValidTargets(gameState, gameState.player.position);
+        return new Set(validTargets.map(pointToKey));
+    }, [selectedSkillId, gameState]);
+
+    const targetedKeys = useMemo(() => {
+        const keys = new Set<string>();
+        for (const e of gameState.enemies) {
+            if (e.intentPosition) keys.add(pointToKey(e.intentPosition));
+        }
+        return keys;
+    }, [gameState.enemies]);
 
     useEffect(() => {
         const next = { ...traceCacheRef.current };
@@ -126,41 +157,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
 
                         const dist = hexDistance(hex, gameState.player.position);
 
-                        // Movement Highlights
-                        let isMoveHighlight = false;
-                        if (showMovementRange && !selectedSkillId) {
-                            const movementSkillIds = ['BASIC_MOVE', 'DASH'];
-                            for (const id of movementSkillIds) {
-                                if (gameState.player.activeSkills.some(s => s.id === id)) {
-                                    const def = SkillRegistry.get(id);
-                                    if (def?.getValidTargets) {
-                                        const validTargets = def.getValidTargets(gameState, gameState.player.position);
-                                        if (validTargets.some(v => hexEquals(v, hex))) {
-                                            isMoveHighlight = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (!isMoveHighlight && dist === 1 && !isWall) {
-                                const hasPrimarySkills = gameState.player.activeSkills.some(s => ['BASIC_MOVE', 'DASH'].includes(s.id));
-                                if (!hasPrimarySkills) isMoveHighlight = true;
-                            }
-                        }
-
-                        // Skill Highlights
-                        let isSkillHighlight = false;
-                        if (selectedSkillId) {
-                            const def = SkillRegistry.get(selectedSkillId);
-                            if (def?.getValidTargets) {
-                                const validTargets = def.getValidTargets(gameState, gameState.player.position);
-                                isSkillHighlight = validTargets.some(v => hexEquals(v, hex));
-                            }
-                        }
+                        const isMoveHighlight = movementHighlightKeys.has(tileKey)
+                            || (showMovementRange
+                                && !selectedSkillId
+                                && dist === 1
+                                && !isWall
+                                && !gameState.player.activeSkills.some(s => ['BASIC_MOVE', 'DASH'].includes(s.id)));
+                        const isSkillHighlight = skillHighlightKeys.has(tileKey);
 
                         const showRangeHighlight = isSkillHighlight || isMoveHighlight;
-                        const isTargeted = gameState.enemies.some(e => e.intentPosition && hexEquals(e.intentPosition, hex));
+                        const isTargeted = targetedKeys.has(tileKey);
                         const isStairs = hexEquals(hex, gameState.stairsPosition);
                         const isShrine = gameState.shrinePosition && hexEquals(hex, gameState.shrinePosition);
 

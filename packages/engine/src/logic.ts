@@ -822,6 +822,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     }
                     return {
                         ...next,
+                        actionLog: [...(s.actionLog || [])],
                         dailyRunDate: s.dailyRunDate,
                         runObjectives: s.runObjectives,
                         hazardBreaches: s.hazardBreaches || 0

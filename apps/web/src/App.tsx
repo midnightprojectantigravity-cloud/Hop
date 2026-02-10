@@ -88,13 +88,25 @@ import { UI } from './components/UI';
 import { UpgradeOverlay } from './components/UpgradeOverlay';
 import { SkillTray } from './components/SkillTray';
 import { gameReducer, generateInitialState, generateHubState, hexEquals, pointToKey, ensureActorTrinity, deriveMaxHpFromTrinity, DEFAULT_LOADOUTS } from '@hop/engine';
-import type { Point, Action, GameState, Actor } from '@hop/engine';
+import type { Point, Action, GameState, Actor, TimelineEvent } from '@hop/engine';
 import type { ReplayRecord } from './components/ReplayManager';
 import { isPlayerTurn } from '@hop/engine';
 import { Hub } from './components/Hub';
 import { ArcadeHub } from './components/ArcadeHub';
 
 function App() {
+  const getVisualEventsSignature = (events: Array<{ type: string; payload: any }> | undefined): string => {
+    const arr = events || [];
+    const last = arr.length > 0 ? arr[arr.length - 1] : undefined;
+    return `${arr.length}:${last?.type ?? 'none'}`;
+  };
+
+  const getTimelineEventsSignature = (events: TimelineEvent[] | undefined): string => {
+    const arr = events || [];
+    const last = arr.length > 0 ? arr[arr.length - 1] : undefined;
+    return `${arr.length}:${last?.id ?? 'none'}:${last?.phase ?? 'none'}`;
+  };
+
   const [pathname, setPathname] = useState(() => window.location.pathname);
 
   useEffect(() => {
@@ -215,21 +227,29 @@ function App() {
   }, [gameState]);
 
   useEffect(() => {
-    const stateToSave = {
-      ...gameState,
-      tiles: Array.from(gameState.tiles.entries()).map(([key, tile]) => [
-        key,
-        {
-          ...tile,
-          traits: Array.from(tile.traits) // Convert Set -> Array
-        }
-      ])
-    };
+    if (!(gameState.gameStatus === 'playing' || gameState.gameStatus === 'choosing_upgrade')) {
+      return;
+    }
 
-    const safeStringify = (obj: any) =>
-      JSON.stringify(obj, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
+    const timer = window.setTimeout(() => {
+      const stateToSave = {
+        ...gameState,
+        tiles: Array.from(gameState.tiles.entries()).map(([key, tile]) => [
+          key,
+          {
+            ...tile,
+            traits: Array.from(tile.traits) // Convert Set -> Array
+          }
+        ])
+      };
 
-    localStorage.setItem('hop_save', safeStringify(stateToSave));
+      const safeStringify = (obj: any) =>
+        JSON.stringify(obj, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
+
+      localStorage.setItem('hop_save', safeStringify(stateToSave));
+    }, 300);
+
+    return () => window.clearTimeout(timer);
   }, [gameState]);
 
   const [isReplayMode, setIsReplayMode] = useState(false);
@@ -253,9 +273,9 @@ function App() {
   const [isBusy, setIsBusy] = useState(false);
 
   const lastProcessedEventsHash = useRef('');
-  const currentEventsHash = JSON.stringify(gameState.visualEvents || []);
+  const currentEventsHash = getVisualEventsSignature(gameState.visualEvents);
   const lastProcessedTimelineHash = useRef('');
-  const currentTimelineHash = JSON.stringify(gameState.timelineEvents || []);
+  const currentTimelineHash = getTimelineEventsSignature(gameState.timelineEvents);
   const pendingObservedBusy = useRef(false);
 
   // Update processed hash when animations settle

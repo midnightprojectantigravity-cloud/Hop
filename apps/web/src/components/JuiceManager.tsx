@@ -35,6 +35,7 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
     const isRunningQueue = useRef(false);
     const [timelineBusy, setTimelineBusy] = useState(false);
     const prefersReducedMotion = useRef(false);
+    const movementDurationByActor = useRef<Map<string, number>>(new Map());
 
     useEffect(() => {
         if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -44,6 +45,21 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
         mq.addEventListener?.('change', onChange);
         return () => mq.removeEventListener?.('change', onChange);
     }, []);
+
+    useEffect(() => {
+        if (!visualEvents.length) return;
+        const next = new Map(movementDurationByActor.current);
+        for (const ev of visualEvents) {
+            if (ev.type !== 'kinetic_trace') continue;
+            const trace = ev.payload;
+            if (!trace?.actorId) continue;
+            const duration = Number(trace.durationMs ?? 0);
+            if (duration > 0) {
+                next.set(String(trace.actorId), duration);
+            }
+        }
+        movementDurationByActor.current = next;
+    }, [visualEvents]);
 
     // Notify parent of busy state
     useEffect(() => {
@@ -103,10 +119,25 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
             while (timelineQueue.current.length > 0) {
                 const ev = timelineQueue.current.shift()!;
                 enqueueTimelineEffects(ev);
-                const baseDuration = ev.blocking ? (ev.suggestedDurationMs ?? 140) : 0;
-                const waitDuration = prefersReducedMotion.current
-                    ? Math.min(80, Math.floor(baseDuration * 0.35))
-                    : baseDuration;
+                let baseDuration = ev.blocking ? (ev.suggestedDurationMs ?? 140) : 0;
+
+                // Movement is rendered by Entity animations using kinetic_trace.durationMs.
+                // For strict sequence fidelity, use that duration to gate post-move phases.
+                if (ev.phase === 'MOVE_END') {
+                    const actorId = (ev.payload as any)?.targetActorId as string | undefined;
+                    if (actorId) {
+                        const tracedMs = movementDurationByActor.current.get(actorId);
+                        if (tracedMs && tracedMs > 0) {
+                            baseDuration = Math.max(baseDuration, tracedMs);
+                        }
+                    }
+                }
+
+                const waitDuration = ev.phase === 'MOVE_END'
+                    ? baseDuration
+                    : (prefersReducedMotion.current
+                        ? Math.min(80, Math.floor(baseDuration * 0.35))
+                        : baseDuration);
                 if (waitDuration > 0) {
                     await waitMs(waitDuration);
                 }
