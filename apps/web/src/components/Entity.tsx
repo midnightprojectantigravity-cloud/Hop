@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Actor as EntityType, MovementTrace } from '@hop/engine';
 import { isStunned, hexToPixel, getDirectionFromTo, hexEquals, TILE_SIZE, getHexLine, getEntityVisual, isEntityFlying } from '@hop/engine';
-import { resolveMovementPath } from './movement-path';
 
 interface EntityProps {
     entity: EntityType;
@@ -15,6 +14,8 @@ const renderIcon = (entity: EntityType, isPlayer: boolean, size = 24) => {
     const visual = getEntityVisual(entity.subtype, entity.type, entity.enemyType as 'melee' | 'ranged' | 'boss', entity.archetype);
     const { icon, shape, color, borderColor, size: sizeMult = 1.0 } = visual;
     const finalSize = size * sizeMult;
+    const bombFuse = entity.statusEffects?.find(s => s.type === 'time_bomb');
+    const bombTimer = bombFuse ? Math.max(0, bombFuse.duration) : (entity.actionCooldown ?? 0);
 
     return (
         <g>
@@ -35,7 +36,7 @@ const renderIcon = (entity: EntityType, isPlayer: boolean, size = 24) => {
             {/* Special overlays */}
             {entity.subtype === 'bomb' && (
                 <text y={finalSize * 0.2} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold">
-                    {entity.actionCooldown ?? 0}
+                    {bombTimer}
                 </text>
             )}
 
@@ -53,16 +54,17 @@ const renderIcon = (entity: EntityType, isPlayer: boolean, size = 24) => {
     );
 };
 
-export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementTrace }) => {
+const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementTrace }) => {
     const [displayPos, setDisplayPos] = useState(entity.position);
     const [displayPixel, setDisplayPixel] = useState(() => hexToPixel(entity.position, TILE_SIZE));
     const [animationPrevPos, setAnimationPrevPos] = useState<EntityType['position'] | undefined>(entity.previousPosition);
+    const [segmentDurationMs, setSegmentDurationMs] = useState(220);
+    const [segmentEasing, setSegmentEasing] = useState('cubic-bezier(0.22, 1, 0.36, 1)');
     const [teleportPhase, setTeleportPhase] = useState<'none' | 'out' | 'in'>('none');
     const animationInProgress = useRef(false);
-    const lastCompletedMoveSignature = useRef<string>('');
+    const lastTargetPos = useRef(entity.position);
     const animationTimers = useRef<number[]>([]);
     const animationFrameRef = useRef<number | null>(null);
-    const movementEffectRunRef = useRef(0);
 
     const [isFlashing, setIsFlashing] = useState(false);
     const prevHp = useRef(entity.hp);
@@ -70,16 +72,9 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, moveme
     const isPlayer = entity.type === 'player';
     const targetPixel = entity.intentPosition ? hexToPixel(entity.intentPosition, TILE_SIZE) : null;
     const movementDebugEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_MOVEMENT);
-    const movementDebugVisualEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_MOVEMENT_VISUAL);
-    const movementTraceSignature = movementTrace
-        ? `${movementTrace.actorId}|${movementTrace.movementType || ''}|${movementTrace.destination?.q ?? ''},${movementTrace.destination?.r ?? ''},${movementTrace.destination?.s ?? ''}|${(movementTrace.path || []).map(p => `${p.q},${p.r},${p.s}`).join(';')}`
-        : '';
 
     // Sequential Animation Logic
     useEffect(() => {
-        const effectRunId = ++movementEffectRunRef.current;
-        const effectStartedAt = performance.now();
-
         const clearAnimationTimers = () => {
             for (const t of animationTimers.current) {
                 clearTimeout(t);
@@ -91,91 +86,118 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, moveme
             }
         };
 
-        const resolvedPath = resolveMovementPath(entity, movementTrace);
-        const hasMatchingTrace = resolvedPath.hasMatchingTrace;
-        const tracePath = resolvedPath.source === 'trace'
-            ? resolvedPath.path as EntityType['position'][]
-            : undefined;
-        const inferredMovementType = resolvedPath.movementType;
+        if (!hexEquals(entity.position, lastTargetPos.current)) {
+            // New position detected
+            lastTargetPos.current = entity.position;
 
-        const fallbackMoveSignature = entity.previousPosition && !hexEquals(entity.previousPosition, entity.position)
-            ? `${entity.id}|fallback|${entity.previousPosition.q},${entity.previousPosition.r},${entity.previousPosition.s}->${entity.position.q},${entity.position.r},${entity.position.s}`
-            : '';
-        const moveSignature = hasMatchingTrace ? `trace|${movementTraceSignature}` : fallbackMoveSignature;
+            const hasMatchingTrace = movementTrace
+                && movementTrace.actorId === entity.id
+                && movementTrace.destination
+                && hexEquals(movementTrace.destination as any, entity.position)
+                && Array.isArray(movementTrace.path)
+                && movementTrace.path.length > 0;
+            const tracePath = hasMatchingTrace
+                ? movementTrace.path as EntityType['position'][]
+                : undefined;
 
-        if (moveSignature && moveSignature !== lastCompletedMoveSignature.current) {
+            const inferredMovementType = hasMatchingTrace
+                ? movementTrace.movementType
+                : undefined;
+            const traceStartDelayMs = hasMatchingTrace ? Math.max(0, movementTrace.startDelayMs ?? 0) : 0;
 
             if (movementDebugEnabled) {
                 const fallbackPathLen = entity.previousPosition ? getHexLine(entity.previousPosition, entity.position).length : 0;
-                console.log('[HOP_MOVE_EFFECT] start', {
-                    runId: effectRunId,
-                    actorId: entity.id,
-                    position: entity.position,
-                    previousPosition: entity.previousPosition,
-                    movementTraceSignature
-                });
                 console.log('[HOP_MOVE]', {
                     actorId: entity.id,
                     movementType: inferredMovementType || 'fallback',
                     usedEngineTrace: hasMatchingTrace,
                     tracePathLength: tracePath?.length || 0,
                     tracePath: tracePath || [],
+                    startDelayMs: traceStartDelayMs,
                     fallbackPathLength: fallbackPathLen,
                     origin: movementTrace?.origin || entity.previousPosition,
                     destination: entity.position
                 });
             }
 
-            if (inferredMovementType === 'teleport' && hasMatchingTrace && movementTrace?.origin) {
+            if (inferredMovementType === 'teleport' && hasMatchingTrace && movementTrace.origin) {
                 clearAnimationTimers();
                 animationInProgress.current = true;
-                const totalDuration = movementTrace?.durationMs ?? 180;
+                const totalDuration = movementTrace.durationMs ?? 180;
                 const halfDuration = Math.max(80, Math.floor(totalDuration / 2));
-                const teleportOrigin = movementTrace.origin as EntityType['position'];
 
-                setAnimationPrevPos(teleportOrigin);
-                setDisplayPos(teleportOrigin);
-                setDisplayPixel(hexToPixel(teleportOrigin, TILE_SIZE));
-                setTeleportPhase('out');
+                const startTeleport = () => {
+                    setSegmentDurationMs(0);
+                    setSegmentEasing('linear');
+                    setAnimationPrevPos(movementTrace.origin);
+                    setDisplayPos(movementTrace.origin);
+                    setDisplayPixel(hexToPixel(movementTrace.origin, TILE_SIZE));
+                    setTeleportPhase('out');
 
-                const t1 = window.setTimeout(() => {
-                    setDisplayPos(entity.position);
-                    setAnimationPrevPos(entity.position);
-                    setDisplayPixel(hexToPixel(entity.position, TILE_SIZE));
-                    setTeleportPhase('in');
-                }, halfDuration);
-                const t2 = window.setTimeout(() => {
-                    setTeleportPhase('none');
-                    animationInProgress.current = false;
-                    lastCompletedMoveSignature.current = moveSignature;
-                }, halfDuration * 2);
-                animationTimers.current.push(t1, t2);
+                    const t1 = window.setTimeout(() => {
+                        setDisplayPos(entity.position);
+                        setAnimationPrevPos(entity.position);
+                        setDisplayPixel(hexToPixel(entity.position, TILE_SIZE));
+                        setTeleportPhase('in');
+                    }, halfDuration);
+                    const t2 = window.setTimeout(() => {
+                        setTeleportPhase('none');
+                        animationInProgress.current = false;
+                    }, halfDuration * 2);
+                    animationTimers.current.push(t1, t2);
+                };
+
+                if (traceStartDelayMs > 0) {
+                    const t0 = window.setTimeout(startTeleport, traceStartDelayMs);
+                    animationTimers.current.push(t0);
+                } else {
+                    startTeleport();
+                }
                 return () => {
                     clearAnimationTimers();
                     animationInProgress.current = false;
                 };
             }
 
-            const canAnimateFromTrace = resolvedPath.source === 'trace' && Array.isArray(resolvedPath.path) && resolvedPath.path.length > 1;
-            const canAnimateFromFallback = resolvedPath.source === 'fallback' && Array.isArray(resolvedPath.path) && resolvedPath.path.length > 1;
-            if (canAnimateFromTrace || canAnimateFromFallback) {
-                const path = canAnimateFromTrace
-                    ? (tracePath as EntityType['position'][])
-                    : (resolvedPath.path as EntityType['position'][]);
+            const hasPrevStep = !!(entity.previousPosition && !hexEquals(entity.position, entity.previousPosition));
+            const hasTraceStep = !!(tracePath && tracePath.length > 1);
+
+            if (hasTraceStep || hasPrevStep) {
+                const rawPath = tracePath || (entity.previousPosition ? getHexLine(entity.previousPosition, entity.position) : []);
+                let path = rawPath;
+                if (
+                    hasMatchingTrace
+                    && movementTrace?.origin
+                    && path.length > 1
+                    && hexEquals(path[path.length - 1], movementTrace.origin)
+                    && !hexEquals(path[0], movementTrace.origin)
+                ) {
+                    path = [...path].reverse();
+                }
+
                 if (path.length > 1) {
                     clearAnimationTimers();
                     animationInProgress.current = true;
-                    const totalDuration = movementTrace?.durationMs ?? Math.max(220, path.length * 150);
                     const segmentCount = Math.max(1, path.length - 1);
-                    const perSegmentBudgetMs = Math.max(130, Math.floor(totalDuration / segmentCount));
-                    const hopMoveMs = Math.max(95, Math.floor(perSegmentBudgetMs * 0.72));
-                    const hopSettleMs = Math.max(40, perSegmentBudgetMs - hopMoveMs);
-                    const hopCycleMs = hopMoveMs + hopSettleMs;
+                    const tracePerSegmentMs = movementTrace?.durationMs
+                        ? movementTrace.durationMs / segmentCount
+                        : 0;
+                    const perSegmentMs = Math.max(
+                        90,
+                        Math.min(130, tracePerSegmentMs || 112)
+                    );
+                    const totalDuration = perSegmentMs * segmentCount;
                     const pointsPx = path.map(p => hexToPixel(p, TILE_SIZE));
                     const startTs = performance.now();
+                    const easeInOutCubic = (t: number) =>
+                        t < 0.5
+                            ? 4 * t * t * t
+                            : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
                     setTeleportPhase('none');
                     // Frame-driven path playback must not be re-smoothed by CSS transitions.
+                    setSegmentDurationMs(0);
+                    setSegmentEasing('linear');
                     setDisplayPos(path[0]);
                     setAnimationPrevPos(path[0]);
                     setDisplayPixel(pointsPx[0]);
@@ -183,23 +205,13 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, moveme
                     let lastSegmentIndex = -1;
                     const animate = (now: number) => {
                         const elapsed = Math.max(0, now - startTs);
-                        const segmentIndex = Math.min(segmentCount - 1, Math.floor(elapsed / hopCycleMs));
-                        const segmentStart = segmentIndex * hopCycleMs;
+                        const segmentIndex = Math.min(segmentCount - 1, Math.floor(elapsed / perSegmentMs));
+                        const segmentStart = segmentIndex * perSegmentMs;
                         const segmentElapsed = elapsed - segmentStart;
-                        const moveT = Math.max(0, Math.min(1, segmentElapsed / hopMoveMs));
+                        const tRaw = Math.max(0, Math.min(1, segmentElapsed / perSegmentMs));
+                        const t = easeInOutCubic(tRaw);
 
                         if (segmentIndex !== lastSegmentIndex) {
-                            if (movementDebugEnabled) {
-                                const fromHex = path[segmentIndex];
-                                const toHex = path[Math.min(path.length - 1, segmentIndex + 1)];
-                                console.log('[HOP_MOVE_SEGMENT]', {
-                                    runId: effectRunId,
-                                    actorId: entity.id,
-                                    segmentIndex,
-                                    fromHex,
-                                    toHex
-                                });
-                            }
                             setAnimationPrevPos(path[segmentIndex]);
                             setDisplayPos(path[Math.min(path.length - 1, segmentIndex + 1)]);
                             lastSegmentIndex = segmentIndex;
@@ -207,13 +219,12 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, moveme
 
                         const from = pointsPx[segmentIndex];
                         const to = pointsPx[Math.min(pointsPx.length - 1, segmentIndex + 1)];
-                        const t = segmentElapsed <= hopMoveMs ? moveT : 1;
                         setDisplayPixel({
                             x: from.x + ((to.x - from.x) * t),
                             y: from.y + ((to.y - from.y) * t)
                         });
 
-                        if (elapsed < (segmentCount * hopCycleMs) + hopSettleMs) {
+                        if (elapsed < totalDuration) {
                             animationFrameRef.current = requestAnimationFrame(animate);
                             return;
                         }
@@ -222,20 +233,18 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, moveme
                         setDisplayPos(entity.position);
                         setAnimationPrevPos(entity.previousPosition);
                         setDisplayPixel(pointsPx[pointsPx.length - 1]);
-                        lastCompletedMoveSignature.current = moveSignature;
                         animationFrameRef.current = null;
                     };
-                    animationFrameRef.current = requestAnimationFrame(animate);
+                    if (traceStartDelayMs > 0) {
+                        const t0 = window.setTimeout(() => {
+                            animationFrameRef.current = requestAnimationFrame(animate);
+                        }, traceStartDelayMs);
+                        animationTimers.current.push(t0);
+                    } else {
+                        animationFrameRef.current = requestAnimationFrame(animate);
+                    }
 
                     return () => {
-                        if (movementDebugEnabled) {
-                            console.log('[HOP_MOVE_EFFECT] cleanup', {
-                                runId: effectRunId,
-                                actorId: entity.id,
-                                elapsedMs: Math.round(performance.now() - effectStartedAt),
-                                reason: 'path-animation-effect-cleanup'
-                            });
-                        }
                         clearAnimationTimers();
                         animationInProgress.current = false;
                     };
@@ -243,31 +252,13 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, moveme
             }
             // Fallback for 1-tile move or no previous position
             setTeleportPhase('none');
+            setSegmentDurationMs(220);
+            setSegmentEasing('cubic-bezier(0.22, 1, 0.36, 1)');
             setDisplayPos(entity.position);
             setAnimationPrevPos(entity.previousPosition);
             setDisplayPixel(hexToPixel(entity.position, TILE_SIZE));
-            lastCompletedMoveSignature.current = moveSignature;
         }
-        else if (!moveSignature && !animationInProgress.current) {
-            // Non-animated position changes (e.g. floor transition) must hard-sync visual position.
-            if (!hexEquals(displayPos, entity.position)) {
-                setTeleportPhase('none');
-                setDisplayPos(entity.position);
-                setAnimationPrevPos(entity.previousPosition);
-                setDisplayPixel(hexToPixel(entity.position, TILE_SIZE));
-            }
-        }
-        return () => {
-            if (movementDebugEnabled) {
-                console.log('[HOP_MOVE_EFFECT] cleanup', {
-                    runId: effectRunId,
-                    actorId: entity.id,
-                    elapsedMs: Math.round(performance.now() - effectStartedAt),
-                    reason: 'effect-rerun-or-unmount'
-                });
-            }
-        };
-    }, [entity.position, entity.id, movementTraceSignature]);
+    }, [entity.position, entity.previousPosition, movementTrace, entity.id]);
 
     const { x, y } = displayPixel || hexToPixel(displayPos, TILE_SIZE);
 
@@ -313,46 +304,6 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, moveme
 
     return (
         <g style={{ pointerEvents: 'none' }}>
-            {movementDebugVisualEnabled && movementTrace && Array.isArray(movementTrace.path) && movementTrace.path.length > 0 && (
-                <g>
-                    <polyline
-                        points={movementTrace.path.map(p => {
-                            const pix = hexToPixel(p, TILE_SIZE);
-                            return `${pix.x},${pix.y}`;
-                        }).join(' ')}
-                        fill="none"
-                        stroke={isPlayer ? '#22d3ee' : '#f43f5e'}
-                        strokeWidth={2}
-                        strokeDasharray="5 3"
-                        opacity={0.9}
-                    />
-                    {movementTrace.path.map((p, idx) => {
-                        const pix = hexToPixel(p, TILE_SIZE);
-                        return (
-                            <g key={`trace-${entity.id}-${idx}`} transform={`translate(${pix.x}, ${pix.y})`}>
-                                <circle r={idx === 0 ? 5 : 3.5} fill={idx === 0 ? '#facc15' : '#22d3ee'} opacity={0.95} />
-                                <text y={-8} textAnchor="middle" fontSize={9} fill="#ffffff" stroke="#000000" strokeWidth={2} paintOrder="stroke">
-                                    {idx}
-                                </text>
-                            </g>
-                        );
-                    })}
-                    <g transform={`translate(${x}, ${y})`}>
-                        <circle r={6} fill="none" stroke="#ffffff" strokeWidth={2} />
-                        <circle r={1.5} fill="#ffffff" />
-                    </g>
-                    <g transform={`translate(${x + 14}, ${y - 14})`}>
-                        <rect x={-2} y={-11} width={145} height={26} fill="rgba(0,0,0,0.72)" rx={4} />
-                        <text x={4} y={0} fontSize={10} fill="#e2e8f0">
-                            {`px(${x.toFixed(1)}, ${y.toFixed(1)})`}
-                        </text>
-                        <text x={4} y={11} fontSize={10} fill="#cbd5e1">
-                            {`hex(${displayPos.q}, ${displayPos.r}, ${displayPos.s})`}
-                        </text>
-                    </g>
-                </g>
-            )}
-
             {/* Intent Line */}
             {targetPixel && !isPlayer && !isStunned(entity) && (
                 <line
@@ -369,7 +320,10 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, moveme
 
             {/* Main Entity Group - Handles smooth movement translation */}
             <g
-                transform={`translate(${x}, ${y})`}
+                style={{
+                    transition: `transform ${segmentDurationMs}ms ${segmentEasing}`,
+                    transform: `translate(${x}px, ${y}px)`
+                }}
                 className={isDying ? 'animate-lava-sink' : ''}
             >
                 {/* Visual Content Group - Handles idle animation, squash/stretch, and damage flash */}
@@ -429,3 +383,35 @@ export const Entity: React.FC<EntityProps> = ({ entity, isSpear, isDying, moveme
         </g>
     );
 };
+
+const movementTraceKey = (m?: MovementTrace): string => {
+    if (!m) return '';
+    const pathSig = (m.path || []).map(p => `${p.q},${p.r},${p.s}`).join(';');
+    return `${m.actorId}|${m.movementType || ''}|${m.destination?.q ?? ''},${m.destination?.r ?? ''},${m.destination?.s ?? ''}|${pathSig}|${m.durationMs ?? ''}|${m.startDelayMs ?? 0}|${m.wasLethal ? 1 : 0}`;
+};
+
+const statusSig = (arr: any[] = []) => arr.map(s => `${s.id}:${s.duration ?? ''}:${s.stacks ?? ''}`).join('|');
+
+export const Entity = React.memo(EntityBase, (prev, next) => {
+    const a = prev.entity;
+    const b = next.entity;
+    return prev.isSpear === next.isSpear
+        && prev.isDying === next.isDying
+        && movementTraceKey(prev.movementTrace) === movementTraceKey(next.movementTrace)
+        && a.id === b.id
+        && a.hp === b.hp
+        && a.maxHp === b.maxHp
+        && a.facing === b.facing
+        && a.intent === b.intent
+        && a.isVisible === b.isVisible
+        && a.position.q === b.position.q
+        && a.position.r === b.position.r
+        && a.position.s === b.position.s
+        && (a.previousPosition?.q ?? 0) === (b.previousPosition?.q ?? 0)
+        && (a.previousPosition?.r ?? 0) === (b.previousPosition?.r ?? 0)
+        && (a.previousPosition?.s ?? 0) === (b.previousPosition?.s ?? 0)
+        && (a.intentPosition?.q ?? 0) === (b.intentPosition?.q ?? 0)
+        && (a.intentPosition?.r ?? 0) === (b.intentPosition?.r ?? 0)
+        && (a.intentPosition?.s ?? 0) === (b.intentPosition?.s ?? 0)
+        && statusSig(a.statusEffects) === statusSig(b.statusEffects);
+});

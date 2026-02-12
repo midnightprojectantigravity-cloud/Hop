@@ -7,13 +7,14 @@ interface UIProps {
     onReset: () => void;
     onWait: () => void;
     onExitToHub: () => void;
+    inputLocked?: boolean;
 }
 
 // Use canonical engine score
 
 import { InitiativeDisplay } from './InitiativeQueue';
 
-export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub }) => {
+export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub, inputLocked = false }) => {
     const score = computeScore(gameState);
 
     const messages = Array.isArray(gameState.message) ? gameState.message : [];
@@ -155,8 +156,12 @@ export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub 
                 <div className="flex flex-col gap-3">
                     <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Directives</span>
                     <button
+                        disabled={inputLocked}
                         onClick={onWait}
-                        className="w-full flex justify-between items-center px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group"
+                        className={`w-full flex justify-between items-center px-4 py-3 border rounded-xl transition-all group ${inputLocked
+                            ? 'bg-white/[0.03] border-white/5 text-white/30 cursor-not-allowed opacity-50'
+                            : 'bg-white/5 hover:bg-white/10 border-white/10'
+                            }`}
                     >
                         <span className="text-sm font-bold text-white/70">Secure & Wait</span>
                         <span className="text-lg grayscale group-hover:grayscale-0 transition-all">🛡️</span>

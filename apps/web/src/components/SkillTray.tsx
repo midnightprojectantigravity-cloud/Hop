@@ -8,6 +8,7 @@ interface SkillTrayProps {
     onSelectSkill: (skillId: string | null) => void;
     hasSpear: boolean;
     gameState: GameState;
+    inputLocked?: boolean;
 }
 
 export const SkillTray: React.FC<SkillTrayProps> = ({
@@ -15,7 +16,8 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
     selectedSkillId,
     onSelectSkill,
     hasSpear,
-    gameState
+    gameState,
+    inputLocked = false
 }) => {
     // Organize skills by slot
     const slots: SkillSlot[] = ['offensive', 'defensive', 'utility'];
@@ -29,7 +31,7 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                     const isSelected = selectedSkillId === skill.id;
                     const isOnCooldown = skill.currentCooldown > 0;
                     const isSpearSlot = skill.id === 'SPEAR_THROW';
-                    const cannotUse = (isOnCooldown && !isSpearSlot) || (isSpearSlot && !hasSpear);
+                    const cannotUse = inputLocked || (isOnCooldown && !isSpearSlot) || (isSpearSlot && !hasSpear);
 
                     const def = getSkillDefinition(skill.id);
                     const rawName = def?.name || skill.name;

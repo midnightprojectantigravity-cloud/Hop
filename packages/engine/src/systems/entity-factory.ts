@@ -305,6 +305,23 @@ export function createCompanion(config: {
         return entity;
     }
 
+    if (config.companionType === 'skeleton') {
+        return createEntity({
+            id: config.id || `${config.companionType}-${config.ownerId}`,
+            type: 'enemy',
+            subtype: 'skeleton',
+            position: config.position,
+            hp: 2,
+            maxHp: 2,
+            speed: 50,
+            factionId: 'player',
+            skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'],
+            companionOf: config.ownerId,
+            weightClass: 'Standard',
+            trinity: config.trinity,
+        });
+    }
+
     return createEntity({
         id: config.id || `${config.companionType}-${config.ownerId}`,
         type: 'enemy',

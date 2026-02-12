@@ -22,6 +22,7 @@ import { FIREBALL } from './skills/fireball';
 import { FIREWALL } from './skills/firewall';
 import { FIREWALK } from './skills/firewalk';
 import { BOMB_TOSS } from './skills/bomb_toss';
+import { TIME_BOMB } from './skills/time_bomb';
 import { CORPSE_EXPLOSION } from './skills/corpse_explosion';
 import { RAISE_DEAD } from './skills/raise_dead';
 import { SOUL_SWAP } from './skills/soul_swap';
@@ -66,6 +67,7 @@ export const COMPOSITIONAL_SKILLS = {
     FIREWALL,
     FIREWALK,
     BOMB_TOSS,
+    TIME_BOMB,
     CORPSE_EXPLOSION,
     RAISE_DEAD,
     SOUL_SWAP,

@@ -308,6 +308,19 @@ Status: complete; next iterations are calibration/tuning-only unless a release b
   - [x] `docs/BALANCE_BACKLOG.md` and `docs/UPA_GUIDE.md` updated for v1 lock.
   - [x] `docs/NEXT_LEVEL.md` marks MVP Closeout complete and opens calibration-only phase.
 
+### ARC.MVP.PR6 - Replay + Smoothness Hardening
+- Scope:
+  - [x] Preserve replay action history across floor transitions.
+  - [x] Add replay action normalization and diagnostics metadata on save/load.
+  - [x] Surface replay integrity flags in Replay UI (`legacy`, `truncated`, `invalid`).
+  - [x] Reduce board/render churn (`GameBoard` precomputed highlights, memoized `HexTile`/`Entity`).
+  - [x] Reduce VFX cleanup churn in `JuiceManager`.
+  - [x] Add optional FPS/frame-time debug probe (`window.__HOP_DEBUG_PERF = true`).
+- Acceptance:
+  - [x] Long runs replay with full action history (not last-floor only).
+  - [x] Web build passes and replay-related tests pass.
+  - [x] `scenarios_runner` remains green.
+
 ## Working Rules
 - One mechanic slice per PR: rule change + test coverage + telemetry rerun.
 - No new large systems while imbalance backlog is open.

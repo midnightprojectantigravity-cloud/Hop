@@ -29,23 +29,22 @@ const getHexCorners = (size: number): string => {
     return points.join(' ');
 };
 
-// Unique ID generator for SVG defs (avoid conflicts between tiles)
-let tileIdCounter = 0;
-const getTileId = () => `tile-${++tileIdCounter}`;
+const SHOW_DEBUG_HEX_COORDS = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    return Boolean((window as any).__HOP_DEBUG_HEX_COORDS);
+};
 
-// Lava bubble positions (pre-calculated for consistency)
 const LAVA_BUBBLES = [
     { cx: -8, cy: -6, r: 3, delay: 0 },
     { cx: 6, cy: 2, r: 2.5, delay: 0.3 },
-    { cx: -3, cy: 8, r: 2, delay: 0.6 },
-    { cx: 10, cy: -4, r: 2, delay: 0.9 },
+    { cx: -3, cy: 8, r: 2, delay: 0.6 }
 ];
 
-export const HexTile: React.FC<HexTileProps> = ({
+const HexTileComponent: React.FC<HexTileProps> = ({
     hex, onClick, isValidMove, isTargeted, isStairs, isLava, isShrine, isWall, isFire, onMouseEnter
 }) => {
     const { x, y } = hexToPixel(hex, TILE_SIZE);
-    const tileId = React.useMemo(() => getTileId(), []);
+    const showDebugCoords = SHOW_DEBUG_HEX_COORDS();
 
     // Color selection from design doc
     let fill: string = COLORS.floor;
@@ -56,10 +55,10 @@ export const HexTile: React.FC<HexTileProps> = ({
         fill = COLORS.wall;
         stroke = '#1f2937';
     } else if (isLava) {
-        fill = COLORS.lava;
+        fill = '#7f1d1d';
         stroke = '#7f1d1d';
     } else if (isFire) {
-        fill = '#7c2d12'; // Dark orange-red base
+        fill = '#7c2d12';
         stroke = '#ea580c';
     } else if (isStairs) {
         fill = COLORS.portal;
@@ -84,42 +83,6 @@ export const HexTile: React.FC<HexTileProps> = ({
             style={{ cursor }}
             className="hex-tile transition-colors duration-200"
         >
-            {/* SVG Defs for gradients and filters */}
-            <defs>
-                {/* Lava gradient with glow */}
-                {isLava && (
-                    <radialGradient id={`lava-grad-${tileId}`} cx="50%" cy="50%" r="70%">
-                        <stop offset="0%" stopColor="#dc2626" />
-                        <stop offset="60%" stopColor="#991b1b" />
-                        <stop offset="100%" stopColor="#450a0a" />
-                    </radialGradient>
-                )}
-                {/* Fire gradient */}
-                {isFire && (
-                    <radialGradient id={`fire-grad-${tileId}`} cx="50%" cy="50%" r="70%">
-                        <stop offset="0%" stopColor="#ef4444" />
-                        <stop offset="60%" stopColor="#b91c1c" />
-                        <stop offset="100%" stopColor="#7f1d1d" />
-                    </radialGradient>
-                )}
-                {/* Shrine crystal gradient */}
-                {isShrine && (
-                    <linearGradient id={`shrine-grad-${tileId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#fdba74" />
-                        <stop offset="50%" stopColor="#f97316" />
-                        <stop offset="100%" stopColor="#c2410c" />
-                    </linearGradient>
-                )}
-                {/* Floor texture pattern */}
-                {!isWall && !isLava && !isFire && !isStairs && !isShrine && (
-                    <pattern id={`floor-texture-${tileId}`} patternUnits="userSpaceOnUse" width="8" height="8">
-                        <rect width="8" height="8" fill={COLORS.floor} />
-                        <circle cx="2" cy="2" r="0.5" fill="rgba(0,0,0,0.1)" />
-                        <circle cx="6" cy="6" r="0.5" fill="rgba(255,255,255,0.05)" />
-                    </pattern>
-                )}
-            </defs>
-
             {/* Draw Wall with slight offset for 3D look if it's a wall */}
             {isWall && (
                 <polygon
@@ -132,7 +95,7 @@ export const HexTile: React.FC<HexTileProps> = ({
             {/* Main tile polygon */}
             <polygon
                 points={getHexCorners(TILE_SIZE - 2)}
-                fill={isLava ? `url(#lava-grad-${tileId})` : (isFire ? `url(#fire-grad-${tileId})` : fill)}
+                fill={fill}
                 stroke={stroke}
                 strokeWidth={isTargeted || isValidMove ? "3" : "1"}
             />
@@ -158,9 +121,8 @@ export const HexTile: React.FC<HexTileProps> = ({
                         points={getHexCorners(TILE_SIZE - 4)}
                         fill="none"
                         stroke="#f97316"
-                        strokeWidth="2"
-                        opacity="0.5"
-                        style={{ filter: 'blur(2px)' }}
+                        strokeWidth="1"
+                        opacity="0.35"
                     />
                 </g>
             )}
@@ -168,9 +130,8 @@ export const HexTile: React.FC<HexTileProps> = ({
             {/* Fire bubbles/embers */}
             {isFire && (
                 <g className="fire-embers">
-                    <circle cx="-6" cy="4" r="2" fill="#fbbf24" opacity="0.8" style={{ animation: `lavaBubble 1.5s ease-in-out 0s infinite` }} />
-                    <circle cx="4" cy="-6" r="1.5" fill="#fcd34d" opacity="0.8" style={{ animation: `lavaBubble 1.2s ease-in-out 0.5s infinite` }} />
-                    <circle cx="0" cy="0" r="2.5" fill="#f59e0b" opacity="0.6" style={{ animation: `lavaBubble 1.8s ease-in-out 0.2s infinite` }} />
+                    <circle cx="-6" cy="4" r="2" fill="#fbbf24" opacity="0.75" style={{ animation: `lavaBubble 1.6s ease-in-out 0s infinite` }} />
+                    <circle cx="4" cy="-6" r="1.5" fill="#fcd34d" opacity="0.75" style={{ animation: `lavaBubble 1.4s ease-in-out 0.5s infinite` }} />
                 </g>
             )}
 
@@ -180,7 +141,7 @@ export const HexTile: React.FC<HexTileProps> = ({
                     {/* Crystal base */}
                     <polygon
                         points="0,-18 8,-4 5,12 -5,12 -8,-4"
-                        fill={`url(#shrine-grad-${tileId})`}
+                        fill="#f97316"
                         stroke="#fff"
                         strokeWidth="1"
                         opacity="0.9"
@@ -222,18 +183,32 @@ export const HexTile: React.FC<HexTileProps> = ({
                 </g>
             )}
 
-            {/* Debug Coords - optional, let's keep it dim */}
-            <text
-                x="0"
-                y="0"
-                textAnchor="middle"
-                fill="rgba(0,0,0,0.15)"
-                fontSize="8"
-                dy=".3em"
-                pointerEvents="none"
-            >
-                {`${hex.q},${hex.r}`}
-            </text>
+            {showDebugCoords && (
+                <text
+                    x="0"
+                    y="0"
+                    textAnchor="middle"
+                    fill="rgba(0,0,0,0.15)"
+                    fontSize="8"
+                    dy=".3em"
+                    pointerEvents="none"
+                >
+                    {`${hex.q},${hex.r}`}
+                </text>
+            )}
         </g>
     );
 };
+
+export const HexTile = React.memo(HexTileComponent, (prev, next) => {
+    return prev.hex.q === next.hex.q
+        && prev.hex.r === next.hex.r
+        && prev.hex.s === next.hex.s
+        && prev.isValidMove === next.isValidMove
+        && prev.isTargeted === next.isTargeted
+        && prev.isStairs === next.isStairs
+        && prev.isLava === next.isLava
+        && prev.isShrine === next.isShrine
+        && prev.isWall === next.isWall
+        && prev.isFire === next.isFire;
+});

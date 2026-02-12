@@ -5,7 +5,7 @@
  */
 import type { GameState, Action, Entity, AtomicEffect } from './types';
 import { hexEquals, getNeighbors } from './hex';
-import { resolveTelegraphedAttacks, resolveSingleEnemyTurn } from './systems/combat';
+import { resolveTelegraphedAttacks } from './systems/combat';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
 import { checkShrine, checkStairs, getEnemyAt } from './helpers';
 import { generateDungeon, generateEnemies, getFloorTheme } from './systems/map';
@@ -298,27 +298,6 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
             continue;
         }
 
-        // Bombs are autonomous countdown entities and must tick every turn.
-        if (actorId !== 'player' && activeActor.subtype === 'bomb') {
-            const turnStartPosition = getTurnStartPosition(curState, actorId) || activeActor.position;
-            const bombResult = resolveSingleEnemyTurn(curState, activeActor, turnStartPosition);
-            curState = bombResult.state;
-            messages.push(...bombResult.messages);
-
-            if (bombResult.isDead) {
-                curState = {
-                    ...curState,
-                    initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId),
-                };
-            } else {
-                curState = {
-                    ...curState,
-                    initiativeQueue: endActorTurn(curState, actorId),
-                };
-            }
-            continue;
-        }
-
         // 4. Resolve Telegraphs (Environment/Delayed Skills) - Mostly for Player/Enemies interaction
         // Note: original code only checked telegraphs for enemy actors? Check if player needs this.
         // Assuming environment affects everyone.
@@ -407,6 +386,22 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         // Success Path
         curState = nextState;
         messages.push(...tacticalMessages);
+
+        // Preserve bomber cast cadence until enemy skill cooldowns are fully unified.
+        if (actorId !== 'player') {
+            const actingEnemy = curState.enemies.find(e => e.id === actorId);
+            if (actingEnemy?.subtype === 'bomber') {
+                const nextCooldown = intent.skillId === 'BOMB_TOSS'
+                    ? 2
+                    : Math.max(0, (actingEnemy.actionCooldown ?? 0) - 1);
+                if (actingEnemy.actionCooldown !== nextCooldown) {
+                    curState = {
+                        ...curState,
+                        enemies: curState.enemies.map(e => e.id === actorId ? { ...e, actionCooldown: nextCooldown } : e)
+                    };
+                }
+            }
+        }
 
         // Check Death
         const postActionActor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);

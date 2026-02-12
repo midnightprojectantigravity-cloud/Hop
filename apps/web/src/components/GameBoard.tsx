@@ -1,7 +1,7 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import type { GameState, Point } from '@hop/engine';
 import {
-    hexDistance, hexEquals, isTileInDiamond, hexToPixel,
+    isTileInDiamond, hexToPixel,
     TILE_SIZE, SkillRegistry, pointToKey, UnifiedTileService
 } from '@hop/engine';
 import { HexTile } from './HexTile';
@@ -21,6 +21,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
     const [isShaking, setIsShaking] = useState(false);
     const [hoveredTile, setHoveredTile] = useState<Point | null>(null);
     const traceCacheRef = useRef<Record<string, any>>({});
+    const playerPos = gameState.player.position;
 
     // Filter cells based on dynamic diamond geometry
     const cells = useMemo(() => {
@@ -80,41 +81,105 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
             const trace = ev.payload;
             if (trace?.actorId) {
                 out[trace.actorId] = trace;
-                traceCacheRef.current[trace.actorId] = trace; // PERSIST THE TRACE
             }
         }
         return out;
     }, [gameState.visualEvents]);
 
-    const movementHighlightKeys = useMemo(() => {
-        if (!showMovementRange || selectedSkillId) return new Set<string>();
-        const keys = new Set<string>();
-        const movementSkillIds = ['BASIC_MOVE', 'DASH'];
+    const movementTargets = useMemo(() => {
+        if (!showMovementRange || selectedSkillId) return [] as Point[];
+
+        const movementSkillIds = ['BASIC_MOVE', 'DASH'] as const;
+        const playerSkillIds = new Set(gameState.player.activeSkills.map(s => s.id));
+        const validSet = new Set<string>();
+        const results: Point[] = [];
+
         for (const id of movementSkillIds) {
-            if (!gameState.player.activeSkills.some(s => s.id === id)) continue;
+            if (!playerSkillIds.has(id)) continue;
             const def = SkillRegistry.get(id);
             if (!def?.getValidTargets) continue;
-            const validTargets = def.getValidTargets(gameState, gameState.player.position);
-            for (const t of validTargets) keys.add(pointToKey(t));
+            const targets = def.getValidTargets(gameState, playerPos);
+            for (const t of targets) {
+                const key = pointToKey(t);
+                if (!validSet.has(key)) {
+                    validSet.add(key);
+                    results.push(t);
+                }
+            }
         }
-        return keys;
-    }, [showMovementRange, selectedSkillId, gameState]);
+        return results;
+    }, [showMovementRange, selectedSkillId, gameState, playerPos]);
 
-    const skillHighlightKeys = useMemo(() => {
-        if (!selectedSkillId) return new Set<string>();
+    const movementTargetSet = useMemo(() => {
+        const set = new Set<string>();
+        for (const p of movementTargets) set.add(pointToKey(p));
+        return set;
+    }, [movementTargets]);
+
+    const hasPrimaryMovementSkills = useMemo(
+        () => gameState.player.activeSkills.some(s => s.id === 'BASIC_MOVE' || s.id === 'DASH'),
+        [gameState.player.activeSkills]
+    );
+
+    const stairsKey = useMemo(() => pointToKey(gameState.stairsPosition), [gameState.stairsPosition]);
+    const shrineKey = useMemo(
+        () => (gameState.shrinePosition ? pointToKey(gameState.shrinePosition) : null),
+        [gameState.shrinePosition]
+    );
+
+    const fallbackNeighborSet = useMemo(() => {
+        const neighbors = [
+            { q: playerPos.q + 1, r: playerPos.r, s: playerPos.s - 1 },
+            { q: playerPos.q + 1, r: playerPos.r - 1, s: playerPos.s },
+            { q: playerPos.q, r: playerPos.r - 1, s: playerPos.s + 1 },
+            { q: playerPos.q - 1, r: playerPos.r, s: playerPos.s + 1 },
+            { q: playerPos.q - 1, r: playerPos.r + 1, s: playerPos.s },
+            { q: playerPos.q, r: playerPos.r + 1, s: playerPos.s - 1 }
+        ];
+        const set = new Set<string>();
+        for (const n of neighbors) {
+            if (isTileInDiamond(n.q, n.r, gameState.gridWidth, gameState.gridHeight)) {
+                set.add(pointToKey(n));
+            }
+        }
+        return set;
+    }, [playerPos, gameState.gridWidth, gameState.gridHeight]);
+
+    const selectedSkillTargetSet = useMemo(() => {
+        const set = new Set<string>();
+        if (!selectedSkillId) return set;
         const def = SkillRegistry.get(selectedSkillId);
-        if (!def?.getValidTargets) return new Set<string>();
-        const validTargets = def.getValidTargets(gameState, gameState.player.position);
-        return new Set(validTargets.map(pointToKey));
-    }, [selectedSkillId, gameState]);
+        if (!def?.getValidTargets) return set;
+        const targets = def.getValidTargets(gameState, playerPos);
+        for (const t of targets) set.add(pointToKey(t));
+        return set;
+    }, [selectedSkillId, gameState, playerPos]);
 
-    const targetedKeys = useMemo(() => {
-        const keys = new Set<string>();
+    const targetedIntentSet = useMemo(() => {
+        const set = new Set<string>();
         for (const e of gameState.enemies) {
-            if (e.intentPosition) keys.add(pointToKey(e.intentPosition));
+            if (e.intentPosition) set.add(pointToKey(e.intentPosition));
         }
-        return keys;
+        return set;
     }, [gameState.enemies]);
+
+    const tileVisualFlags = useMemo(() => {
+        const out = new Map<string, { isWall: boolean; isLava: boolean; isFire: boolean }>();
+        for (const hex of cells) {
+            const key = pointToKey(hex);
+            const traits = UnifiedTileService.getTraitsAt(gameState, hex);
+            out.set(key, {
+                isWall: traits.has('BLOCKS_MOVEMENT') && traits.has('BLOCKS_LOS'),
+                isLava: traits.has('LAVA') || (traits.has('HAZARDOUS') && traits.has('LIQUID')),
+                isFire: traits.has('FIRE')
+            });
+        }
+        return out;
+    }, [cells, gameState.tiles]);
+
+    const handleHoverTile = useCallback((hex: Point) => {
+        setHoveredTile(hex);
+    }, []);
 
     useEffect(() => {
         const next = { ...traceCacheRef.current };
@@ -146,29 +211,26 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                         hoveredTile={hoveredTile}
                     />
                     {cells.map((hex) => {
-                        // FIXED: Use pointToKey for O(1) lookup in the Unified Tile Service
                         const tileKey = pointToKey(hex);
+                        const flags = tileVisualFlags.get(tileKey) || { isWall: false, isLava: false, isFire: false };
+                        const isWall = flags.isWall;
+                        const isLava = flags.isLava;
+                        const isFire = flags.isFire;
 
-                        // Trait-based detection via UnifiedTileService
-                        const traits = UnifiedTileService.getTraitsAt(gameState, hex);
-                        const isWall = traits.has('BLOCKS_MOVEMENT') && traits.has('BLOCKS_LOS');
-                        const isLava = traits.has('LAVA') || (traits.has('HAZARDOUS') && traits.has('LIQUID'));
-                        const isFire = traits.has('FIRE');
-
-                        const dist = hexDistance(hex, gameState.player.position);
-
-                        const isMoveHighlight = movementHighlightKeys.has(tileKey)
-                            || (showMovementRange
+                        const isMoveHighlight =
+                            (showMovementRange && !selectedSkillId && movementTargetSet.has(tileKey))
+                            || (
+                                showMovementRange
                                 && !selectedSkillId
-                                && dist === 1
+                                && !hasPrimaryMovementSkills
+                                && fallbackNeighborSet.has(tileKey)
                                 && !isWall
-                                && !gameState.player.activeSkills.some(s => ['BASIC_MOVE', 'DASH'].includes(s.id)));
-                        const isSkillHighlight = skillHighlightKeys.has(tileKey);
-
+                            );
+                        const isSkillHighlight = !!selectedSkillId && selectedSkillTargetSet.has(tileKey);
                         const showRangeHighlight = isSkillHighlight || isMoveHighlight;
-                        const isTargeted = targetedKeys.has(tileKey);
-                        const isStairs = hexEquals(hex, gameState.stairsPosition);
-                        const isShrine = gameState.shrinePosition && hexEquals(hex, gameState.shrinePosition);
+                        const isTargeted = targetedIntentSet.has(tileKey);
+                        const isStairs = tileKey === stairsKey;
+                        const isShrine = shrineKey ? tileKey === shrineKey : false;
 
                         return (
                             <HexTile
@@ -182,7 +244,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                                 isFire={isFire}
                                 isShrine={isShrine}
                                 isWall={isWall}
-                                onMouseEnter={setHoveredTile}
+                                onMouseEnter={handleHoverTile}
                             />
                         );
                     })}

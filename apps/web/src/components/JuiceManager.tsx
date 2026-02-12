@@ -27,15 +27,27 @@ const resolveEventPoint = (payload: any): Point | null => {
     return null;
 };
 
+const getEffectLifetimeMs = (effectType: JuiceEffect['type']): number => {
+    if (effectType === 'impact') return 400;
+    if (effectType === 'combat_text') return 1000;
+    if (effectType === 'flash') return 300;
+    if (effectType === 'spear_trail') return 500;
+    if (effectType === 'vaporize') return 600;
+    if (effectType === 'lava_ripple') return 800;
+    if (effectType === 'explosion_ring') return 1000;
+    return 2000;
+};
+
 export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timelineEvents = [], onBusyStateChange }) => {
     const [effects, setEffects] = useState<JuiceEffect[]>([]);
-    const eventHash = useRef<string>('');
-    const processedTimelineIds = useRef<Set<string>>(new Set());
+    const processedTimelineCount = useRef(0);
+    const processedVisualCount = useRef(0);
     const timelineQueue = useRef<TimelineEvent[]>([]);
     const isRunningQueue = useRef(false);
     const [timelineBusy, setTimelineBusy] = useState(false);
     const prefersReducedMotion = useRef(false);
     const movementDurationByActor = useRef<Map<string, number>>(new Map());
+    const cleanupTimerRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -105,10 +117,13 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
 
     useEffect(() => {
         if (!timelineEvents.length) return;
-        const newEvents = timelineEvents.filter(ev => !processedTimelineIds.current.has(ev.id));
+        if (timelineEvents.length < processedTimelineCount.current) {
+            processedTimelineCount.current = 0;
+        }
+        const newEvents = timelineEvents.slice(processedTimelineCount.current);
         if (!newEvents.length) return;
 
-        newEvents.forEach(ev => processedTimelineIds.current.add(ev.id));
+        processedTimelineCount.current = timelineEvents.length;
         timelineQueue.current.push(...newEvents);
 
         if (isRunningQueue.current) return;
@@ -149,16 +164,24 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
 
     // Fallback mode for legacy visual events when no timeline is present
     useEffect(() => {
-        if (timelineEvents.length > 0) return;
-        const hash = JSON.stringify(visualEvents);
-        if (hash === eventHash.current) return;
-        eventHash.current = hash;
+        if (timelineEvents.length > 0) {
+            processedVisualCount.current = visualEvents.length;
+            return;
+        }
+        if (visualEvents.length < processedVisualCount.current) {
+            processedVisualCount.current = 0;
+        }
+
+        const startIndex = processedVisualCount.current;
+        if (startIndex >= visualEvents.length) return;
+        const incoming = visualEvents.slice(startIndex);
+        processedVisualCount.current = visualEvents.length;
 
         const newEffects: JuiceEffect[] = [];
         const now = Date.now();
 
-        visualEvents.forEach((ev, idx) => {
-            const id = `juice-${now}-${idx}`;
+        incoming.forEach((ev, idx) => {
+            const id = `juice-${now}-${startIndex + idx}`;
             if (ev.type === 'vfx' && ev.payload?.type === 'impact') {
                 if (ev.payload.position) {
                     newEffects.push({
@@ -224,22 +247,44 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
 
     // Cleanup finished effects
     useEffect(() => {
-        const interval = setInterval(() => {
-            const now = Date.now();
-            setEffects(prev => prev.filter(e => {
-                const age = now - e.startTime;
-                if (e.type === 'impact') return age < 400;
-                if (e.type === 'combat_text') return age < 1000;
-                if (e.type === 'flash') return age < 300;
-                if (e.type === 'spear_trail') return age < 500;
-                if (e.type === 'vaporize') return age < 600;
-                if (e.type === 'lava_ripple') return age < 800;
-                if (e.type === 'explosion_ring') return age < 1000;
-                return age < 2000;
-            }));
-        }, 100);
-        return () => clearInterval(interval);
-    }, []);
+        if (cleanupTimerRef.current !== null) {
+            window.clearTimeout(cleanupTimerRef.current);
+            cleanupTimerRef.current = null;
+        }
+
+        if (effects.length === 0) return;
+
+        const now = Date.now();
+        let nextExpiryMs = Infinity;
+        for (const effect of effects) {
+            const age = now - effect.startTime;
+            const remaining = getEffectLifetimeMs(effect.type) - age;
+            if (remaining > 0 && remaining < nextExpiryMs) {
+                nextExpiryMs = remaining;
+            }
+        }
+
+        if (!Number.isFinite(nextExpiryMs)) {
+            setEffects([]);
+            return;
+        }
+
+        const delay = Math.max(16, Math.min(180, Math.floor(nextExpiryMs)));
+        cleanupTimerRef.current = window.setTimeout(() => {
+            const tickNow = Date.now();
+            setEffects(prev => {
+                const next = prev.filter(e => (tickNow - e.startTime) < getEffectLifetimeMs(e.type));
+                return next.length === prev.length ? prev : next;
+            });
+        }, delay);
+
+        return () => {
+            if (cleanupTimerRef.current !== null) {
+                window.clearTimeout(cleanupTimerRef.current);
+                cleanupTimerRef.current = null;
+            }
+        };
+    }, [effects]);
 
     return (
         <g style={{ pointerEvents: 'none' }}>

@@ -61,6 +61,7 @@ export const STATUS_REGISTRY: Record<string, { tickWindow: 'START_OF_TURN' | 'EN
     poisoned: { tickWindow: 'START_OF_TURN' },
     armored: { tickWindow: 'END_OF_TURN' },
     hidden: { tickWindow: 'END_OF_TURN' },
+    time_bomb: { tickWindow: 'END_OF_TURN' },
 };
 
 // Enemy stats with simplified tiers

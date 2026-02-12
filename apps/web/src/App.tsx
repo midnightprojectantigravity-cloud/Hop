@@ -95,6 +95,23 @@ import { Hub } from './components/Hub';
 import { ArcadeHub } from './components/ArcadeHub';
 
 function App() {
+  const REPLAY_ALLOWED_ACTIONS = new Set([
+    'MOVE', 'THROW_SPEAR', 'WAIT', 'USE_SKILL', 'JUMP', 'SHIELD_BASH', 'ATTACK', 'LEAP',
+    'ADVANCE_TURN', 'SELECT_UPGRADE', 'RESOLVE_PENDING'
+  ]);
+  const normalizeReplayActions = (actions: any[]): Action[] => {
+    if (!Array.isArray(actions)) return [];
+    return actions.filter(a => a && typeof a.type === 'string' && REPLAY_ALLOWED_ACTIONS.has(a.type)) as Action[];
+  };
+  const buildReplayDiagnostics = (actions: Action[], floor: number) => {
+    const types = new Set(actions.map(a => a.type));
+    const hasTurnAdvance = types.has('ADVANCE_TURN');
+    const hasPendingResolve = types.has('RESOLVE_PENDING');
+    const actionCount = actions.length;
+    const suspiciouslyShort = floor >= 5 && actionCount < Math.max(25, floor * 4);
+    return { actionCount, hasTurnAdvance, hasPendingResolve, suspiciouslyShort };
+  };
+
   const getVisualEventsSignature = (events: Array<{ type: string; payload: any }> | undefined): string => {
     const arr = events || [];
     const last = arr.length > 0 ? arr[arr.length - 1] : undefined;
@@ -198,8 +215,10 @@ function App() {
     return generateHubState();
   });
 
-  // Add this inside the App component, below your useReducer line
+  const isDebugQueryEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_QUERY);
+
   useEffect(() => {
+    if (!isDebugQueryEnabled) return;
     (window as any).state = gameState;
     (window as any).QUERY = {
       // Direct tile lookup
@@ -224,14 +243,34 @@ function App() {
       // NEW: See all keys currently in the map to spot patterns
       dumpKeys: () => Array.from(gameState.tiles.keys())
     };
-  }, [gameState]);
+  }, [gameState, isDebugQueryEnabled]);
+
+  const persistSaveJobRef = useRef<number | null>(null);
+  const lastPersistedSignatureRef = useRef<string>('');
+  const isSaveEligible = gameState.gameStatus === 'playing' || gameState.gameStatus === 'choosing_upgrade';
+  const saveSignature = `${gameState.gameStatus}|${gameState.floor}|${gameState.turnNumber}|${gameState.player.hp}|${pointToKey(gameState.player.position)}|${gameState.enemies.length}|${gameState.actionLog?.length ?? 0}|${gameState.message?.length ?? 0}`;
 
   useEffect(() => {
-    if (!(gameState.gameStatus === 'playing' || gameState.gameStatus === 'choosing_upgrade')) {
+    if (persistSaveJobRef.current !== null) {
+      if (typeof (window as any).cancelIdleCallback === 'function') {
+        (window as any).cancelIdleCallback(persistSaveJobRef.current);
+      } else {
+        window.clearTimeout(persistSaveJobRef.current);
+      }
+      persistSaveJobRef.current = null;
+    }
+
+    if (!isSaveEligible) {
+      lastPersistedSignatureRef.current = '';
+      localStorage.removeItem('hop_save');
       return;
     }
 
-    const timer = window.setTimeout(() => {
+    if (saveSignature === lastPersistedSignatureRef.current) {
+      return;
+    }
+
+    const persist = () => {
       const stateToSave = {
         ...gameState,
         tiles: Array.from(gameState.tiles.entries()).map(([key, tile]) => [
@@ -247,10 +286,27 @@ function App() {
         JSON.stringify(obj, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
 
       localStorage.setItem('hop_save', safeStringify(stateToSave));
-    }, 300);
+      lastPersistedSignatureRef.current = saveSignature;
+      persistSaveJobRef.current = null;
+    };
 
-    return () => window.clearTimeout(timer);
-  }, [gameState]);
+    if (typeof (window as any).requestIdleCallback === 'function') {
+      persistSaveJobRef.current = (window as any).requestIdleCallback(persist, { timeout: 500 });
+    } else {
+      persistSaveJobRef.current = window.setTimeout(persist, 120);
+    }
+
+    return () => {
+      if (persistSaveJobRef.current !== null) {
+        if (typeof (window as any).cancelIdleCallback === 'function') {
+          (window as any).cancelIdleCallback(persistSaveJobRef.current);
+        } else {
+          window.clearTimeout(persistSaveJobRef.current);
+        }
+        persistSaveJobRef.current = null;
+      }
+    };
+  }, [gameState, isSaveEligible, saveSignature]);
 
   const [isReplayMode, setIsReplayMode] = useState(false);
   const [replayActions, setReplayActions] = useState<Action[]>([]);
@@ -261,16 +317,61 @@ function App() {
   useEffect(() => {
     if (isReplayMode) return;
     if (gameState.gameStatus !== 'playing') return;
-    const playerTurn = isPlayerTurn(gameState);
-    if (!playerTurn) {
-      const timer = setTimeout(() => dispatch({ type: 'ADVANCE_TURN' }), 400);
-      return () => clearTimeout(timer);
-    }
-  }, [gameState, isReplayMode]);
+    if (isPlayerTurn(gameState)) return;
+
+    // Persistent turn pump: keep advancing non-player actors even if one dispatch
+    // returns an equivalent state and would otherwise stop one-shot timers.
+    const interval = window.setInterval(() => {
+      dispatch({ type: 'ADVANCE_TURN' });
+    }, 380);
+    return () => window.clearInterval(interval);
+  }, [isReplayMode, gameState.gameStatus, gameState.turnNumber, gameState.pendingStatus, gameState.initiativeQueue, gameState.player.id, gameState.enemies]);
+
+  useEffect(() => {
+    const enabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_PERF);
+    if (!enabled) return;
+    let raf = 0;
+    let last = performance.now();
+    let frames = 0;
+    let totalMs = 0;
+    let windowStart = last;
+    const tick = (ts: number) => {
+      const dt = ts - last;
+      last = ts;
+      frames++;
+      totalMs += dt;
+      if (ts - windowStart >= 2000) {
+        const avgMs = totalMs / Math.max(1, frames);
+        const fps = 1000 / Math.max(1, avgMs);
+        console.log('[HOP_PERF]', { fps: Number(fps.toFixed(1)), avgFrameMs: Number(avgMs.toFixed(2)), frames });
+        windowStart = ts;
+        frames = 0;
+        totalMs = 0;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [gameState.gameStatus, isReplayMode]);
 
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [showMovementRange, setShowMovementRange] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [postCommitInputLock, setPostCommitInputLock] = useState(false);
+  const commitLockTurnRef = useRef<number | null>(null);
+  const commitLockActionLenRef = useRef<number | null>(null);
+  const postCommitWatchdogRef = useRef<number | null>(null);
+  const isPlayerControlWindow = gameState.gameStatus === 'playing' && !gameState.pendingStatus && isPlayerTurn(gameState);
+  const isInputLocked = isReplayMode || isBusy || !isPlayerControlWindow || postCommitInputLock;
+  const clearPostCommitLock = () => {
+    setPostCommitInputLock(false);
+    commitLockTurnRef.current = null;
+    commitLockActionLenRef.current = null;
+    if (postCommitWatchdogRef.current !== null) {
+      window.clearTimeout(postCommitWatchdogRef.current);
+      postCommitWatchdogRef.current = null;
+    }
+  };
 
   const lastProcessedEventsHash = useRef('');
   const currentEventsHash = getVisualEventsSignature(gameState.visualEvents);
@@ -310,6 +411,55 @@ function App() {
     }
   }, [gameState.pendingStatus, gameState.timelineEvents, isBusy, currentEventsHash, currentTimelineHash]);
 
+  useEffect(() => {
+    if (!postCommitInputLock) return;
+
+    if (isReplayMode || gameState.gameStatus !== 'playing') {
+      clearPostCommitLock();
+      return;
+    }
+
+    const lockTurn = commitLockTurnRef.current;
+    const expectedActionLen = commitLockActionLenRef.current;
+    const turnAdvanced = lockTurn !== null ? gameState.turnNumber > lockTurn : false;
+    const actionCommitted = expectedActionLen !== null ? (gameState.actionLog?.length ?? 0) >= expectedActionLen : false;
+    const queueResolved = isPlayerTurn(gameState) && !isBusy && !gameState.pendingStatus;
+
+    // Release only when the committed action has been observed and the queue
+    // has returned control to the player (same turn or next turn).
+    if (queueResolved && (turnAdvanced || actionCommitted)) {
+      clearPostCommitLock();
+    }
+  }, [postCommitInputLock, isReplayMode, gameState.gameStatus, gameState.turnNumber, gameState.pendingStatus, gameState.initiativeQueue, gameState.actionLog, isBusy, gameState.player.id, gameState.enemies]);
+
+  useEffect(() => {
+    if (!postCommitInputLock) return;
+    if (postCommitWatchdogRef.current !== null) {
+      window.clearTimeout(postCommitWatchdogRef.current);
+    }
+    // Fail-safe: if lock remains far beyond normal turn resolution, release lock
+    // and emit a diagnostic so we never hard-freeze input.
+    postCommitWatchdogRef.current = window.setTimeout(() => {
+      if (postCommitInputLock) {
+        console.error('[HOP_INPUT_LOCK] Watchdog released stuck post-commit lock', {
+          turnNumber: gameState.turnNumber,
+          pendingStatus: gameState.pendingStatus?.status,
+          playerTurn: isPlayerTurn(gameState),
+          isBusy,
+          actionLogLength: gameState.actionLog?.length ?? 0
+        });
+        clearPostCommitLock();
+      }
+    }, 8000);
+
+    return () => {
+      if (postCommitWatchdogRef.current !== null) {
+        window.clearTimeout(postCommitWatchdogRef.current);
+        postCommitWatchdogRef.current = null;
+      }
+    };
+  }, [postCommitInputLock, gameState.turnNumber, gameState.pendingStatus, gameState.actionLog, isBusy, gameState.initiativeQueue, gameState.player.id, gameState.enemies]);
+
   const [tutorialInstructions, setTutorialInstructions] = useState<string | null>(null);
   const [floorIntro, setFloorIntro] = useState<{ floor: number; theme: string } | null>(null);
 
@@ -334,9 +484,25 @@ function App() {
     }
   }, [gameState.gameStatus]);
 
+  const armPostCommitLock = () => {
+    if (postCommitWatchdogRef.current !== null) {
+      window.clearTimeout(postCommitWatchdogRef.current);
+      postCommitWatchdogRef.current = null;
+    }
+    commitLockTurnRef.current = gameState.turnNumber;
+    commitLockActionLenRef.current = (gameState.actionLog?.length ?? 0) + 1;
+    setPostCommitInputLock(true);
+  };
+
+  const handleSelectSkill = (skillId: string | null) => {
+    if (isInputLocked) return;
+    setSelectedSkillId(skillId);
+  };
+
   const handleTileClick = (target: Point) => {
-    if (isReplayMode || isBusy) return; // Block during replay or animations
+    if (isInputLocked) return;
     if (selectedSkillId) {
+      armPostCommitLock();
       dispatch({ type: 'USE_SKILL', payload: { skillId: selectedSkillId, target } });
       setSelectedSkillId(null);
       return;
@@ -345,6 +511,7 @@ function App() {
       setShowMovementRange(!showMovementRange);
       return;
     }
+    armPostCommitLock();
     dispatch({ type: 'MOVE', payload: target });
     setShowMovementRange(false);
   };
@@ -355,12 +522,24 @@ function App() {
   };
 
   const handleReset = () => { dispatch({ type: 'RESET' }); setSelectedSkillId(null); setIsReplayMode(false); };
-  const handleWait = () => { if (isReplayMode || isBusy) return; dispatch({ type: 'WAIT' }); setSelectedSkillId(null); };
+  const handleWait = () => {
+    if (isInputLocked) return;
+    armPostCommitLock();
+    dispatch({ type: 'WAIT' });
+    setSelectedSkillId(null);
+  };
 
   const startReplay = (r: ReplayRecord) => {
     if (!r) return;
+    const normalizedActions = normalizeReplayActions(r.actions || []);
+    if (normalizedActions.length !== (r.actions || []).length) {
+      console.warn('[HOP_REPLAY] Dropped unsupported actions from replay', {
+        original: (r.actions || []).length,
+        kept: normalizedActions.length
+      });
+    }
     setIsReplayMode(true);
-    setReplayActions(r.actions);
+    setReplayActions(normalizedActions);
     setReplayActive(false); // Start paused
     replayIndexRef.current = 0;
 
@@ -403,14 +582,18 @@ function App() {
       // Record to local storage
       const seed = gameState.initialSeed ?? gameState.rngSeed ?? '0';
       const score = gameState.completedRun?.score || (gameState.player.hp || 0) + (gameState.floor || 0) * 100;
+      const normalizedActions = normalizeReplayActions(gameState.actionLog || []);
+      const diagnostics = buildReplayDiagnostics(normalizedActions, gameState.floor || 0);
       const rec: ReplayRecord = {
         id: `run-${Date.now()}`,
         seed,
         loadoutId: gameState.player.archetype,
-        actions: gameState.actionLog || [],
+        actions: normalizedActions,
         score,
         floor: gameState.floor,
         date: new Date().toISOString(),
+        replayVersion: 2,
+        diagnostics
       };
 
       const raw = localStorage.getItem('hop_replays_v1');
@@ -429,7 +612,9 @@ function App() {
         date: rec.date,
         seed: rec.seed,
         loadoutId: rec.loadoutId,
-        actions: rec.actions // Store actions in LB for easy replay? Or just use replays list.
+        actions: rec.actions,
+        replayVersion: rec.replayVersion,
+        diagnostics: rec.diagnostics
       });
       lb.sort((a, b) => b.score - a.score);
       lb = lb.slice(0, 5);
@@ -494,7 +679,7 @@ function App() {
     <div className="flex w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
       {/* Left Sidebar: HUD & Tactical Log */}
       <aside className="w-80 border-r border-white/5 bg-[#030712] flex flex-col z-20 overflow-y-auto">
-        <UI gameState={gameState} onReset={handleReset} onWait={handleWait} onExitToHub={handleExitToHub} />
+        <UI gameState={gameState} onReset={handleReset} onWait={handleWait} onExitToHub={handleExitToHub} inputLocked={isInputLocked} />
       </aside>
 
       {/* Center: The Map (Full Height) */}
@@ -508,6 +693,13 @@ function App() {
               showMovementRange={showMovementRange}
               onBusyStateChange={setIsBusy}
             />
+            {isInputLocked && gameState.gameStatus === 'playing' && (
+              <div className="absolute inset-0 z-40 pointer-events-auto">
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-black/55 border border-white/15 text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">
+                  Resolving Turn...
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -520,9 +712,10 @@ function App() {
             <SkillTray
               skills={gameState.player.activeSkills || []}
               selectedSkillId={selectedSkillId}
-              onSelectSkill={setSelectedSkillId}
+              onSelectSkill={handleSelectSkill}
               hasSpear={gameState.hasSpear}
               gameState={gameState}
+              inputLocked={isInputLocked}
             />
           </div>
 

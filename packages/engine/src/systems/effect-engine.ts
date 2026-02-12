@@ -307,6 +307,20 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     }
                 }
 
+                const existingVisualEvents = [...(nextState.visualEvents || [])];
+                const isKineticTransfer = Boolean((effect as any).ignoreCollision || effect.isFling);
+                const priorKineticSlides = isKineticTransfer
+                    ? existingVisualEvents.reduce((count, ev) => {
+                        if (ev.type !== 'kinetic_trace') return count;
+                        const payload = ev.payload as MovementTrace | undefined;
+                        if (!payload) return count;
+                        return (payload.movementType ?? 'slide') === 'slide' ? count + 1 : count;
+                    }, 0)
+                    : 0;
+                const traceStartDelayMs = isTeleportMovement
+                    ? 0
+                    : (isKineticTransfer ? Math.min(640, priorKineticSlides * 90) : 0);
+
                 const trace: MovementTrace = {
                     actorId: targetActorId,
                     origin,
@@ -314,13 +328,55 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     destination: finalDestination,
                     movementType: isTeleportMovement ? 'teleport' : 'slide',
                     durationMs: effect.animationDuration ?? (isTeleportMovement ? 180 : Math.max(120, (effect.path?.length || getHexLine(origin, finalDestination).length) * 110)),
+                    startDelayMs: traceStartDelayMs,
                     wasLethal: nextState.tiles.get(pointToKey(finalDestination))?.traits.has('HAZARDOUS') || false
                 };
 
-                nextState.visualEvents = [...(nextState.visualEvents || []), {
-                    type: 'kinetic_trace' as const,
-                    payload: trace
-                }];
+                // Coalesce chained slide traces for the same actor into one continuous path.
+                // This preserves step-by-step slide playback for kinetic pulses that emit
+                // multiple Displacement effects in a single resolution pass.
+                const visualEvents = existingVisualEvents;
+                if (!isTeleportMovement) {
+                    let merged = false;
+                    for (let i = visualEvents.length - 1; i >= 0; i--) {
+                        const ev = visualEvents[i];
+                        if (ev.type !== 'kinetic_trace') continue;
+                        const prev = ev.payload as MovementTrace | undefined;
+                        if (!prev || prev.actorId !== targetActorId) continue;
+
+                        if ((prev.movementType ?? 'slide') === 'slide' && hexEquals(prev.destination, trace.origin)) {
+                            const prevPath = (prev.path && prev.path.length > 0) ? prev.path : [prev.origin, prev.destination];
+                            const nextPath = (trace.path && trace.path.length > 0) ? trace.path : [trace.origin, trace.destination];
+                            const mergedPath = [...prevPath, ...nextPath.slice(1)];
+                            visualEvents[i] = {
+                                type: 'kinetic_trace' as const,
+                                payload: {
+                                    ...trace,
+                                    origin: prev.origin,
+                                    path: mergedPath,
+                                    durationMs: (prev.durationMs || 0) + (trace.durationMs || 0),
+                                    startDelayMs: Math.min(prev.startDelayMs ?? traceStartDelayMs, traceStartDelayMs),
+                                    movementType: 'slide' as const,
+                                    wasLethal: Boolean(prev.wasLethal || trace.wasLethal),
+                                } as MovementTrace
+                            };
+                            merged = true;
+                        }
+                        break;
+                    }
+                    if (!merged) {
+                        visualEvents.push({
+                            type: 'kinetic_trace' as const,
+                            payload: trace
+                        });
+                    }
+                } else {
+                    visualEvents.push({
+                        type: 'kinetic_trace' as const,
+                        payload: trace
+                    });
+                }
+                nextState.visualEvents = visualEvents;
 
                 if (targetActorId === nextState.player.id) {
                     nextState.player = {
@@ -726,21 +782,24 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     + (nextState.actionLog?.length ?? 0)
                     + nextState.enemies.length;
                 const bombId = `bomb-${stableIdFromSeed(seed, counter, 8, 'bomb')}`;
-                const bomb: Actor = {
-                    ...createEntity({
-                        id: bombId,
-                        type: 'enemy',
-                        subtype: 'bomb',
-                        factionId: 'enemy',
-                        position: effect.position,
-                        hp: 1,
-                        maxHp: 1,
-                        speed: 10,
-                        skills: [],
-                        weightClass: 'Standard',
-                    }),
-                    actionCooldown: 2,
-                };
+                const bomb: Actor = createEntity({
+                    id: bombId,
+                    type: 'enemy',
+                    subtype: 'bomb',
+                    factionId: 'enemy',
+                    position: effect.position,
+                    speed: 10,
+                    skills: ['TIME_BOMB'],
+                    weightClass: 'Standard',
+                });
+                bomb.statusEffects = [
+                    {
+                        id: 'TIME_BOMB',
+                        type: 'time_bomb',
+                        duration: 2,
+                        tickWindow: 'END_OF_TURN',
+                    },
+                ];
                 nextState.enemies = [...nextState.enemies, bomb];
             } else if (effect.itemType === 'shield') {
                 nextState.shieldPosition = effect.position;

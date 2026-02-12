@@ -2,10 +2,11 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getActorAt } from '../helpers';
 import { validateRange } from '../systems/validation';
 import { UnifiedTileService } from '../systems/unified-tile-service';
+import { createEntity } from '../systems/entity-factory';
 
 /**
- * BOMB_TOSS Skill
- * Enemy-only skill: spawns a bomb on a valid empty tile within range.
+ * BOMB_TOSS
+ * Spawns a bomb actor with a fuse counter and `TIME_BOMB` loadout.
  */
 export const BOMB_TOSS: SkillDefinition = {
     id: 'BOMB_TOSS',
@@ -16,7 +17,7 @@ export const BOMB_TOSS: SkillDefinition = {
     baseVariables: {
         range: 3,
         cost: 0,
-        cooldown: 0,
+        cooldown: 2,
     },
     execute: (state: GameState, attacker: Actor, target?: Point): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
@@ -40,7 +41,27 @@ export const BOMB_TOSS: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
-        effects.push({ type: 'SpawnItem', itemType: 'bomb', position: target });
+        const bombId = `bomb-${attacker.id}-${state.turnNumber}-${state.actionLog?.length ?? 0}-${target.q}_${target.r}_${target.s}`;
+        const bomb = createEntity({
+            id: bombId,
+            type: 'enemy',
+            subtype: 'bomb',
+            factionId: attacker.factionId,
+            position: target,
+            speed: 10,
+            skills: ['TIME_BOMB'],
+            weightClass: 'Standard',
+        });
+        bomb.statusEffects = [
+            {
+                id: 'TIME_BOMB',
+                type: 'time_bomb',
+                duration: 2,
+                tickWindow: 'END_OF_TURN',
+            },
+        ];
+
+        effects.push({ type: 'SpawnActor', actor: bomb });
         messages.push('Bomb tossed!');
 
         return { effects, messages, consumesTurn: true };
@@ -61,3 +82,4 @@ export const BOMB_TOSS: SkillDefinition = {
     },
     upgrades: {},
 };
+

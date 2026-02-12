@@ -93,6 +93,7 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         risk: { noProgressCastPenalty: 2 }
     },
     BOMB_TOSS: { intentTags: ['damage', 'control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 6, control: 2 } },
+    TIME_BOMB: { intentTags: ['damage', 'hazard', 'utility'], target: { pattern: 'self' }, estimates: { damage: 6, control: 1 } },
     CORPSE_EXPLOSION: { intentTags: ['damage', 'control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 6, control: 1 } },
     RAISE_DEAD: { intentTags: ['summon', 'control', 'utility'], target: { pattern: 'single' }, estimates: { summon: 5 } },
     SOUL_SWAP: { intentTags: ['move', 'control', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2, control: 2 } },

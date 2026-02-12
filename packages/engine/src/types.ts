@@ -31,6 +31,7 @@ export interface MovementTrace {
     destination: Point; // Final landing hex
     movementType?: 'slide' | 'teleport';
     durationMs?: number;
+    startDelayMs?: number;
     interruptedBy?: 'WALL' | 'ACTOR' | 'BOUNDARY' | 'LAVA';
     wasLethal: boolean;
 }

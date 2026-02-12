@@ -52,6 +52,7 @@ export type SkillID =
     | 'FIREWALK'
     | 'FIREWALL'
     | 'BOMB_TOSS'
+    | 'TIME_BOMB'
     | 'MULTI_SHOOT'
     | 'RAISE_DEAD'
     | 'SET_TRAP'
@@ -80,6 +81,7 @@ export type StatusID =
     | 'rooted'
     | 'fire_immunity'
     | 'burning'
+    | 'time_bomb'
     | 'protected'
     | 'marked_scout'
     | 'marked_predator';

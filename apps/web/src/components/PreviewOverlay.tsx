@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import type { GameState, Point } from '@hop/engine';
 import {
-    hexToPixel, getHexLine, hexAdd, scaleVector, hexEquals, isHexInRectangularGrid,
-    TILE_SIZE, SkillRegistry, getSkillRange,
+    hexToPixel, getHexLine, hexAdd, scaleVector, isHexInRectangularGrid,
+    TILE_SIZE, SkillRegistry, getSkillRange, pointToKey,
     getSkillAoE, UnifiedTileService
 } from '@hop/engine';
 
@@ -15,24 +15,31 @@ interface PreviewOverlayProps {
 
 const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkillId, showMovementRange, hoveredTile }) => {
     const playerPos = gameState.player.position;
+    const enemyPositionSet = useMemo(() => {
+        const set = new Set<string>();
+        for (const e of gameState.enemies) {
+            if (e.hp > 0) set.add(pointToKey(e.position));
+        }
+        return set;
+    }, [gameState.enemies]);
 
     // Tier 1: Movement Selection (Base State) - Aggregate primary movement skills (Walk / Dash)
     const movementTiles = useMemo(() => {
         if (!showMovementRange || selectedSkillId) return [] as Point[];
+        const playerSkillIds = new Set(gameState.player.activeSkills.map(s => s.id));
 
         // Define primary movement skills
-        const movementSkillIds = ['BASIC_MOVE', 'DASH'];
+        const movementSkillIds = ['BASIC_MOVE', 'DASH'] as const;
         const validSet = new Set<string>();
         const results: Point[] = [];
 
         movementSkillIds.forEach(id => {
-            const skill = gameState.player.activeSkills.find(s => s.id === id);
-            if (skill) {
+            if (playerSkillIds.has(id)) {
                 const def = SkillRegistry.get(id);
                 if (def?.getValidTargets) {
                     const targets = def.getValidTargets(gameState, playerPos);
                     targets.forEach(p => {
-                        const key = `${p.q},${p.r},${p.s}`;
+                        const key = pointToKey(p);
                         if (!validSet.has(key)) {
                             validSet.add(key);
                             results.push(p);
@@ -58,12 +65,19 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
         return results;
     }, [gameState, showMovementRange, selectedSkillId, playerPos]);
 
+    const movementTileSet = useMemo(() => {
+        const set = new Set<string>();
+        for (const p of movementTiles) set.add(pointToKey(p));
+        return set;
+    }, [movementTiles]);
+
     // Tier 2: Skill Targeting (Action State)
     const skillTargets = useMemo(() => {
         if (!selectedSkillId) return [] as Array<{ p: Point; isValidTarget: boolean; isBlocked: boolean; isWall: boolean; isEnemy: boolean }>;
         const def = SkillRegistry.get(selectedSkillId);
         const range = def?.baseVariables?.range ?? getSkillRange(gameState.player, selectedSkillId);
-        const validSet: Point[] = def?.getValidTargets ? def.getValidTargets(gameState, playerPos) : [];
+        const validTargets: Point[] = def?.getValidTargets ? def.getValidTargets(gameState, playerPos) : [];
+        const validTargetSet = new Set(validTargets.map(pointToKey));
 
         const results: Array<{ p: Point; isValidTarget: boolean; isBlocked: boolean; isWall: boolean; isEnemy: boolean }> = [];
 
@@ -78,7 +92,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
 
                     // FIXED: Use UnifiedTileService trait check instead of wallPositions array
                     const isWall = UnifiedTileService.isLosBlocking(gameState, p);
-                    const isEnemy = !!gameState.enemies.some(e => hexEquals(e.position, p) && e.hp > 0);
+                    const isEnemy = enemyPositionSet.has(pointToKey(p));
 
                     const line = getHexLine(playerPos, p);
                     const interior = line.slice(1, -1);
@@ -86,10 +100,10 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                     // FIXED: Interior collision check using UnifiedTileService
                     const interiorBlocked = interior.some(iP =>
                         UnifiedTileService.isLosBlocking(gameState, iP) ||
-                        gameState.enemies.some(e => e.hp > 0 && hexEquals(e.position, iP))
+                        enemyPositionSet.has(pointToKey(iP))
                     );
 
-                    let isValidTarget = validSet.some(v => hexEquals(v, p));
+                    const isValidTarget = validTargetSet.has(pointToKey(p));
 
                     results.push({ p, isValidTarget, isBlocked: interiorBlocked, isWall, isEnemy });
 
@@ -98,21 +112,29 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
             }
         } else {
             // For circular or arbitrary area skills (Jump, Blast, Attack, Bash, etc.)
-            validSet.forEach(p => {
+            validTargets.forEach(p => {
                 // FIXED: Map-based trait check
                 const isWall = UnifiedTileService.isLosBlocking(gameState, p);
-                const isEnemy = !!gameState.enemies.some(e => hexEquals(e.position, p) && e.hp > 0);
+                const isEnemy = enemyPositionSet.has(pointToKey(p));
                 results.push({ p, isValidTarget: true, isBlocked: false, isWall, isEnemy });
             });
         }
 
         return results;
-    }, [gameState, selectedSkillId, playerPos]);
+    }, [gameState, selectedSkillId, playerPos, enemyPositionSet]);
+
+    const skillTargetsByKey = useMemo(() => {
+        const map = new Map<string, { p: Point; isValidTarget: boolean; isBlocked: boolean; isWall: boolean; isEnemy: boolean }>();
+        for (const entry of skillTargets) {
+            map.set(pointToKey(entry.p), entry);
+        }
+        return map;
+    }, [skillTargets]);
 
     // Tier 3: Hover Intent (Immediate Impact)
     const intentPreview = useMemo(() => {
         if (showMovementRange && hoveredTile && !selectedSkillId) {
-            const isMoveTile = movementTiles.some(t => hexEquals(t, hoveredTile));
+            const isMoveTile = movementTileSet.has(pointToKey(hoveredTile));
             if (isMoveTile) {
                 const path = getHexLine(playerPos, hoveredTile);
                 return { path, aoe: [], hasEnemy: false, target: hoveredTile };
@@ -121,7 +143,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
 
         if (!selectedSkillId || !hoveredTile) return null;
 
-        const targetEntry = skillTargets.find(t => hexEquals(t.p, hoveredTile));
+        const targetEntry = skillTargetsByKey.get(pointToKey(hoveredTile));
         if (!targetEntry || !targetEntry.isValidTarget || targetEntry.isBlocked) return null;
 
         const path = getHexLine(playerPos, hoveredTile);
@@ -129,7 +151,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
         const hasEnemy = targetEntry.isEnemy;
 
         return { path, aoe, hasEnemy, target: hoveredTile };
-    }, [gameState, selectedSkillId, hoveredTile, skillTargets, movementTiles, showMovementRange, playerPos]);
+    }, [gameState, selectedSkillId, hoveredTile, skillTargetsByKey, movementTileSet, showMovementRange, playerPos]);
 
     return (
         <g pointerEvents="none">
@@ -212,7 +234,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                     })()}
 
                     {/* AoE Hazard Zone */}
-                    {Array.from(new Map(intentPreview.aoe.map(hex => [`${hex.q},${hex.r}`, hex])).values()).map((hex) => {
+                    {Array.from(new Map(intentPreview.aoe.map(hex => [pointToKey(hex), hex])).values()).map((hex) => {
                         const { x, y } = hexToPixel(hex, TILE_SIZE);
                         return (
                             <circle

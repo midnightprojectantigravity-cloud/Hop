@@ -87,10 +87,17 @@ describe('entity-factory trinity defaults', () => {
         });
         expect(readTrinity(skeleton.components)).toEqual({
             type: 'trinity',
-            body: 5,
+            body: 15,
             mind: 1,
             instinct: 4,
         });
+        expect(skeleton.hp).toBe(2);
+        expect(skeleton.maxHp).toBe(2);
+        expect(skeleton.speed).toBe(50);
+        const skeletonSkills = new Set((skeleton.activeSkills || []).map(s => s.id));
+        expect(skeletonSkills.has('BASIC_MOVE')).toBe(true);
+        expect(skeletonSkills.has('BASIC_ATTACK')).toBe(true);
+        expect(skeletonSkills.has('AUTO_ATTACK')).toBe(true);
     });
 
     it('preserves explicit trinity override when provided', () => {

@@ -126,8 +126,8 @@ export const resolveSingleEnemyTurn = (
 
   // 1. Process Bomb self-ticks
   if (enemy.subtype === 'bomb') {
-    const timer = (enemy.actionCooldown ?? 1) - 1;
-    if (timer <= 0) {
+    const fuse = enemy.statusEffects?.find(s => s.type === 'time_bomb');
+    if (!fuse || fuse.duration <= 1) {
       messages.push("A bomb exploded!");
 
       // Damage all entities in 1-tile radius
@@ -155,7 +155,7 @@ export const resolveSingleEnemyTurn = (
 
       return { state: curState, messages, isDead: true };
     }
-    nextEnemy = { ...enemy, actionCooldown: timer };
+    nextEnemy = tickStatuses({ ...enemy, intent: undefined, intentPosition: undefined });
   } else if (isStunned(enemy)) {
     // Tick down statuses and clear intent
     nextEnemy = handleStunReset(tickStatuses(enemy));
@@ -164,21 +164,24 @@ export const resolveSingleEnemyTurn = (
     if (!occupied) {
       messages.push(`${enemy.subtype} placed a bomb.`);
       const bombId = `bomb_${enemy.id}_${state.turnNumber}`;
-      const bomb: Entity = {
-        ...createEntity({
-          id: bombId,
-          type: 'enemy',
-          subtype: 'bomb',
-          factionId: 'enemy',
-          position: enemy.intentPosition,
-          hp: 1,
-          maxHp: 1,
-          speed: 10,
-          skills: [],
-          weightClass: 'Standard',
-        }),
-        actionCooldown: 2,
-      };
+      const bomb: Entity = createEntity({
+        id: bombId,
+        type: 'enemy',
+        subtype: 'bomb',
+        factionId: 'enemy',
+        position: enemy.intentPosition,
+        speed: 10,
+        skills: ['TIME_BOMB'],
+        weightClass: 'Standard',
+      });
+      bomb.statusEffects = [
+        {
+          id: 'TIME_BOMB',
+          type: 'time_bomb',
+          duration: 2,
+          tickWindow: 'END_OF_TURN'
+        }
+      ];
       curState = {
         ...curState,
         enemies: [...curState.enemies, bomb],

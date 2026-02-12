@@ -129,6 +129,21 @@ export class WildStrategy implements IStrategyProvider {
         if (actor.subtype === 'falcon') {
             return this.getFalconIntent(gameState, actor);
         }
+        if (actor.subtype === 'bomb') {
+            return {
+                type: 'USE_SKILL',
+                actorId: actor.id,
+                skillId: 'TIME_BOMB',
+                targetHex: actor.position,
+                priority: 10,
+                metadata: {
+                    expectedValue: 0,
+                    reasoningCode: 'BOMB_FUSE_TICK',
+                    isGhost: false,
+                    rngConsumption: 0
+                }
+            };
+        }
 
         // 1. Prepare inputs for legacy AI
         // computeEnemyAction expects the player's *current* position (after they moved)
