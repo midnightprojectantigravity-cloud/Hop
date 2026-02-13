@@ -84,6 +84,7 @@ export const DASH: SkillDefinition = {
                     target: 'self',
                     destination: stopPos,
                     path: dashPath,
+                    simulatePath: true,
                     ignoreGroundHazards: true,
                     animationDuration: dashPath.length * 60  // 60ms per tile (fast dash)
                 }
@@ -128,6 +129,7 @@ export const DASH: SkillDefinition = {
                 target: 'self',
                 destination: stopPos,
                 path: dashPath,
+                simulatePath: true,
                 ignoreGroundHazards: true,
                 animationDuration: dashPath.length * 60  // 60ms per tile
             };

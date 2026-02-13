@@ -1,4 +1,4 @@
-import type { GameState, AtomicEffect, Actor, Point, MovementTrace } from '../types';
+import type { GameState, AtomicEffect, Actor, Point, MovementTrace, TimelineEvent, TimelinePhase } from '../types';
 import { hexEquals, getHexLine, getDirectionFromTo, hexDirection, hexAdd } from '../hex';
 import { applyDamage, applyHeal, checkVitals, addStatus } from './actor';
 
@@ -60,12 +60,36 @@ const removeCorpseTraitAt = (state: GameState, position: Point): GameState => {
     return nextState;
 };
 
+const EFFECT_WARN = typeof process !== 'undefined' && (process.env?.HOP_ENGINE_WARN === '1' || process.env?.HOP_ENGINE_DEBUG === '1');
+const TIMELINE_PHASE_ORDER: Record<TimelinePhase, number> = {
+    INTENT_START: 1,
+    MOVE_START: 2,
+    MOVE_END: 3,
+    ON_PASS: 4,
+    ON_ENTER: 5,
+    HAZARD_CHECK: 6,
+    STATUS_APPLY: 7,
+    DAMAGE_APPLY: 8,
+    DEATH_RESOLVE: 9,
+    INTENT_END: 10
+};
+
+const getBlockingTimelineDurationMs = (events?: TimelineEvent[]): number => {
+    const list = events || [];
+    let total = 0;
+    for (const ev of list) {
+        if (!ev.blocking) continue;
+        total += Number(ev.suggestedDurationMs || 0);
+    }
+    return total;
+};
+
 const appendTimelineEvent = (
     state: GameState,
     phase: 'MOVE_START' | 'MOVE_END' | 'ON_PASS' | 'ON_ENTER' | 'HAZARD_CHECK' | 'STATUS_APPLY' | 'DAMAGE_APPLY' | 'DEATH_RESOLVE' | 'INTENT_START' | 'INTENT_END',
     type: string,
     payload: any,
-    context: { targetId?: string; sourceId?: string },
+    context: { targetId?: string; sourceId?: string; stepId?: string },
     blocking: boolean,
     suggestedDurationMs: number
 ): GameState => {
@@ -73,8 +97,23 @@ const appendTimelineEvent = (
     const idx = events.length;
     const turn = state.turnNumber || 0;
     const actorId = context.sourceId || context.targetId;
-    const groupId = `${turn}:${actorId || 'system'}`;
-    const id = `${groupId}:${idx}:${phase}`;
+    const groupId = context.stepId || `${turn}:${actorId || 'system'}`;
+    const stepId = context.stepId || groupId;
+    const previousStepEvent = stepId
+        ? [...events].reverse().find(ev => (ev.stepId || ev.groupId) === stepId)
+        : undefined;
+    if (previousStepEvent) {
+        const prevOrder = TIMELINE_PHASE_ORDER[previousStepEvent.phase as TimelinePhase] || 0;
+        const nextOrder = TIMELINE_PHASE_ORDER[phase as TimelinePhase] || 0;
+        if (prevOrder > nextOrder && EFFECT_WARN) {
+            console.warn('[TURN_STACK] Non-monotonic timeline phase order detected.', {
+                stepId,
+                previous: previousStepEvent.phase,
+                next: phase
+            });
+        }
+    }
+    const id = `${stepId}:${idx}:${phase}`;
     return {
         ...state,
         timelineEvents: [
@@ -83,6 +122,7 @@ const appendTimelineEvent = (
                 id,
                 turn,
                 actorId,
+                stepId,
                 phase,
                 type,
                 payload,
@@ -131,7 +171,7 @@ const scaleCombatProfileDamage = (
 /**
  * Apply a single atomic effect to the game state.
  */
-export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, context: { targetId?: string; sourceId?: string } = {}): GameState => {
+export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, context: { targetId?: string; sourceId?: string; stepId?: string } = {}): GameState => {
     let nextState = { ...state };
     const ensureTilesClone = () => {
         if (nextState.tiles === state.tiles) {
@@ -161,6 +201,13 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             }
 
             const origin = effect.source || actor?.position;
+            // Critical sequencing contract:
+            // movement traces should begin after all prior blocking timeline beats.
+            // This allows UI playback to remain actor-by-actor, even if engine logic resolves instantly.
+            const timelineDelayBeforeMoveMs = Math.min(
+                3200,
+                Math.max(0, getBlockingTimelineDurationMs(nextState.timelineEvents))
+            );
             let moveEndedEventEmitted = false;
             const isTeleportMovement = !((effect as any).simulatePath || effect.path || effect.isFling);
             if (origin) {
@@ -317,9 +364,10 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         return (payload.movementType ?? 'slide') === 'slide' ? count + 1 : count;
                     }, 0)
                     : 0;
-                const traceStartDelayMs = isTeleportMovement
+                const kineticChainDelayMs = isTeleportMovement
                     ? 0
                     : (isKineticTransfer ? Math.min(640, priorKineticSlides * 90) : 0);
+                const traceStartDelayMs = Math.max(timelineDelayBeforeMoveMs, kineticChainDelayMs);
 
                 const trace: MovementTrace = {
                     actorId: targetActorId,
@@ -1082,7 +1130,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 /**
  * Apply a list of effects to the game state.
  */
-export const applyEffects = (state: GameState, effects: AtomicEffect[], context: { targetId?: string; sourceId?: string } = {}): GameState => {
+export const applyEffects = (state: GameState, effects: AtomicEffect[], context: { targetId?: string; sourceId?: string; stepId?: string } = {}): GameState => {
     // Legacy themeInterceptors decommissioned. 
     // Hazard logic is now unified in TileResolver and executed during Displacement or turn ends.
 

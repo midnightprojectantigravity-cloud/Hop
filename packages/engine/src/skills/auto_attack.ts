@@ -213,7 +213,8 @@ export const applyAutoAttack = (
     entity: Actor,
     previousNeighbors?: Point[],
     attackerTurnStartPosition?: Point,
-    persistentTargetIds?: string[]
+    persistentTargetIds?: string[],
+    stepId?: string
 ): { state: GameState; kills: number; messages: string[] } => {
     // Check if entity has AUTO_ATTACK skill
     const hasAutoAttack = entity.activeSkills?.some(s => s.id === 'AUTO_ATTACK');
@@ -242,7 +243,11 @@ export const applyAutoAttack = (
     });
 
     // Apply effects using the common effect engine
-    const newState = applyEffects(state, result.effects, { targetId: undefined });
+    const newState = applyEffects(state, result.effects, {
+        sourceId: entity.id,
+        targetId: undefined,
+        stepId
+    });
 
     return {
         state: newState,

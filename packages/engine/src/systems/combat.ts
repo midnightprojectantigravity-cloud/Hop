@@ -19,7 +19,12 @@ import { applyDamage } from './actor';
 import { createEntity } from './entity-factory';
 import { addToQueue } from './initiative';
 
-export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point, targetActorId?: string): { state: GameState; messages: string[] } => {
+export const resolveTelegraphedAttacks = (
+  state: GameState,
+  playerMovedTo: Point,
+  targetActorId?: string,
+  stepId?: string
+): { state: GameState; messages: string[] } => {
   let curState = state;
   const messages: string[] = [];
 
@@ -67,7 +72,7 @@ export const resolveTelegraphedAttacks = (state: GameState, playerMovedTo: Point
 
         // Execute skill AT THE REASSESSED POSITION
         const result = skillDef.execute(curState, liveEnemy, targetPos, activeSkill.activeUpgrades);
-        curState = applyEffects(curState, result.effects, { targetId: curState.player.id });
+        curState = applyEffects(curState, result.effects, { sourceId: liveEnemy.id, targetId: curState.player.id, stepId });
         messages.push(...result.messages);
         enemyHandled = true;
       } else if (liveEnemy.subtype === 'bomber') {

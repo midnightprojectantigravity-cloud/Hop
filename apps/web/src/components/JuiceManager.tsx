@@ -46,8 +46,10 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
     const isRunningQueue = useRef(false);
     const [timelineBusy, setTimelineBusy] = useState(false);
     const prefersReducedMotion = useRef(false);
-    const movementDurationByActor = useRef<Map<string, number>>(new Map());
+    const movementDurationByActor = useRef<Map<string, { durationMs: number; seenAt: number }>>(new Map());
     const cleanupTimerRef = useRef<number | null>(null);
+    const MAX_BLOCKING_WAIT_MS = 900;
+    const MAX_QUEUE_RUNTIME_MS = 5000;
 
     useEffect(() => {
         if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -61,22 +63,28 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
     useEffect(() => {
         if (!visualEvents.length) return;
         const next = new Map(movementDurationByActor.current);
+        const now = Date.now();
         for (const ev of visualEvents) {
             if (ev.type !== 'kinetic_trace') continue;
             const trace = ev.payload;
             if (!trace?.actorId) continue;
             const duration = Number(trace.durationMs ?? 0);
             if (duration > 0) {
-                next.set(String(trace.actorId), duration);
+                next.set(String(trace.actorId), {
+                    durationMs: duration,
+                    seenAt: now
+                });
             }
         }
         movementDurationByActor.current = next;
     }, [visualEvents]);
 
-    // Notify parent of busy state
+    // Notify parent of busy state.
+    // Only timeline sequencing should gate turn progression; decorative effects
+    // (combat text, flashes, etc.) must not hold input lock.
     useEffect(() => {
-        onBusyStateChange?.(effects.length > 0 || timelineBusy);
-    }, [effects.length, timelineBusy, onBusyStateChange]);
+        onBusyStateChange?.(timelineBusy);
+    }, [timelineBusy, onBusyStateChange]);
 
     const enqueueTimelineEffects = (ev: TimelineEvent) => {
         const now = Date.now();
@@ -131,34 +139,62 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
         setTimelineBusy(true);
 
         (async () => {
-            while (timelineQueue.current.length > 0) {
-                const ev = timelineQueue.current.shift()!;
-                enqueueTimelineEffects(ev);
-                let baseDuration = ev.blocking ? (ev.suggestedDurationMs ?? 140) : 0;
+            try {
+                const queueStart = Date.now();
+                while (timelineQueue.current.length > 0) {
+                    if ((Date.now() - queueStart) > MAX_QUEUE_RUNTIME_MS) {
+                        console.warn('[HOP_JUICE] Timeline queue exceeded runtime budget; flushing remaining events.', {
+                            queued: timelineQueue.current.length
+                        });
+                        break;
+                    }
+                    const ev = timelineQueue.current.shift()!;
+                    enqueueTimelineEffects(ev);
+                    let baseDuration = ev.blocking ? (ev.suggestedDurationMs ?? 140) : 0;
 
-                // Movement is rendered by Entity animations using kinetic_trace.durationMs.
-                // For strict sequence fidelity, use that duration to gate post-move phases.
-                if (ev.phase === 'MOVE_END') {
-                    const actorId = (ev.payload as any)?.targetActorId as string | undefined;
-                    if (actorId) {
-                        const tracedMs = movementDurationByActor.current.get(actorId);
-                        if (tracedMs && tracedMs > 0) {
-                            baseDuration = Math.max(baseDuration, tracedMs);
+                    // Movement is rendered by Entity animations using kinetic_trace.durationMs.
+                    // For strict sequence fidelity, use recent movement durations only.
+                    if (ev.phase === 'MOVE_END') {
+                        const actorId = (ev.payload as any)?.targetActorId as string | undefined;
+                        if (actorId) {
+                            const traced = movementDurationByActor.current.get(actorId);
+                            const isFresh = traced ? (Date.now() - traced.seenAt) <= 2500 : false;
+                            if (traced && isFresh && traced.durationMs > 0) {
+                                baseDuration = Math.max(baseDuration, Math.min(MAX_BLOCKING_WAIT_MS, traced.durationMs));
+                            }
                         }
                     }
-                }
 
-                const waitDuration = ev.phase === 'MOVE_END'
-                    ? baseDuration
-                    : (prefersReducedMotion.current
-                        ? Math.min(80, Math.floor(baseDuration * 0.35))
-                        : baseDuration);
-                if (waitDuration > 0) {
-                    await waitMs(waitDuration);
+                    let phaseDuration = 0;
+                    if (ev.phase === 'MOVE_END') {
+                        phaseDuration = Math.min(700, Math.max(120, baseDuration));
+                    } else if (ev.phase === 'DEATH_RESOLVE') {
+                        phaseDuration = Math.min(160, Math.max(90, baseDuration));
+                    } else if (ev.phase === 'DAMAGE_APPLY') {
+                        phaseDuration = Math.min(110, Math.max(60, baseDuration));
+                    } else if (ev.phase === 'HAZARD_CHECK') {
+                        phaseDuration = Math.min(100, Math.max(50, baseDuration));
+                    } else if (ev.blocking) {
+                        phaseDuration = Math.min(90, Math.max(0, baseDuration));
+                    }
+
+                    const rawWaitDuration = ev.phase === 'MOVE_END'
+                        ? baseDuration
+                        : (prefersReducedMotion.current
+                            ? Math.min(70, Math.floor(phaseDuration * 0.5))
+                            : phaseDuration);
+                    const waitDuration = Math.max(0, Math.min(MAX_BLOCKING_WAIT_MS, rawWaitDuration));
+                    if (waitDuration > 0) {
+                        await waitMs(waitDuration);
+                    }
                 }
+            } catch (err) {
+                console.error('[HOP_JUICE] Timeline queue processing failed; releasing busy lock.', err);
+            } finally {
+                timelineQueue.current = [];
+                isRunningQueue.current = false;
+                setTimelineBusy(false);
             }
-            isRunningQueue.current = false;
-            setTimelineBusy(false);
         })();
     }, [timelineEvents]);
 

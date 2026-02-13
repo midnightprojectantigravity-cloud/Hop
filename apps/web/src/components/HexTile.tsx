@@ -204,6 +204,10 @@ export const HexTile = React.memo(HexTileComponent, (prev, next) => {
     return prev.hex.q === next.hex.q
         && prev.hex.r === next.hex.r
         && prev.hex.s === next.hex.s
+        && prev.onClick === next.onClick
+        && prev.onMouseEnter === next.onMouseEnter
+        && prev.isCenter === next.isCenter
+        && prev.isSelected === next.isSelected
         && prev.isValidMove === next.isValidMove
         && prev.isTargeted === next.isTargeted
         && prev.isStairs === next.isStairs

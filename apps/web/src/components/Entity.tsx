@@ -7,6 +7,7 @@ interface EntityProps {
     isSpear?: boolean;
     isDying?: boolean; // For death animations
     movementTrace?: MovementTrace;
+    waapiControlled?: boolean;
 }
 
 
@@ -54,7 +55,7 @@ const renderIcon = (entity: EntityType, isPlayer: boolean, size = 24) => {
     );
 };
 
-const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementTrace }) => {
+const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementTrace, waapiControlled = false }) => {
     const [displayPos, setDisplayPos] = useState(entity.position);
     const [displayPixel, setDisplayPixel] = useState(() => hexToPixel(entity.position, TILE_SIZE));
     const [animationPrevPos, setAnimationPrevPos] = useState<EntityType['position'] | undefined>(entity.previousPosition);
@@ -85,6 +86,30 @@ const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementT
                 animationFrameRef.current = null;
             }
         };
+
+        if (waapiControlled) {
+            clearAnimationTimers();
+            animationInProgress.current = false;
+            const hasCurrentTrace = Boolean(
+                movementTrace
+                && movementTrace.actorId === entity.id
+                && movementTrace.destination
+                && hexEquals(movementTrace.destination as any, entity.position)
+            );
+            const moved = !hexEquals(entity.position, lastTargetPos.current);
+            lastTargetPos.current = entity.position;
+            // In WAAPI mode, avoid pre-snapping to reducer-final position when
+            // this actor has an active movement trace in the current frame.
+            if (moved && !hasCurrentTrace) {
+                setDisplayPos(entity.position);
+                setAnimationPrevPos(entity.previousPosition);
+                setDisplayPixel(hexToPixel(entity.position, TILE_SIZE));
+            }
+            if (teleportPhase !== 'none') setTeleportPhase('none');
+            if (segmentDurationMs !== 0) setSegmentDurationMs(0);
+            if (segmentEasing !== 'linear') setSegmentEasing('linear');
+            return;
+        }
 
         if (!hexEquals(entity.position, lastTargetPos.current)) {
             // New position detected
@@ -258,7 +283,7 @@ const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementT
             setAnimationPrevPos(entity.previousPosition);
             setDisplayPixel(hexToPixel(entity.position, TILE_SIZE));
         }
-    }, [entity.position, entity.previousPosition, movementTrace, entity.id]);
+    }, [entity.position, entity.previousPosition, movementTrace, entity.id, waapiControlled]);
 
     const { x, y } = displayPixel || hexToPixel(displayPos, TILE_SIZE);
 
@@ -320,8 +345,9 @@ const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementT
 
             {/* Main Entity Group - Handles smooth movement translation */}
             <g
+                data-actor-node={entity.id}
                 style={{
-                    transition: `transform ${segmentDurationMs}ms ${segmentEasing}`,
+                    transition: waapiControlled ? 'none' : `transform ${segmentDurationMs}ms ${segmentEasing}`,
                     transform: `translate(${x}px, ${y}px)`
                 }}
                 className={isDying ? 'animate-lava-sink' : ''}
@@ -397,6 +423,7 @@ export const Entity = React.memo(EntityBase, (prev, next) => {
     const b = next.entity;
     return prev.isSpear === next.isSpear
         && prev.isDying === next.isDying
+        && prev.waapiControlled === next.waapiControlled
         && movementTraceKey(prev.movementTrace) === movementTraceKey(next.movementTrace)
         && a.id === b.id
         && a.hp === b.hp

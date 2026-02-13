@@ -31,6 +31,7 @@ export * from './systems/calibration';
 export * from './systems/evaluation-baselines';
 export * from './systems/challenge-design';
 export * from './systems/serialization';
+export * from './systems/replay-validation';
 export * from './systems/commands';
 export * from './systems/mask';
 export * from './systems/loadout';

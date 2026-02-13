@@ -13,6 +13,20 @@ Current behavior has known drift points:
 ## Delivery Strategy
 One PR slice at a time, each with deterministic acceptance tests.
 
+## Progress
+- [x] PR1 - Engine Guard Rails
+- [x] PR2 - Engine Step Envelope
+- [x] PR3 - Web Turn Driver State Machine
+- [x] PR4 - Intercept Stack Formalization
+- [x] PR5 - Replay Hardening
+- [x] PR6 - Observability and Audit Tooling
+
+## Completion Snapshot
+- `npm run build` passes for engine + web.
+- `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts packages/engine/src/__tests__/turn_stack_guards.test.ts packages/engine/src/__tests__/replay_validation.test.ts apps/web/src/__tests__/turn_driver.test.ts apps/web/src/__tests__/replay.test.ts` passes.
+- `npm run mvp:turn-stack:audit:strict` passes with `totalViolations: 0`.
+- Turn stack audit documentation: `docs/TURN_STACK_AUDIT.md`.
+
 ---
 
 ## PR1 - Engine Guard Rails (Must Land First)
@@ -129,4 +143,3 @@ Must be explicitly validated by product/design:
 4. Confirm initiative visualization should advance only on actor-step completion.
 
 After validation, implementation proceeds in PR1 -> PR6 order.
-

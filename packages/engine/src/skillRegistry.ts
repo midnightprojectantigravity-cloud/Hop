@@ -121,6 +121,7 @@ export function createActiveSkill(id: SkillID): any {
  */
 export function createDefaultSkills(): any[] {
     return [
+        createActiveSkill('BASIC_MOVE'),
         createActiveSkill('BASIC_ATTACK'),
         createActiveSkill('AUTO_ATTACK'),
         createActiveSkill('SPEAR_THROW'),

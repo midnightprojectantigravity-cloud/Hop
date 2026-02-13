@@ -168,6 +168,7 @@ export interface TimelineEvent {
     id: string;
     turn: number;
     actorId?: string;
+    stepId?: string;
     phase: TimelinePhase;
     type: string;
     payload?: any;
@@ -202,6 +203,21 @@ export interface ObjectiveResult {
     target: number;
     value: number;
     success: boolean;
+}
+
+export type PendingFrameType =
+    | 'STAIRS_TRANSITION'
+    | 'SHRINE_CHOICE'
+    | 'RUN_WON'
+    | 'RUN_LOST';
+
+export interface PendingFrame {
+    id: string;
+    type: PendingFrameType;
+    status: 'playing' | 'choosing_upgrade' | 'won' | 'lost';
+    createdTurn: number;
+    blocking: boolean;
+    payload?: Record<string, any>;
 }
 
 export interface SkillModifier {
@@ -468,6 +484,7 @@ export interface GameState {
         shrineOptions?: string[];
         completedRun?: any;
     };
+    pendingFrames?: PendingFrame[];
 
     // Kinetic Tri-Trap system
     traps?: Array<{

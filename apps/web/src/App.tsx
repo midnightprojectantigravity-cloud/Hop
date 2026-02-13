@@ -82,27 +82,80 @@
  */
 
 
-import { useReducer, useRef, useState, useEffect } from 'react';
+import { useReducer, useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';
 import { UpgradeOverlay } from './components/UpgradeOverlay';
 import { SkillTray } from './components/SkillTray';
-import { gameReducer, generateInitialState, generateHubState, hexEquals, pointToKey, ensureActorTrinity, deriveMaxHpFromTrinity, DEFAULT_LOADOUTS } from '@hop/engine';
+import { gameReducer, generateInitialState, generateHubState, hexEquals, pointToKey, ensureActorTrinity, deriveMaxHpFromTrinity, DEFAULT_LOADOUTS, validateReplayActions, ensurePlayerLoadoutIntegrity } from '@hop/engine';
 import type { Point, Action, GameState, Actor, TimelineEvent } from '@hop/engine';
 import type { ReplayRecord } from './components/ReplayManager';
 import { isPlayerTurn } from '@hop/engine';
 import { Hub } from './components/Hub';
 import { ArcadeHub } from './components/ArcadeHub';
+import { deriveTurnDriverState } from './turn-driver';
+
+type TurnTraceEntry = {
+  id: number;
+  t: number;
+  event: string;
+  turnNumber: number;
+  phase: string;
+  gameStatus: string;
+  playerTurn: boolean;
+  isBusy: boolean;
+  postCommitInputLock: boolean;
+  pendingStatus: string;
+  pendingFrames: number;
+  canPlayerInput: boolean;
+  shouldAdvanceQueue: boolean;
+  shouldResolvePending: boolean;
+  actionLogLength: number;
+  queueHead: string;
+  details?: Record<string, unknown>;
+};
+
+const summarizeActionPayload = (action: Action): Record<string, unknown> | undefined => {
+  const payload = (action as any).payload;
+  if (!payload || typeof payload !== 'object') return undefined;
+
+  if ('q' in payload && 'r' in payload) {
+    return {
+      q: Number((payload as any).q ?? 0),
+      r: Number((payload as any).r ?? 0),
+      s: Number((payload as any).s ?? 0)
+    };
+  }
+
+  if ((action as any).type === 'USE_SKILL') {
+    const p = payload as any;
+    return {
+      skillId: p.skillId ?? 'unknown',
+      target: p.target ? { q: p.target.q, r: p.target.r, s: p.target.s } : null
+    };
+  }
+
+  if ((action as any).type === 'START_RUN') {
+    return {
+      loadoutId: (payload as any).loadoutId ?? 'unknown',
+      mode: (payload as any).mode ?? 'normal'
+    };
+  }
+
+  if ((action as any).type === 'LOAD_STATE') {
+    const state = payload as any;
+    return {
+      floor: state?.floor ?? 0,
+      gameStatus: state?.gameStatus ?? 'unknown',
+      turnNumber: state?.turnNumber ?? 0,
+      queueLength: Array.isArray(state?.initiativeQueue) ? state.initiativeQueue.length : 0
+    };
+  }
+
+  return {};
+};
 
 function App() {
-  const REPLAY_ALLOWED_ACTIONS = new Set([
-    'MOVE', 'THROW_SPEAR', 'WAIT', 'USE_SKILL', 'JUMP', 'SHIELD_BASH', 'ATTACK', 'LEAP',
-    'ADVANCE_TURN', 'SELECT_UPGRADE', 'RESOLVE_PENDING'
-  ]);
-  const normalizeReplayActions = (actions: any[]): Action[] => {
-    if (!Array.isArray(actions)) return [];
-    return actions.filter(a => a && typeof a.type === 'string' && REPLAY_ALLOWED_ACTIONS.has(a.type)) as Action[];
-  };
   const buildReplayDiagnostics = (actions: Action[], floor: number) => {
     const types = new Set(actions.map(a => a.type));
     const hasTurnAdvance = types.has('ADVANCE_TURN');
@@ -204,7 +257,7 @@ function App() {
           };
         };
 
-        parsed.player = normalizeActor(parsed.player);
+        parsed.player = ensurePlayerLoadoutIntegrity(normalizeActor(parsed.player));
         parsed.enemies = Array.isArray(parsed.enemies) ? parsed.enemies.map(normalizeActor) : [];
 
         return parsed;
@@ -311,21 +364,9 @@ function App() {
   const [isReplayMode, setIsReplayMode] = useState(false);
   const [replayActions, setReplayActions] = useState<Action[]>([]);
   const [replayActive, setReplayActive] = useState(false);
+  const [replayError, setReplayError] = useState<string | null>(null);
   const replayIndexRef = useRef(0);
   const lastRecordedRunRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (isReplayMode) return;
-    if (gameState.gameStatus !== 'playing') return;
-    if (isPlayerTurn(gameState)) return;
-
-    // Persistent turn pump: keep advancing non-player actors even if one dispatch
-    // returns an equivalent state and would otherwise stop one-shot timers.
-    const interval = window.setInterval(() => {
-      dispatch({ type: 'ADVANCE_TURN' });
-    }, 380);
-    return () => window.clearInterval(interval);
-  }, [isReplayMode, gameState.gameStatus, gameState.turnNumber, gameState.pendingStatus, gameState.initiativeQueue, gameState.player.id, gameState.enemies]);
 
   useEffect(() => {
     const enabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_PERF);
@@ -358,15 +399,185 @@ function App() {
   const [showMovementRange, setShowMovementRange] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [postCommitInputLock, setPostCommitInputLock] = useState(false);
+  const [postCommitTick, setPostCommitTick] = useState(0);
   const commitLockTurnRef = useRef<number | null>(null);
   const commitLockActionLenRef = useRef<number | null>(null);
+  const postCommitLockedAtRef = useRef<number | null>(null);
   const postCommitWatchdogRef = useRef<number | null>(null);
-  const isPlayerControlWindow = gameState.gameStatus === 'playing' && !gameState.pendingStatus && isPlayerTurn(gameState);
-  const isInputLocked = isReplayMode || isBusy || !isPlayerControlWindow || postCommitInputLock;
-  const clearPostCommitLock = () => {
+  const pendingFrameCount = gameState.pendingFrames?.length ?? 0;
+  const turnDriver = useMemo(() => deriveTurnDriverState({
+    gameStatus: gameState.gameStatus,
+    isReplayMode,
+    isBusy,
+    postCommitInputLock,
+    isPlayerTurn: isPlayerTurn(gameState),
+    hasPendingStatus: Boolean(gameState.pendingStatus),
+    pendingFrameCount
+  }), [gameState.gameStatus, isReplayMode, isBusy, postCommitInputLock, gameState.pendingStatus, pendingFrameCount, gameState.initiativeQueue, gameState.player.id, gameState.enemies]);
+  const isInputLocked = !turnDriver.canPlayerInput;
+  const turnTraceRef = useRef<TurnTraceEntry[]>([]);
+  const turnTraceSeqRef = useRef(0);
+  const lastDriverSignatureRef = useRef('');
+  const queueHead = gameState.initiativeQueue?.entries?.[
+    Math.max(0, gameState.initiativeQueue.currentIndex ?? 0)
+  ]?.actorId
+    ?? gameState.initiativeQueue?.entries?.[0]?.actorId
+    ?? 'none';
+
+  const appendTurnTrace = useCallback((event: string, details?: Record<string, unknown>) => {
+    const entry: TurnTraceEntry = {
+      id: ++turnTraceSeqRef.current,
+      t: Date.now(),
+      event,
+      turnNumber: gameState.turnNumber,
+      phase: turnDriver.phase,
+      gameStatus: gameState.gameStatus,
+      playerTurn: isPlayerTurn(gameState),
+      isBusy,
+      postCommitInputLock,
+      pendingStatus: gameState.pendingStatus?.status ?? 'none',
+      pendingFrames: gameState.pendingFrames?.length ?? 0,
+      canPlayerInput: turnDriver.canPlayerInput,
+      shouldAdvanceQueue: turnDriver.shouldAdvanceQueue,
+      shouldResolvePending: turnDriver.shouldResolvePending,
+      actionLogLength: gameState.actionLog?.length ?? 0,
+      queueHead,
+      details
+    };
+    turnTraceRef.current.push(entry);
+    if (turnTraceRef.current.length > 800) {
+      turnTraceRef.current.splice(0, turnTraceRef.current.length - 800);
+    }
+  }, [
+    gameState.turnNumber,
+    gameState.gameStatus,
+    gameState.pendingStatus,
+    gameState.pendingFrames,
+    gameState.actionLog,
+    gameState.initiativeQueue,
+    gameState.player.id,
+    gameState.enemies,
+    turnDriver.phase,
+    turnDriver.canPlayerInput,
+    turnDriver.shouldAdvanceQueue,
+    turnDriver.shouldResolvePending,
+    isBusy,
+    postCommitInputLock,
+    queueHead
+  ]);
+
+  const dispatchWithTrace = useCallback((action: Action, source: string) => {
+    appendTurnTrace('DISPATCH', {
+      source,
+      actionType: action.type,
+      payload: summarizeActionPayload(action)
+    });
+    dispatch(action);
+  }, [appendTurnTrace]);
+
+  useEffect(() => {
+    const signature = [
+      turnDriver.phase,
+      gameState.turnNumber,
+      gameState.gameStatus,
+      gameState.pendingStatus?.status ?? 'none',
+      gameState.pendingFrames?.length ?? 0,
+      isBusy ? 1 : 0,
+      postCommitInputLock ? 1 : 0,
+      queueHead
+    ].join('|');
+    if (signature !== lastDriverSignatureRef.current) {
+      appendTurnTrace('TURN_STATE');
+      lastDriverSignatureRef.current = signature;
+    }
+  }, [
+    turnDriver.phase,
+    gameState.turnNumber,
+    gameState.gameStatus,
+    gameState.pendingStatus,
+    gameState.pendingFrames,
+    isBusy,
+    postCommitInputLock,
+    queueHead,
+    appendTurnTrace
+  ]);
+
+  useEffect(() => {
+    (window as any).__HOP_TURN_TRACE = turnTraceRef.current;
+    (window as any).__HOP_DUMP_TURN_TRACE = () => [...turnTraceRef.current];
+    (window as any).__HOP_PRINT_TURN_TRACE = (limit: number = 80) => {
+      const rows = turnTraceRef.current.slice(-Math.max(1, Math.floor(limit)));
+      console.table(rows.map(r => ({
+        id: r.id,
+        event: r.event,
+        turn: r.turnNumber,
+        phase: r.phase,
+        status: r.gameStatus,
+        playerTurn: r.playerTurn,
+        busy: r.isBusy,
+        lock: r.postCommitInputLock,
+        pending: `${r.pendingStatus}/${r.pendingFrames}`,
+        queueHead: r.queueHead,
+        actionLog: r.actionLogLength,
+        details: r.details ? JSON.stringify(r.details) : ''
+      })));
+      return rows;
+    };
+    (window as any).__HOP_CLEAR_TURN_TRACE = () => {
+      turnTraceRef.current.length = 0;
+      turnTraceSeqRef.current = 0;
+    };
+    turnTraceRef.current.push({
+      id: ++turnTraceSeqRef.current,
+      t: Date.now(),
+      event: 'TRACE_READY',
+      turnNumber: 0,
+      phase: 'INIT',
+      gameStatus: 'init',
+      playerTurn: false,
+      isBusy: false,
+      postCommitInputLock: false,
+      pendingStatus: 'none',
+      pendingFrames: 0,
+      canPlayerInput: false,
+      shouldAdvanceQueue: false,
+      shouldResolvePending: false,
+      actionLogLength: 0,
+      queueHead: 'none'
+    });
+    return () => {
+      delete (window as any).__HOP_DUMP_TURN_TRACE;
+      delete (window as any).__HOP_PRINT_TURN_TRACE;
+      delete (window as any).__HOP_CLEAR_TURN_TRACE;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!turnDriver.shouldAdvanceQueue) return;
+    appendTurnTrace('QUEUE_SCHEDULE', { delayMs: turnDriver.queueAdvanceDelayMs });
+
+    // One-shot queue pump with explicit driver phase gate.
+    const timer = window.setTimeout(() => {
+      dispatchWithTrace({ type: 'ADVANCE_TURN' }, 'queue_pump');
+    }, turnDriver.queueAdvanceDelayMs);
+    return () => window.clearTimeout(timer);
+  }, [turnDriver.shouldAdvanceQueue, turnDriver.queueAdvanceDelayMs, gameState.turnNumber, gameState.initiativeQueue, gameState.player.id, gameState.enemies, dispatchWithTrace, appendTurnTrace]);
+
+  const clearPostCommitLock = (reason: string = 'unknown') => {
+    if (postCommitInputLock) {
+      appendTurnTrace('LOCK_RELEASE', {
+        reason,
+        lockTurn: commitLockTurnRef.current,
+        expectedActionLogLength: commitLockActionLenRef.current
+      });
+    }
     setPostCommitInputLock(false);
     commitLockTurnRef.current = null;
     commitLockActionLenRef.current = null;
+    postCommitLockedAtRef.current = null;
+    postCommitObservedBusyRef.current = false;
+    postCommitEventHashAtArmRef.current = '';
+    postCommitTimelineHashAtArmRef.current = '';
     if (postCommitWatchdogRef.current !== null) {
       window.clearTimeout(postCommitWatchdogRef.current);
       postCommitWatchdogRef.current = null;
@@ -377,7 +588,14 @@ function App() {
   const currentEventsHash = getVisualEventsSignature(gameState.visualEvents);
   const lastProcessedTimelineHash = useRef('');
   const currentTimelineHash = getTimelineEventsSignature(gameState.timelineEvents);
+  const postCommitObservedBusyRef = useRef(false);
+  const postCommitEventHashAtArmRef = useRef('');
+  const postCommitTimelineHashAtArmRef = useRef('');
+  const POST_COMMIT_MIN_LOCK_MS = 220;
+  const POST_COMMIT_BUSY_WAIT_TIMEOUT_MS = 900;
   const pendingObservedBusy = useRef(false);
+  const pendingResolveStartedAtRef = useRef<number>(0);
+  const pendingInterceptSignature = `${gameState.pendingStatus?.status ?? 'none'}:${pendingFrameCount}`;
 
   // Update processed hash when animations settle
   useEffect(() => {
@@ -389,13 +607,29 @@ function App() {
 
   useEffect(() => {
     pendingObservedBusy.current = false;
-  }, [gameState.pendingStatus]);
+    pendingResolveStartedAtRef.current = performance.now();
+  }, [pendingInterceptSignature]);
 
   useEffect(() => {
-    if (gameState.pendingStatus && isBusy) {
+    if ((gameState.pendingStatus || pendingFrameCount > 0) && isBusy) {
       pendingObservedBusy.current = true;
     }
-  }, [gameState.pendingStatus, isBusy]);
+  }, [gameState.pendingStatus, pendingFrameCount, isBusy]);
+
+  useEffect(() => {
+    if (!postCommitInputLock) return;
+    if (isBusy) {
+      postCommitObservedBusyRef.current = true;
+    }
+  }, [postCommitInputLock, isBusy]);
+
+  useEffect(() => {
+    if (!postCommitInputLock) return;
+    const timer = window.setTimeout(() => {
+      setPostCommitTick(v => v + 1);
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [postCommitInputLock, postCommitTick]);
 
   // Auto-resolve pending transitions when animations settle
   useEffect(() => {
@@ -404,33 +638,124 @@ function App() {
       && (currentEventsHash === lastProcessedEventsHash.current)
       && (currentTimelineHash === lastProcessedTimelineHash.current);
     const hasBlockingTimeline = (gameState.timelineEvents || []).some(ev => ev.blocking);
-    const readyForResolve = noPendingAnimations && (!hasBlockingTimeline || pendingObservedBusy.current);
+    const blockingDurationMs = (gameState.timelineEvents || [])
+      .filter(ev => ev.blocking)
+      .reduce((sum, ev) => sum + (ev.suggestedDurationMs || 0), 0);
+    const movementTraceBudgetMs = (gameState.visualEvents || []).reduce((maxMs, ev) => {
+      if (ev.type !== 'kinetic_trace') return maxMs;
+      const trace = ev.payload as { startDelayMs?: number; durationMs?: number } | undefined;
+      if (!trace) return maxMs;
+      const startDelayMs = Math.max(0, Number(trace.startDelayMs || 0));
+      const durationMs = Math.max(0, Number(trace.durationMs || 0));
+      return Math.max(maxMs, startDelayMs + durationMs);
+    }, 0);
+    const interactionBudgetMs = Math.max(blockingDurationMs, movementTraceBudgetMs);
+    const requiredFallbackDelayMs = interactionBudgetMs > 0
+      ? Math.max(160, Math.min(3200, interactionBudgetMs + 40))
+      : 0;
+    const elapsedPendingMs = Math.max(0, performance.now() - pendingResolveStartedAtRef.current);
+    const canResolveByBusySignal = !hasBlockingTimeline || pendingObservedBusy.current;
+    const canResolveByFallbackDelay = !hasBlockingTimeline || elapsedPendingMs >= requiredFallbackDelayMs;
+    const readyForResolve = noPendingAnimations && (canResolveByBusySignal || canResolveByFallbackDelay);
 
-    if (gameState.pendingStatus && readyForResolve) {
-      dispatch({ type: 'RESOLVE_PENDING' });
+    if (!turnDriver.shouldResolvePending) return;
+
+    if (readyForResolve) {
+      appendTurnTrace('PENDING_RESOLVE_READY', {
+        noPendingAnimations,
+        hasBlockingTimeline,
+        movementTraceBudgetMs,
+        elapsedPendingMs,
+        requiredFallbackDelayMs
+      });
+      dispatchWithTrace({ type: 'RESOLVE_PENDING' }, 'pending_ready');
+      return;
     }
-  }, [gameState.pendingStatus, gameState.timelineEvents, isBusy, currentEventsHash, currentTimelineHash]);
+
+    // Fail-safe: if the busy signal was missed, resolve once the blocking budget elapsed.
+    if (!isBusy && hasBlockingTimeline && !pendingObservedBusy.current) {
+      appendTurnTrace('PENDING_RESOLVE_WAIT', {
+        movementTraceBudgetMs,
+        elapsedPendingMs,
+        requiredFallbackDelayMs
+      });
+      const remainingMs = Math.max(0, requiredFallbackDelayMs - elapsedPendingMs);
+      const timer = window.setTimeout(() => {
+        dispatchWithTrace({ type: 'RESOLVE_PENDING' }, 'pending_fallback_delay');
+      }, remainingMs);
+      return () => window.clearTimeout(timer);
+    }
+  }, [turnDriver.shouldResolvePending, gameState.timelineEvents, gameState.visualEvents, isBusy, currentEventsHash, currentTimelineHash, dispatchWithTrace, appendTurnTrace]);
 
   useEffect(() => {
     if (!postCommitInputLock) return;
 
     if (isReplayMode || gameState.gameStatus !== 'playing') {
-      clearPostCommitLock();
+      clearPostCommitLock('mode_or_status_change');
+      return;
+    }
+
+    // Intercept stack (shrine/stairs/win/loss) now owns flow control.
+    // Post-commit lock is only for normal queue handoff back to player input.
+    if (gameState.pendingStatus || (gameState.pendingFrames?.length ?? 0) > 0) {
+      clearPostCommitLock('pending_intercept');
       return;
     }
 
     const lockTurn = commitLockTurnRef.current;
     const expectedActionLen = commitLockActionLenRef.current;
+    const lockAgeMs = postCommitLockedAtRef.current !== null
+      ? Math.max(0, performance.now() - postCommitLockedAtRef.current)
+      : Number.POSITIVE_INFINITY;
     const turnAdvanced = lockTurn !== null ? gameState.turnNumber > lockTurn : false;
     const actionCommitted = expectedActionLen !== null ? (gameState.actionLog?.length ?? 0) >= expectedActionLen : false;
-    const queueResolved = isPlayerTurn(gameState) && !isBusy && !gameState.pendingStatus;
+    const minimumLockSatisfied = lockAgeMs >= POST_COMMIT_MIN_LOCK_MS;
+    const visualsChangedSinceArm =
+      currentEventsHash !== postCommitEventHashAtArmRef.current
+      || currentTimelineHash !== postCommitTimelineHashAtArmRef.current;
+    const noActionProgressYet = !turnAdvanced && !actionCommitted;
+    const waitForExpectedBusy =
+      !postCommitObservedBusyRef.current
+      && visualsChangedSinceArm
+      && lockAgeMs < POST_COMMIT_BUSY_WAIT_TIMEOUT_MS;
+    // IMPORTANT: Do not derive this from turnDriver.canPlayerInput because
+    // turnDriver itself is lock-aware and would deadlock this release path.
+    const queueResolved =
+      gameState.gameStatus === 'playing'
+      && !isReplayMode
+      && !isBusy
+      && !gameState.pendingStatus
+      && (gameState.pendingFrames?.length ?? 0) === 0
+      && isPlayerTurn(gameState);
 
     // Release only when the committed action has been observed and the queue
     // has returned control to the player (same turn or next turn).
-    if (queueResolved && (turnAdvanced || actionCommitted)) {
-      clearPostCommitLock();
+    // Age fallback prevents stale-lock deadlocks across hub/run transitions.
+    if (waitForExpectedBusy) {
+      appendTurnTrace('LOCK_WAIT_FOR_BUSY', {
+        lockAgeMs,
+        visualsChangedSinceArm
+      });
+      return;
     }
-  }, [postCommitInputLock, isReplayMode, gameState.gameStatus, gameState.turnNumber, gameState.pendingStatus, gameState.initiativeQueue, gameState.actionLog, isBusy, gameState.player.id, gameState.enemies]);
+
+    // If no state progress occurred at all (e.g. invalid/no-op intent), never let
+    // post-commit lock hang until watchdog.
+    if (queueResolved && noActionProgressYet && lockAgeMs > 450) {
+      clearPostCommitLock('no_progress_timeout');
+      return;
+    }
+
+    if (queueResolved && minimumLockSatisfied && (turnAdvanced || actionCommitted || lockAgeMs > 1500)) {
+      clearPostCommitLock(turnAdvanced ? 'turn_advanced' : actionCommitted ? 'action_committed' : 'age_fallback');
+    }
+  }, [postCommitInputLock, isReplayMode, gameState.gameStatus, gameState.turnNumber, gameState.pendingStatus, gameState.pendingFrames, gameState.initiativeQueue, gameState.actionLog, isBusy, gameState.player.id, gameState.enemies, appendTurnTrace, currentEventsHash, currentTimelineHash, postCommitTick]);
+
+  useEffect(() => {
+    if (gameState.gameStatus !== 'playing' && postCommitInputLock) {
+      clearPostCommitLock('not_playing');
+    }
+  }, [gameState.gameStatus, postCommitInputLock, appendTurnTrace]);
 
   useEffect(() => {
     if (!postCommitInputLock) return;
@@ -444,11 +769,14 @@ function App() {
         console.error('[HOP_INPUT_LOCK] Watchdog released stuck post-commit lock', {
           turnNumber: gameState.turnNumber,
           pendingStatus: gameState.pendingStatus?.status,
+          pendingFrames: gameState.pendingFrames?.length ?? 0,
           playerTurn: isPlayerTurn(gameState),
           isBusy,
-          actionLogLength: gameState.actionLog?.length ?? 0
+          actionLogLength: gameState.actionLog?.length ?? 0,
+          traceTail: turnTraceRef.current.slice(-40)
         });
-        clearPostCommitLock();
+        appendTurnTrace('LOCK_WATCHDOG_RELEASE');
+        clearPostCommitLock('watchdog');
       }
     }, 8000);
 
@@ -458,7 +786,19 @@ function App() {
         postCommitWatchdogRef.current = null;
       }
     };
-  }, [postCommitInputLock, gameState.turnNumber, gameState.pendingStatus, gameState.actionLog, isBusy, gameState.initiativeQueue, gameState.player.id, gameState.enemies]);
+  }, [postCommitInputLock, gameState.turnNumber, gameState.pendingStatus, gameState.actionLog, isBusy, gameState.initiativeQueue, gameState.player.id, gameState.enemies, appendTurnTrace]);
+
+  useEffect(() => {
+    if (!postCommitInputLock) return;
+    const timer = window.setTimeout(() => {
+      appendTurnTrace('LOCK_STALL_SNAPSHOT', {
+        lockAgeMs: postCommitLockedAtRef.current !== null
+          ? Math.max(0, performance.now() - postCommitLockedAtRef.current)
+          : null
+      });
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [postCommitInputLock, appendTurnTrace]);
 
   const [tutorialInstructions, setTutorialInstructions] = useState<string | null>(null);
   const [floorIntro, setFloorIntro] = useState<{ floor: number; theme: string } | null>(null);
@@ -491,7 +831,17 @@ function App() {
     }
     commitLockTurnRef.current = gameState.turnNumber;
     commitLockActionLenRef.current = (gameState.actionLog?.length ?? 0) + 1;
+    postCommitLockedAtRef.current = performance.now();
+    postCommitObservedBusyRef.current = false;
+    postCommitEventHashAtArmRef.current = currentEventsHash;
+    postCommitTimelineHashAtArmRef.current = currentTimelineHash;
     setPostCommitInputLock(true);
+    appendTurnTrace('LOCK_ARM', {
+      lockTurn: gameState.turnNumber,
+      expectedActionLogLength: (gameState.actionLog?.length ?? 0) + 1,
+      eventHashAtArm: currentEventsHash,
+      timelineHashAtArm: currentTimelineHash
+    });
   };
 
   const handleSelectSkill = (skillId: string | null) => {
@@ -503,7 +853,7 @@ function App() {
     if (isInputLocked) return;
     if (selectedSkillId) {
       armPostCommitLock();
-      dispatch({ type: 'USE_SKILL', payload: { skillId: selectedSkillId, target } });
+      dispatchWithTrace({ type: 'USE_SKILL', payload: { skillId: selectedSkillId, target } }, 'player_use_skill');
       setSelectedSkillId(null);
       return;
     }
@@ -512,41 +862,45 @@ function App() {
       return;
     }
     armPostCommitLock();
-    dispatch({ type: 'MOVE', payload: target });
+    dispatchWithTrace({ type: 'MOVE', payload: target }, 'player_move');
     setShowMovementRange(false);
   };
 
   const handleSelectUpgrade = (upgrade: string) => {
     if (isReplayMode || isBusy) return;
-    dispatch({ type: 'SELECT_UPGRADE', payload: upgrade });
+    dispatchWithTrace({ type: 'SELECT_UPGRADE', payload: upgrade }, 'upgrade_select');
   };
 
-  const handleReset = () => { dispatch({ type: 'RESET' }); setSelectedSkillId(null); setIsReplayMode(false); };
+  const handleReset = () => { dispatchWithTrace({ type: 'RESET' }, 'reset'); setSelectedSkillId(null); setIsReplayMode(false); setReplayError(null); };
   const handleWait = () => {
     if (isInputLocked) return;
     armPostCommitLock();
-    dispatch({ type: 'WAIT' });
+    dispatchWithTrace({ type: 'WAIT' }, 'player_wait');
     setSelectedSkillId(null);
   };
 
   const startReplay = (r: ReplayRecord) => {
     if (!r) return;
-    const normalizedActions = normalizeReplayActions(r.actions || []);
-    if (normalizedActions.length !== (r.actions || []).length) {
-      console.warn('[HOP_REPLAY] Dropped unsupported actions from replay', {
-        original: (r.actions || []).length,
-        kept: normalizedActions.length
+    const validation = validateReplayActions(r.actions || []);
+    if (!validation.valid) {
+      const msg = `Replay rejected: ${validation.errors.slice(0, 3).join(' | ')}`;
+      setReplayError(msg);
+      console.error('[HOP_REPLAY] Invalid replay actions', {
+        replayId: r.id,
+        errors: validation.errors
       });
+      return;
     }
+    setReplayError(null);
     setIsReplayMode(true);
-    setReplayActions(normalizedActions);
+    setReplayActions(validation.actions);
     setReplayActive(false); // Start paused
     replayIndexRef.current = 0;
 
     const seed = r.seed || r.id || String(Date.now());
     const loadout = r.loadoutId ? (DEFAULT_LOADOUTS as any)[r.loadoutId] : undefined;
     const init = generateInitialState(1, seed, seed, undefined, loadout);
-    dispatch({ type: 'LOAD_STATE', payload: init } as Action);
+    dispatchWithTrace({ type: 'LOAD_STATE', payload: init } as Action, 'replay_start');
   };
 
   const stepReplay = () => {
@@ -555,7 +909,7 @@ function App() {
       setReplayActive(false);
       return;
     }
-    dispatch(replayActions[idx] as Action);
+    dispatchWithTrace(replayActions[idx] as Action, 'replay_step');
     replayIndexRef.current = idx + 1;
   };
 
@@ -567,12 +921,13 @@ function App() {
 
   const stopReplay = () => {
     setIsReplayMode(false);
+    setReplayError(null);
     handleExitToHub();
   };
 
-  const handleLoadScenario = (state: GameState, instructions: string) => { dispatch({ type: 'LOAD_STATE', payload: state }); setTutorialInstructions(instructions); setSelectedSkillId(null); };
+  const handleLoadScenario = (state: GameState, instructions: string) => { dispatchWithTrace({ type: 'LOAD_STATE', payload: state }, 'scenario_load'); setTutorialInstructions(instructions); setSelectedSkillId(null); };
 
-  const handleExitToHub = () => { dispatch({ type: 'EXIT_TO_HUB' }); setSelectedSkillId(null); setIsReplayMode(false); navigateTo(hubPath); };
+  const handleExitToHub = () => { dispatchWithTrace({ type: 'EXIT_TO_HUB' }, 'exit_to_hub'); setSelectedSkillId(null); setIsReplayMode(false); setReplayError(null); navigateTo(hubPath); };
 
   // Auto-record runs on win/loss
   useEffect(() => {
@@ -582,13 +937,19 @@ function App() {
       // Record to local storage
       const seed = gameState.initialSeed ?? gameState.rngSeed ?? '0';
       const score = gameState.completedRun?.score || (gameState.player.hp || 0) + (gameState.floor || 0) * 100;
-      const normalizedActions = normalizeReplayActions(gameState.actionLog || []);
-      const diagnostics = buildReplayDiagnostics(normalizedActions, gameState.floor || 0);
+      const replayValidation = validateReplayActions(gameState.actionLog || []);
+      if (!replayValidation.valid) {
+        console.error('[HOP_REPLAY] Refusing to persist replay with invalid action log', {
+          errors: replayValidation.errors
+        });
+        return;
+      }
+      const diagnostics = buildReplayDiagnostics(replayValidation.actions, gameState.floor || 0);
       const rec: ReplayRecord = {
         id: `run-${Date.now()}`,
         seed,
         loadoutId: gameState.player.archetype,
-        actions: normalizedActions,
+        actions: replayValidation.actions,
         score,
         floor: gameState.floor,
         date: new Date().toISOString(),
@@ -628,11 +989,11 @@ function App() {
   const handleStartRun = (mode: 'normal' | 'daily') => {
     const id = gameState.selectedLoadoutId;
     if (!id) { console.warn('Start Run called without a selected loadout.'); return; }
-    dispatch({ type: 'START_RUN', payload: { loadoutId: id, mode } });
+    dispatchWithTrace({ type: 'START_RUN', payload: { loadoutId: id, mode } }, 'hub_start_run');
   };
 
   const handleStartArcadeRun = (loadoutId: string) => {
-    dispatch({ type: 'START_RUN', payload: { loadoutId, mode: 'daily' } });
+    dispatchWithTrace({ type: 'START_RUN', payload: { loadoutId, mode: 'daily' } }, 'arcade_start_run');
     navigateTo(hubPath);
   };
 
@@ -648,13 +1009,18 @@ function App() {
           <Hub
             gameState={gameState}
             onSelectLoadout={(l) => {
-              dispatch({ type: 'APPLY_LOADOUT', payload: l });
+              dispatchWithTrace({ type: 'APPLY_LOADOUT', payload: l }, 'hub_select_loadout');
             }}
             onStartRun={handleStartRun}
             onOpenArcade={() => navigateTo(arcadePath)}
             onLoadScenario={handleLoadScenario}
             onStartReplay={startReplay}
           />
+        )}
+        {replayError && (
+          <div className="absolute top-4 right-4 z-40 max-w-xl px-4 py-3 rounded-xl border border-red-400/40 bg-red-900/70 text-red-100 text-xs font-bold tracking-wide">
+            {replayError}
+          </div>
         )}
         {/* Hub instructions overlay */}
         {

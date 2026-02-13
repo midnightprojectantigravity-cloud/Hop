@@ -4,7 +4,7 @@
  * Goal: Meta - Allows for pre-game character customization.
  * TODO: Implement "Cloud Save" by integrating with an external database/API.
  */
-import type { Skill } from '../types';
+import type { Skill, Actor } from '../types';
 import { createActiveSkill } from '../skillRegistry';
 
 export interface Loadout {
@@ -87,5 +87,33 @@ export const applyLoadoutToPlayer = (loadout: Loadout): { upgrades: string[]; ac
         upgrades: [...loadout.startingUpgrades],
         activeSkills,
         archetype
+    };
+};
+
+const hasMovementSkill = (skills: Skill[]): boolean =>
+    skills.some(s => s.id === 'BASIC_MOVE' || s.id === 'DASH');
+
+/**
+ * Guard against stale saves / migrations that accidentally strip movement passives.
+ */
+export const ensureMobilitySkill = (skills: Skill[] = []): Skill[] => {
+    if (hasMovementSkill(skills)) return skills;
+    const fallback = createActiveSkill('BASIC_MOVE') as Skill | null;
+    return fallback ? [fallback, ...skills] : skills;
+};
+
+/**
+ * World-state integrity helper for player actors loaded from snapshots/replays.
+ */
+export const ensurePlayerLoadoutIntegrity = (player: Actor): Actor => {
+    const currentSkills = player.activeSkills || [];
+    const normalizedSkills = ensureMobilitySkill(currentSkills);
+    if (normalizedSkills === currentSkills) {
+        return player;
+    }
+
+    return {
+        ...player,
+        activeSkills: normalizedSkills,
     };
 };

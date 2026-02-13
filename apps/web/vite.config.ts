@@ -11,7 +11,7 @@ export default defineConfig({
   },
   plugins: [react()],
   root: '.',
-  base: '/Hop/',
+  base: '/Hop',
   server: {
     port: 5175,
     strictPort: true,

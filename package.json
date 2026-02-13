@@ -42,8 +42,10 @@
     "mvp:replay:gate": "npx tsx packages/engine/scripts/runReplayParityGate.ts mvp-replay-gate-seed 1",
     "mvp:timeline:audit": "npx tsx packages/engine/scripts/runTimelineAudit.ts 20 80 artifacts/upa/UPA_TIMELINE_AUDIT.json 2400 0",
     "mvp:timeline:audit:strict": "npx tsx packages/engine/scripts/runTimelineAudit.ts 20 80 artifacts/upa/UPA_TIMELINE_AUDIT.json 1500 1",
+    "mvp:turn-stack:audit": "npx tsx packages/engine/scripts/runTurnStackAudit.ts 8 80 artifacts/upa/UPA_TURN_STACK_AUDIT.json 4000 0",
+    "mvp:turn-stack:audit:strict": "npx tsx packages/engine/scripts/runTurnStackAudit.ts 8 80 artifacts/upa/UPA_TURN_STACK_AUDIT.json 4000 1",
     "upa:messages:audit": "npx tsx packages/engine/scripts/runUpaMessageAudit.ts 8 60 artifacts/upa/UPA_MESSAGE_AUDIT.json 2500",
-    "mvp:gate": "npm run build --workspace=@hop/engine && npm run build --workspace=@hop/web && npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent && npm run mvp:replay:gate && npm run mvp:timeline:audit && npx tsx packages/engine/scripts/runSkillHealthReport.ts 80 60 docs/UPA_SKILL_HEALTH.json 2 0 2"
+    "mvp:gate": "npm run build --workspace=@hop/engine && npm run build --workspace=@hop/web && npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent && npm run mvp:replay:gate && npm run mvp:timeline:audit && npm run mvp:turn-stack:audit:strict && npx tsx packages/engine/scripts/runSkillHealthReport.ts 80 60 docs/UPA_SKILL_HEALTH.json 2 0 2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

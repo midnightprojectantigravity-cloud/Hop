@@ -3,7 +3,7 @@
  * Follows the Command Pattern & Immutable State.
  * resolveEnemyActions and gameReducer are the primary entry points.
  */
-import type { GameState, Action, Entity, AtomicEffect } from './types';
+import type { GameState, Action, Entity, AtomicEffect, PendingFrame, PendingFrameType } from './types';
 import { hexEquals, getNeighbors } from './hex';
 import { resolveTelegraphedAttacks } from './systems/combat';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
@@ -27,7 +27,7 @@ import {
     getCurrentEntry,
     isPlayerTurn,
 } from './systems/initiative';
-import { tickStatuses } from './systems/status';
+import { isStunned, tickStatuses } from './systems/status';
 import { createEntity, ensureActorTrinity } from './systems/entity-factory';
 
 
@@ -35,7 +35,7 @@ import { createEntity, ensureActorTrinity } from './systems/entity-factory';
  * Generate initial state with the new tactical arena generation
  */
 import { consumeRandom } from './systems/rng';
-import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS } from './systems/loadout';
+import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS, ensureMobilitySkill, ensurePlayerLoadoutIntegrity } from './systems/loadout';
 import { tickTileEffects } from './systems/tile-tick';
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { buildRunSummary, createDailyObjectives, createDailySeed, toDateKey } from './systems/run-objectives';
@@ -44,6 +44,47 @@ import { appendTaggedMessage, appendTaggedMessages } from './systems/engine-mess
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
+const TURN_STACK_WARN = ENGINE_DEBUG || ENGINE_WARN;
+
+const warnTurnStackInvariant = (message: string, payload?: Record<string, unknown>) => {
+    if (!TURN_STACK_WARN) return;
+    if (payload) {
+        console.warn(`[TURN_STACK] ${message}`, payload);
+        return;
+    }
+    console.warn(`[TURN_STACK] ${message}`);
+};
+
+const createPendingFrame = (
+    state: GameState,
+    type: PendingFrameType,
+    status: PendingFrame['status'],
+    payload?: Record<string, unknown>
+): PendingFrame => {
+    const idx = (state.pendingFrames?.length ?? 0) + 1;
+    return {
+        id: `${state.turnNumber}:${status}:${type}:${idx}`,
+        type,
+        status,
+        createdTurn: state.turnNumber,
+        blocking: true,
+        payload
+    };
+};
+
+const withPendingFrame = (
+    state: GameState,
+    pendingStatus: NonNullable<GameState['pendingStatus']>,
+    frameType: PendingFrameType,
+    framePayload?: Record<string, unknown>
+): GameState => {
+    const frame = createPendingFrame(state, frameType, pendingStatus.status as PendingFrame['status'], framePayload);
+    return {
+        ...state,
+        pendingStatus,
+        pendingFrames: [...(state.pendingFrames || []), frame]
+    };
+};
 
 export const generateHubState = (): GameState => {
     const base = generateInitialState();
@@ -92,7 +133,7 @@ export const generateInitialState = (
 
     const upgrades = preservePlayer?.upgrades || (loadout ? loadout.startingUpgrades : []);
     const loadoutApplied = loadout ? applyLoadoutToPlayer(loadout) : { activeSkills: createDefaultSkills(), archetype: 'VANGUARD' as const };
-    const activeSkills = preservePlayer?.activeSkills || loadoutApplied.activeSkills;
+    const activeSkills = ensureMobilitySkill(preservePlayer?.activeSkills || loadoutApplied.activeSkills);
     const archetype = (preservePlayer as any)?.archetype || loadoutApplied.archetype;
 
     // Unified Tile Service: Initialized directly from dungeon
@@ -178,7 +219,12 @@ export const generateInitialState = (
     return tempState;
 };
 
-const executeStatusWindow = (state: GameState, actorId: string, window: 'START_OF_TURN' | 'END_OF_TURN'): { state: GameState, messages: string[] } => {
+const executeStatusWindow = (
+    state: GameState,
+    actorId: string,
+    window: 'START_OF_TURN' | 'END_OF_TURN',
+    stepId?: string
+): { state: GameState, messages: string[] } => {
     const actor = actorId === 'player' ? state.player : state.enemies.find(e => e.id === actorId);
     if (!actor) return { state, messages: [] };
     const effects: AtomicEffect[] = [];
@@ -192,7 +238,7 @@ const executeStatusWindow = (state: GameState, actorId: string, window: 'START_O
         }
     });
 
-    const newState = applyEffects(state, effects, { sourceId: actorId });
+    const newState = applyEffects(state, effects, { sourceId: actorId, stepId });
     return { state: newState, messages };
 };
 
@@ -204,6 +250,14 @@ import type { Intent } from './types/intent';
 import { ManualStrategy } from './strategy/manual';
 
 export const processNextTurn = (state: GameState, isResuming: boolean = false): GameState => {
+    if (state.pendingStatus || (state.pendingFrames?.length ?? 0) > 0) {
+        warnTurnStackInvariant('Blocked processNextTurn while pendingStatus is active.', {
+            status: state.pendingStatus?.status,
+            pendingFrames: state.pendingFrames?.length ?? 0,
+            turnNumber: state.turnNumber
+        });
+        return state;
+    }
     let curState = state;
     const messages: string[] = [];
     const dyingEntities: Entity[] = [];
@@ -220,14 +274,18 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         // GLOBAL DEATH CHECK: If player is dead, the game is over.
         if (curState.player.hp <= 0 && curState.pendingStatus?.status !== 'lost') {
             const completedRun = buildRunSummary(curState);
-            return {
-                ...curState,
-                pendingStatus: {
+            return withPendingFrame(
+                {
+                    ...curState,
+                    message: appendTaggedMessage(curState.message, 'You have fallen...', 'CRITICAL', 'COMBAT')
+                },
+                {
                     status: 'lost',
                     completedRun
                 },
-                message: appendTaggedMessage(curState.message, 'You have fallen...', 'CRITICAL', 'COMBAT')
-            };
+                'RUN_LOST',
+                { reason: 'GLOBAL_DEATH_CHECK' }
+            );
         }
         curState.occupancyMask = SpatialSystem.refreshOccupancyMask(curState);
 
@@ -249,6 +307,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         if (!actorId) break; // End of round?
 
         const actor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
+        const actorStepId = `${curState.turnNumber}:${curState.initiativeQueue?.round ?? 0}:${actorId}:${iterations}`;
 
         // If actor is missing/dead, remove from queue and continue
         if (!actor || actor.hp <= 0) {
@@ -263,7 +322,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         }
 
         if (!isResuming || iterations > 1) {
-            const sotResult = executeStatusWindow(curState, actorId, 'START_OF_TURN');
+            const sotResult = executeStatusWindow(curState, actorId, 'START_OF_TURN', actorStepId);
             curState = sotResult.state;
             messages.push(...sotResult.messages);
 
@@ -281,7 +340,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                 }
             }
 
-            const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId);
+            const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId, actorStepId);
             curState = tele.state;
             messages.push(...tele.messages);
         }
@@ -298,35 +357,50 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
             continue;
         }
 
-        // 4. Resolve Telegraphs (Environment/Delayed Skills) - Mostly for Player/Enemies interaction
-        // Note: original code only checked telegraphs for enemy actors? Check if player needs this.
-        // Assuming environment affects everyone.
-        const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId);
-        curState = tele.state;
-        messages.push(...tele.messages);
-
         // 5. THE AGENCY PIPELINE
         const actorForIntent = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
         if (!actorForIntent || actorForIntent.hp <= 0) {
             continue;
         }
-        const strategy = StrategyRegistry.resolve(actorForIntent);
-        const intentOrPromise = strategy.getIntent(curState, actorForIntent);
-
-        // Check if we need to wait for input (Manual Strategy)
-        if (intentOrPromise instanceof Promise) {
-            // HALT EXECUTION: Return state and wait for input action
-            const intentPreview = buildIntentPreview(curState);
-            return {
-                ...curState,
-                intentPreview,
-                message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
-                dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
+        let intent: Intent;
+        let forcedStunSkip = false;
+        if (isStunned(actorForIntent)) {
+            forcedStunSkip = true;
+            intent = {
+                type: 'WAIT',
+                actorId: actorForIntent.id,
+                skillId: 'WAIT_SKILL',
+                priority: 0,
+                metadata: {
+                    expectedValue: 0,
+                    reasoningCode: 'STATUS_STUNNED_AUTOSKIP',
+                    isGhost: false
+                }
             };
-        }
+            if (actorId === 'player') {
+                messages.push('You are stunned and skip your turn.');
+            } else {
+                messages.push(`${actorForIntent.subtype || 'Enemy'} is stunned and skips its turn.`);
+            }
+        } else {
+            const strategy = StrategyRegistry.resolve(actorForIntent);
+            const intentOrPromise = strategy.getIntent(curState, actorForIntent);
 
-        // We have a synchronous Intent
-        let intent = intentOrPromise as Intent;
+            // Check if we need to wait for input (Manual Strategy)
+            if (intentOrPromise instanceof Promise) {
+                // HALT EXECUTION: Return state and wait for input action
+                const intentPreview = buildIntentPreview(curState);
+                return {
+                    ...curState,
+                    intentPreview,
+                    message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
+                    dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
+                };
+            }
+
+            // We have a synchronous Intent
+            intent = intentOrPromise as Intent;
+        }
 
         // DEEP DIAGNOSTIC: Log Loadout and Intent
         const loadoutStr = activeActor.activeSkills.map(s => s.id).join(', ');
@@ -364,7 +438,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         // 8. Apply Effects
         // Note: applyEffects handles damage, healing, movement, etc.
         const stateBeforeEffects = curState;
-        const nextState = applyEffects(curState, effects, { sourceId: actorId, targetId });
+        const nextState = applyEffects(curState, effects, { sourceId: actorId, targetId, stepId: actorStepId });
 
         if (actorId === 'player') {
             nextState.kills = (nextState.kills || 0) + (kills || 0);
@@ -409,16 +483,20 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
             // Actor died during their own turn (e.g. walked into lava)
             if (actorId === 'player') {
                 const completedRun = buildRunSummary(curState);
-                return {
-                    ...curState,
-                    pendingStatus: { status: 'lost', completedRun },
-                    message: appendTaggedMessage(
-                        appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
-                        'You have fallen...',
-                        'CRITICAL',
-                        'COMBAT'
-                    )
-                };
+                return withPendingFrame(
+                    {
+                        ...curState,
+                        message: appendTaggedMessage(
+                            appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
+                            'You have fallen...',
+                            'CRITICAL',
+                            'COMBAT'
+                        )
+                    },
+                    { status: 'lost', completedRun },
+                    'RUN_LOST',
+                    { reason: 'SELF_ACTION_DEATH' }
+                );
             }
             curState = {
                 ...curState,
@@ -430,7 +508,7 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
         }
 
         // End of Turn Statuses
-        const eotResult = executeStatusWindow(curState, actorId, 'END_OF_TURN');
+        const eotResult = executeStatusWindow(curState, actorId, 'END_OF_TURN', actorStepId);
         curState = eotResult.state;
         messages.push(...eotResult.messages);
 
@@ -443,7 +521,12 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
 
         // 10. Passives / After-Turn Cleanup (Auto-Attack, etc)
         const actorAfterTurn = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
-        if (actorAfterTurn && actorAfterTurn.hp > 0) {
+        const skipPassivesThisTurn =
+            forcedStunSkip
+            || intent.metadata?.reasoningCode === 'STATUS_STUNNED'
+            || intent.metadata?.reasoningCode === 'STATUS_STUNNED_AUTOSKIP';
+
+        if (!skipPassivesThisTurn && actorAfterTurn && actorAfterTurn.hp > 0) {
             const playerStartPos = getTurnStartPosition(curState, actorId) || actorAfterTurn.previousPosition || actorAfterTurn.position;
             const persistentNeighborIds = getTurnStartNeighborIds(curState, actorId) ?? undefined;
 
@@ -452,7 +535,8 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                 actorAfterTurn,
                 getNeighbors(playerStartPos),
                 playerStartPos,
-                persistentNeighborIds
+                persistentNeighborIds,
+                actorStepId
             );
             curState = autoAttackResult.state;
             messages.push(...autoAttackResult.messages);
@@ -495,38 +579,51 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                     picked.push(available[idx]);
                     available.splice(idx, 1);
                 }
-                return {
-                    ...curState,
-                    rngCounter: rngState.rngCounter,
-                    pendingStatus: {
-                        status: 'choosing_upgrade',
-                        shrineOptions: picked.length > 0 ? picked : ['EXTRA_HP']
+                const shrineOptions = picked.length > 0 ? picked : ['EXTRA_HP'];
+                return withPendingFrame(
+                    {
+                        ...curState,
+                        rngCounter: rngState.rngCounter,
+                        message: appendTaggedMessage(curState.message, 'A holy shrine! Choose an upgrade.', 'INFO', 'OBJECTIVE')
                     },
-                    message: appendTaggedMessage(curState.message, 'A holy shrine! Choose an upgrade.', 'INFO', 'OBJECTIVE')
-                };
+                    {
+                        status: 'choosing_upgrade',
+                        shrineOptions
+                    },
+                    'SHRINE_CHOICE',
+                    { shrineOptions }
+                );
             }
 
             if (checkStairs(curState, curState.player.position)) {
                 const arcadeMax = 10;
                 if (curState.floor >= arcadeMax) {
                     const completedRun = buildRunSummary(curState);
-                    return {
-                        ...curState,
-                        pendingStatus: {
+                    return withPendingFrame(
+                        {
+                            ...curState,
+                            message: appendTaggedMessage(curState.message, `Arcade Cleared! Final Score: ${completedRun.score}`, 'INFO', 'OBJECTIVE')
+                        },
+                        {
                             status: 'won',
                             completedRun
                         },
-                        message: appendTaggedMessage(curState.message, `Arcade Cleared! Final Score: ${completedRun.score}`, 'INFO', 'OBJECTIVE')
-                    };
+                        'RUN_WON',
+                        { score: completedRun.score ?? 0 }
+                    );
                 }
 
-                return {
-                    ...curState,
-                    pendingStatus: {
+                return withPendingFrame(
+                    {
+                        ...curState,
+                        message: appendTaggedMessage(curState.message, 'Descending to the next level...', 'INFO', 'OBJECTIVE')
+                    },
+                    {
                         status: 'playing',
                     },
-                    message: appendTaggedMessage(curState.message, 'Descending to the next level...', 'INFO', 'OBJECTIVE')
-                };
+                    'STAIRS_TRANSITION',
+                    { nextFloor: curState.floor + 1 }
+                );
             }
         }
 
@@ -545,10 +642,15 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
 
 
 export const gameReducer = (state: GameState, action: Action): GameState => {
-    if (state.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE' && action.type !== 'LOAD_STATE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN' && action.type !== 'EXIT_TO_HUB') return state;
+    const normalizedPlayer = ensurePlayerLoadoutIntegrity(state.player);
+    const normalizedState = normalizedPlayer === state.player
+        ? state
+        : { ...state, player: normalizedPlayer };
+
+    if (normalizedState.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE' && action.type !== 'LOAD_STATE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN' && action.type !== 'EXIT_TO_HUB') return normalizedState;
 
     const clearedState: GameState = {
-        ...state,
+        ...normalizedState,
         isShaking: false,
         lastSpearPath: undefined,
         dyingEntities: [],
@@ -571,7 +673,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     ])
                 );
             }
-            loaded.player = ensureActorTrinity(loaded.player);
+            loaded.player = ensurePlayerLoadoutIntegrity(ensureActorTrinity(loaded.player));
             loaded.enemies = (loaded.enemies || []).map(ensureActorTrinity);
             if (loaded.companions) {
                 loaded.companions = loaded.companions.map(ensureActorTrinity);
@@ -590,10 +692,10 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         }
     }
 
-    if (state.gameStatus !== 'playing' && action.type !== 'SELECT_UPGRADE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN') return state;
+    if (normalizedState.gameStatus !== 'playing' && action.type !== 'SELECT_UPGRADE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN') return normalizedState;
 
-    const command = createCommand(action, state);
-    const oldState = state;
+    const command = createCommand(action, normalizedState);
+    const oldState = normalizedState;
 
     let curState = {
         ...clearedState,
@@ -769,11 +871,34 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             }
 
             case 'ADVANCE_TURN': {
+                if (s.pendingStatus || (s.pendingFrames?.length ?? 0) > 0) {
+                    warnTurnStackInvariant('Ignored ADVANCE_TURN while pendingStatus is active.', {
+                        status: s.pendingStatus?.status,
+                        pendingFrames: s.pendingFrames?.length ?? 0,
+                        turnNumber: s.turnNumber
+                    });
+                    return s;
+                }
                 return processNextTurn(s, false);
             }
 
             case 'RESOLVE_PENDING': {
-                if (!s.pendingStatus) return s;
+                const pendingFrames = s.pendingFrames || [];
+                if (pendingFrames.length > 1) {
+                    return {
+                        ...s,
+                        pendingFrames: pendingFrames.slice(1)
+                    };
+                }
+                if (!s.pendingStatus) {
+                    if (pendingFrames.length === 1) {
+                        return {
+                            ...s,
+                            pendingFrames: []
+                        };
+                    }
+                    return s;
+                }
                 const { status, shrineOptions, completedRun } = s.pendingStatus;
                 if (status === 'playing' && s.gameStatus === 'playing') {
                     const baseSeed = s.initialSeed ?? s.rngSeed ?? '0';
@@ -820,7 +945,8 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                         actionLog: [...(s.actionLog || [])],
                         dailyRunDate: s.dailyRunDate,
                         runObjectives: s.runObjectives,
-                        hazardBreaches: s.hazardBreaches || 0
+                        hazardBreaches: s.hazardBreaches || 0,
+                        pendingFrames: undefined
                     };
                 }
                 return {
@@ -828,7 +954,8 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                     gameStatus: status,
                     shrineOptions: shrineOptions || s.shrineOptions,
                     completedRun: completedRun || (s as any).completedRun,
-                    pendingStatus: undefined
+                    pendingStatus: undefined,
+                    pendingFrames: undefined
                 };
             }
 
