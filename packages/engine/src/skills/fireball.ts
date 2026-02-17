@@ -6,6 +6,7 @@ import { SpatialSystem } from '../systems/SpatialSystem';
 import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
 import { getActorAt } from '../helpers';
 import { pointToKey } from '../hex';
+import { getSurfaceStatus, getSurfaceSkillPowerMultiplier } from '../systems/surface-status';
 
 
 
@@ -44,6 +45,8 @@ export const FIREBALL: SkillDefinition = {
         const inDangerPreviewHex = !!_state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position));
         for (const p of affected) {
             const actorAtPoint = getActorAt(_state, p);
+            const surfaceStatus = getSurfaceStatus(_state, p);
+            const surfaceMultiplier = getSurfaceSkillPowerMultiplier('FIREBALL', surfaceStatus);
             const combat = calculateCombat({
                 attackerId: attacker.id,
                 targetId: actorAtPoint?.id || pointToKey(p),
@@ -53,7 +56,9 @@ export const FIREBALL: SkillDefinition = {
                 targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
                 damageClass: 'magical',
                 scaling: [{ attribute: 'mind', coefficient: 0.2 }],
-                statusMultipliers: [],
+                statusMultipliers: surfaceMultiplier === 1
+                    ? []
+                    : [{ id: `surface_${surfaceStatus}`, multiplier: surfaceMultiplier }],
                 inDangerPreviewHex,
                 theoreticalMaxPower: 1
             });

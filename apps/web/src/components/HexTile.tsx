@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { hexToPixel, type Point, TILE_SIZE, COLORS } from '@hop/engine';
 
 interface HexTileProps {
@@ -14,6 +14,8 @@ interface HexTileProps {
     isWall?: boolean;
     isFire?: boolean;
     onMouseEnter?: (hex: Point) => void;
+    assetHref?: string;
+    interactionOnly?: boolean;
 }
 
 const getHexCorners = (size: number): string => {
@@ -41,10 +43,18 @@ const LAVA_BUBBLES = [
 ];
 
 const HexTileComponent: React.FC<HexTileProps> = ({
-    hex, onClick, isValidMove, isTargeted, isStairs, isLava, isShrine, isWall, isFire, onMouseEnter
+    hex, onClick, isValidMove, isTargeted, isStairs, isLava, isShrine, isWall, isFire, onMouseEnter, assetHref, interactionOnly
 }) => {
+    const [imageFailed, setImageFailed] = useState(false);
+
+    useEffect(() => {
+        setImageFailed(false);
+    }, [assetHref]);
+
     const { x, y } = hexToPixel(hex, TILE_SIZE);
     const showDebugCoords = SHOW_DEBUG_HEX_COORDS();
+    const tilePoints = getHexCorners(TILE_SIZE - 2);
+    const clipId = `hex-clip-${hex.q}-${hex.r}-${hex.s}`;
 
     // Color selection from design doc
     let fill: string = COLORS.floor;
@@ -67,6 +77,10 @@ const HexTileComponent: React.FC<HexTileProps> = ({
         fill = COLORS.shrine;
         stroke = '#c2410c';
     }
+    if (interactionOnly) {
+        fill = 'transparent';
+        stroke = 'rgba(255,255,255,0.10)';
+    }
 
     if (isValidMove) {
         stroke = '#ffffff';
@@ -75,6 +89,7 @@ const HexTileComponent: React.FC<HexTileProps> = ({
     if (isTargeted) {
         stroke = '#ff0000';
     }
+    const showTileImage = Boolean(assetHref) && !interactionOnly && !imageFailed;
 
     return (
         <g transform={`translate(${x},${y})`}
@@ -93,15 +108,43 @@ const HexTileComponent: React.FC<HexTileProps> = ({
             )}
 
             {/* Main tile polygon */}
-            <polygon
-                points={getHexCorners(TILE_SIZE - 2)}
-                fill={fill}
-                stroke={stroke}
-                strokeWidth={isTargeted || isValidMove ? "3" : "1"}
-            />
+            {!showTileImage && (
+                <polygon
+                    points={tilePoints}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={isTargeted || isValidMove ? "3" : "1"}
+                />
+            )}
+
+            {showTileImage && (
+                <>
+                    <defs>
+                        <clipPath id={clipId}>
+                            <polygon points={tilePoints} />
+                        </clipPath>
+                    </defs>
+                    <image
+                        href={assetHref}
+                        x={-TILE_SIZE}
+                        y={-(TILE_SIZE * 0.866)}
+                        width={TILE_SIZE * 2}
+                        height={TILE_SIZE * 1.732}
+                        preserveAspectRatio="xMidYMid slice"
+                        clipPath={`url(#${clipId})`}
+                        onError={() => setImageFailed(true)}
+                    />
+                    <polygon
+                        points={tilePoints}
+                        fill="none"
+                        stroke={stroke}
+                        strokeWidth={isTargeted || isValidMove ? "3" : "1"}
+                    />
+                </>
+            )}
 
             {/* Lava bubbles with animation */}
-            {isLava && (
+            {isLava && !interactionOnly && (
                 <g className="lava-bubbles">
                     {LAVA_BUBBLES.map((bubble, i) => (
                         <circle
@@ -128,58 +171,10 @@ const HexTileComponent: React.FC<HexTileProps> = ({
             )}
 
             {/* Fire bubbles/embers */}
-            {isFire && (
+            {isFire && !interactionOnly && (
                 <g className="fire-embers">
                     <circle cx="-6" cy="4" r="2" fill="#fbbf24" opacity="0.75" style={{ animation: `lavaBubble 1.6s ease-in-out 0s infinite` }} />
                     <circle cx="4" cy="-6" r="1.5" fill="#fcd34d" opacity="0.75" style={{ animation: `lavaBubble 1.4s ease-in-out 0.5s infinite` }} />
-                </g>
-            )}
-
-            {/* Shrine crystal icon */}
-            {isShrine && (
-                <g className="shrine-icon">
-                    {/* Crystal base */}
-                    <polygon
-                        points="0,-18 8,-4 5,12 -5,12 -8,-4"
-                        fill="#f97316"
-                        stroke="#fff"
-                        strokeWidth="1"
-                        opacity="0.9"
-                    />
-                    {/* Crystal shine */}
-                    <polygon
-                        points="-2,-14 2,-14 1,-2 -1,-2"
-                        fill="rgba(255,255,255,0.6)"
-                    />
-                    {/* Glow effect */}
-                    <circle
-                        cx="0"
-                        cy="0"
-                        r="14"
-                        fill="none"
-                        stroke="#fdba74"
-                        strokeWidth="2"
-                        opacity="0.4"
-                        style={{ animation: 'shrineGlow 2s ease-in-out infinite' }}
-                    />
-                </g>
-            )}
-
-            {/* Stairs icon */}
-            {isStairs && (
-                <g className="stairs-icon">
-                    {/* Stair steps */}
-                    <rect x="-12" y="6" width="8" height="4" fill="#1f2937" rx="1" />
-                    <rect x="-6" y="2" width="8" height="4" fill="#374151" rx="1" />
-                    <rect x="0" y="-2" width="8" height="4" fill="#4b5563" rx="1" />
-                    <rect x="6" y="-6" width="8" height="4" fill="#6b7280" rx="1" />
-                    {/* Arrow indicator */}
-                    <path
-                        d="M 2 -14 L 2 -20 L -4 -20 L 2 -26 L 8 -20 L 2 -20"
-                        fill="#22c55e"
-                        stroke="#16a34a"
-                        strokeWidth="1"
-                    />
                 </g>
             )}
 
@@ -214,5 +209,7 @@ export const HexTile = React.memo(HexTileComponent, (prev, next) => {
         && prev.isLava === next.isLava
         && prev.isShrine === next.isShrine
         && prev.isWall === next.isWall
-        && prev.isFire === next.isFire;
+        && prev.isFire === next.isFire
+        && prev.assetHref === next.assetHref
+        && prev.interactionOnly === next.interactionOnly;
 });

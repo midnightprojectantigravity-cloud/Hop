@@ -5,6 +5,7 @@ import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, isBlockedByWall } from '../systems/validation';
 import { SpatialSystem } from '../systems/SpatialSystem';
 import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { getSurfaceStatus, getSurfaceSkillPowerMultiplier } from '../systems/surface-status';
 
 /**
  * FIREWALL Skill
@@ -57,6 +58,8 @@ export const FIREWALL: SkillDefinition = {
                 // If an actor is there, damage them immediately
                 const actor = getActorAt(state, p);
                 if (actor) {
+                    const surfaceStatus = getSurfaceStatus(state, p);
+                    const surfaceMultiplier = getSurfaceSkillPowerMultiplier('FIREWALL', surfaceStatus);
                     const combat = calculateCombat({
                         attackerId: attacker.id,
                         targetId: actor.id,
@@ -66,7 +69,9 @@ export const FIREWALL: SkillDefinition = {
                         targetTrinity: extractTrinityStats(actor),
                         damageClass: 'magical',
                         scaling: [{ attribute: 'mind', coefficient: 0.15 }],
-                        statusMultipliers: []
+                        statusMultipliers: surfaceMultiplier === 1
+                            ? []
+                            : [{ id: `surface_${surfaceStatus}`, multiplier: surfaceMultiplier }]
                     });
                     effects.push({ type: 'Damage', target: actor.id, amount: combat.finalPower, reason: 'firewall_impact', scoreEvent: combat.scoreEvent });
                 }

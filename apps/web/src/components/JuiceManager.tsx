@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Point, TimelineEvent } from '@hop/engine';
 import { hexToPixel, TILE_SIZE } from '@hop/engine';
+import type { VisualAssetManifest, VisualAssetEntry } from '../visual/asset-manifest';
+import { resolveFxAssetId, resolveCombatTextFrameAssetId } from '../visual/asset-selectors';
 
 interface JuiceEffect {
     id: string;
@@ -14,6 +16,7 @@ interface JuiceManagerProps {
     visualEvents: { type: string; payload: any }[];
     timelineEvents?: TimelineEvent[];
     onBusyStateChange?: (busy: boolean) => void;
+    assetManifest?: VisualAssetManifest | null;
 }
 
 const waitMs = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -38,7 +41,7 @@ const getEffectLifetimeMs = (effectType: JuiceEffect['type']): number => {
     return 2000;
 };
 
-export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timelineEvents = [], onBusyStateChange }) => {
+export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timelineEvents = [], onBusyStateChange, assetManifest }) => {
     const [effects, setEffects] = useState<JuiceEffect[]>([]);
     const processedTimelineCount = useRef(0);
     const processedVisualCount = useRef(0);
@@ -50,6 +53,13 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
     const cleanupTimerRef = useRef<number | null>(null);
     const MAX_BLOCKING_WAIT_MS = 900;
     const MAX_QUEUE_RUNTIME_MS = 5000;
+    const assetById = useMemo(() => {
+        const map = new Map<string, VisualAssetEntry>();
+        for (const asset of assetManifest?.assets || []) {
+            map.set(asset.id, asset);
+        }
+        return map;
+    }, [assetManifest]);
 
     useEffect(() => {
         if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -327,8 +337,26 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
             {effects.map(effect => {
                 if (!effect.position) return null;
                 const { x, y } = hexToPixel(effect.position, TILE_SIZE);
+                const fxAssetId = resolveFxAssetId(effect.type);
+                const fxAssetHref = fxAssetId ? assetById.get(fxAssetId)?.path : undefined;
+                const frameAssetHref = assetById.get(resolveCombatTextFrameAssetId())?.path;
 
                 if (effect.type === 'impact') {
+                    if (fxAssetHref) {
+                        return (
+                            <image
+                                key={effect.id}
+                                href={fxAssetHref}
+                                x={x - TILE_SIZE * 0.75}
+                                y={y - TILE_SIZE * 0.75}
+                                width={TILE_SIZE * 1.5}
+                                height={TILE_SIZE * 1.5}
+                                preserveAspectRatio="xMidYMid meet"
+                                className="animate-impact"
+                                opacity="0.9"
+                            />
+                        );
+                    }
                     return (
                         <circle
                             key={effect.id}
@@ -348,6 +376,17 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
 
                     return (
                         <g key={effect.id} transform={`translate(${x}, ${y - 10})`}>
+                            {frameAssetHref && (
+                                <image
+                                    href={frameAssetHref}
+                                    x={-46}
+                                    y={-24}
+                                    width={92}
+                                    height={24}
+                                    preserveAspectRatio="xMidYMid meet"
+                                    opacity="0.78"
+                                />
+                            )}
                             <text
                                 textAnchor="middle"
                                 fill={color}
@@ -401,6 +440,21 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
                 }
 
                 if (effect.type === 'vaporize') {
+                    if (fxAssetHref) {
+                        return (
+                            <image
+                                key={effect.id}
+                                href={fxAssetHref}
+                                x={x - TILE_SIZE * 0.95}
+                                y={y - TILE_SIZE * 0.95}
+                                width={TILE_SIZE * 1.9}
+                                height={TILE_SIZE * 1.9}
+                                preserveAspectRatio="xMidYMid meet"
+                                className="animate-vaporize"
+                                opacity="0.9"
+                            />
+                        );
+                    }
                     return (
                         <g key={effect.id}>
                             <circle
@@ -425,6 +479,21 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
                 }
 
                 if (effect.type === 'lava_ripple') {
+                    if (fxAssetHref) {
+                        return (
+                            <image
+                                key={effect.id}
+                                href={fxAssetHref}
+                                x={x - TILE_SIZE}
+                                y={y - TILE_SIZE}
+                                width={TILE_SIZE * 2}
+                                height={TILE_SIZE * 2}
+                                preserveAspectRatio="xMidYMid meet"
+                                className="animate-ping"
+                                opacity="0.85"
+                            />
+                        );
+                    }
                     return (
                         <circle
                             key={effect.id}
@@ -440,6 +509,21 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({ visualEvents, timeli
                 }
 
                 if (effect.type === 'explosion_ring') {
+                    if (fxAssetHref) {
+                        return (
+                            <image
+                                key={effect.id}
+                                href={fxAssetHref}
+                                x={x - TILE_SIZE * 1.35}
+                                y={y - TILE_SIZE * 1.35}
+                                width={TILE_SIZE * 2.7}
+                                height={TILE_SIZE * 2.7}
+                                preserveAspectRatio="xMidYMid meet"
+                                className="animate-explosion-ring"
+                                opacity="0.88"
+                            />
+                        );
+                    }
                     return (
                         <circle
                             key={effect.id}

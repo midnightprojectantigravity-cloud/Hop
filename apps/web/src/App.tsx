@@ -93,7 +93,10 @@ import type { ReplayRecord } from './components/ReplayManager';
 import { isPlayerTurn } from '@hop/engine';
 import { Hub } from './components/Hub';
 import { ArcadeHub } from './components/ArcadeHub';
+import { BiomeSandbox } from './components/BiomeSandbox';
 import { deriveTurnDriverState } from './turn-driver';
+import { loadAssetManifest } from './visual/asset-manifest';
+import type { VisualAssetManifest } from './visual/asset-manifest';
 
 type TurnTraceEntry = {
   id: number;
@@ -195,7 +198,11 @@ function App() {
   const hubBase = pathname.toLowerCase().startsWith('/hop') ? '/Hop' : '';
   const hubPath = `${hubBase || ''}` || '/';
   const arcadePath = `${hubBase}/Arcade` || '/Arcade';
-  const isArcadeRoute = pathname.toLowerCase().endsWith('/arcade') || pathname.toLowerCase().endsWith('/arcarde');
+  const biomesPath = `${hubBase}/Biomes` || '/Biomes';
+  const pathnameLower = pathname.toLowerCase();
+  const normalizedPathname = pathnameLower.replace(/\/+$/, '');
+  const isArcadeRoute = normalizedPathname.endsWith('/arcade') || normalizedPathname.endsWith('/arcarde');
+  const isBiomesRoute = normalizedPathname.endsWith('/biomes');
 
   // packages/web/src/App.tsx
 
@@ -269,6 +276,19 @@ function App() {
   });
 
   const isDebugQueryEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_QUERY);
+  const [assetManifest, setAssetManifest] = useState<VisualAssetManifest | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+    void loadAssetManifest().then((manifest) => {
+      if (!isActive) return;
+      setAssetManifest(manifest);
+      (window as any).__HOP_ASSET_MANIFEST = manifest;
+    });
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isDebugQueryEnabled) return;
@@ -997,9 +1017,27 @@ function App() {
     navigateTo(hubPath);
   };
 
+  if (isBiomesRoute) {
+    return (
+      <BiomeSandbox
+        assetManifest={assetManifest}
+        onBack={() => navigateTo(hubPath)}
+      />
+    );
+  }
+
   if (gameState.gameStatus === 'hub') {
     return (
       <div className="w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
+        {!isArcadeRoute && (
+          <button
+            type="button"
+            onClick={() => navigateTo(biomesPath)}
+            className="absolute top-4 right-4 z-40 px-4 py-2 rounded-xl border border-cyan-300/35 bg-cyan-500/10 hover:bg-cyan-500/20 text-[10px] font-black uppercase tracking-[0.2em]"
+          >
+            Biome Sandbox
+          </button>
+        )}
         {isArcadeRoute ? (
           <ArcadeHub
             onBack={() => navigateTo(hubPath)}
@@ -1058,6 +1096,7 @@ function App() {
               selectedSkillId={selectedSkillId}
               showMovementRange={showMovementRange}
               onBusyStateChange={setIsBusy}
+              assetManifest={assetManifest}
             />
             {isInputLocked && gameState.gameStatus === 'playing' && (
               <div className="absolute inset-0 z-40 pointer-events-auto">

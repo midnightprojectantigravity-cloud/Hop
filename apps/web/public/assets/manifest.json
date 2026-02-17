@@ -1,0 +1,542 @@
+{
+  "version": "1.0.0",
+  "gridTopology": "flat-top-hex",
+  "tileUnitPx": 256,
+  "tileAspectRatio": 1.154700538,
+  "biomeUnderlay": {
+    "default": "/assets/biomes/biome.catacombs.floor.02.webp",
+    "themes": {
+      "catacombs": "/assets/biomes/biome.catacombs.floor.02.webp",
+      "inferno": "/assets/biomes/biome.red.floor.01.webp",
+      "throne": "/assets/biomes/biome.throne.floor.01.webp",
+      "frozen": "/assets/biomes/biome.frozen.floor.01.webp",
+      "void": "/assets/biomes/biome.void.floor.01.webp"
+    },
+    "mode": "off",
+    "scalePx": 256,
+    "opacity": 0.9
+  },
+  "biomeLayers": {
+    "undercurrent": {
+      "default": "/assets/biomes/biome.red.lava.01.webp",
+      "themes": {
+        "catacombs": "/assets/biomes/biome.red.lava.01.webp",
+        "inferno": "/assets/biomes/biome.red.lava.01.webp",
+        "throne": "/assets/biomes/biome.red.lava.02.webp",
+        "frozen": "/assets/biomes/biome.red.lava.02.webp",
+        "void": "/assets/biomes/biome.red.lava.02.webp"
+      },
+      "mode": "repeat",
+      "scalePx": 256,
+      "opacity": 0.62,
+      "scroll": {
+        "x": 160,
+        "y": 110,
+        "durationMs": 22000
+      }
+    },
+    "crust": {
+      "default": "/assets/biomes/biome.catacombs.floor.02.webp",
+      "themes": {
+        "catacombs": "/assets/biomes/biome.catacombs.floor.02.webp",
+        "inferno": "/assets/biomes/biome.red.floor.01.webp",
+        "throne": "/assets/biomes/biome.throne.floor.01.webp",
+        "frozen": "/assets/biomes/biome.frozen.floor.01.webp",
+        "void": "/assets/biomes/biome.void.floor.01.webp"
+      },
+      "mode": "repeat",
+      "scalePx": 256,
+      "opacity": 1,
+      "seedShiftPx": 96
+    },
+    "clutter": {
+      "density": 0.14,
+      "maxPerHex": 1,
+      "bleedScaleMax": 2.0,
+      "tags": [
+        "clutter",
+        "obstacle"
+      ]
+    }
+  },
+  "biomeMaterials": {
+    "crust": {
+      "detailA": {
+        "default": "/assets/biomes/biome.catacombs.floor.02.webp",
+        "themes": {
+          "catacombs": "/assets/biomes/biome.catacombs.floor.02.webp",
+          "inferno": "/assets/biomes/biome.red.floor.01.webp",
+          "throne": "/assets/biomes/biome.throne.floor.01.webp",
+          "frozen": "/assets/biomes/biome.frozen.floor.01.webp",
+          "void": "/assets/biomes/biome.void.floor.01.webp"
+        },
+        "mode": "off",
+        "scalePx": 192,
+        "opacity": 0.18
+      },
+      "detailB": {
+        "default": "/assets/biomes/biome.catacombs.floor.01.webp",
+        "themes": {
+          "catacombs": "/assets/biomes/biome.catacombs.floor.01.webp",
+          "inferno": "/assets/biomes/biome.red.floor.01.webp",
+          "throne": "/assets/biomes/biome.throne.floor.01.webp",
+          "frozen": "/assets/biomes/biome.frozen.floor.01.webp",
+          "void": "/assets/biomes/biome.void.floor.01.webp"
+        },
+        "mode": "off",
+        "scalePx": 256,
+        "opacity": 0.14
+      },
+      "tint": {
+        "default": "#847360",
+        "themes": {
+          "catacombs": "#847360",
+          "inferno": "#8f4a2e",
+          "throne": "#5b6d41",
+          "frozen": "#536e8e",
+          "void": "#5f5977"
+        },
+        "opacity": 0,
+        "blendMode": "multiply"
+      }
+    }
+  },
+  "layers": [
+    "ground",
+    "decal",
+    "prop",
+    "unit",
+    "fx",
+    "ui"
+  ],
+  "assets": [
+    {
+      "id": "tile.catacombs.floor.01",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "catacombs",
+      "path": "/assets/biomes/biome.catacombs.floor.01.webp",
+      "width": 435,
+      "height": 376,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "floor",
+        "stone"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "tile.catacombs.floor.02",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "catacombs",
+      "path": "/assets/biomes/biome.catacombs.floor.02.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "floor",
+        "stone"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "tile.inferno.floor.01",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "inferno",
+      "path": "/assets/biomes/biome.red.floor.01.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "floor",
+        "inferno"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "tile.throne.floor.01",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "throne",
+      "path": "/assets/biomes/biome.throne.floor.01.webp",
+      "width": 435,
+      "height": 376,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "floor",
+        "throne"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "tile.frozen.floor.01",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "frozen",
+      "path": "/assets/biomes/biome.frozen.floor.01.webp",
+      "width": 436,
+      "height": 375,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "floor",
+        "frozen"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "tile.void.floor.01",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "void",
+      "path": "/assets/biomes/biome.void.floor.01.webp",
+      "width": 436,
+      "height": 375,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "floor",
+        "void"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "tile.catacombs.wall.01",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "catacombs",
+      "path": "/assets/tiles/tile.catacombs.wall.01.svg",
+      "width": 256,
+      "height": 222,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "wall",
+        "blocking"
+      ],
+      "recommendedFormat": "svg"
+    },
+    {
+      "id": "tile.catacombs.lava.01",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "catacombs",
+      "path": "/assets/tiles/tile.catacombs.lava.01.svg",
+      "width": 256,
+      "height": 222,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "lava",
+        "hazard"
+      ],
+      "recommendedFormat": "svg"
+    },
+    {
+      "id": "tile.inferno.lava.01",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "inferno",
+      "path": "/assets/biomes/biome.red.lava.01.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "lava",
+        "hazard",
+        "inferno"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "tile.catacombs.fire.01",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "catacombs",
+      "path": "/assets/tiles/tile.catacombs.fire.01.svg",
+      "width": 256,
+      "height": 222,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "fire",
+        "hazard"
+      ],
+      "recommendedFormat": "svg"
+    },
+    {
+      "id": "prop.inferno.clutter.mountain.01",
+      "type": "prop",
+      "layer": "prop",
+      "theme": "inferno",
+      "path": "/assets/biomes/biome.inferno.clutter.mountain.01.webp",
+      "width": 512,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.78
+      },
+      "tags": [
+        "clutter",
+        "obstacle",
+        "mountain",
+        "blocking",
+        "inferno"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "prop.core.stairs.01",
+      "type": "prop",
+      "layer": "prop",
+      "theme": "core",
+      "path": "/assets/props/prop.core.stairs.01.svg",
+      "width": 128,
+      "height": 128,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "tags": [
+        "stairs",
+        "objective"
+      ],
+      "recommendedFormat": "svg"
+    },
+    {
+      "id": "prop.core.shrine.01",
+      "type": "prop",
+      "layer": "prop",
+      "theme": "core",
+      "path": "/assets/props/prop.core.shrine.01.svg",
+      "width": 128,
+      "height": 128,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "tags": [
+        "shrine",
+        "objective"
+      ],
+      "recommendedFormat": "svg"
+    },
+    {
+      "id": "unit.player.vanguard.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.player.vanguard.01.webp",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.player.firemage.04",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.player.firemage.04.webp",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.player.skirmisher.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.player.hunter.01.webp",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.player.hunter.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.player.hunter.01.webp",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.player.necromancer.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.player.necro.01.webp",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.player.assassin.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.player.assassin.01.webp",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.footman.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.enemy.footman.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.shield_bearer.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.enemy.shield_bearer.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.archer.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.enemy.archer.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.warlock.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.enemy.warlock.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.bomber.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.enemy.bomber.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.bomb.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.enemy.bomb.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.boss.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/units/unit.enemy.boss.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "fx.core.impact.01",
+      "type": "fx",
+      "layer": "fx",
+      "theme": "core",
+      "path": "/assets/fx/fx.core.impact.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "svg"
+    },
+    {
+      "id": "fx.core.vaporize.01",
+      "type": "fx",
+      "layer": "fx",
+      "theme": "core",
+      "path": "/assets/fx/fx.core.vaporize.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "svg"
+    },
+    {
+      "id": "fx.core.lava_ripple.01",
+      "type": "fx",
+      "layer": "fx",
+      "theme": "core",
+      "path": "/assets/fx/fx.core.lava_ripple.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "svg"
+    },
+    {
+      "id": "fx.core.explosion_ring.01",
+      "type": "fx",
+      "layer": "fx",
+      "theme": "core",
+      "path": "/assets/fx/fx.core.explosion_ring.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "svg"
+    },
+    {
+      "id": "decal.combat.blood.01",
+      "type": "decal",
+      "layer": "decal",
+      "theme": "core",
+      "path": "/assets/decals/decal.combat.blood.01.svg",
+      "width": 128,
+      "height": 128,
+      "recommendedFormat": "svg"
+    },
+    {
+      "id": "ui.core.hp_frame.01",
+      "type": "ui",
+      "layer": "ui",
+      "theme": "core",
+      "path": "/assets/ui/ui.core.hp_frame.01.svg",
+      "width": 256,
+      "height": 64,
+      "recommendedFormat": "svg"
+    }
+  ]
+}

@@ -21,6 +21,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate visual asset manifest
+        run: npm run assets:validate
+
       - name: Build engine
         run: npm run build --workspace=@hop/engine
 

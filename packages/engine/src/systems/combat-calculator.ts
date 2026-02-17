@@ -37,6 +37,11 @@ export interface CombatIntent {
     theoreticalMaxPower?: number;
     attackPowerMultiplier?: number;
     targetDamageTakenMultiplier?: number;
+    engagementRange?: number;
+    optimalRangeMin?: number;
+    optimalRangeMax?: number;
+    targetOptimalRangeMin?: number;
+    targetOptimalRangeMax?: number;
 }
 
 export interface CombatScoreEvent {
@@ -49,6 +54,7 @@ export interface CombatScoreEvent {
     damageClass: 'physical' | 'magical';
     hitPressure: number;
     mitigationPressure: number;
+    rangePressure: number;
     critPressure: number;
     resistancePressure: number;
     bodyContribution: number;
@@ -67,6 +73,7 @@ export interface CombatCalculationResult {
     riskMultiplier: number;
     criticalMultiplier: number;
     hitMultiplier: number;
+    rangeMultiplier: number;
     mitigationMultiplier: number;
     critExpectedMultiplier: number;
     finalPower: number;
@@ -108,9 +115,21 @@ const computeRiskMultiplier = (intent: CombatIntent): number => {
 const computeHitMultiplier = (
     attacker: TrinityStats,
     defender: TrinityStats | undefined,
-    damageClass: 'physical' | 'magical'
-): { multiplier: number; pressure: number } => {
-    if (!defender) return { multiplier: 1, pressure: 0 };
+    damageClass: 'physical' | 'magical',
+    engagementRange: number | undefined,
+    optimalRangeMin: number | undefined,
+    optimalRangeMax: number | undefined,
+    targetOptimalRangeMin: number | undefined,
+    targetOptimalRangeMax: number | undefined
+): { multiplier: number; pressure: number; rangePressure: number; rangeMultiplier: number } => {
+    if (!defender) {
+        return {
+            multiplier: 1,
+            pressure: 0,
+            rangePressure: 0,
+            rangeMultiplier: 1
+        };
+    }
 
     const atkAccuracy = damageClass === 'physical'
         ? (0.85 + attacker.instinct * 0.015 + attacker.body * 0.005)
@@ -121,7 +140,71 @@ const computeHitMultiplier = (
         : (defender.instinct * 0.008 + defender.mind * 0.008);
 
     const hitChance = clamp(atkAccuracy - defEvasion, 0.1, 0.99);
-    return { multiplier: hitChance, pressure: round3(atkAccuracy - defEvasion) };
+    if (typeof engagementRange !== 'number') {
+        return {
+            multiplier: hitChance,
+            pressure: round3(atkAccuracy - defEvasion),
+            rangePressure: 0,
+            rangeMultiplier: 1
+        };
+    }
+
+    const attackerBand = {
+        min: clamp(
+            optimalRangeMin ?? (damageClass === 'physical' ? 1 : 2),
+            1,
+            6
+        ),
+        max: clamp(
+            optimalRangeMax ?? (damageClass === 'physical' ? 2 : 4),
+            1,
+            6
+        )
+    };
+    if (attackerBand.max < attackerBand.min) {
+        const swap = attackerBand.min;
+        attackerBand.min = attackerBand.max;
+        attackerBand.max = swap;
+    }
+
+    const defenderBand = {
+        min: clamp(
+            targetOptimalRangeMin ?? (damageClass === 'physical' ? 1 : 2),
+            1,
+            6
+        ),
+        max: clamp(
+            targetOptimalRangeMax ?? (damageClass === 'physical' ? 3 : 5),
+            1,
+            6
+        )
+    };
+    if (defenderBand.max < defenderBand.min) {
+        const swap = defenderBand.min;
+        defenderBand.min = defenderBand.max;
+        defenderBand.max = swap;
+    }
+
+    const distance = clamp(engagementRange, 1, 6);
+    const tooClose = Math.max(0, attackerBand.min - distance);
+    const tooFar = Math.max(0, distance - attackerBand.max);
+    const bandPenalty = (tooClose * 0.06) + (tooFar * 0.1);
+    const instinctCompensation = attacker.instinct * 0.015;
+    const defenderComfort = (
+        distance >= defenderBand.min && distance <= defenderBand.max
+            ? 0.05
+            : 0
+    ) + (defender.instinct * 0.006);
+    const rangePressure = instinctCompensation - bandPenalty - defenderComfort;
+    const rangeMultiplier = clamp(1 + rangePressure, 0.55, 1.25);
+    const finalHitMultiplier = clamp(hitChance * rangeMultiplier, 0.05, 0.99);
+
+    return {
+        multiplier: finalHitMultiplier,
+        pressure: round3(atkAccuracy - defEvasion),
+        rangePressure: round3(rangePressure),
+        rangeMultiplier: round3(rangeMultiplier)
+    };
 };
 
 const computeMitigationMultiplier = (
@@ -235,8 +318,17 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
     const riskMultiplier = computeRiskMultiplier(intent);
     const criticalMultiplier = levers.instinctCriticalMultiplier;
     const hit = interactionModel === 'triangle'
-        ? computeHitMultiplier(intent.trinity, intent.targetTrinity, damageClass)
-        : { multiplier: 1, pressure: 0 };
+        ? computeHitMultiplier(
+            intent.trinity,
+            intent.targetTrinity,
+            damageClass,
+            intent.engagementRange,
+            intent.optimalRangeMin,
+            intent.optimalRangeMax,
+            intent.targetOptimalRangeMin,
+            intent.targetOptimalRangeMax
+        )
+        : { multiplier: 1, pressure: 0, rangePressure: 0, rangeMultiplier: 1 };
     const mitigation = interactionModel === 'triangle'
         ? computeMitigationMultiplier(intent.targetTrinity, damageClass)
         : { multiplier: 1, pressure: 0 };
@@ -269,6 +361,7 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
         riskMultiplier: round3(riskMultiplier),
         criticalMultiplier: round3(criticalMultiplier),
         hitMultiplier: round3(hit.multiplier),
+        rangeMultiplier: round3(hit.rangeMultiplier),
         mitigationMultiplier: round3(mitigation.multiplier),
         critExpectedMultiplier: round3(crit.multiplier),
         finalPower,
@@ -284,6 +377,7 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
             riskBonusApplied: !!intent.inDangerPreviewHex,
             damageClass,
             hitPressure: hit.pressure,
+            rangePressure: hit.rangePressure,
             mitigationPressure: mitigation.pressure,
             critPressure: crit.critPressure,
             resistancePressure: crit.resistancePressure,

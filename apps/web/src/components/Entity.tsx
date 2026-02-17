@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Actor as EntityType, MovementTrace } from '@hop/engine';
 import { isStunned, hexToPixel, getDirectionFromTo, hexEquals, TILE_SIZE, getHexLine, getEntityVisual, isEntityFlying } from '@hop/engine';
 
@@ -8,29 +8,82 @@ interface EntityProps {
     isDying?: boolean; // For death animations
     movementTrace?: MovementTrace;
     waapiControlled?: boolean;
+    assetHref?: string;
+    fallbackAssetHref?: string;
+    floorTheme?: string;
 }
 
+const FLOOR_THEME_LUMA: Record<string, number> = {
+    catacombs: 0.2,
+    inferno: 0.16,
+    throne: 0.24,
+    frozen: 0.45,
+    void: 0.08
+};
 
-const renderIcon = (entity: EntityType, isPlayer: boolean, size = 24) => {
+const contrastRatio = (a: number, b: number): number => {
+    const light = Math.max(a, b);
+    const dark = Math.min(a, b);
+    return (light + 0.05) / (dark + 0.05);
+};
+
+const getHexRingPoints = (rx: number, ry: number): string => {
+    const points: string[] = [];
+    for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        points.push(`${Math.cos(angle) * rx},${Math.sin(angle) * ry}`);
+    }
+    return points.join(' ');
+};
+
+
+const renderIcon = (
+    entity: EntityType,
+    isPlayer: boolean,
+    size = 24,
+    assetHref?: string,
+    onAssetError?: () => void,
+    contrastBoost = 1
+) => {
     const visual = getEntityVisual(entity.subtype, entity.type, entity.enemyType as 'melee' | 'ranged' | 'boss', entity.archetype);
     const { icon, shape, color, borderColor, size: sizeMult = 1.0 } = visual;
     const finalSize = size * sizeMult;
     const bombFuse = entity.statusEffects?.find(s => s.type === 'time_bomb');
     const bombTimer = bombFuse ? Math.max(0, bombFuse.duration) : (entity.actionCooldown ?? 0);
+    const contrastFilter = `contrast(${contrastBoost.toFixed(2)}) brightness(${(contrastBoost > 1 ? 1.12 : 1.04).toFixed(2)})`;
+    const assetImageFilter = isPlayer
+        ? `drop-shadow(0 3px 4px rgba(0,0,0,0.45)) drop-shadow(0 0 2px rgba(255,255,255,0.5)) saturate(1.08) ${contrastFilter}`
+        : `drop-shadow(0 3px 4px rgba(0,0,0,0.50)) drop-shadow(0 0 2px rgba(255,255,255,0.35)) saturate(1.0) ${contrastFilter}`;
 
     return (
         <g>
             <title>{isPlayer ? 'Player' : `${entity.subtype || 'Enemy'}`}</title>
-            {shape === 'square' && (
+            {assetHref && (
+                <image
+                    href={assetHref}
+                    x={-finalSize}
+                    y={-finalSize}
+                    width={finalSize * 2}
+                    height={finalSize * 2}
+                    preserveAspectRatio="xMidYMid meet"
+                    onError={onAssetError}
+                    style={{
+                        filter: assetImageFilter,
+                        opacity: isPlayer ? 1 : 0.97
+                    }}
+                />
+            )}
+
+            {!assetHref && shape === 'square' && (
                 <rect x={-finalSize * 0.8} y={-finalSize * 0.8} width={finalSize * 1.6} height={finalSize * 1.6} fill={color} stroke={borderColor} strokeWidth={2} />
             )}
-            {shape === 'diamond' && (
+            {!assetHref && shape === 'diamond' && (
                 <path d={`M0 ${-finalSize * 0.8} L${finalSize * 0.6} 0 L0 ${finalSize * 0.8} L${-finalSize * 0.6} 0 Z`} fill={color} stroke={borderColor} strokeWidth={1} />
             )}
-            {shape === 'triangle' && (
+            {!assetHref && shape === 'triangle' && (
                 <path d={`M0 ${-finalSize * 0.8} L${finalSize * 0.7} ${finalSize * 0.5} L${-finalSize * 0.7} ${finalSize * 0.5} Z`} fill={color} stroke={borderColor} strokeWidth={1} />
             )}
-            {shape === 'circle' && (
+            {!assetHref && shape === 'circle' && (
                 <circle r={finalSize * 0.7} fill={color} stroke={borderColor} strokeWidth={1} />
             )}
 
@@ -42,20 +95,29 @@ const renderIcon = (entity: EntityType, isPlayer: boolean, size = 24) => {
             )}
 
             {/* Icon/Emoji */}
-            {!isPlayer && entity.subtype !== 'bomb' && (
+            {!assetHref && !isPlayer && entity.subtype !== 'bomb' && (
                 <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={finalSize * 0.8} opacity={0.8}>
                     {icon}
                 </text>
             )}
 
-            {isPlayer && (
+            {!assetHref && isPlayer && (
                 <path d={`M0 ${-finalSize * 0.4} L0 ${finalSize * 0.4} M${-finalSize * 0.15} ${-finalSize * 0.2} L0 ${-finalSize * 0.5} L${finalSize * 0.15} ${-finalSize * 0.2}`} stroke={borderColor} strokeWidth={2} fill="none" />
             )}
         </g>
     );
 };
 
-const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementTrace, waapiControlled = false }) => {
+const EntityBase: React.FC<EntityProps> = ({
+    entity,
+    isSpear,
+    isDying,
+    movementTrace,
+    waapiControlled = false,
+    assetHref,
+    fallbackAssetHref,
+    floorTheme
+}) => {
     const [displayPos, setDisplayPos] = useState(entity.position);
     const [displayPixel, setDisplayPixel] = useState(() => hexToPixel(entity.position, TILE_SIZE));
     const [animationPrevPos, setAnimationPrevPos] = useState<EntityType['position'] | undefined>(entity.previousPosition);
@@ -73,6 +135,22 @@ const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementT
     const isPlayer = entity.type === 'player';
     const targetPixel = entity.intentPosition ? hexToPixel(entity.intentPosition, TILE_SIZE) : null;
     const movementDebugEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_MOVEMENT);
+    const [resolvedAssetHref, setResolvedAssetHref] = useState<string | undefined>(assetHref || fallbackAssetHref);
+    const [usedFallbackAsset, setUsedFallbackAsset] = useState(false);
+
+    useEffect(() => {
+        setResolvedAssetHref(assetHref || fallbackAssetHref);
+        setUsedFallbackAsset(false);
+    }, [assetHref, fallbackAssetHref, entity.id]);
+
+    const handleAssetError = () => {
+        if (!usedFallbackAsset && fallbackAssetHref && resolvedAssetHref !== fallbackAssetHref) {
+            setResolvedAssetHref(fallbackAssetHref);
+            setUsedFallbackAsset(true);
+            return;
+        }
+        setResolvedAssetHref(undefined);
+    };
 
     // Sequential Animation Logic
     useEffect(() => {
@@ -326,6 +404,24 @@ const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementT
 
     const visual = getEntityVisual(entity.subtype, entity.type, entity.enemyType as 'melee' | 'ranged' | 'boss', entity.archetype);
     const isFlying = isEntityFlying(entity);
+    const unitIconScale = isPlayer ? 1.34 : 0.92;
+    const unitIconYOffset = isPlayer ? -9 : -2;
+    const unitIconSize = isPlayer ? 24 : 18;
+    const normalizedTheme = String(floorTheme || '').toLowerCase();
+    const floorLuma = FLOOR_THEME_LUMA[normalizedTheme] ?? 0.22;
+    const desiredUnitLuma = isPlayer ? 0.87 : 0.82;
+    const baseContrast = contrastRatio(floorLuma, desiredUnitLuma);
+    const contrastBoost = baseContrast < 4.5 ? 1.22 : 1.06;
+    const silhouetteOpacity = baseContrast < 4.5 ? 0.62 : 0.42;
+    const baseRingStroke = isPlayer ? '#22e7ff' : '#ff4fd0';
+    const baseRingFill = isPlayer ? 'rgba(34,231,255,0.22)' : 'rgba(255,79,208,0.22)';
+    const ringGlow = isPlayer ? 'rgba(34,231,255,0.48)' : 'rgba(255,79,208,0.46)';
+    const ringRx = isPlayer ? TILE_SIZE * 0.5 : TILE_SIZE * 0.46;
+    const ringRy = isPlayer ? TILE_SIZE * 0.2 : TILE_SIZE * 0.18;
+    const ringPoints = useMemo(() => getHexRingPoints(ringRx, ringRy), [ringRx, ringRy]);
+    const innerRingPoints = useMemo(() => getHexRingPoints(ringRx * 0.86, ringRy * 0.84), [ringRx, ringRy]);
+    const ringY = isPlayer ? TILE_SIZE * 0.32 : TILE_SIZE * 0.3;
+    const rimLightStroke = isPlayer ? 'rgba(190,250,255,0.86)' : 'rgba(255,201,241,0.86)';
 
     return (
         <g style={{ pointerEvents: 'none' }}>
@@ -359,8 +455,29 @@ const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementT
                     opacity={isInvisible ? 0.3 : (visual.opacity || 1)}
                     style={{ filter: isInvisible ? 'blur(1px)' : 'none' }}
                 >
-                    {/* subtle background circle */}
-                    <circle r={TILE_SIZE * 0.9} fill={isPlayer ? 'rgba(139,94,52,0.06)' : 'rgba(184,20,20,0.06)'} opacity={1} />
+                    {/* Contrast plate + team ring for tactical readability. */}
+                    <circle
+                        r={isPlayer ? TILE_SIZE * 0.92 : TILE_SIZE * 0.84}
+                        cy={ringY - 2}
+                        fill={isPlayer ? 'rgba(6,15,23,0.84)' : 'rgba(22,7,18,0.84)'}
+                        opacity={silhouetteOpacity}
+                    />
+                    <g transform={`translate(0,${ringY})`}>
+                        <polygon
+                            points={ringPoints}
+                            fill={baseRingFill}
+                            stroke={baseRingStroke}
+                            strokeWidth={2}
+                            style={{ filter: `drop-shadow(0 0 5px ${ringGlow})` }}
+                        />
+                        <polygon
+                            points={innerRingPoints}
+                            fill="none"
+                            stroke={baseRingStroke}
+                            strokeWidth={1.4}
+                            opacity={0.82}
+                        />
+                    </g>
 
                     {/* Shadow if flying */}
                     {isFlying && (
@@ -372,15 +489,23 @@ const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementT
                     )}
 
                     {/* SVG icon */}
-                    <g transform="translate(0,-2) scale(0.9)">
-                        {renderIcon(entity, isPlayer, 18)}
+                    <g transform={`translate(0,${unitIconYOffset}) scale(${unitIconScale})`}>
+                        <circle
+                            r={Math.max(10, unitIconSize * 0.84)}
+                            fill="none"
+                            stroke={rimLightStroke}
+                            strokeWidth={2}
+                            opacity={0.68}
+                            style={{ filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.45))' }}
+                        />
+                        {renderIcon(entity, isPlayer, unitIconSize, resolvedAssetHref, handleAssetError, contrastBoost)}
                     </g>
 
                     {/* Stun Icon */}
                     {isStunned(entity) && (
                         <g transform={`translate(0, -${TILE_SIZE * 0.8})`} className="stun-icon">
-                            <text fontSize="14" textAnchor="middle">⭐</text>
-                            <text fontSize="8" textAnchor="middle" dy="-3" dx="6">✨</text>
+                            <text fontSize="14" textAnchor="middle">*</text>
+                            <text fontSize="8" textAnchor="middle" dy="-3" dx="6">+</text>
                         </g>
                     )}
 
@@ -403,7 +528,7 @@ const EntityBase: React.FC<EntityProps> = ({ entity, isSpear, isDying, movementT
                             {entity.intent}
                         </text>
                     )}
-                    <title>{`${entity.subtype || entity.type} — HP ${entity.hp}/${entity.maxHp}${entity.intent ? ` — ${entity.intent}` : ''}`}</title>
+                    <title>{`${entity.subtype || entity.type} - HP ${entity.hp}/${entity.maxHp}${entity.intent ? ` - ${entity.intent}` : ''}`}</title>
                 </g>
             </g>
         </g>
@@ -424,6 +549,9 @@ export const Entity = React.memo(EntityBase, (prev, next) => {
     return prev.isSpear === next.isSpear
         && prev.isDying === next.isDying
         && prev.waapiControlled === next.waapiControlled
+        && prev.assetHref === next.assetHref
+        && prev.fallbackAssetHref === next.fallbackAssetHref
+        && prev.floorTheme === next.floorTheme
         && movementTraceKey(prev.movementTrace) === movementTraceKey(next.movementTrace)
         && a.id === b.id
         && a.hp === b.hp
@@ -442,3 +570,4 @@ export const Entity = React.memo(EntityBase, (prev, next) => {
         && (a.intentPosition?.s ?? 0) === (b.intentPosition?.s ?? 0)
         && statusSig(a.statusEffects) === statusSig(b.statusEffects);
 });
+

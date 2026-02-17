@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="fm-flame" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff7c2"/>
+      <stop offset="52%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#b91c1c"/>
+    </radialGradient>
+    <linearGradient id="fm-cloak" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c2d12"/>
+      <stop offset="100%" stop-color="#431407"/>
+    </linearGradient>
+    <linearGradient id="fm-trim" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Grounded contact shadow -->
+  <ellipse cx="60" cy="110" rx="25" ry="8" fill="#000" opacity="0.25"/>
+
+  <!-- Staff (weapon silhouette must be unmistakable) -->
+  <g>
+    <path d="M69 88 L102 24" stroke="#f5deb3" stroke-width="4.2" stroke-linecap="round"/>
+    <path d="M69 88 L102 24" stroke="#6b3f1a" stroke-width="1.4" stroke-linecap="round" opacity="0.65"/>
+    <circle cx="102" cy="24" r="7.5" fill="url(#fm-flame)" stroke="#fcd34d" stroke-width="1.6"/>
+    <path d="M102 10 C107 15 110 20 108 26 C106 31 101 34 97 33 C93 30 92 24 95 19 C97 15 99 12 102 10 Z" fill="url(#fm-flame)" opacity="0.92"/>
+  </g>
+
+  <!-- Cloak and body -->
+  <path d="M35 100 L45 59 L61 46 L77 53 L84 99 L67 106 L49 108 Z"
+        fill="url(#fm-cloak)" stroke="#2b1107" stroke-width="2.2"/>
+  <path d="M48 60 L62 51 L72 56 L68 96 L52 98 Z"
+        fill="#9a3412" opacity="0.95"/>
+  <path d="M53 61 L66 60 L65 96 L55 97 Z" fill="url(#fm-trim)" opacity="0.55"/>
+
+  <!-- Hood -->
+  <path d="M52 38 C63 31 76 34 80 46 C75 55 67 59 57 58 C50 53 48 45 52 38 Z"
+        fill="#3b0a0a" stroke="#220707" stroke-width="1.8"/>
+
+  <!-- Face (east-facing, one eye visible) -->
+  <path d="M58 45 C62 41 68 41 71 45 C71 50 68 54 63 55 C60 53 58 50 58 45 Z"
+        fill="#d6a57a" stroke="#8a5a3c" stroke-width="1.1"/>
+  <circle cx="66.5" cy="47" r="1.45" fill="#fff"/>
+  <circle cx="66.5" cy="47" r="0.72" fill="#0b0b0b"/>
+
+  <!-- Right arm casting flame -->
+  <path d="M63 69 C72 68 78 70 83 74 C83 78 80 80 75 79 C71 78 67 76 63 73 Z"
+        fill="#7c2d12" stroke="#2b1107" stroke-width="1.5"/>
+  <path d="M84 74 C92 72 97 74 101 79 C99 84 92 85 86 83 Z"
+        fill="url(#fm-flame)" stroke="#f97316" stroke-width="1"/>
+  <circle cx="95" cy="79" r="2.2" fill="#fff3b0" opacity="0.9"/>
+
+  <!-- Left arm gripping staff -->
+  <path d="M49 69 C54 67 57 67 61 70 C60 74 57 76 53 76 C50 75 48 72 49 69 Z"
+        fill="#7c2d12" stroke="#2b1107" stroke-width="1.5"/>
+
+  <!-- Ember accents -->
+  <circle cx="88" cy="45" r="1.2" fill="#fbbf24" opacity="0.8"/>
+  <circle cx="84" cy="51" r="1" fill="#f59e0b" opacity="0.7"/>
+  <circle cx="76" cy="41" r="0.9" fill="#fb923c" opacity="0.75"/>
+</svg>

@@ -11,6 +11,7 @@
     "dev": "npm run dev --workspace=@hop/web",
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
+    "assets:validate": "node scripts/validate-asset-manifest.mjs",
     "validator": "npm start --workspace=@hop/server",
     "lint": "npm run lint --workspaces --if-present",
     "upa:grades:static": "npx tsx packages/engine/scripts/runSkillGradesStatic.ts p6-static-v1 docs/UPA_SKILL_GRADES_STATIC.json",

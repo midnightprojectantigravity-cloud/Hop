@@ -5,6 +5,7 @@
 - UPA operations and commands are documented in `docs/UPA_GUIDE.md`.
 - Active tuning queue is tracked in `docs/BALANCE_BACKLOG.md`.
 - Architecture rules and terminology are defined in `docs/GOLD_STANDARD_MANIFESTO.md`.
+- Biome visual runtime + emergent bestiary hardship + triangle formulas are codified in `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md` (updated February 15, 2026).
 
 ## Execution Posture (Current)
 - 80/20 over perfection: prioritize speed of instrumentation and feedback loops.
