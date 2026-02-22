@@ -343,6 +343,24 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                 }
             }
 
+            if (actorId === 'player') {
+                const shieldSkill = curState.player.activeSkills?.find(s => s.id === 'SHIELD_BASH');
+                const hasPassiveProtection = !!shieldSkill?.activeUpgrades?.includes('PASSIVE_PROTECTION');
+                if (hasPassiveProtection && (shieldSkill?.currentCooldown || 0) === 0) {
+                    const hardenedArmor = Math.max(curState.player.temporaryArmor || 0, 1);
+                    if (hardenedArmor !== (curState.player.temporaryArmor || 0)) {
+                        curState = {
+                            ...curState,
+                            player: {
+                                ...curState.player,
+                                temporaryArmor: hardenedArmor
+                            }
+                        };
+                        messages.push(appendTaggedMessage([], 'Passive Protection braces your guard.', 'INFO', 'COMBAT')[0]);
+                    }
+                }
+            }
+
             const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId, actorStepId);
             curState = tele.state;
             messages.push(...tele.messages);
@@ -517,8 +535,8 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
 
         curState = {
             ...curState,
-            enemies: curState.enemies.map(e => e.id === actorId ? tickStatuses(e) : e),
-            player: actorId === 'player' ? tickStatuses(curState.player) : curState.player,
+            enemies: curState.enemies.map(e => e.id === actorId ? tickActorSkills(tickStatuses(e)) : e),
+            player: actorId === 'player' ? tickActorSkills(tickStatuses(curState.player)) : curState.player,
             initiativeQueue: endActorTurn(curState, actorId)
         };
 
@@ -553,6 +571,23 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
 
             // 1. Pick up spear if on it
             if (curState.spearPosition && hexEquals(playerPos, curState.spearPosition)) {
+                const spearSkill = curState.player.activeSkills?.find(s => s.id === 'SPEAR_THROW');
+                const hasSpearCleave = !!spearSkill?.activeUpgrades?.some(up => up === 'SPEAR_CLEAVE' || up === 'CLEAVE');
+                if (hasSpearCleave) {
+                    const cleaveTargets = getNeighbors(playerPos)
+                        .map(pos => curState.enemies.find(e => e.hp > 0 && hexEquals(e.position, pos)))
+                        .filter((e): e is Entity => !!e && e.factionId !== curState.player.factionId);
+                    if (cleaveTargets.length > 0) {
+                        const cleaveEffects: AtomicEffect[] = cleaveTargets.map(e => ({
+                            type: 'Damage',
+                            target: e.id,
+                            amount: 1,
+                            reason: 'spear_cleave_pickup'
+                        }));
+                        curState = applyEffects(curState, cleaveEffects, { sourceId: curState.player.id, stepId: actorStepId });
+                        messages.push(`Spear cleave hit ${cleaveTargets.length} target(s).`);
+                    }
+                }
                 curState = {
                     ...curState,
                     hasSpear: true,
@@ -566,13 +601,34 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
             curState = tileTickResult.state;
             messages.push(...tileTickResult.messages);
 
-            curState.player = tickActorSkills(curState.player);
             curState = { ...curState, turnNumber: curState.turnNumber + 1, turnsSpent: (curState.turnsSpent || 0) + 1 };
+            if (curState.traps && curState.traps.length > 0) {
+                curState = {
+                    ...curState,
+                    traps: curState.traps.map(t => ({
+                        ...t,
+                        cooldown: Math.max(0, t.cooldown - 1)
+                    }))
+                };
+            }
 
             // CHECK TILE INTERACTIONS (Shrines / Stairs)
             if (checkShrine(curState, curState.player.position)) {
-                const allUpgrades = SkillRegistry.getAllUpgrades().map(u => u.id);
-                const available = allUpgrades.filter(u => !curState.upgrades.includes(u));
+                const playerSkills = curState.player.activeSkills || [];
+                const playerSkillIds = new Set(playerSkills.map(s => s.id));
+                const appliedBySkill = new Map<string, Set<string>>();
+                for (const sk of playerSkills) {
+                    appliedBySkill.set(sk.id, new Set(sk.activeUpgrades || []));
+                }
+                const available = SkillRegistry.getAllUpgrades()
+                    .filter(u => playerSkillIds.has(u.skillId))
+                    .filter(u => {
+                        if (curState.upgrades.includes(u.id)) return false;
+                        const owned = appliedBySkill.get(u.skillId);
+                        return !owned || !owned.has(u.id);
+                    })
+                    .map(u => u.id)
+                    .filter((id, idx, arr) => arr.indexOf(id) === idx);
                 const picked: string[] = [];
                 let rngState = { ...curState };
                 for (let i = 0; i < 3 && available.length > 0; i++) {
@@ -715,24 +771,47 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             case 'SELECT_UPGRADE': {
                 if (!('payload' in a)) return s;
                 const upgradeId = a.payload;
+                const offered = s.pendingStatus?.shrineOptions || s.shrineOptions || [];
+                if (!offered.includes(upgradeId)) {
+                    return {
+                        ...s,
+                        message: appendTaggedMessage(s.message, `Upgrade ${upgradeId} was not offered.`, 'CRITICAL', 'SYSTEM')
+                    };
+                }
+
                 let player = s.player;
+                let applied = false;
                 const upgradeDef = SkillRegistry.getUpgrade(upgradeId);
                 if (upgradeDef) {
                     // Find which skill this upgrade belongs to
                     const skillId = SkillRegistry.getSkillForUpgrade(upgradeId);
-                    if (skillId) {
+                    const ownsSkill = !!skillId && player.activeSkills.some(sk => sk.id === skillId);
+                    if (skillId && ownsSkill) {
+                        const beforeSerialized = JSON.stringify(player.activeSkills);
                         player = addUpgrade(player, skillId, upgradeId);
+                        applied = JSON.stringify(player.activeSkills) !== beforeSerialized;
                     }
                 } else if (upgradeId === 'EXTRA_HP') {
                     player = increaseMaxHp(player, 1, true);
+                    applied = true;
                 }
+
+                if (!applied && upgradeId !== 'EXTRA_HP') {
+                    return {
+                        ...s,
+                        message: appendTaggedMessage(s.message, `Upgrade ${upgradeId} could not be applied.`, 'CRITICAL', 'SYSTEM')
+                    };
+                }
+
                 return {
                     ...s,
                     player,
-                    upgrades: [...s.upgrades, upgradeId],
+                    upgrades: s.upgrades.includes(upgradeId) ? s.upgrades : [...s.upgrades, upgradeId],
                     gameStatus: 'playing',
                     shrinePosition: undefined,
                     shrineOptions: undefined,
+                    pendingStatus: undefined,
+                    pendingFrames: undefined,
                     message: appendTaggedMessage(s.message, `Gained ${upgradeDef?.name || upgradeId}!`, 'INFO', 'OBJECTIVE')
                 };
             }

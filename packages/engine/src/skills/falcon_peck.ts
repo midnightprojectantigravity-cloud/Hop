@@ -22,9 +22,17 @@ export const FALCON_PECK: SkillDefinition = {
         cooldown: 0,
         damage: 1,
     },
-    execute: (state: GameState, attacker: Actor, target?: Point): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
+    execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
+        const ownerId = attacker.companionOf;
+        const owner = ownerId
+            ? (ownerId === state.player.id ? state.player : state.enemies.find(e => e.id === ownerId))
+            : undefined;
+        const commandUpgrades = owner?.activeSkills?.find(s => s.id === 'FALCON_COMMAND')?.activeUpgrades || [];
+        const hasTwinTalons = activeUpgrades.includes('TWIN_TALONS')
+            || commandUpgrades.includes('TWIN_TALONS')
+            || commandUpgrades.includes('FALCON_TWIN_TALONS');
 
         if (!target) {
             return { effects, messages, consumesTurn: false };
@@ -41,26 +49,35 @@ export const FALCON_PECK: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
-        const combat = calculateCombat({
-            attackerId: attacker.id,
-            targetId: targetActor.id,
-            skillId: 'FALCON_PECK',
-            basePower: 1,
-            trinity: extractTrinityStats(attacker),
-            targetTrinity: extractTrinityStats(targetActor),
-            damageClass: 'physical',
-            scaling: [{ attribute: 'instinct', coefficient: 0.15 }],
-            statusMultipliers: []
-        });
+        const targetActors = [targetActor];
+        if (hasTwinTalons) {
+            const extra = getNeighbors(attacker.position)
+                .map(p => getActorAt(state, p))
+                .filter((a): a is Actor => !!a && a.id !== targetActor.id && a.factionId === 'enemy')[0];
+            if (extra) targetActors.push(extra);
+        }
 
-        // Apply damage
-        effects.push({
-            type: 'Damage',
-            target: targetActor.id,
-            amount: combat.finalPower,
-            reason: 'falcon_peck',
-            scoreEvent: combat.scoreEvent
-        });
+        for (const victim of targetActors) {
+            const combat = calculateCombat({
+                attackerId: attacker.id,
+                targetId: victim.id,
+                skillId: 'FALCON_PECK',
+                basePower: 1,
+                trinity: extractTrinityStats(attacker),
+                targetTrinity: extractTrinityStats(victim),
+                damageClass: 'physical',
+                scaling: [{ attribute: 'instinct', coefficient: 0.15 }],
+                statusMultipliers: []
+            });
+
+            effects.push({
+                type: 'Damage',
+                target: victim.id,
+                amount: combat.finalPower,
+                reason: 'falcon_peck',
+                scoreEvent: combat.scoreEvent
+            });
+        }
 
         effects.push({
             type: 'Juice',
@@ -70,7 +87,9 @@ export const FALCON_PECK: SkillDefinition = {
             intensity: 'low'
         });
 
-        messages.push(`Falcon pecked ${targetActor.subtype || 'enemy'}!`);
+        messages.push(hasTwinTalons && targetActors.length > 1
+            ? `Falcon pecked ${targetActors.length} enemies!`
+            : `Falcon pecked ${targetActor.subtype || 'enemy'}!`);
 
         return { effects, messages, consumesTurn: true };
     },

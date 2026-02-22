@@ -110,8 +110,14 @@ export const SHIELD_BASH: SkillDefinition = {
         return { effects, messages };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        // Can target neighbors (or range 2 if upgraded)
-        return SpatialSystem.getAreaTargets(state, origin, 1).filter(p => !!getActorAt(state, p));
+        const attacker = getActorAt(state, origin) as Actor | undefined;
+        if (!attacker) return [];
+        const skill = attacker.activeSkills?.find(s => s.id === 'SHIELD_BASH');
+        const range = 1 + (skill?.activeUpgrades?.includes('SHIELD_RANGE') ? 1 : 0);
+        return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
+            const target = getActorAt(state, p);
+            return !!target && target.id !== attacker.id && target.factionId !== attacker.factionId;
+        });
     },
     upgrades: {
         SHIELD_RANGE: { id: 'SHIELD_RANGE', name: 'Extended Bash', description: 'Range +1' },

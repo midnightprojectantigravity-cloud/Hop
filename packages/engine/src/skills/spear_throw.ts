@@ -31,10 +31,12 @@ export const SPEAR_THROW: SkillDefinition = {
 
         // 1. Upgrade Detection
         const hasRange = activeUpgrades.includes('SPEAR_RANGE');
+        const hasRecall = activeUpgrades.includes('RECALL');
         const hasRecallDamage = activeUpgrades.includes('RECALL_DAMAGE');
         const hasLunge = activeUpgrades.includes('LUNGE');
         const hasLungeArc = activeUpgrades.includes('LUNGE_ARC');
         const hasDeepBreath = activeUpgrades.includes('DEEP_BREATH');
+        const hasCleave = activeUpgrades.includes('SPEAR_CLEAVE') || activeUpgrades.includes('CLEAVE');
 
         const range = 3 + (hasRange ? 1 : 0);
 
@@ -145,6 +147,10 @@ export const SPEAR_THROW: SkillDefinition = {
 
             // Important: Mark that player no longer has spear, and spawn it
             effects.push({ type: 'SpawnItem', itemType: 'spear', position: hitPos });
+            if (hasRecall) {
+                effects.push({ type: 'PickupSpear', position: hitPos });
+                messages.push('Spear auto-retrieved.');
+            }
 
         } else {
             // --- RECALL MODE ---
@@ -181,6 +187,26 @@ export const SPEAR_THROW: SkillDefinition = {
             effects.push({ type: 'PickupSpear', position: spearPos });
             messages.push('Spear recalled.');
 
+            if (hasCleave) {
+                for (const n of getNeighbors(spearPos)) {
+                    const enemy = getEnemyAt(state.enemies, n);
+                    if (!enemy) continue;
+                    const cleaveCombat = calculateCombat({
+                        attackerId: shooter.id,
+                        targetId: enemy.id,
+                        skillId: 'SPEAR_THROW',
+                        basePower: 1,
+                        trinity,
+                        targetTrinity: extractTrinityStats(enemy),
+                        damageClass: 'physical',
+                        scaling: [{ attribute: 'body', coefficient: 0.1 }],
+                        statusMultipliers: []
+                    });
+                    effects.push({ type: 'Damage', target: enemy.id, amount: cleaveCombat.finalPower, scoreEvent: cleaveCombat.scoreEvent });
+                }
+                messages.push('Cleave triggered on pickup.');
+            }
+
             // Juice
             effects.push({
                 type: 'Juice',
@@ -216,7 +242,7 @@ export const SPEAR_THROW: SkillDefinition = {
         LUNGE: { id: 'LUNGE', name: 'Lunge', description: 'If an enemy is exactly 2 hexes away, move to them and kill' },
         LUNGE_ARC: { id: 'LUNGE_ARC', name: 'Lunge Sweeping', description: 'Lunge hits neighbors of the target' },
         DEEP_BREATH: { id: 'DEEP_BREATH', name: 'Deep Breath', description: 'Reset Jump cooldown on spear kill' },
-        CLEAVE: { id: 'CLEAVE', name: 'Cleave', description: 'Damage all neighbors when picking up spear' }
+        SPEAR_CLEAVE: { id: 'SPEAR_CLEAVE', name: 'Cleave', description: 'Damage all neighbors when picking up spear' }
     },
     scenarios: getSkillScenarios('SPEAR_THROW')
 };

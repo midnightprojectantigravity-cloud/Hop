@@ -35,7 +35,7 @@ export const DEFAULT_SKILLS = {
         range: 2,
         cooldown: 0, // Disabled until picked up (special case)
         damage: 999, // Instant kill
-        upgrades: ['SPEAR_RANGE', 'RECALL', 'RECALL_DAMAGE', 'LUNGE', 'LUNGE_ARC', 'DEEP_BREATH', 'CLEAVE'],
+        upgrades: ['SPEAR_RANGE', 'RECALL', 'RECALL_DAMAGE', 'LUNGE', 'LUNGE_ARC', 'DEEP_BREATH', 'SPEAR_CLEAVE'],
     },
     shield: {
         id: 'SHIELD_BASH',
@@ -116,16 +116,16 @@ export const COLORS = {
 
 // Themes per floor range
 export const FLOOR_THEMES: Record<number, string> = {
-    1: 'catacombs',
-    2: 'catacombs',
+    1: 'inferno',
+    2: 'inferno',
     3: 'inferno',
     4: 'inferno',
-    5: 'throne',
-    6: 'frozen',
-    7: 'frozen',
-    8: 'frozen',
-    9: 'void',
-    10: 'void',
+    5: 'inferno',
+    6: 'inferno',
+    7: 'inferno',
+    8: 'inferno',
+    9: 'inferno',
+    10: 'inferno',
 };
 
 // Available enemy types per floor proficiency

@@ -269,7 +269,7 @@ export const generateEnemies = (
 };
 
 export const getFloorTheme = (floor: number): FloorTheme => {
-    return (FLOOR_THEMES as any)[floor] || 'catacombs';
+    return (FLOOR_THEMES as any)[floor] || 'inferno';
 };
 
 export default {

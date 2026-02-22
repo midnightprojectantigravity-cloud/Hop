@@ -81,7 +81,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
     const skillTargets = useMemo(() => {
         if (!selectedSkillId) return [] as Array<{ p: Point; isValidTarget: boolean; isBlocked: boolean; isWall: boolean; isEnemy: boolean }>;
         const def = SkillRegistry.get(selectedSkillId);
-        const range = def?.baseVariables?.range ?? getSkillRange(gameState.player, selectedSkillId);
+        const range = getSkillRange(gameState.player, selectedSkillId) || def?.baseVariables?.range || 0;
         const validTargets: Point[] = def?.getValidTargets ? def.getValidTargets(gameState, playerPos) : [];
         const validTargetSet = new Set(validTargets.map(pointToKey));
 

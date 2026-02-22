@@ -8,13 +8,25 @@ interface UIProps {
     onWait: () => void;
     onExitToHub: () => void;
     inputLocked?: boolean;
+    compact?: boolean;
+    hideInitiativeQueue?: boolean;
+    hideLog?: boolean;
 }
 
 // Use canonical engine score
 
 import { InitiativeDisplay } from './InitiativeQueue';
 
-export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub, inputLocked = false }) => {
+export const UI: React.FC<UIProps> = ({
+    gameState,
+    onReset,
+    onWait,
+    onExitToHub,
+    inputLocked = false,
+    compact = false,
+    hideInitiativeQueue = false,
+    hideLog = false,
+}) => {
     const score = computeScore(gameState);
 
     const messages = Array.isArray(gameState.message) ? gameState.message : [];
@@ -82,26 +94,26 @@ export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub,
 
     return (
         <div className="flex flex-col h-full max-h-screen">
-            <div className="flex flex-col gap-8 p-8 overflow-y-auto flex-1 min-h-0">
+            <div className={`flex flex-col overflow-y-auto flex-1 min-h-0 ${compact ? 'gap-4 p-4' : 'gap-8 p-8'}`}>
                 <div className="flex justify-between items-start">
                     <div>
-                        <h1 className="text-xl font-black uppercase tracking-widest text-white/90 mb-1">Hoplite</h1>
+                        <h1 className={`${compact ? 'text-base' : 'text-xl'} font-black uppercase tracking-widest text-white/90 mb-1`}>Hoplite</h1>
                         <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Tactical Arena</p>
                     </div>
-                    <div className="px-2 py-1 bg-white/10 rounded border border-white/20 text-[10px] font-black text-white/60">
+                    <div className={`px-2 py-1 bg-white/10 rounded border border-white/20 text-[10px] font-black text-white/60 ${compact ? 'hidden sm:block' : ''}`}>
                         V2.1.0
                     </div>
                 </div>
 
                 {/* Initiative Queue */}
-                <InitiativeDisplay gameState={gameState} />
+                {!hideInitiativeQueue && <InitiativeDisplay gameState={gameState} />}
 
                 {/* Health & Armor Section */}
-                <div className="space-y-6">
+                <div className={compact ? 'space-y-4' : 'space-y-6'}>
                     <div className="flex flex-col">
                         <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2">Vitality</span>
                         <div className="flex items-end gap-2">
-                            <span className="text-4xl font-black text-red-500 leading-none">{gameState.player.hp}</span>
+                            <span className={`${compact ? 'text-3xl' : 'text-4xl'} font-black text-red-500 leading-none`}>{gameState.player.hp}</span>
                             <span className="text-xl text-white/20 font-bold leading-none mb-1">/</span>
                             <span className="text-xl text-gray-500 font-bold leading-none mb-1">{gameState.player.maxHp}</span>
                         </div>
@@ -133,7 +145,7 @@ export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub,
                 </div>
 
                 {/* Stats Section */}
-                <div className="py-8 border-y border-white/5 space-y-6">
+                <div className={`${compact ? 'py-4 space-y-4' : 'py-8 space-y-6'} border-y border-white/5`}>
                     <div className="flex flex-col gap-3">
                         <div className="flex justify-between items-center">
                             <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Arcade Progress</span>
@@ -153,12 +165,12 @@ export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub,
                 </div>
 
                 {/* Actions Section */}
-                <div className="flex flex-col gap-3">
+                <div className={`flex flex-col ${compact ? 'gap-2' : 'gap-3'}`}>
                     <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Directives</span>
                     <button
                         disabled={inputLocked}
                         onClick={onWait}
-                        className={`w-full flex justify-between items-center px-4 py-3 border rounded-xl transition-all group ${inputLocked
+                        className={`w-full flex justify-between items-center ${compact ? 'px-3 py-2.5' : 'px-4 py-3'} border rounded-xl transition-all group ${inputLocked
                             ? 'bg-white/[0.03] border-white/5 text-white/30 cursor-not-allowed opacity-50'
                             : 'bg-white/5 hover:bg-white/10 border-white/10'
                             }`}
@@ -168,14 +180,14 @@ export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub,
                     </button>
                     <button
                         onClick={onReset}
-                        className="w-full flex justify-between items-center px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-all group"
+                        className={`w-full flex justify-between items-center ${compact ? 'px-3 py-2.5' : 'px-4 py-3'} bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-all group`}
                     >
                         <span className="text-sm font-bold text-red-400/80">Reset Chronology</span>
                         <span className="text-lg grayscale group-hover:grayscale-0 transition-all">🔄</span>
                     </button>
                     <button
                         onClick={onExitToHub}
-                        className="w-full flex justify-between items-center px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group"
+                        className={`w-full flex justify-between items-center ${compact ? 'px-3 py-2.5' : 'px-4 py-3'} bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group`}
                     >
                         <span className="text-sm font-bold text-white/70">Return to Hub</span>
                         <span className="text-lg grayscale group-hover:grayscale-0 transition-all">🏠</span>
@@ -184,11 +196,11 @@ export const UI: React.FC<UIProps> = ({ gameState, onReset, onWait, onExitToHub,
             </div>
 
             {/* Message Feed - Fixed at bottom */}
-            {messages.length > 0 && (
-                <div className="p-8 border-t border-white/5 bg-[#030712]/80 backdrop-blur-sm">
+            {!hideLog && messages.length > 0 && (
+                <div className={`${compact ? 'p-4' : 'p-8'} border-t border-white/5 bg-[#030712]/80 backdrop-blur-sm`}>
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold block">Tactical Log</span>
-                        <div className="flex items-center gap-2">
+                        <div className={`items-center gap-2 ${compact ? 'hidden sm:flex' : 'flex'}`}>
                             <select
                                 value={channelFilter}
                                 onChange={(e) => setChannelFilter(e.target.value as LogChannel)}

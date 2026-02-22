@@ -280,7 +280,9 @@ export const removeFromQueue = (queue: InitiativeQueue, actorId: string): Initia
     // Adjust currentIndex if needed
     let newIndex = queue.currentIndex;
     const removedIndex = queue.entries.findIndex(e => e.actorId === actorId);
-    if (removedIndex >= 0 && removedIndex < queue.currentIndex) {
+    // If we removed the current actor, rewind one slot so the next advance
+    // picks the actor that shifted into this index instead of skipping them.
+    if (removedIndex >= 0 && removedIndex <= queue.currentIndex) {
         newIndex--;
     }
 

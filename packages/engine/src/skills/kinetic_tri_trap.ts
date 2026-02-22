@@ -74,10 +74,13 @@ export const KINETIC_TRI_TRAP: SkillDefinition = {
         cost: 0,
         cooldown: SKILL_COOLDOWN,
     },
-    execute: (state: GameState, attacker: Actor, _target?: Point) => {
+    execute: (state: GameState, attacker: Actor, _target?: Point, activeUpgrades: string[] = []) => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
         let currentState = state;
+        const hasVolatileCore = activeUpgrades.includes('VOLATILE_CORE');
+        const hasChainReaction = activeUpgrades.includes('TRAP_CHAIN_REACTION') || activeUpgrades.includes('CHAIN_REACTION');
+        const hasQuickReload = activeUpgrades.includes('QUICK_RELOAD');
 
         // Get valid trap positions
         const validPositions = getValidTrapPositions(state, attacker.position, TRAP_RANGE);
@@ -112,7 +115,10 @@ export const KINETIC_TRI_TRAP: SkillDefinition = {
             effects.push({
                 type: 'PlaceTrap',
                 position: pos,
-                ownerId: attacker.id
+                ownerId: attacker.id,
+                volatileCore: hasVolatileCore,
+                chainReaction: hasChainReaction,
+                resetCooldown: hasQuickReload ? 1 : TRAP_RESET_CD
             });
             effects.push({
                 type: 'Juice',
@@ -142,8 +148,8 @@ export const KINETIC_TRI_TRAP: SkillDefinition = {
             name: 'Volatile Core',
             description: 'Traps deal 1 damage when triggered.',
         },
-        CHAIN_REACTION: {
-            id: 'CHAIN_REACTION',
+        TRAP_CHAIN_REACTION: {
+            id: 'TRAP_CHAIN_REACTION',
             name: 'Chain Reaction',
             description: 'When a trap triggers, adjacent traps also activate.',
         },

@@ -9,6 +9,7 @@ interface SkillTrayProps {
     hasSpear: boolean;
     gameState: GameState;
     inputLocked?: boolean;
+    compact?: boolean;
 }
 
 export const SkillTray: React.FC<SkillTrayProps> = ({
@@ -17,13 +18,14 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
     onSelectSkill,
     hasSpear,
     gameState,
-    inputLocked = false
+    inputLocked = false,
+    compact = false,
 }) => {
     // Organize skills by slot
     const slots: SkillSlot[] = ['offensive', 'defensive', 'utility'];
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className={compact ? 'grid grid-cols-3 gap-2 sm:grid-cols-4' : 'flex flex-col gap-4'}>
             {slots.flatMap(slot => {
                 const slotSkills = skills.filter(s => s.slot === slot);
                 return slotSkills.map(skill => {
@@ -44,7 +46,7 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                             disabled={cannotUse}
                             onClick={() => onSelectSkill(isSelected ? null : skill.id)}
                             className={`
-                            relative w-full h-24 rounded-2xl flex flex-col items-center justify-center gap-1
+                            relative w-full ${compact ? 'h-20 rounded-xl gap-0.5' : 'h-24 rounded-2xl gap-1'} flex flex-col items-center justify-center
                             border transition-all transform hover:translate-x-1
                             ${isSelected
                                     ? 'bg-blue-600 border-white shadow-[0_0_20px_rgba(59,130,246,0.5)]'
@@ -52,21 +54,21 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                             ${cannotUse ? 'opacity-40 grayscale pointer-events-none' : 'cursor-pointer'}
                         `}
                         >
-                            <span className="text-3xl">
+                            <span className={compact ? 'text-2xl' : 'text-3xl'}>
                                 {displayIcon}
                             </span>
-                            <span className="text-[10px] uppercase font-bold tracking-widest text-white/50 text-center px-2">
+                            <span className={`${compact ? 'text-[9px] tracking-[0.12em]' : 'text-[10px] tracking-widest'} uppercase font-bold text-white/50 text-center px-2 leading-tight`}>
                                 {displayName}
                             </span>
 
                             {isOnCooldown && !isSpearSlot && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl backdrop-blur-[2px]">
-                                    <span className="text-3xl font-black text-white">{skill.currentCooldown}</span>
+                                <div className={`absolute inset-0 flex items-center justify-center bg-black/40 ${compact ? 'rounded-xl' : 'rounded-2xl'} backdrop-blur-[2px]`}>
+                                    <span className={`${compact ? 'text-2xl' : 'text-3xl'} font-black text-white`}>{skill.currentCooldown}</span>
                                 </div>
                             )}
 
                             {/* Slot Label */}
-                            <div className="absolute -top-2 left-4 px-2 py-0.5 bg-[#030712] rounded-full border border-white/10 text-[8px] uppercase font-black tracking-widest text-white/40">
+                            <div className={`absolute ${compact ? '-top-1 left-2 px-1.5' : '-top-2 left-4 px-2'} py-0.5 bg-[#030712] rounded-full border border-white/10 text-[8px] uppercase font-black tracking-widest text-white/40`}>
                                 {slot}
                             </div>
                         </button>

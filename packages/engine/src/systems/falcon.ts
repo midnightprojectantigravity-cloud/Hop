@@ -381,6 +381,35 @@ export function resolveFalconTurn(state: GameState, falcon: Actor): { state: Gam
         });
     }
 
+    const ownerId = falcon.companionOf;
+    const owner = ownerId
+        ? (ownerId === nextState.player.id ? nextState.player : nextState.enemies.find(e => e.id === ownerId))
+        : undefined;
+    const commandUpgrades = owner?.activeSkills?.find(s => s.id === 'FALCON_COMMAND')?.activeUpgrades || [];
+    const hasKeenSight = commandUpgrades.includes('KEEN_SIGHT');
+    if (hasKeenSight) {
+        const liveFalcon = nextState.enemies.find(e => e.id === falcon.id) || falcon;
+        let revealedCount = 0;
+        nextState = {
+            ...nextState,
+            enemies: nextState.enemies.map(e => {
+                if (e.factionId !== 'enemy') return e;
+                if (hexDistance(e.position, liveFalcon.position) > 3) return e;
+                const shouldReveal = !e.isVisible || (e.stealthCounter || 0) > 0;
+                if (!shouldReveal) return e;
+                revealedCount += 1;
+                return {
+                    ...e,
+                    isVisible: true,
+                    stealthCounter: 0
+                };
+            })
+        };
+        if (revealedCount > 0) {
+            nextState.message = appendTaggedMessage(nextState.message, `Falcon revealed ${revealedCount} hidden threat(s).`, 'INFO', 'AI');
+        }
+    }
+
     // 3. Sync messages directly (applyEffects handles Message effects but behaviors return strings)
     // messages are already handled by combat.ts calling push(...result.messages)
 

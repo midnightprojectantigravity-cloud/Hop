@@ -133,8 +133,9 @@ export type AtomicEffect =
     | { type: 'RemoveCorpse'; position: Point }
     | { type: 'SpawnActor', actor: Actor }
     | { type: 'PlaceFire'; position: Point; duration: number }
-    | { type: 'PlaceTrap'; position: Point; ownerId: string }
+    | { type: 'PlaceTrap'; position: Point; ownerId: string; volatileCore?: boolean; chainReaction?: boolean; resetCooldown?: number }
     | { type: 'RemoveTrap'; position: Point; ownerId?: string }
+    | { type: 'SetTrapCooldown'; position: Point; cooldown: number; ownerId?: string }
     | { type: 'SetStealth'; target: 'self' | 'targetActor' | string; amount: number }
     | {
         type: 'UpdateCompanionState';
@@ -519,6 +520,9 @@ export interface GameState {
         ownerId: string;
         isRevealed: boolean;
         cooldown: number;  // Individual trap reset CD
+        volatileCore?: boolean;
+        chainReaction?: boolean;
+        resetCooldown?: number;
     }>;
 }
 

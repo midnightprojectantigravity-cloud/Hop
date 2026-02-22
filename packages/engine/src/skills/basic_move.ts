@@ -145,7 +145,10 @@ export const BASIC_MOVE: SkillDefinition = {
             destination: target,
             source: attacker.position,
             path,
-            simulatePath: true
+            simulatePath: true,
+            // Validation/pathfinding allows passing through allies for free movement.
+            // Runtime simulation must match that contract to avoid short-stops.
+            ignoreCollision: true
         });
 
         const actorLabel = attacker.id === state.player.id

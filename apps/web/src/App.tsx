@@ -892,7 +892,7 @@ function App() {
   const lastFloorRef = useRef(gameState.floor);
   useEffect(() => {
     if (gameState.gameStatus === 'playing' && gameState.floor !== lastFloorRef.current) {
-      setFloorIntro({ floor: gameState.floor, theme: gameState.theme || 'Catacombs' });
+      setFloorIntro({ floor: gameState.floor, theme: gameState.theme || 'Inferno' });
       lastFloorRef.current = gameState.floor;
       const timer = setTimeout(() => setFloorIntro(null), 3000);
       return () => clearTimeout(timer);
@@ -902,7 +902,7 @@ function App() {
   // Also trigger intro on initial start
   useEffect(() => {
     if (gameState.gameStatus === 'playing' && gameState.floor === 1 && !lastFloorRef.current) {
-      setFloorIntro({ floor: 1, theme: gameState.theme || 'Catacombs' });
+      setFloorIntro({ floor: 1, theme: gameState.theme || 'Inferno' });
       lastFloorRef.current = 1;
       const timer = setTimeout(() => setFloorIntro(null), 3000);
       return () => clearTimeout(timer);
@@ -1145,16 +1145,36 @@ function App() {
   }
 
   return (
-    <div className="flex w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
-      {/* Left Sidebar: HUD & Tactical Log */}
-      <aside className="w-80 border-r border-white/5 bg-[#030712] flex flex-col z-20 overflow-y-auto">
-        <UI gameState={gameState} onReset={handleReset} onWait={handleWait} onExitToHub={handleExitToHub} inputLocked={isInputLocked} />
+    <div className="flex flex-col lg:flex-row w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
+      {/* Mobile Top HUD (compact) */}
+      <div className="lg:hidden shrink-0 h-[28svh] min-h-[170px] max-h-[280px] border-b border-white/5 bg-[#030712] z-20">
+        <UI
+          gameState={gameState}
+          onReset={handleReset}
+          onWait={handleWait}
+          onExitToHub={handleExitToHub}
+          inputLocked={isInputLocked}
+          compact
+          hideInitiativeQueue
+          hideLog
+        />
+      </div>
+
+      {/* Left Sidebar: HUD & Tactical Log (desktop) */}
+      <aside className="hidden lg:flex w-80 border-r border-white/5 bg-[#030712] flex-col z-20 overflow-y-auto">
+        <UI
+          gameState={gameState}
+          onReset={handleReset}
+          onWait={handleWait}
+          onExitToHub={handleExitToHub}
+          inputLocked={isInputLocked}
+        />
       </aside>
 
-      {/* Center: The Map (Full Height) */}
-      <main className="flex-1 relative flex items-center justify-center bg-[#020617] overflow-hidden">
-        <div className="w-full h-full p-8 flex items-center justify-center">
-          <div className={`w-full h-full relative border border-white/5 bg-[#030712]/50 rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
+      {/* Center: The Map */}
+      <main className="flex-1 min-h-0 relative flex items-center justify-center bg-[#020617] overflow-hidden">
+        <div className="w-full h-full p-0 sm:p-3 lg:p-8 flex items-center justify-center">
+          <div className={`w-full h-full relative border border-white/5 bg-[#030712]/50 rounded-none sm:rounded-3xl lg:rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
             <GameBoard
               gameState={gameState}
               onMove={handleTileClick}
@@ -1167,7 +1187,7 @@ function App() {
             />
             {isInputLocked && gameState.gameStatus === 'playing' && (
               <div className="absolute inset-0 z-40 pointer-events-auto">
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-black/55 border border-white/15 text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">
+                <div className="absolute top-3 sm:top-4 lg:top-6 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-black/55 border border-white/15 text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">
                   Resolving Turn...
                 </div>
               </div>
@@ -1176,8 +1196,27 @@ function App() {
         </div>
       </main>
 
-      {/* Right Sidebar: Skills */}
-      <aside className="w-80 border-l border-white/5 bg-[#030712] flex flex-col z-20 overflow-y-auto">
+      {/* Mobile Bottom Skills */}
+      <aside className="lg:hidden shrink-0 h-[22svh] min-h-[138px] max-h-[220px] border-t border-white/5 bg-[#030712] z-20 overflow-y-auto">
+        <div className="p-3 flex flex-col gap-3 h-full">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Tactical Skills</h3>
+            <div className="text-[9px] font-bold uppercase tracking-widest text-white/20">Hop Engine v5.0</div>
+          </div>
+          <SkillTray
+            skills={gameState.player.activeSkills || []}
+            selectedSkillId={selectedSkillId}
+            onSelectSkill={handleSelectSkill}
+            hasSpear={gameState.hasSpear}
+            gameState={gameState}
+            inputLocked={isInputLocked}
+            compact
+          />
+        </div>
+      </aside>
+
+      {/* Right Sidebar: Skills (desktop) */}
+      <aside className="hidden lg:flex w-80 border-l border-white/5 bg-[#030712] flex-col z-20 overflow-y-auto">
         <div className="p-6 flex flex-col gap-8 h-full">
           <div className="flex-1">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/30 mb-6">Tactical Skills</h3>

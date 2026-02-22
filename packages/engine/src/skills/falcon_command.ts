@@ -145,8 +145,8 @@ export const FALCON_COMMAND: SkillDefinition = {
             name: 'Keen Sight',
             description: 'Falcon reveals hidden enemies within 3 tiles of its position.',
         },
-        TWIN_TALONS: {
-            id: 'TWIN_TALONS',
+        FALCON_TWIN_TALONS: {
+            id: 'FALCON_TWIN_TALONS',
             name: 'Twin Talons',
             description: 'Basic Peck hits 2 targets instead of 1.',
         },

@@ -9,46 +9,37 @@ interface UpgradeOverlayProps {
 export const UpgradeOverlay: React.FC<UpgradeOverlayProps> = ({ onSelect, gameState }) => {
     const player = gameState.player;
 
-    // 1. Base HP Option
-    const options = [
-        {
-            id: 'EXTRA_HP',
-            label: '❤️ Extra Heart',
-            desc: 'Increases your Max HP by 1 and heals you to full.',
-            color: 'bg-red-900/40 border-red-500'
+    const offeredIds = gameState.pendingStatus?.shrineOptions || gameState.shrineOptions || ['EXTRA_HP'];
+    const allOptions = offeredIds.map((id) => {
+        if (id === 'EXTRA_HP') {
+            return {
+                id: 'EXTRA_HP',
+                label: 'Extra Heart',
+                desc: 'Increases your Max HP by 1 and heals you to full.',
+                color: 'bg-red-900/40 border-red-500'
+            };
         }
-    ];
 
-    // 2. Collect all potential skill upgrades player doesn't have
-    const eligibleUpgrades: any[] = [];
-    for (const skill of player.activeSkills || []) {
-        for (const upId of skill.upgrades) {
-            if (!skill.activeUpgrades.includes(upId)) {
-                const def = SkillRegistry.getUpgrade(upId);
-                if (def) {
-                    eligibleUpgrades.push({
-                        id: upId,
-                        label: `✨ ${def.name}`,
-                        desc: def.description,
-                        color: skill.slot === 'offensive' ? 'bg-orange-900/40 border-orange-500' :
-                            skill.slot === 'defensive' ? 'bg-blue-900/40 border-blue-500' :
-                                'bg-green-900/40 border-green-500'
-                    });
-                }
-            }
-        }
-    }
+        const def = SkillRegistry.getUpgrade(id);
+        const skillId = SkillRegistry.getSkillForUpgrade(id);
+        const skill = player.activeSkills?.find(s => s.id === skillId);
+        const color = skill?.slot === 'offensive'
+            ? 'bg-orange-900/40 border-orange-500'
+            : skill?.slot === 'defensive'
+                ? 'bg-blue-900/40 border-blue-500'
+                : 'bg-green-900/40 border-green-500';
 
-    // Shuffle and pick up to 3
-    const shuffled = [...eligibleUpgrades].sort(() => Math.random() - 0.5);
-    const selectedUpgrades = shuffled.slice(0, 3);
-
-    const allOptions = [...options, ...selectedUpgrades];
+        return {
+            id,
+            label: def ? def.name : id,
+            desc: def?.description || 'Unknown upgrade.',
+            color
+        };
+    });
 
     return (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
             <div className="bg-gray-900 p-8 rounded-3xl border-2 border-slate-700 max-w-2xl w-full shadow-2xl relative overflow-hidden">
-                {/* Visual Flair */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-blue-500 to-green-500" />
 
                 <h2 className="text-4xl font-black text-white mb-2 text-center tracking-tight">SHRINE BLESSING</h2>
@@ -68,9 +59,8 @@ export const UpgradeOverlay: React.FC<UpgradeOverlayProps> = ({ onSelect, gameSt
                             <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-200">{opt.label}</h3>
                             <p className="text-sm text-slate-400 group-hover:text-slate-300 leading-relaxed">{opt.desc}</p>
 
-                            {/* Subtle sparkle effect on hover */}
                             <div className="absolute -right-2 -bottom-2 opacity-0 group-hover:opacity-10 scale-0 group-hover:scale-150 transition-all font-bold text-4xl">
-                                ✨
+                                *
                             </div>
                         </button>
                     ))}
@@ -79,4 +69,3 @@ export const UpgradeOverlay: React.FC<UpgradeOverlayProps> = ({ onSelect, gameSt
         </div>
     );
 };
-

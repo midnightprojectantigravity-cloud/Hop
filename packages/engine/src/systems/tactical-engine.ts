@@ -50,6 +50,15 @@ export class TacticalEngine {
             };
         }
 
+        const actorSkill = actor.activeSkills.find(s => s.id === intent.skillId);
+        if (actorSkill && (actorSkill.currentCooldown || 0) > 0) {
+            return {
+                effects: [],
+                messages: [`${intent.skillId} is on cooldown (${actorSkill.currentCooldown}).`],
+                consumesTurn: actor.type === 'player' ? false : true
+            };
+        }
+
         // 2. Target Resolution (Search Phase)
         let targetHex = intent.targetHex;
         let finalTargetId = intent.primaryTargetId;
@@ -72,13 +81,34 @@ export class TacticalEngine {
 
         // 3. Execution (Atomic Effects)
         // Find the specific skill instance on the actor to get upgrades
-        const actorSkill = actor.activeSkills.find(s => s.id === intent.skillId);
         const upgrades = actorSkill?.activeUpgrades || [];
 
         const execution = skillDef!.execute(gameState, actor, targetHex, upgrades);
+        const executionEffects = [...effects, ...execution.effects];
+
+        if (execution.consumesTurn !== false) {
+            const baseCooldown = skillDef!.baseVariables.cooldown || 0;
+            let cooldown = baseCooldown;
+            for (const upId of upgrades) {
+                const mod = skillDef!.upgrades?.[upId];
+                if (typeof mod?.modifyCooldown === 'number') {
+                    cooldown += mod.modifyCooldown;
+                }
+            }
+            cooldown = Math.max(0, cooldown);
+            if (cooldown > 0) {
+                executionEffects.push({
+                    type: 'ModifyCooldown',
+                    skillId: intent.skillId as any,
+                    // Cooldowns are ticked at end of turn, so add one turn to preserve authored values.
+                    amount: cooldown + 1,
+                    setExact: true
+                });
+            }
+        }
 
         return {
-            effects: [...effects, ...execution.effects],
+            effects: executionEffects,
             messages: [...messages, ...execution.messages],
             consumesTurn: execution.consumesTurn ?? true,
             targetId: finalTargetId,

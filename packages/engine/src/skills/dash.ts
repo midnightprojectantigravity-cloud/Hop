@@ -24,9 +24,11 @@ export const DASH: SkillDefinition = {
         cost: 0,
         cooldown: 0,
     },
-    execute: (state: GameState, attacker: Actor, target?: Point) => {
+    execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []) => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
+        const hasMomentumSurge = activeUpgrades.includes('MOMENTUM_SURGE');
+        const hasChainReaction = activeUpgrades.includes('DASH_CHAIN_REACTION') || activeUpgrades.includes('CHAIN_REACTION');
 
         if (!target) return { effects, messages, consumesTurn: false };
 
@@ -97,10 +99,13 @@ export const DASH: SkillDefinition = {
                 effects.push(...SKILL_JUICE_SIGNATURES.DASH.impact(stopPos, dir, true));
 
                 // Trigger Kinetic Pulse (Momentum 5)
+                const momentum = 5
+                    + (state.hasShield && hasMomentumSurge ? 2 : 0)
+                    + (hasChainReaction ? 1 : 0);
                 const pulseEffects = processKineticPulse(tempState, {
                     origin: stopPos,
                     direction: dir,
-                    momentum: 5
+                    momentum
                 });
 
                 // IMPORTANT: The displacement MUST be in the final effects list!
@@ -160,8 +165,8 @@ export const DASH: SkillDefinition = {
             name: 'Momentum Surge',
             description: '+2 Momentum when dashing with shield',
         },
-        'CHAIN_REACTION': {
-            id: 'CHAIN_REACTION',
+        'DASH_CHAIN_REACTION': {
+            id: 'DASH_CHAIN_REACTION',
             name: 'Chain Reaction',
             description: 'Enemies pushed into other enemies transfer momentum',
         }

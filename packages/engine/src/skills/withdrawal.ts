@@ -29,7 +29,8 @@ const SKILL_COOLDOWN = 2;
 function calculateSafeSpot(
     state: GameState,
     origin: Point,
-    threatPos: Point
+    threatPos: Point,
+    maxDistance: number = BACKROLL_MAX
 ): Point | null {
     // Get direction FROM threat TO origin (away from threat)
     const dirIdx = getDirectionFromTo(threatPos, origin);
@@ -37,8 +38,8 @@ function calculateSafeSpot(
 
     const dirVec = hexDirection(dirIdx);
 
-    // Try 2 hexes first, then 1 hex
-    for (let dist = BACKROLL_MAX; dist >= BACKROLL_MIN; dist--) {
+    // Try farthest legal retreat first.
+    for (let dist = maxDistance; dist >= BACKROLL_MIN; dist--) {
         let pos = origin;
         let valid = true;
 
@@ -89,9 +90,11 @@ export const WITHDRAWAL: SkillDefinition = {
         cooldown: SKILL_COOLDOWN,
         damage: SHOT_DAMAGE,
     },
-    execute: (state: GameState, attacker: Actor, target?: Point) => {
+    execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []) => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
+        const hasPartingShot = activeUpgrades.includes('PARTING_SHOT');
+        const hasNimbleFeet = activeUpgrades.includes('NIMBLE_FEET');
 
         if (!target) {
             return { effects, messages: ['No target!'], consumesTurn: false };
@@ -115,7 +118,7 @@ export const WITHDRAWAL: SkillDefinition = {
             attackerId: attacker.id,
             targetId: targetActor.id,
             skillId: 'WITHDRAWAL',
-            basePower: SHOT_DAMAGE,
+            basePower: SHOT_DAMAGE + (hasPartingShot ? 1 : 0),
             trinity: extractTrinityStats(attacker),
             targetTrinity: extractTrinityStats(targetActor),
             damageClass: 'physical',
@@ -129,7 +132,8 @@ export const WITHDRAWAL: SkillDefinition = {
         messages.push(`Withdrawal shot hits ${targetActor.subtype || 'enemy'}!`);
 
         // 2. Calculate backroll
-        const safeSpot = calculateSafeSpot(state, attacker.position, target);
+        const retreatDistance = hasNimbleFeet ? 3 : BACKROLL_MAX;
+        const safeSpot = calculateSafeSpot(state, attacker.position, target, retreatDistance);
 
         if (safeSpot) {
             effects.push({
@@ -216,12 +220,17 @@ export function executePassiveWithdrawal(
 ): { effects: AtomicEffect[]; messages: string[] } {
     const hunter = hunterId === state.player.id ? state.player : state.enemies.find(e => e.id === hunterId);
     if (!hunter) return { effects: [], messages: [] };
+    const withdrawalSkill = hunter.activeSkills?.find(s => s.id === 'WITHDRAWAL');
+    const activeUpgrades = withdrawalSkill?.activeUpgrades || [];
+    const hasHairTrigger = activeUpgrades.includes('HAIR_TRIGGER');
 
     // Execute the skill
-    const result = WITHDRAWAL.execute(state, hunter, enemyPos);
+    const result = WITHDRAWAL.execute(state, hunter, enemyPos, activeUpgrades);
 
     // Add cooldown effect
-    result.effects.push({ type: 'ModifyCooldown', skillId: 'WITHDRAWAL', amount: SKILL_COOLDOWN, setExact: true });
+    if (!hasHairTrigger) {
+        result.effects.push({ type: 'ModifyCooldown', skillId: 'WITHDRAWAL', amount: SKILL_COOLDOWN + 1, setExact: true });
+    }
 
     return result;
 }

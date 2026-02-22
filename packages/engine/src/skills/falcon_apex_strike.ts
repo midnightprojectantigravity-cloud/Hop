@@ -20,9 +20,15 @@ export const FALCON_APEX_STRIKE: SkillDefinition = {
         cooldown: 2,
         damage: 40,
     },
-    execute: (state: GameState, attacker: Actor, target?: Point): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
+    execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
+        const ownerId = attacker.companionOf;
+        const owner = ownerId
+            ? (ownerId === state.player.id ? state.player : state.enemies.find(e => e.id === ownerId))
+            : undefined;
+        const commandUpgrades = owner?.activeSkills?.find(s => s.id === 'FALCON_COMMAND')?.activeUpgrades || [];
+        const hasApexPredator = activeUpgrades.includes('APEX_PREDATOR') || commandUpgrades.includes('APEX_PREDATOR');
 
         if (!target) return { effects, messages, consumesTurn: false };
 
@@ -65,7 +71,7 @@ export const FALCON_APEX_STRIKE: SkillDefinition = {
         effects.push({
             type: 'UpdateCompanionState',
             target: attacker.id,
-            apexStrikeCooldown: 2,
+            apexStrikeCooldown: hasApexPredator ? 1 : 2,
         });
 
         messages.push(`Falcon executes APEX STRIKE on ${targetActor.subtype || 'enemy'}!`);

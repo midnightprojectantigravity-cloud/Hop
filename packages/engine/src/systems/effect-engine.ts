@@ -494,6 +494,8 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
         case 'Damage': {
             const isHazardReason = !!effect.reason && ['lava_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage'].includes(effect.reason);
+            const markedPredatorBonus = (victim?: Actor): number =>
+                victim?.statusEffects?.some(s => s.type === 'marked_predator') ? 1 : 0;
             if (isHazardReason) {
                 nextState = appendTimelineEvent(
                     nextState,
@@ -563,6 +565,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     const damageClass = effect.scoreEvent?.damageClass || 'physical';
                     const traitScaled = scaleCombatProfileDamage(nextState, effect.amount, context.sourceId, victim, damageClass, effect.reason);
                     let damageAmount = traitScaled.amount;
+                    damageAmount += markedPredatorBonus(victim);
                     if (isFireDamage && hasEmberWard) {
                         damageAmount = Math.max(0, damageAmount - 1);
                     }
@@ -592,7 +595,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     const corpsePositions: Point[] = [];
                     const damageClass = effect.scoreEvent?.damageClass || 'physical';
                     const traitScaled = scaleCombatProfileDamage(nextState, effect.amount, context.sourceId, victim, damageClass, effect.reason);
-                    const scaledAmount = traitScaled.amount;
+                    const scaledAmount = traitScaled.amount + markedPredatorBonus(victim);
                     simulationTargetId = targetActorId || victim?.id;
                     simulationPos = victimPos || victim?.position;
                     simulationAmount = scaledAmount;
@@ -676,7 +679,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 const scaledAmount = traitScaled.amount;
                 simulationTargetId = targetAtPos?.id;
                 simulationPos = targetPos;
-                simulationAmount = scaledAmount;
+                simulationAmount = scaledAmount + markedPredatorBonus(targetAtPos || undefined);
                 nextState.visualEvents = [...(nextState.visualEvents || []),
                 { type: 'vfx', payload: { type: 'impact', position: targetPos } }
                 ];
@@ -691,7 +694,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     }].slice(-500);
                 }
                 if (hexEquals(nextState.player.position, targetPos)) {
-                    nextState.player = applyDamage(nextState.player, scaledAmount);
+                    nextState.player = applyDamage(nextState.player, scaledAmount + markedPredatorBonus(nextState.player));
                     if (isFireDamage) {
                         nextState.hazardBreaches = (nextState.hazardBreaches || 0) + 1;
                     }
@@ -701,7 +704,7 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 }
                 const updateDamageAt = (e: Actor) => {
                     if (hexEquals(e.position, targetPos)) {
-                        const updated = applyDamage(e, scaledAmount);
+                        const updated = applyDamage(e, scaledAmount + markedPredatorBonus(e));
                         if (updated.hp <= 0) {
                             nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
                             killedAtIds.push(e.id);
@@ -1080,18 +1083,26 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'ModifyCooldown': {
-            nextState.player = {
-                ...nextState.player,
-                activeSkills: nextState.player.activeSkills?.map(s => {
-                    if (s.id === effect.skillId) {
-                        return {
-                            ...s,
-                            currentCooldown: effect.setExact ? effect.amount : Math.max(0, s.currentCooldown + effect.amount)
-                        };
-                    }
-                    return s;
+            const applyToActor = (actor: Actor): Actor => ({
+                ...actor,
+                activeSkills: actor.activeSkills?.map(s => {
+                    if (s.id !== effect.skillId) return s;
+                    return {
+                        ...s,
+                        currentCooldown: effect.setExact ? effect.amount : Math.max(0, s.currentCooldown + effect.amount)
+                    };
                 })
-            };
+            });
+
+            const actorId = context.sourceId || nextState.player.id;
+            if (actorId === nextState.player.id) {
+                nextState.player = applyToActor(nextState.player);
+            } else {
+                nextState.enemies = nextState.enemies.map(e => e.id === actorId ? applyToActor(e) : e);
+                if (nextState.companions) {
+                    nextState.companions = nextState.companions.map(e => e.id === actorId ? applyToActor(e) : e);
+                }
+            }
             break;
         }
         case 'SpawnCorpse': {
@@ -1149,7 +1160,10 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 position: effect.position,
                 ownerId: effect.ownerId,
                 isRevealed: false,
-                cooldown: 0
+                cooldown: 0,
+                volatileCore: effect.volatileCore,
+                chainReaction: effect.chainReaction,
+                resetCooldown: effect.resetCooldown
             }];
             break;
         }
@@ -1162,6 +1176,19 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         !hexEquals(t.position, effect.position)
                     );
                 }
+            }
+            break;
+        }
+        case 'SetTrapCooldown': {
+            if (nextState.traps) {
+                nextState.traps = nextState.traps.map(t => {
+                    if (effect.ownerId && t.ownerId !== effect.ownerId) return t;
+                    if (!hexEquals(t.position, effect.position)) return t;
+                    return {
+                        ...t,
+                        cooldown: Math.max(0, effect.cooldown)
+                    };
+                });
             }
             break;
         }

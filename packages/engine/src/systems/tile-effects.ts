@@ -2,7 +2,7 @@ import type { GameState, Actor, Point } from '../types';
 import type { Tile, TileHookResult, TileHookContext, TileEffectState } from './tile-types';
 import { TILE_EFFECTS } from './tile-registry';
 import type { TileEffectID } from '../types/registry';
-import { hexEquals } from '../hex';
+import { getNeighbors, hexEquals } from '../hex';
 import { UnifiedTileService } from './unified-tile-service';
 
 /**
@@ -12,6 +12,16 @@ import { UnifiedTileService } from './unified-tile-service';
  */
 
 export class TileResolver {
+    private static hasFireProtection(actor: Actor): boolean {
+        return actor.statusEffects.some(s => s.type === 'fire_immunity')
+            || actor.activeSkills?.some(s => s.id === 'ABSORB_FIRE')
+            || false;
+    }
+
+    private static isFireHazard(tile: Tile, traits: Set<string>): boolean {
+        return tile.baseId === 'LAVA' || traits.has('LAVA') || traits.has('FIRE');
+    }
+
     /**
      * Merge multiple TileHookResults into one
      */
@@ -50,6 +60,11 @@ export class TileResolver {
         const traits = UnifiedTileService.getTraitsForTile(state, tile);
 
         if (traits.has('HAZARDOUS') && !actor.isFlying) {
+            const fireProtected = this.isFireHazard(tile, traits) && this.hasFireProtection(actor);
+            if (fireProtected) {
+                // Fire-immune actors should not be intercepted/killed by fire hazard entry.
+                // Damage conversion/healing is handled downstream by Damage resolution.
+            } else {
             const damage = 99;
             if (tile.baseId === 'LAVA' || traits.has('LAVA')) {
                 this.mergeResults(combinedResult, {
@@ -69,6 +84,7 @@ export class TileResolver {
                     messages: [`Void consumes your soul!`],
                     interrupt: true
                 });
+            }
             }
         }
 
@@ -137,6 +153,17 @@ export class TileResolver {
 
         // 1. Process Base Traits
         if (traits.has('HAZARDOUS') && !actor.isFlying && !ignoreGroundHazards) {
+            const fireProtected = this.isFireHazard(tile, traits) && this.hasFireProtection(actor);
+            if (fireProtected) {
+                // Preserve absorb-fire contract: fire still applies its payload, but never interrupts movement.
+                this.mergeResults(combinedResult, {
+                    effects: [
+                        { type: 'Damage', target: actor.id, amount: 99, reason: 'hazard_intercept' }
+                    ],
+                    messages: ['Flames surge through you.'],
+                    interrupt: false
+                });
+            } else {
             // LETHAL HAZARD: Intercept and kill immediately
             const damage = 99;
 
@@ -148,6 +175,7 @@ export class TileResolver {
                 messages: [(tile.baseId === 'LAVA' || traits.has('LAVA')) ? 'Sunk in Lava!' : 'Consumed by Void!'],
                 interrupt: true
             });
+            }
         } else if (traits.has('SLIPPERY')) {
             combinedResult.newMomentum = Math.max(1, (momentum || 0));
         } else if (traits.has('LIQUID')) {
@@ -213,6 +241,12 @@ export class TileResolver {
                 this.mergeResults(combinedResult, {
                     effects: [
                         {
+                            type: 'SetTrapCooldown',
+                            position: trapAtPos.position,
+                            ownerId: trapAtPos.ownerId,
+                            cooldown: trapAtPos.resetCooldown ?? 2
+                        },
+                        {
                             type: 'Displacement',
                             target: actor.id,
                             destination: dest,
@@ -225,6 +259,40 @@ export class TileResolver {
                     messages: [`${actor.subtype || 'Unit'} triggered a kinetic trap!`],
                     interrupt: true
                 });
+
+                if (trapAtPos.volatileCore) {
+                    this.mergeResults(combinedResult, {
+                        effects: [{ type: 'Damage', target: actor.id, amount: 1, reason: 'trap_volatile_core' }],
+                        messages: ['Volatile core detonates!']
+                    });
+                }
+
+                if (trapAtPos.chainReaction && state.traps) {
+                    const adjacentTriggered = state.traps.filter(t =>
+                        t.ownerId === trapAtPos.ownerId &&
+                        t.cooldown === 0 &&
+                        !hexEquals(t.position, trapAtPos.position) &&
+                        getNeighbors(trapAtPos.position).some(n => hexEquals(n, t.position))
+                    );
+
+                    for (const chained of adjacentTriggered) {
+                        this.mergeResults(combinedResult, {
+                            effects: [{
+                                type: 'SetTrapCooldown',
+                                position: chained.position,
+                                ownerId: chained.ownerId,
+                                cooldown: chained.resetCooldown ?? 2
+                            }],
+                            messages: ['Chain reaction sparks nearby traps!']
+                        });
+                        if (chained.volatileCore) {
+                            this.mergeResults(combinedResult, {
+                                effects: [{ type: 'Damage', target: actor.id, amount: 1, reason: 'trap_chain_volatile' }],
+                                messages: ['Chain blast!']
+                            });
+                        }
+                    }
+                }
             }
         }
 

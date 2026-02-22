@@ -52,9 +52,8 @@ export const BASIC_ATTACK: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
-        // Validate range
-        let range = 1;
-        if (activeUpgrades.includes('EXTENDED_REACH')) range += 1;
+        // Validate melee range
+        const range = 1;
 
         if (!validateRange(attacker.position, target, range)) {
             messages.push('Target out of range!');
@@ -81,7 +80,11 @@ export const BASIC_ATTACK: SkillDefinition = {
 
         // Calculate damage through the centralized combat calculator.
         let baseDamage = 1;
-        if (activeUpgrades.includes('POWER_STRIKE')) baseDamage += 1;
+        if (activeUpgrades.includes('POWER_STRIKE')) baseDamage += 2;
+        const heldPosition = hexEquals(attacker.previousPosition || attacker.position, attacker.position);
+        if (activeUpgrades.includes('EXTENDED_REACH') && heldPosition) {
+            baseDamage += 1;
+        }
         const combat = calculateCombat({
             attackerId: attacker.id,
             targetId: targetActor.id,
@@ -108,8 +111,13 @@ export const BASIC_ATTACK: SkillDefinition = {
         messages.push(`${attackerName} attacked ${targetName}!`);
 
         // Vampiric upgrade: heal on kill (TODO: Add Heal effect type when implemented)
-        if (activeUpgrades.includes('VAMPIRIC') && targetActor.hp <= damage) {
-            messages.push('Vampiric heal!');
+        if (activeUpgrades.includes('VAMPIRIC')) {
+            const netDamage = Math.max(0, damage - (targetActor.temporaryArmor || 0));
+            if ((targetActor.hp - netDamage) <= 0) {
+                const vampiricHeal = 1;
+                effects.push({ type: 'Heal', target: attacker.id, amount: vampiricHeal });
+                messages.push('Vampiric heal!');
+            }
         }
 
         return { effects, messages, consumesTurn: true };
@@ -117,7 +125,8 @@ export const BASIC_ATTACK: SkillDefinition = {
     getValidTargets: (state: GameState, origin: Point) => {
         const attacker = getActorAt(state, origin);
         if (!attacker) return [];
-        return getNeighbors(origin).filter(n => {
+        const candidates = getNeighbors(origin);
+        return candidates.filter(n => {
             const actor = getActorAt(state, n);
             return !!actor
                 && actor.subtype !== 'bomb'
@@ -128,13 +137,13 @@ export const BASIC_ATTACK: SkillDefinition = {
     upgrades: {
         EXTENDED_REACH: {
             id: 'EXTENDED_REACH',
-            name: 'Extended Reach',
-            description: 'Attack range +1'
+            name: 'Disciplined Stance',
+            description: '+1 damage when attacking without moving first.'
         },
         POWER_STRIKE: {
             id: 'POWER_STRIKE',
             name: 'Power Strike',
-            description: 'Damage +1'
+            description: 'Damage +2'
         },
         VAMPIRIC: {
             id: 'VAMPIRIC',
