@@ -8,7 +8,7 @@ import type { Point, Room, FloorTheme, Entity } from '../types';
 import type { Tile } from './tile-types';
 import { BASE_TILES } from './tile-registry';
 import { createHex, hexEquals, hexDistance, getDiamondGrid } from '../hex';
-import { createRng } from './rng';
+import { createRng, stableIdFromSeed } from './rng';
 import {
     ENEMY_STATS,
     FLOOR_ENEMY_BUDGET,
@@ -20,6 +20,9 @@ import {
 } from '../constants';
 import { isSpecialTile } from '../helpers';
 import { createEnemy, getEnemySkillLoadout } from './entity-factory';
+import { ensureTacticalDataBootstrapped } from './tactical-data-bootstrap';
+import { getBaseUnitDefinitionBySubtype } from './base-unit-registry';
+import { instantiateActorFromDefinitionWithCursor, type PropensityRngCursor } from './propensity-instantiation';
 
 export interface DungeonResult {
     rooms: Room[];
@@ -179,9 +182,15 @@ export const generateEnemies = (
     spawnPositions: Point[],
     seed: string
 ): Entity[] => {
+    ensureTacticalDataBootstrapped();
+
     const rng = createRng(seed + ':enemies');
     const budget = FLOOR_ENEMY_BUDGET[Math.min(floor, FLOOR_ENEMY_BUDGET.length - 1)];
     const availableTypes = (FLOOR_ENEMY_TYPES as any)[floor] || (FLOOR_ENEMY_TYPES as any)[Math.max(...Object.keys(FLOOR_ENEMY_TYPES).map(Number))];
+    let propensityCursor: PropensityRngCursor = {
+        rngSeed: `${seed}:enemy-propensity`,
+        rngCounter: 0
+    };
 
     const enemies: Entity[] = [];
     let remainingBudget = budget;
@@ -211,24 +220,47 @@ export const generateEnemies = (
 
         const hpScale = Math.floor(floor / 5);
         const weightClass = stats.weightClass || 'Standard';
-        const enemyBase = createEnemy({
-            id: `enemy_${enemies.length}_${rng.next().toString(36).slice(2, 8)}`,
-            subtype: enemyType,
-            position,
-            speed: stats.speed || 50,
-            skills: getEnemySkillLoadout(enemyType),
-            weightClass: weightClass,
-            enemyType: stats.type as 'melee' | 'ranged',
-        });
-        const enemy = hpScale > 0
+        const enemySeedCounter = (propensityCursor.rngCounter << 8) + enemies.length;
+        const enemyId = `enemy_${enemies.length}_${stableIdFromSeed(seed, enemySeedCounter, 6, enemyType)}`;
+
+        const unitDef = getBaseUnitDefinitionBySubtype(enemyType);
+        let enemy: Entity;
+        if (unitDef) {
+            const instantiated = instantiateActorFromDefinitionWithCursor(propensityCursor, unitDef, {
+                actorId: enemyId,
+                position,
+                subtype: enemyType,
+                factionId: 'enemy'
+            });
+            propensityCursor = instantiated.nextCursor;
+            enemy = instantiated.actor;
+        } else {
+            enemy = createEnemy({
+                id: enemyId,
+                subtype: enemyType,
+                position,
+                speed: stats.speed || 50,
+                skills: getEnemySkillLoadout(enemyType),
+                weightClass: weightClass,
+                enemyType: stats.type as 'melee' | 'ranged',
+            });
+        }
+
+        const scaledEnemy = hpScale > 0
             ? {
-                ...enemyBase,
-                hp: enemyBase.hp + hpScale,
-                maxHp: enemyBase.maxHp + hpScale,
+                ...enemy,
+                hp: enemy.hp + hpScale,
+                maxHp: enemy.maxHp + hpScale,
             }
-            : enemyBase;
-        enemy.isVisible = true;
-        enemies.push(enemy);
+            : enemy;
+
+        enemies.push({
+            ...scaledEnemy,
+            subtype: enemyType,
+            enemyType: stats.type as 'melee' | 'ranged' | 'boss',
+            actionCooldown: stats.actionCooldown ?? scaledEnemy.actionCooldown,
+            isVisible: true
+        });
 
         remainingBudget -= stats.cost;
     }

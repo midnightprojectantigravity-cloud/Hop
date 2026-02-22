@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import type { GameState, Point, MovementTrace } from '@hop/engine';
+import type { GameState, Point, MovementTrace, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
 import {
     isTileInDiamond, hexToPixel,
-    TILE_SIZE, SkillRegistry, pointToKey, UnifiedTileService
+    TILE_SIZE, SkillRegistry, pointToKey, UnifiedTileService, previewActionOutcome, getHexLine
 } from '@hop/engine';
 import { HexTile } from './HexTile';
 import { Entity } from './Entity';
@@ -11,12 +11,17 @@ import { JuiceManager } from './JuiceManager';
 import type {
     VisualAssetManifest,
     VisualAssetEntry,
+    VisualBiomeThemePreset,
     VisualBiomeTextureLayer,
     VisualBiomeClutterLayer,
+    VisualBiomeWallsProfile,
+    VisualBiomeWallsThemeOverride,
     VisualBiomeMaterialProfile,
+    VisualMountainRenderSettings,
     VisualBiomeTintProfile,
     VisualBlendMode
 } from '../visual/asset-manifest';
+import { getBiomeThemePreset } from '../visual/asset-manifest';
 import {
     resolveTileAssetId,
     resolvePropAssetId,
@@ -35,7 +40,24 @@ interface GameBoardProps {
     biomeDebug?: {
         undercurrentOffset?: { x: number; y: number };
         crustOffset?: { x: number; y: number };
+        mountainAssetPath?: string;
+        mountainScale?: number;
+        mountainOffset?: { x: number; y: number };
+        mountainAnchor?: { x: number; y: number };
+        mountainCrustBlendMode?: 'off' | VisualBlendMode;
+        mountainCrustBlendOpacity?: number;
+        mountainTintColor?: string;
+        mountainTintBlendMode?: 'off' | VisualBlendMode;
+        mountainTintOpacity?: number;
     };
+    onSimulationEvents?: (events: SimulationEvent[]) => void;
+    onMirrorSnapshot?: (snapshot: StateMirrorSnapshot) => void;
+    enginePreviewGhost?: {
+        path: Point[];
+        aoe: Point[];
+        hasEnemy: boolean;
+        target: Point;
+    } | null;
 }
 
 type BoardDepthSprite = {
@@ -58,15 +80,6 @@ const hashString = (input: string): number => {
 };
 
 const hashFloat = (input: string): number => hashString(input) / 0xffffffff;
-
-const HEX_NEIGHBOR_OFFSETS: Point[] = [
-    { q: 1, r: 0, s: -1 },
-    { q: 0, r: 1, s: -1 },
-    { q: -1, r: 1, s: 0 },
-    { q: -1, r: 0, s: 1 },
-    { q: 0, r: -1, s: 1 },
-    { q: 1, r: -1, s: 0 }
-];
 
 const parseMountainClusterSize = (asset: VisualAssetEntry): number => {
     const tags = (asset.tags || []).map(t => t.toLowerCase());
@@ -135,6 +148,53 @@ const readBlendMode = (blend?: VisualBlendMode): React.CSSProperties['mixBlendMo
     return 'multiply';
 };
 
+const normalizeHexColor = (value: string, fallback = '#8b6f4a'): string => {
+    const raw = String(value || '').trim();
+    const fullHex = /^#([0-9a-f]{6})$/i;
+    if (fullHex.test(raw)) return raw.toLowerCase();
+    const shortHex = /^#([0-9a-f]{3})$/i;
+    if (shortHex.test(raw)) {
+        const [r, g, b] = raw.slice(1).split('');
+        return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+    }
+    return fallback;
+};
+
+const hexToRgb01 = (hex: string): { r: number; g: number; b: number } => {
+    const normalized = normalizeHexColor(hex);
+    const value = normalized.slice(1);
+    return {
+        r: parseInt(value.slice(0, 2), 16) / 255,
+        g: parseInt(value.slice(2, 4), 16) / 255,
+        b: parseInt(value.slice(4, 6), 16) / 255
+    };
+};
+
+const toSvgSafeId = (value: string): string => value.replace(/[^a-zA-Z0-9_-]/g, '-');
+
+type ResolvedMountainRenderSettings = {
+    scale: number;
+    offsetX: number;
+    offsetY: number;
+    anchorX: number;
+    anchorY: number;
+    crustBlendMode: React.CSSProperties['mixBlendMode'] | 'off';
+    crustBlendOpacity: number;
+    tintColor: string;
+    tintBlendMode: React.CSSProperties['mixBlendMode'] | 'off';
+    tintOpacity: number;
+    tintMatrixValues: string;
+};
+
+const resolveMountainBlendMode = (
+    value: 'off' | VisualBlendMode | undefined,
+    fallback: React.CSSProperties['mixBlendMode'] | 'off'
+): React.CSSProperties['mixBlendMode'] | 'off' => {
+    if (value === 'off') return 'off';
+    if (value) return readBlendMode(value);
+    return fallback;
+};
+
 const getHexPoints = (size: number): string => {
     const points: string[] = [];
     for (let i = 0; i < 6; i++) {
@@ -144,7 +204,7 @@ const getHexPoints = (size: number): string => {
     return points.join(' ');
 };
 
-export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selectedSkillId, showMovementRange, onBusyStateChange, assetManifest, biomeDebug }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selectedSkillId, showMovementRange, onBusyStateChange, assetManifest, biomeDebug, onSimulationEvents, onMirrorSnapshot, enginePreviewGhost }) => {
     type BoardDecal = { id: string; position: Point; href: string; createdAt: number };
     type BoardProp = { id: string; kind: 'stairs' | 'shrine'; position: Point; asset?: VisualAssetEntry };
     const [isShaking, setIsShaking] = useState(false);
@@ -160,6 +220,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
     const lastMovementBatchSignatureRef = useRef('');
     const processedTimelineDecalCountRef = useRef(0);
     const processedVisualDecalCountRef = useRef(0);
+    const processedSimulationEventCountRef = useRef(0);
     const playerPos = gameState.player.position;
 
     // Filter cells based on dynamic diamond geometry
@@ -300,15 +361,78 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         return set;
     }, [gameState.enemies]);
 
+    const resolvedEnginePreviewGhost = useMemo(() => {
+        if (enginePreviewGhost) return enginePreviewGhost;
+        if (!hoveredTile) return null;
+
+        const hoveredKey = pointToKey(hoveredTile);
+        if (showMovementRange && !selectedSkillId) {
+            const isMoveTile = movementTargetSet.has(hoveredKey)
+                || (!hasPrimaryMovementSkills && fallbackNeighborSet.has(hoveredKey));
+            if (!isMoveTile) return null;
+            return {
+                path: getHexLine(playerPos, hoveredTile),
+                aoe: [],
+                hasEnemy: false,
+                target: hoveredTile
+            };
+        }
+
+        if (!selectedSkillId) return null;
+
+        const selectedSkill = gameState.player.activeSkills.find(skill => skill.id === selectedSkillId);
+        const preview = previewActionOutcome(gameState, {
+            actorId: gameState.player.id,
+            skillId: selectedSkillId,
+            target: hoveredTile,
+            activeUpgrades: selectedSkill?.activeUpgrades || []
+        });
+
+        if (!preview.ok) return null;
+
+        const aoeByKey = new Map<string, Point>();
+        for (const event of preview.simulationEvents) {
+            if (!event.position) continue;
+            if (event.type !== 'DamageTaken' && event.type !== 'StatusApplied' && event.type !== 'UnitMoved') continue;
+            aoeByKey.set(pointToKey(event.position), event.position);
+        }
+
+        const hasEnemy = preview.simulationEvents.some(event =>
+            (event.type === 'DamageTaken' || event.type === 'StatusApplied')
+            && Boolean(event.targetId)
+            && event.targetId !== gameState.player.id
+        );
+
+        return {
+            path: getHexLine(playerPos, hoveredTile),
+            aoe: [...aoeByKey.values()],
+            hasEnemy,
+            target: hoveredTile
+        };
+    }, [
+        enginePreviewGhost,
+        hoveredTile,
+        showMovementRange,
+        selectedSkillId,
+        movementTargetSet,
+        hasPrimaryMovementSkills,
+        fallbackNeighborSet,
+        gameState,
+        playerPos
+    ]);
+
     const tileVisualFlags = useMemo(() => {
         const out = new Map<string, { isWall: boolean; isLava: boolean; isFire: boolean }>();
         for (const hex of cells) {
             const key = pointToKey(hex);
             const traits = UnifiedTileService.getTraitsAt(gameState, hex);
+            const isWall = traits.has('BLOCKS_MOVEMENT') && traits.has('BLOCKS_LOS');
+            const hasLava = traits.has('LAVA') || (traits.has('HAZARDOUS') && traits.has('LIQUID'));
+            const hasFire = traits.has('FIRE');
             out.set(key, {
-                isWall: traits.has('BLOCKS_MOVEMENT') && traits.has('BLOCKS_LOS'),
-                isLava: traits.has('LAVA') || (traits.has('HAZARDOUS') && traits.has('LIQUID')),
-                isFire: traits.has('FIRE')
+                isWall,
+                isLava: !isWall && hasLava,
+                isFire: !isWall && hasFire
             });
         }
         return out;
@@ -332,6 +456,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         () => `${gameState.initialSeed || gameState.rngSeed || gameState.turnNumber}:${gameState.floor}:${biomeThemeKey}`,
         [gameState.initialSeed, gameState.rngSeed, gameState.turnNumber, gameState.floor, biomeThemeKey]
     );
+    const biomeThemePreset = useMemo<VisualBiomeThemePreset | undefined>(
+        () => getBiomeThemePreset(assetManifest, biomeThemeKey),
+        [assetManifest, biomeThemeKey]
+    );
     const legacyUnderlayLayer = useMemo<VisualBiomeTextureLayer | undefined>(() => {
         const underlay = assetManifest?.biomeUnderlay;
         if (!underlay) return undefined;
@@ -344,16 +472,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         };
     }, [assetManifest?.biomeUnderlay]);
     const undercurrentLayer = useMemo<VisualBiomeTextureLayer | undefined>(
-        () => assetManifest?.biomeLayers?.undercurrent,
-        [assetManifest?.biomeLayers?.undercurrent]
+        () => biomeThemePreset?.biomeLayers?.undercurrent || assetManifest?.biomeLayers?.undercurrent,
+        [biomeThemePreset?.biomeLayers?.undercurrent, assetManifest?.biomeLayers?.undercurrent]
     );
     const crustLayer = useMemo<VisualBiomeTextureLayer | undefined>(
-        () => assetManifest?.biomeLayers?.crust || legacyUnderlayLayer,
-        [assetManifest?.biomeLayers?.crust, legacyUnderlayLayer]
+        () => biomeThemePreset?.biomeLayers?.crust || assetManifest?.biomeLayers?.crust || legacyUnderlayLayer,
+        [biomeThemePreset?.biomeLayers?.crust, assetManifest?.biomeLayers?.crust, legacyUnderlayLayer]
     );
     const clutterLayer = useMemo<VisualBiomeClutterLayer | undefined>(
-        () => assetManifest?.biomeLayers?.clutter,
-        [assetManifest?.biomeLayers?.clutter]
+        () => biomeThemePreset?.biomeLayers?.clutter || assetManifest?.biomeLayers?.clutter,
+        [biomeThemePreset?.biomeLayers?.clutter, assetManifest?.biomeLayers?.clutter]
     );
     const undercurrentHref = useMemo(
         () => resolveBiomeLayerPath(undercurrentLayer, biomeThemeKey),
@@ -374,12 +502,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
     const undercurrentScroll = useMemo(() => ({
         x: Number(undercurrentLayer?.scroll?.x ?? 120),
         y: Number(undercurrentLayer?.scroll?.y ?? 90),
-        durationMs: Math.max(1000, Number(undercurrentLayer?.scroll?.durationMs ?? 18000))
+        durationMs: Math.max(1000, Number(undercurrentLayer?.scroll?.durationMs ?? 92000))
     }), [undercurrentLayer?.scroll?.x, undercurrentLayer?.scroll?.y, undercurrentLayer?.scroll?.durationMs]);
     const undercurrentOffset = useMemo(() => ({
-        x: Number(biomeDebug?.undercurrentOffset?.x ?? 0),
-        y: Number(biomeDebug?.undercurrentOffset?.y ?? 0)
-    }), [biomeDebug?.undercurrentOffset?.x, biomeDebug?.undercurrentOffset?.y]);
+        x: Number(undercurrentLayer?.offsetX ?? 0) + Number(biomeDebug?.undercurrentOffset?.x ?? 0),
+        y: Number(undercurrentLayer?.offsetY ?? 0) + Number(biomeDebug?.undercurrentOffset?.y ?? 0)
+    }), [undercurrentLayer?.offsetX, undercurrentLayer?.offsetY, biomeDebug?.undercurrentOffset?.x, biomeDebug?.undercurrentOffset?.y]);
     const crustHref = useMemo(
         () => resolveBiomeLayerPath(crustLayer, biomeThemeKey),
         [crustLayer, biomeThemeKey]
@@ -402,16 +530,24 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         return { x: hx, y: hy };
     }, [crustLayer?.seedShiftPx, biomeSeed]);
     const crustOffset = useMemo(() => ({
-        x: Number(biomeDebug?.crustOffset?.x ?? 0),
-        y: Number(biomeDebug?.crustOffset?.y ?? 0)
-    }), [biomeDebug?.crustOffset?.x, biomeDebug?.crustOffset?.y]);
+        x: Number(crustLayer?.offsetX ?? 0) + Number(biomeDebug?.crustOffset?.x ?? 0),
+        y: Number(crustLayer?.offsetY ?? 0) + Number(biomeDebug?.crustOffset?.y ?? 0)
+    }), [crustLayer?.offsetX, crustLayer?.offsetY, biomeDebug?.crustOffset?.x, biomeDebug?.crustOffset?.y]);
     const crustPatternShift = useMemo(
         () => ({ x: crustSeedShift.x + crustOffset.x, y: crustSeedShift.y + crustOffset.y }),
         [crustSeedShift.x, crustSeedShift.y, crustOffset.x, crustOffset.y]
     );
+    const wallsProfile = useMemo<VisualBiomeWallsProfile | undefined>(
+        () => assetManifest?.walls,
+        [assetManifest?.walls]
+    );
+    const wallsThemeOverride = useMemo<VisualBiomeWallsThemeOverride | undefined>(
+        () => biomeThemePreset?.walls || wallsProfile?.themes?.[biomeThemeKey],
+        [biomeThemePreset?.walls, wallsProfile?.themes, biomeThemeKey]
+    );
     const crustMaterial = useMemo<VisualBiomeMaterialProfile | undefined>(
-        () => assetManifest?.biomeMaterials?.crust,
-        [assetManifest?.biomeMaterials?.crust]
+        () => biomeThemePreset?.biomeMaterials?.crust || assetManifest?.biomeMaterials?.crust,
+        [biomeThemePreset?.biomeMaterials?.crust, assetManifest?.biomeMaterials?.crust]
     );
     const crustDetailALayer = useMemo<VisualBiomeTextureLayer | undefined>(
         () => crustMaterial?.detailA,
@@ -500,6 +636,139 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         [crustTintProfile?.blendMode]
     );
     const crustTintActive = Boolean(crustTintColor && crustTintOpacity > 0);
+    const defaultMountainCrustBlendOpacity = useMemo(
+        () => (crustTintActive ? Math.min(0.55, Math.max(0.15, crustTintOpacity * 0.9)) : 0),
+        [crustTintActive, crustTintOpacity]
+    );
+    const resolveMountainSettings = useCallback((asset?: VisualAssetEntry): ResolvedMountainRenderSettings => {
+        const assetDefaults = asset?.mountainSettings as VisualMountainRenderSettings | undefined;
+        const assetTheme = asset?.mountainSettingsByTheme?.[biomeThemeKey] as VisualMountainRenderSettings | undefined;
+        const presetAssetOverride = asset ? biomeThemePreset?.assetOverrides?.[asset.id] : undefined;
+        const presetAssetMountain = presetAssetOverride?.mountainSettings as VisualMountainRenderSettings | undefined;
+        const scale = Math.min(3, Math.max(0.2, Number(
+            biomeDebug?.mountainScale
+            ?? presetAssetMountain?.scale
+            ?? assetTheme?.scale
+            ?? wallsThemeOverride?.scale
+            ?? wallsProfile?.scale
+            ?? assetDefaults?.scale
+            ?? 0.95
+        )));
+        const offsetX = Number(
+            biomeDebug?.mountainOffset?.x
+            ?? presetAssetMountain?.offsetX
+            ?? assetTheme?.offsetX
+            ?? wallsThemeOverride?.offsetX
+            ?? wallsProfile?.offsetX
+            ?? assetDefaults?.offsetX
+            ?? 0
+        );
+        const offsetY = Number(
+            biomeDebug?.mountainOffset?.y
+            ?? presetAssetMountain?.offsetY
+            ?? assetTheme?.offsetY
+            ?? wallsThemeOverride?.offsetY
+            ?? wallsProfile?.offsetY
+            ?? assetDefaults?.offsetY
+            ?? 0
+        );
+        const anchorX = Math.min(1, Math.max(0, Number(
+            biomeDebug?.mountainAnchor?.x
+            ?? presetAssetMountain?.anchorX
+            ?? assetTheme?.anchorX
+            ?? wallsThemeOverride?.anchorX
+            ?? wallsProfile?.anchorX
+            ?? assetDefaults?.anchorX
+            ?? 0.5
+        )));
+        const anchorY = Math.min(1, Math.max(0, Number(
+            biomeDebug?.mountainAnchor?.y
+            ?? presetAssetMountain?.anchorY
+            ?? assetTheme?.anchorY
+            ?? wallsThemeOverride?.anchorY
+            ?? wallsProfile?.anchorY
+            ?? assetDefaults?.anchorY
+            ?? 0.78
+        )));
+        const crustBlendMode = resolveMountainBlendMode(
+            biomeDebug?.mountainCrustBlendMode
+            ?? presetAssetMountain?.crustBlendMode
+            ?? assetTheme?.crustBlendMode
+            ?? wallsThemeOverride?.crustBlendMode
+            ?? wallsProfile?.crustBlendMode
+            ?? assetDefaults?.crustBlendMode,
+            crustTintBlendMode
+        );
+        const crustBlendOpacity = Math.min(1, Math.max(0, Number(
+            biomeDebug?.mountainCrustBlendOpacity
+            ?? presetAssetMountain?.crustBlendOpacity
+            ?? assetTheme?.crustBlendOpacity
+            ?? wallsThemeOverride?.crustBlendOpacity
+            ?? wallsProfile?.crustBlendOpacity
+            ?? assetDefaults?.crustBlendOpacity
+            ?? defaultMountainCrustBlendOpacity
+        )));
+        const tintColor = normalizeHexColor(String(
+            biomeDebug?.mountainTintColor
+            ?? presetAssetMountain?.tintColor
+            ?? assetTheme?.tintColor
+            ?? wallsThemeOverride?.tintColor
+            ?? wallsProfile?.tintColor
+            ?? assetDefaults?.tintColor
+            ?? crustTintColor
+            ?? '#8b6f4a'
+        ));
+        const tintBlendMode = resolveMountainBlendMode(
+            biomeDebug?.mountainTintBlendMode
+            ?? presetAssetMountain?.tintBlendMode
+            ?? assetTheme?.tintBlendMode
+            ?? wallsThemeOverride?.tintBlendMode
+            ?? wallsProfile?.tintBlendMode
+            ?? assetDefaults?.tintBlendMode,
+            'soft-light'
+        );
+        const tintOpacity = Math.min(1, Math.max(0, Number(
+            biomeDebug?.mountainTintOpacity
+            ?? presetAssetMountain?.tintOpacity
+            ?? assetTheme?.tintOpacity
+            ?? wallsThemeOverride?.tintOpacity
+            ?? wallsProfile?.tintOpacity
+            ?? assetDefaults?.tintOpacity
+            ?? 0
+        )));
+        const rgb = hexToRgb01(tintColor);
+        return {
+            scale,
+            offsetX,
+            offsetY,
+            anchorX,
+            anchorY,
+            crustBlendMode,
+            crustBlendOpacity,
+            tintColor,
+            tintBlendMode,
+            tintOpacity,
+            tintMatrixValues: `0 0 0 0 ${rgb.r.toFixed(4)} 0 0 0 0 ${rgb.g.toFixed(4)} 0 0 0 0 ${rgb.b.toFixed(4)} 0 0 0 1 0`
+        };
+    }, [
+        biomeThemeKey,
+        biomeDebug?.mountainScale,
+        biomeDebug?.mountainOffset?.x,
+        biomeDebug?.mountainOffset?.y,
+        biomeDebug?.mountainAnchor?.x,
+        biomeDebug?.mountainAnchor?.y,
+        biomeDebug?.mountainCrustBlendMode,
+        biomeDebug?.mountainCrustBlendOpacity,
+        biomeDebug?.mountainTintColor,
+        biomeDebug?.mountainTintBlendMode,
+        biomeDebug?.mountainTintOpacity,
+        biomeThemePreset?.assetOverrides,
+        wallsProfile,
+        wallsThemeOverride,
+        crustTintBlendMode,
+        crustTintColor,
+        defaultMountainCrustBlendOpacity
+    ]);
     const crustMaterialVisible = Boolean(
         (crustDetailAHref && crustDetailAMode !== 'off' && crustDetailAOpacity > 0)
         || (crustDetailBHref && crustDetailBMode !== 'off' && crustDetailBOpacity > 0)
@@ -586,91 +855,48 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
             const theme = asset.theme.toLowerCase();
             return theme === biomeThemeKey || theme === 'core';
         });
-        return all.sort((a, b) => a.id.localeCompare(b.id));
-    }, [assetManifest?.assets, biomeThemeKey]);
+        const sorted = all.sort((a, b) => a.id.localeCompare(b.id));
+        const presetPath = String(wallsThemeOverride?.mountainPath || wallsProfile?.mountainPath || '').trim();
+        const overridePath = String(biomeDebug?.mountainAssetPath || presetPath).trim();
+        if (!overridePath) return sorted;
+
+        const exactMatch = sorted.find(asset => asset.path === overridePath);
+        return exactMatch ? [exactMatch] : [];
+    }, [assetManifest?.assets, biomeThemeKey, biomeDebug?.mountainAssetPath, wallsProfile?.mountainPath, wallsThemeOverride?.mountainPath]);
+    const mountainSettingsByAssetId = useMemo(() => {
+        const out = new Map<string, ResolvedMountainRenderSettings>();
+        for (const asset of mountainAssets) {
+            out.set(asset.id, resolveMountainSettings(asset));
+        }
+        return out;
+    }, [mountainAssets, resolveMountainSettings]);
     const mountainSprites = useMemo((): BoardDepthSprite[] => {
         if (!mountainAssets.length) return [];
-        const wallByKey = new Map<string, Point>();
-        for (const hex of cells) {
+        const singleHexPool = mountainAssets.filter(asset => parseMountainClusterSize(asset) === 1);
+        const assetPool = singleHexPool.length ? singleHexPool : mountainAssets;
+        const wallHexes = cells
+            .filter(hex => tileVisualFlags.get(pointToKey(hex))?.isWall)
+            .sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)));
+        if (!wallHexes.length) return [];
+
+        return wallHexes.map((hex) => {
             const key = pointToKey(hex);
-            if (tileVisualFlags.get(key)?.isWall) {
-                wallByKey.set(key, hex);
-            }
-        }
-        if (wallByKey.size === 0) return [];
-
-        const unassigned = new Set(Array.from(wallByKey.keys()).sort((a, b) => a.localeCompare(b)));
-        const out: BoardDepthSprite[] = [];
-
-        while (unassigned.size > 0) {
-            const seedKey = unassigned.values().next().value as string;
-            const queue: string[] = [seedKey];
-            const queued = new Set<string>(queue);
-            const clusterKeys: string[] = [];
-
-            while (queue.length > 0 && clusterKeys.length < 3) {
-                const currentKey = queue.shift() as string;
-                if (!unassigned.has(currentKey)) continue;
-                unassigned.delete(currentKey);
-                clusterKeys.push(currentKey);
-
-                const currentHex = wallByKey.get(currentKey);
-                if (!currentHex) continue;
-                const neighborKeys = HEX_NEIGHBOR_OFFSETS
-                    .map(o => pointToKey({
-                        q: currentHex.q + o.q,
-                        r: currentHex.r + o.r,
-                        s: currentHex.s + o.s
-                    }))
-                    .sort((a, b) => a.localeCompare(b));
-                for (const nKey of neighborKeys) {
-                    if (!unassigned.has(nKey) || queued.has(nKey)) continue;
-                    queue.push(nKey);
-                    queued.add(nKey);
-                }
-            }
-
-            const clusterHexes = clusterKeys.map(key => wallByKey.get(key)).filter(Boolean) as Point[];
-            if (!clusterHexes.length) continue;
-            const clusterSize = Math.min(3, Math.max(1, clusterHexes.length));
-            const centroid = clusterHexes.reduce(
-                (acc, hex) => ({
-                    q: acc.q + hex.q,
-                    r: acc.r + hex.r,
-                    s: acc.s + hex.s
-                }),
-                { q: 0, r: 0, s: 0 }
-            );
-            const centroidPoint: Point = {
-                q: centroid.q / clusterHexes.length,
-                r: centroid.r / clusterHexes.length,
-                s: centroid.s / clusterHexes.length
-            };
-            const clusterAssetPool = mountainAssets.filter(asset => parseMountainClusterSize(asset) === clusterSize);
-            const singleHexPool = mountainAssets.filter(asset => parseMountainClusterSize(asset) === 1);
-            const fallbackPool = clusterAssetPool.length
-                ? clusterAssetPool
-                : (singleHexPool.length ? singleHexPool : mountainAssets);
             const pick = Math.floor(
-                hashFloat(`${biomeSeed}|mountain-cluster|${clusterKeys.join('+')}|asset`) * fallbackPool.length
-            ) % fallbackPool.length;
-            const asset = fallbackPool[pick];
-            const yAnchors = clusterHexes.map(hex => hexToPixel(hex, TILE_SIZE).y);
-            const zAnchorY = Math.max(...yAnchors) + TILE_SIZE * 0.42;
-            const baseScale = clusterSize === 1 ? 0.95 : (clusterSize === 2 ? 1.2 : 1.46);
-            const scaleVariance = 0.1 * hashFloat(`${biomeSeed}|mountain-cluster|${clusterKeys.join('+')}|scale`);
-            out.push({
-                id: `mountain-${clusterKeys.join('-')}-${asset.id}`,
+                hashFloat(`${biomeSeed}|mountain-tile|${key}|asset`) * assetPool.length
+            ) % assetPool.length;
+            const asset = assetPool[pick];
+            const settings = mountainSettingsByAssetId.get(asset.id) || resolveMountainSettings(asset);
+            const { y } = hexToPixel(hex, TILE_SIZE);
+            return {
+                id: `mountain-${key}-${asset.id}`,
                 kind: 'mountain',
-                position: centroidPoint,
+                position: hex,
                 asset,
-                renderScale: Math.min(2, baseScale + scaleVariance),
-                zAnchorY
-            });
-        }
-
-        return out;
-    }, [mountainAssets, cells, tileVisualFlags, biomeSeed]);
+                renderScale: settings.scale,
+                zAnchorY: y + TILE_SIZE * 0.42 + settings.offsetY
+            };
+        });
+    }, [mountainAssets, cells, tileVisualFlags, biomeSeed, mountainSettingsByAssetId, resolveMountainSettings]);
     const clutterAssets = useMemo(() => {
         const tags = new Set((clutterLayer?.tags?.length ? clutterLayer.tags : ['clutter', 'obstacle']).map(t => t.toLowerCase()));
         return (assetManifest?.assets || []).filter(asset => {
@@ -738,6 +964,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         });
         return out;
     }, [mountainSprites, clutterSprites, boardProps]);
+    const mountainCoveredWallKeys = useMemo(() => {
+        const out = new Set<string>();
+        for (const sprite of mountainSprites) {
+            out.add(pointToKey(sprite.position));
+        }
+        return out;
+    }, [mountainSprites]);
 
     const resolveEventPoint = useCallback((payload: any): Point | null => {
         if (!payload) return null;
@@ -798,6 +1031,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
     }, [gameState.timelineEvents, gameState.visualEvents, deathDecalHref, resolveEventPoint]);
 
     useEffect(() => {
+        const events = gameState.simulationEvents || [];
+        if (events.length < processedSimulationEventCountRef.current) {
+            processedSimulationEventCountRef.current = 0;
+        }
+        const newEvents = events.slice(processedSimulationEventCountRef.current);
+        processedSimulationEventCountRef.current = events.length;
+        if (newEvents.length > 0) {
+            onSimulationEvents?.(newEvents);
+        }
+    }, [gameState.simulationEvents, onSimulationEvents]);
+
+    useEffect(() => {
         if (decals.length === 0) return;
         const ttlMs = 12_000;
         const timer = window.setTimeout(() => {
@@ -819,9 +1064,23 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         const out = new Map<string, Point>();
         out.set(gameState.player.id, gameState.player.position);
         for (const e of gameState.enemies) out.set(e.id, e.position);
+        for (const e of gameState.companions || []) out.set(e.id, e.position);
         for (const e of gameState.dyingEntities || []) out.set(e.id, e.position);
         return out;
-    }, [gameState.player.id, gameState.player.position, gameState.enemies, gameState.dyingEntities]);
+    }, [gameState.player.id, gameState.player.position, gameState.enemies, gameState.companions, gameState.dyingEntities]);
+
+    useEffect(() => {
+        if (!onMirrorSnapshot) return;
+        const snapshot: StateMirrorSnapshot = {
+            turn: gameState.turnNumber || 0,
+            stackTick: gameState.stackTrace?.length || 0,
+            actors: [...actorPositionById.entries()].map(([id, position]) => ({
+                id,
+                position: { q: position.q, r: position.r, s: position.s }
+            }))
+        };
+        onMirrorSnapshot(snapshot);
+    }, [onMirrorSnapshot, gameState.turnNumber, gameState.stackTrace, actorPositionById]);
 
     const kineticTraces = useMemo(() => {
         return (gameState.visualEvents || [])
@@ -1028,6 +1287,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                 preserveAspectRatio="xMidYMid meet"
                 shapeRendering="geometricPrecision"
                 className="max-h-full max-w-full"
+                onMouseLeave={() => setHoveredTile(null)}
             >
                 <defs>
                     <clipPath id={biomeClipId} clipPathUnits="userSpaceOnUse">
@@ -1277,6 +1537,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                         selectedSkillId={selectedSkillId}
                         showMovementRange={showMovementRange}
                         hoveredTile={hoveredTile}
+                        enginePreviewGhost={resolvedEnginePreviewGhost}
                     />
                 </g>
                 <g data-layer="interaction-tiles">
@@ -1301,8 +1562,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                         const isTargeted = targetedIntentSet.has(tileKey);
                         const isStairs = tileKey === stairsKey;
                         const isShrine = shrineKey ? tileKey === shrineKey : false;
-                        const interactionOnly = hybridInteractionLayerEnabled && !isWall;
-                        const tileAssetId = resolveTileAssetId({ isWall, isLava, isFire, isStairs, isShrine, theme: gameState.theme });
+                        const renderWallTile = isWall && !mountainCoveredWallKeys.has(tileKey);
+                        const interactionOnly = hybridInteractionLayerEnabled && !renderWallTile;
+                        const tileAssetId = resolveTileAssetId({ isWall: renderWallTile, isLava, isFire, isStairs, isShrine, theme: gameState.theme });
                         const tileAssetHref = interactionOnly ? undefined : assetById.get(tileAssetId)?.path;
 
                         return (
@@ -1316,7 +1578,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                                 isLava={isLava}
                                 isFire={isFire}
                                 isShrine={isShrine}
-                                isWall={isWall}
+                                isWall={renderWallTile}
                                 onMouseEnter={handleHoverTile}
                                 assetHref={tileAssetHref}
                                 interactionOnly={interactionOnly}
@@ -1348,11 +1610,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                     {depthSortedSprites.map((sprite) => {
                         const { x, y } = hexToPixel(sprite.position, TILE_SIZE);
                         if (sprite.asset?.path) {
-                            const anchorX = Math.min(1, Math.max(0, sprite.asset.anchor?.x ?? 0.5));
-                            const anchorY = Math.min(1, Math.max(0, sprite.asset.anchor?.y ?? 0.5));
+                            const baseAnchorX = Math.min(1, Math.max(0, sprite.asset.anchor?.x ?? 0.5));
+                            const baseAnchorY = Math.min(1, Math.max(0, sprite.asset.anchor?.y ?? 0.5));
+                            const isMountain = sprite.kind === 'mountain';
+                            const mountainSettings = isMountain
+                                ? (mountainSettingsByAssetId.get(sprite.asset.id) || resolveMountainSettings(sprite.asset))
+                                : null;
+                            const anchorX = mountainSettings ? mountainSettings.anchorX : baseAnchorX;
+                            const anchorY = mountainSettings ? mountainSettings.anchorY : baseAnchorY;
+                            const renderX = x + (mountainSettings ? mountainSettings.offsetX : 0);
+                            const renderY = y + (mountainSettings ? mountainSettings.offsetY : 0);
                             const renderWidth = Math.max(8, sprite.asset.width * manifestUnitToBoardScale * sprite.renderScale);
                             const renderHeight = Math.max(8, sprite.asset.height * manifestUnitToBoardScale * sprite.renderScale);
-                            const isMountain = sprite.kind === 'mountain';
                             const isShrineProp = sprite.kind === 'shrine';
                             const isStairsProp = sprite.kind === 'stairs';
                             const isObjectiveProp = isShrineProp || isStairsProp;
@@ -1387,24 +1656,127 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                                             />
                                         </>
                                     )}
-                                    <image
-                                        href={sprite.asset.path}
-                                        x={x - renderWidth * anchorX}
-                                        y={y - renderHeight * anchorY}
-                                        width={renderWidth}
-                                        height={renderHeight}
-                                        preserveAspectRatio="xMidYMid meet"
-                                        style={{
-                                            filter: isObjectiveProp
-                                                ? (isShrineProp
-                                                    ? 'drop-shadow(0 4px 6px rgba(0,0,0,0.55)) drop-shadow(0 0 4px rgba(251,146,60,0.45)) saturate(1.08) contrast(1.06)'
-                                                    : 'drop-shadow(0 4px 6px rgba(0,0,0,0.55)) drop-shadow(0 0 4px rgba(74,222,128,0.42)) saturate(1.08) contrast(1.06)')
-                                                : (isMountain
-                                                    ? 'drop-shadow(0 7px 10px rgba(0,0,0,0.56)) saturate(1.04) contrast(1.08)'
-                                                    : 'drop-shadow(0 5px 8px rgba(0,0,0,0.48)) saturate(0.98) contrast(1.04)'),
-                                            opacity: isObjectiveProp ? 0.99 : (isMountain ? 0.96 : 0.9)
-                                        }}
-                                    />
+                                    {(() => {
+                                        const baseFilter = isObjectiveProp
+                                            ? (isShrineProp
+                                                ? 'drop-shadow(0 4px 6px rgba(0,0,0,0.55)) drop-shadow(0 0 4px rgba(251,146,60,0.45)) saturate(1.08) contrast(1.06)'
+                                                : 'drop-shadow(0 4px 6px rgba(0,0,0,0.55)) drop-shadow(0 0 4px rgba(74,222,128,0.42)) saturate(1.08) contrast(1.06)')
+                                            : (isMountain
+                                                ? 'drop-shadow(0 7px 10px rgba(0,0,0,0.56)) saturate(1.04) contrast(1.08)'
+                                                : 'drop-shadow(0 5px 8px rgba(0,0,0,0.48)) saturate(0.98) contrast(1.04)');
+                                        const baseOpacity = isObjectiveProp ? 0.99 : (isMountain ? 0.96 : 0.9);
+                                        const mountainBlendPassEnabled = Boolean(
+                                            mountainSettings
+                                            && mountainSettings.crustBlendMode !== 'off'
+                                            && mountainSettings.crustBlendOpacity > 0
+                                        );
+                                        const mountainTintPassEnabled = Boolean(
+                                            mountainSettings
+                                            && mountainSettings.tintBlendMode !== 'off'
+                                            && mountainSettings.tintOpacity > 0
+                                        );
+                                        const mountainBlendMode = (
+                                            mountainSettings?.crustBlendMode !== 'off'
+                                                ? mountainSettings?.crustBlendMode
+                                                : undefined
+                                        ) as React.CSSProperties['mixBlendMode'] | undefined;
+                                        const mountainTintMode = (
+                                            mountainSettings?.tintBlendMode !== 'off'
+                                                ? mountainSettings?.tintBlendMode
+                                                : undefined
+                                        ) as React.CSSProperties['mixBlendMode'] | undefined;
+                                        const imageX = renderX - renderWidth * anchorX;
+                                        const imageY = renderY - renderHeight * anchorY;
+                                        const spriteSafeId = toSvgSafeId(sprite.id);
+                                        const mountainGroundGradientId = `mountain-ground-gradient-${gameState.floor}-${spriteSafeId}`;
+                                        const mountainGroundMaskId = `mountain-ground-mask-${gameState.floor}-${spriteSafeId}`;
+                                        const mountainTintFilterId = `mountain-tint-filter-${gameState.floor}-${spriteSafeId}`;
+                                        return (
+                                            <>
+                                                {(mountainBlendPassEnabled || mountainTintPassEnabled) && (
+                                                    <defs>
+                                                        {mountainBlendPassEnabled && (
+                                                            <>
+                                                                <linearGradient id={mountainGroundGradientId} x1="0" y1="0" x2="0" y2="1">
+                                                                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
+                                                                    <stop offset="42%" stopColor="#ffffff" stopOpacity="0.04" />
+                                                                    <stop offset="64%" stopColor="#ffffff" stopOpacity="0.42" />
+                                                                    <stop offset="82%" stopColor="#ffffff" stopOpacity="0.82" />
+                                                                    <stop offset="100%" stopColor="#ffffff" stopOpacity="1" />
+                                                                </linearGradient>
+                                                                <mask
+                                                                    id={mountainGroundMaskId}
+                                                                    maskUnits="userSpaceOnUse"
+                                                                    maskContentUnits="userSpaceOnUse"
+                                                                >
+                                                                    <rect
+                                                                        x={imageX}
+                                                                        y={imageY}
+                                                                        width={renderWidth}
+                                                                        height={renderHeight}
+                                                                        fill={`url(#${mountainGroundGradientId})`}
+                                                                    />
+                                                                </mask>
+                                                            </>
+                                                        )}
+                                                        {mountainTintPassEnabled && (
+                                                            <filter
+                                                                id={mountainTintFilterId}
+                                                                x="-10%"
+                                                                y="-10%"
+                                                                width="120%"
+                                                                height="120%"
+                                                            >
+                                                                <feColorMatrix
+                                                                    type="matrix"
+                                                                    values={mountainSettings?.tintMatrixValues}
+                                                                />
+                                                            </filter>
+                                                        )}
+                                                    </defs>
+                                                )}
+                                                <image
+                                                    href={sprite.asset.path}
+                                                    x={imageX}
+                                                    y={imageY}
+                                                    width={renderWidth}
+                                                    height={renderHeight}
+                                                    preserveAspectRatio="xMidYMid meet"
+                                                    opacity={baseOpacity}
+                                                    style={{ filter: baseFilter }}
+                                                />
+                                                {mountainBlendPassEnabled && (
+                                                    <image
+                                                        href={sprite.asset.path}
+                                                        x={imageX}
+                                                        y={imageY}
+                                                        width={renderWidth}
+                                                        height={renderHeight}
+                                                        preserveAspectRatio="xMidYMid meet"
+                                                        opacity={Math.min(0.9, mountainSettings?.crustBlendOpacity || 0)}
+                                                        mask={`url(#${mountainGroundMaskId})`}
+                                                        style={{
+                                                            mixBlendMode: mountainBlendMode,
+                                                            filter: 'brightness(0.92) saturate(0.76) contrast(1.03)'
+                                                        }}
+                                                    />
+                                                )}
+                                                {mountainTintPassEnabled && (
+                                                    <image
+                                                        href={sprite.asset.path}
+                                                        x={imageX}
+                                                        y={imageY}
+                                                        width={renderWidth}
+                                                        height={renderHeight}
+                                                        preserveAspectRatio="xMidYMid meet"
+                                                        opacity={Math.min(0.95, mountainSettings?.tintOpacity || 0)}
+                                                        filter={`url(#${mountainTintFilterId})`}
+                                                        style={{ mixBlendMode: mountainTintMode }}
+                                                    />
+                                                )}
+                                            </>
+                                        );
+                                    })()}
                                 </g>
                             );
                         }

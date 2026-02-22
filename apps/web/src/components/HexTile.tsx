@@ -42,6 +42,34 @@ const LAVA_BUBBLES = [
     { cx: -3, cy: 8, r: 2, delay: 0.6 }
 ];
 
+const getWallReliefPoints = (size: number) => {
+    const body = [
+        [-0.60, 0.42], [-0.50, 0.15], [-0.34, -0.18], [-0.16, -0.36], [0.00, -0.62],
+        [0.12, -0.42], [0.30, -0.20], [0.48, 0.10], [0.60, 0.40], [0.40, 0.48], [-0.48, 0.48]
+    ];
+    const leftFace = [
+        [-0.48, 0.48], [-0.60, 0.42], [-0.34, -0.18], [-0.18, -0.24], [-0.28, 0.28]
+    ];
+    const rightFace = [
+        [0.60, 0.40], [0.40, 0.48], [0.20, 0.28], [0.30, -0.20], [0.48, 0.10]
+    ];
+    const ridgeA = [
+        [-0.34, -0.18], [-0.16, -0.36], [0.00, -0.62], [0.12, -0.42], [0.30, -0.20]
+    ];
+    const ridgeB = [
+        [-0.46, 0.10], [-0.30, -0.12], [-0.10, -0.24], [0.00, -0.40]
+    ];
+    const toPoints = (pairs: number[][]): string =>
+        pairs.map(([px, py]) => `${(px * size).toFixed(2)},${(py * size).toFixed(2)}`).join(' ');
+    return {
+        body: toPoints(body),
+        leftFace: toPoints(leftFace),
+        rightFace: toPoints(rightFace),
+        ridgeA: toPoints(ridgeA),
+        ridgeB: toPoints(ridgeB)
+    };
+};
+
 const HexTileComponent: React.FC<HexTileProps> = ({
     hex, onClick, isValidMove, isTargeted, isStairs, isLava, isShrine, isWall, isFire, onMouseEnter, assetHref, interactionOnly
 }) => {
@@ -54,6 +82,7 @@ const HexTileComponent: React.FC<HexTileProps> = ({
     const { x, y } = hexToPixel(hex, TILE_SIZE);
     const showDebugCoords = SHOW_DEBUG_HEX_COORDS();
     const tilePoints = getHexCorners(TILE_SIZE - 2);
+    const wallRelief = getWallReliefPoints(TILE_SIZE - 2);
     const clipId = `hex-clip-${hex.q}-${hex.r}-${hex.s}`;
 
     // Color selection from design doc
@@ -98,8 +127,8 @@ const HexTileComponent: React.FC<HexTileProps> = ({
             style={{ cursor }}
             className="hex-tile transition-colors duration-200"
         >
-            {/* Draw Wall with slight offset for 3D look if it's a wall */}
-            {isWall && (
+            {/* Draw Wall underside for depth when using image-backed tiles */}
+            {isWall && showTileImage && (
                 <polygon
                     points={getHexCorners(TILE_SIZE - 2)}
                     fill="#111827"
@@ -109,12 +138,62 @@ const HexTileComponent: React.FC<HexTileProps> = ({
 
             {/* Main tile polygon */}
             {!showTileImage && (
-                <polygon
-                    points={tilePoints}
-                    fill={fill}
-                    stroke={stroke}
-                    strokeWidth={isTargeted || isValidMove ? "3" : "1"}
-                />
+                isWall ? (
+                    <g data-wall-fallback="relief">
+                        <ellipse
+                            cx="0"
+                            cy={TILE_SIZE * 0.56}
+                            rx={TILE_SIZE * 0.56}
+                            ry={TILE_SIZE * 0.18}
+                            fill="rgba(3,7,18,0.55)"
+                        />
+                        <polygon
+                            points={tilePoints}
+                            fill="#0f172a"
+                            transform="translate(0, 5)"
+                            opacity="0.92"
+                        />
+                        <polygon
+                            points={tilePoints}
+                            fill="#1f2937"
+                            transform="translate(0, 2)"
+                            opacity="0.98"
+                        />
+                        <polygon points={tilePoints} fill="#273447" />
+                        <polygon points={wallRelief.body} fill="#4b5563" opacity="0.96" />
+                        <polygon points={wallRelief.leftFace} fill="#6b7280" opacity="0.9" />
+                        <polygon points={wallRelief.rightFace} fill="#374151" opacity="0.95" />
+                        <polyline
+                            points={wallRelief.ridgeA}
+                            fill="none"
+                            stroke="rgba(229,231,235,0.55)"
+                            strokeWidth="1.1"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                        <polyline
+                            points={wallRelief.ridgeB}
+                            fill="none"
+                            stroke="rgba(17,24,39,0.58)"
+                            strokeWidth="1"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                        <polygon
+                            points={tilePoints}
+                            fill="none"
+                            stroke={stroke}
+                            strokeWidth={isTargeted || isValidMove ? "3" : "1"}
+                        />
+                    </g>
+                ) : (
+                    <polygon
+                        points={tilePoints}
+                        fill={fill}
+                        stroke={stroke}
+                        strokeWidth={isTargeted || isValidMove ? "3" : "1"}
+                    />
+                )
             )}
 
             {showTileImage && (

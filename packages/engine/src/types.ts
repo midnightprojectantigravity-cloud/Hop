@@ -152,6 +152,23 @@ export interface VisualEvent {
     payload: any;
 }
 
+export type SimulationEventType =
+    | 'UnitMoved'
+    | 'DamageTaken'
+    | 'Healed'
+    | 'StatusApplied'
+    | 'MessageLogged';
+
+export interface SimulationEvent {
+    id: string;
+    turn: number;
+    type: SimulationEventType;
+    actorId?: string;
+    targetId?: string;
+    position?: Point;
+    payload?: Record<string, any>;
+}
+
 export type TimelinePhase =
     | 'INTENT_START'
     | 'MOVE_START'
@@ -176,6 +193,14 @@ export interface TimelineEvent {
     groupId?: string;
     dependsOn?: string[];
     suggestedDurationMs?: number;
+}
+
+export interface StackResolutionTick {
+    tick: number;
+    effectType: string;
+    depthBefore: number;
+    depthAfter: number;
+    reactionsQueued: number;
 }
 
 export interface TelegraphProjectionEntry {
@@ -475,7 +500,9 @@ export interface GameState {
     isShaking?: boolean;
     occupiedCurrentTurn?: Point[];
     visualEvents: VisualEvent[];
+    simulationEvents?: SimulationEvent[];
     timelineEvents?: TimelineEvent[];
+    stackTrace?: StackResolutionTick[];
     combatScoreEvents?: CombatScoreEvent[];
     intentPreview?: IntentPreview;
     turnsSpent: number;

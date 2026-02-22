@@ -40,7 +40,13 @@ try {
   const fingerprint = (() => {
     const p = s.player;
     const enemies = s.enemies.map((e:any) => ({ id: e.id, subtype: e.subtype, hp: e.hp, position: e.position }));
-    const obj = { player: { id: p.id, subtype: p.subtype, hp: p.hp, maxHp: p.maxHp, position: p.position }, enemies, floor: s.floor, turn: s.turn, upgrades: s.upgrades };
+    const obj = {
+      player: { id: p.id, subtype: p.subtype, hp: p.hp, maxHp: p.maxHp, position: p.position },
+      enemies,
+      floor: s.floor,
+      turnNumber: s.turnNumber,
+      upgrades: s.upgrades
+    };
     return JSON.stringify(obj);
   })();
   console.log('Replay applied. Fingerprint:', fingerprint);

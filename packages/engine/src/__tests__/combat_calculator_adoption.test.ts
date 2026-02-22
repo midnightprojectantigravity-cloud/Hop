@@ -1,17 +1,18 @@
 import fs from 'fs';
-import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 const skillFiles = [
-    'packages/engine/src/skills/basic_attack.ts',
-    'packages/engine/src/skills/fireball.ts',
-    'packages/engine/src/skills/corpse_explosion.ts'
+    'basic_attack.ts',
+    'fireball.ts',
+    'corpse_explosion.ts'
 ];
+
+const skillsDir = new URL('../skills/', import.meta.url);
 
 describe('combat-calculator adoption guard', () => {
     it('routes migrated skill damage through calculateCombat', () => {
         for (const file of skillFiles) {
-            const fullPath = path.resolve(process.cwd(), file);
+            const fullPath = new URL(file, skillsDir);
             const source = fs.readFileSync(fullPath, 'utf8');
 
             expect(source).toContain('calculateCombat(');
@@ -22,4 +23,3 @@ describe('combat-calculator adoption guard', () => {
         }
     });
 });
-

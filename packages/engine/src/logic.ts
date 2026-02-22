@@ -41,6 +41,7 @@ import { buildIntentPreview } from './systems/telegraph-projection';
 import { buildRunSummary, createDailyObjectives, createDailySeed, toDateKey } from './systems/run-objectives';
 import { UnifiedTileService } from './systems/unified-tile-service';
 import { appendTaggedMessage, appendTaggedMessages } from './systems/engine-messages';
+import { ensureTacticalDataBootstrapped } from './systems/tactical-data-bootstrap';
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
@@ -111,6 +112,8 @@ export const generateInitialState = (
     preservePlayer?: { hp: number; maxHp: number; upgrades: string[]; activeSkills?: any[] },
     loadout?: Loadout
 ): GameState => {
+    ensureTacticalDataBootstrapped();
+
     // If no seed provided, we MUST generate one, but this should be rare in strict mode.
     const actualSeed = seed || String(Date.now());
 

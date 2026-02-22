@@ -1,0 +1,130 @@
+{
+  "version": "1.0.0",
+  "id": "ENEMY_RAIDER_V1",
+  "name": "Raider",
+  "actorType": "enemy",
+  "subtype": "raider",
+  "factionId": "enemy",
+  "weightClass": "Standard",
+  "coordSpace": {
+    "system": "cube-axial",
+    "pointFormat": "qrs"
+  },
+  "tags": [
+    "melee",
+    "momentum"
+  ],
+  "instantiate": {
+    "rngStream": "unit.instantiate",
+    "seedSalt": "raider",
+    "counterMode": "consume_global",
+    "drawOrder": [
+      "body",
+      "mind",
+      "instinct",
+      "speed",
+      "mass"
+    ],
+    "includeRollTrace": true
+  },
+  "propensities": {
+    "body": {
+      "method": "weighted_table",
+      "table": [
+        { "value": 8, "weight": 0.2 },
+        { "value": 9, "weight": 0.35 },
+        { "value": 10, "weight": 0.3 },
+        { "value": 11, "weight": 0.15 }
+      ],
+      "rngSalt": "body",
+      "round": "round",
+      "clamp": { "min": 1, "max": 20 }
+    },
+    "mind": {
+      "method": "fixed",
+      "value": 2,
+      "rngSalt": "mind",
+      "round": "round",
+      "clamp": { "min": 1, "max": 20 }
+    },
+    "instinct": {
+      "method": "uniform_int",
+      "min": 6,
+      "max": 9,
+      "rngSalt": "instinct",
+      "round": "round",
+      "clamp": { "min": 1, "max": 20 }
+    },
+    "speed": {
+      "method": "uniform_int",
+      "min": 65,
+      "max": 75,
+      "rngSalt": "speed",
+      "round": "round",
+      "clamp": { "min": 1, "max": 200 }
+    },
+    "mass": {
+      "method": "triangular_int",
+      "min": 4,
+      "mode": 5,
+      "max": 7,
+      "rngSalt": "mass",
+      "round": "round",
+      "clamp": { "min": 1, "max": 99 }
+    }
+  },
+  "derivedStats": {
+    "maxHp": {
+      "formula": "trinity_hp_v1"
+    },
+    "initiative": {
+      "formula": "linear",
+      "base": 0,
+      "terms": [
+        { "stat": "speed", "coefficient": 1.0 },
+        { "stat": "instinct", "coefficient": 2.0 }
+      ],
+      "round": "floor",
+      "clamp": { "min": 1, "max": 999 }
+    }
+  },
+  "physics": {
+    "collisionPolicy": "crush_damage",
+    "crushModel": {
+      "baseDamage": 0,
+      "impulseMultiplier": 1.0,
+      "massDivider": 1.0,
+      "minDamage": 1
+    }
+  },
+  "skillLoadout": {
+    "baseSkillIds": [
+      "BASIC_MOVE",
+      "BASIC_ATTACK",
+      "DASH"
+    ],
+    "passiveSkillIds": [
+      "AUTO_ATTACK"
+    ],
+    "forbiddenKeywordTags": [
+      "anchored"
+    ],
+    "startCooldowns": {
+      "DASH": 0
+    }
+  },
+  "runtimeDefaults": {
+    "startingHp": "maxHp",
+    "temporaryArmor": 0,
+    "isVisible": true
+  },
+  "spawnProfile": {
+    "preferredHex": {
+      "q": 5,
+      "r": 6,
+      "s": -11
+    },
+    "allowHazardous": false,
+    "allowOccupied": false
+  }
+}

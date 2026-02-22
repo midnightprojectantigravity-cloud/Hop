@@ -11,9 +11,15 @@ interface PreviewOverlayProps {
     selectedSkillId: string | null;
     showMovementRange: boolean;
     hoveredTile: Point | null;
+    enginePreviewGhost?: {
+        path: Point[];
+        aoe: Point[];
+        hasEnemy: boolean;
+        target: Point;
+    } | null;
 }
 
-const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkillId, showMovementRange, hoveredTile }) => {
+const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkillId, showMovementRange, hoveredTile, enginePreviewGhost }) => {
     const playerPos = gameState.player.position;
     const enemyPositionSet = useMemo(() => {
         const set = new Set<string>();
@@ -133,6 +139,8 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
 
     // Tier 3: Hover Intent (Immediate Impact)
     const intentPreview = useMemo(() => {
+        if (enginePreviewGhost) return enginePreviewGhost;
+
         if (showMovementRange && hoveredTile && !selectedSkillId) {
             const isMoveTile = movementTileSet.has(pointToKey(hoveredTile));
             if (isMoveTile) {
@@ -151,7 +159,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
         const hasEnemy = targetEntry.isEnemy;
 
         return { path, aoe, hasEnemy, target: hoveredTile };
-    }, [gameState, selectedSkillId, hoveredTile, skillTargetsByKey, movementTileSet, showMovementRange, playerPos]);
+    }, [enginePreviewGhost, gameState, selectedSkillId, hoveredTile, skillTargetsByKey, movementTileSet, showMovementRange, playerPos]);
 
     return (
         <g pointerEvents="none">

@@ -87,8 +87,8 @@ import { GameBoard } from './components/GameBoard';
 import { UI } from './components/UI';
 import { UpgradeOverlay } from './components/UpgradeOverlay';
 import { SkillTray } from './components/SkillTray';
-import { gameReducer, generateInitialState, generateHubState, hexEquals, pointToKey, ensureActorTrinity, deriveMaxHpFromTrinity, DEFAULT_LOADOUTS, validateReplayActions, ensurePlayerLoadoutIntegrity } from '@hop/engine';
-import type { Point, Action, GameState, Actor, TimelineEvent } from '@hop/engine';
+import { gameReducer, generateInitialState, generateHubState, hexEquals, pointToKey, ensureActorTrinity, deriveMaxHpFromTrinity, DEFAULT_LOADOUTS, validateReplayActions, ensurePlayerLoadoutIntegrity, buildEngineMirrorSnapshot, validateStateMirrorSnapshot } from '@hop/engine';
+import type { Point, Action, GameState, Actor, TimelineEvent, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
 import type { ReplayRecord } from './components/ReplayManager';
 import { isPlayerTurn } from '@hop/engine';
 import { Hub } from './components/Hub';
@@ -571,6 +571,71 @@ function App() {
       delete (window as any).__HOP_CLEAR_TURN_TRACE;
     };
   }, []);
+
+  const simulationEventLogRef = useRef<SimulationEvent[]>([]);
+  const latestUiMirrorSnapshotRef = useRef<StateMirrorSnapshot | null>(null);
+  const lastMirrorValidationKeyRef = useRef('');
+
+  const handleSimulationEvents = useCallback((events: SimulationEvent[]) => {
+    if (!events || events.length === 0) return;
+    simulationEventLogRef.current = [...simulationEventLogRef.current, ...events].slice(-600);
+    (window as any).__HOP_SIM_EVENTS = simulationEventLogRef.current;
+    window.dispatchEvent(new CustomEvent('hop:simulation-events', {
+      detail: {
+        turn: gameState.turnNumber,
+        events
+      }
+    }));
+    appendTurnTrace('SIM_EVENTS', {
+      count: events.length,
+      lastType: events[events.length - 1]?.type ?? 'unknown'
+    });
+  }, [appendTurnTrace, gameState.turnNumber]);
+
+  const handleUiMirrorSnapshot = useCallback((snapshot: StateMirrorSnapshot) => {
+    latestUiMirrorSnapshotRef.current = snapshot;
+    (window as any).__HOP_UI_MIRROR = snapshot;
+  }, []);
+
+  useEffect(() => {
+    (window as any).__HOP_SIM_EVENTS = simulationEventLogRef.current;
+    (window as any).__HOP_DUMP_SIM_EVENTS = () => [...simulationEventLogRef.current];
+    (window as any).__HOP_CLEAR_SIM_EVENTS = () => {
+      simulationEventLogRef.current = [];
+      (window as any).__HOP_SIM_EVENTS = [];
+    };
+    (window as any).__HOP_DUMP_MIRROR = () => (window as any).__HOP_MIRROR_LAST;
+    return () => {
+      delete (window as any).__HOP_DUMP_SIM_EVENTS;
+      delete (window as any).__HOP_CLEAR_SIM_EVENTS;
+      delete (window as any).__HOP_DUMP_MIRROR;
+    };
+  }, []);
+
+  useEffect(() => {
+    const engineSnapshot = buildEngineMirrorSnapshot(gameState);
+    (window as any).__HOP_ENGINE_MIRROR = engineSnapshot;
+
+    const uiSnapshot = latestUiMirrorSnapshotRef.current;
+    if (!uiSnapshot) return;
+    if (uiSnapshot.turn !== engineSnapshot.turn || uiSnapshot.stackTick !== engineSnapshot.stackTick) return;
+
+    const result = validateStateMirrorSnapshot(engineSnapshot, uiSnapshot);
+    const key = `${engineSnapshot.turn}:${engineSnapshot.stackTick}:${result.ok ? 'ok' : result.mismatches.length}`;
+    if (key === lastMirrorValidationKeyRef.current) return;
+    lastMirrorValidationKeyRef.current = key;
+
+    (window as any).__HOP_MIRROR_LAST = {
+      engineSnapshot,
+      uiSnapshot,
+      result
+    };
+
+    if (!result.ok) {
+      appendTurnTrace('MIRROR_MISMATCH', { count: result.mismatches.length });
+      console.warn('[HOP_MIRROR] snapshot mismatch detected', result.mismatches);
+    }
+  }, [gameState, appendTurnTrace]);
 
   useEffect(() => {
     if (!turnDriver.shouldAdvanceQueue) return;
@@ -1097,6 +1162,8 @@ function App() {
               showMovementRange={showMovementRange}
               onBusyStateChange={setIsBusy}
               assetManifest={assetManifest}
+              onSimulationEvents={handleSimulationEvents}
+              onMirrorSnapshot={handleUiMirrorSnapshot}
             />
             {isInputLocked && gameState.gameStatus === 'playing' && (
               <div className="absolute inset-0 z-40 pointer-events-auto">

@@ -42,6 +42,15 @@ export * from './systems/status';
 export * from './systems/unified-tile-service';
 export * from './systems/entity-factory';
 export * from './systems/emergent-bestiary';
+export * from './systems/propensity-instantiation';
+export * from './systems/resolution-stack';
+export * from './systems/force';
+export * from './systems/composite-skill-factory';
+export * from './systems/composite-skill-bridge';
+export * from './systems/action-preview';
+export * from './systems/state-mirror';
+export * from './systems/base-unit-registry';
+export * from './systems/tactical-data-bootstrap';
 
 // Kinetic Pulse System
 export * from './systems/kinetic-kernel';
@@ -60,3 +69,4 @@ export * from './systems/falcon';
 
 // Visual Registry (for frontend rendering)
 export * from './systems/visual-registry';
+export * from './data';

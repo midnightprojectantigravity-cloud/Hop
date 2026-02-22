@@ -1,4 +1,4 @@
-import type { GameState, AtomicEffect, Actor, Point, MovementTrace, TimelineEvent, TimelinePhase } from '../types';
+import type { GameState, AtomicEffect, Actor, Point, MovementTrace, TimelineEvent, TimelinePhase, StackResolutionTick, SimulationEvent } from '../types';
 import { hexEquals, getHexLine, getDirectionFromTo, hexDirection, hexAdd } from '../hex';
 import { applyDamage, applyHeal, checkVitals, addStatus } from './actor';
 
@@ -13,6 +13,7 @@ import { createEntity, ensureActorTrinity } from './entity-factory';
 import { computeStatusDuration, extractTrinityStats } from './combat-calculator';
 import { getIncomingDamageMultiplier, getOutgoingDamageMultiplier } from './combat-traits';
 import { appendTaggedMessage, appendTaggedMessages, tagMessage } from './engine-messages';
+import { resolveLifoStack } from './resolution-stack';
 
 const addCorpseTraitAt = (state: GameState, position: Point): GameState => {
     const key = pointToKey(position);
@@ -129,6 +130,25 @@ const appendTimelineEvent = (
                 blocking,
                 groupId,
                 suggestedDurationMs
+            }
+        ]
+    };
+};
+
+const appendSimulationEvent = (
+    state: GameState,
+    event: Omit<SimulationEvent, 'id' | 'turn'>
+): GameState => {
+    const events = state.simulationEvents || [];
+    const id = `sim:${state.turnNumber || 0}:${events.length}:${event.type}`;
+    return {
+        ...state,
+        simulationEvents: [
+            ...events,
+            {
+                ...event,
+                id,
+                turn: state.turnNumber || 0
             }
         ]
     };
@@ -457,6 +477,17 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         260
                     );
                 }
+
+                nextState = appendSimulationEvent(nextState, {
+                    type: 'UnitMoved',
+                    actorId: targetActorId,
+                    position: finalDestination,
+                    payload: {
+                        origin,
+                        destination: finalDestination,
+                        movementType: trace.movementType
+                    }
+                });
             }
             break;
         }
@@ -485,6 +516,9 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             );
             let targetActorId = '';
             let targetPos: Point | null = null;
+            let simulationTargetId: string | undefined;
+            let simulationPos: Point | undefined;
+            let simulationAmount = effect.amount;
 
             if (typeof effect.target === 'string') {
                 if (effect.target === 'targetActor') targetActorId = context.targetId || '';
@@ -542,6 +576,9 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                         }].slice(-500);
                     }
                     nextState.player = applyDamage(nextState.player, damageAmount);
+                    simulationTargetId = nextState.player.id;
+                    simulationPos = nextState.player.position;
+                    simulationAmount = damageAmount;
                     if (isFireDamage) {
                         nextState.hazardBreaches = (nextState.hazardBreaches || 0) + 1;
                     }
@@ -556,6 +593,9 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     const damageClass = effect.scoreEvent?.damageClass || 'physical';
                     const traitScaled = scaleCombatProfileDamage(nextState, effect.amount, context.sourceId, victim, damageClass, effect.reason);
                     const scaledAmount = traitScaled.amount;
+                    simulationTargetId = targetActorId || victim?.id;
+                    simulationPos = victimPos || victim?.position;
+                    simulationAmount = scaledAmount;
 
                     const updateDamage = (e: Actor) => {
                         if (e.id === targetActorId) {
@@ -634,6 +674,9 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 const damageClass = effect.scoreEvent?.damageClass || 'physical';
                 const traitScaled = scaleCombatProfileDamage(nextState, effect.amount, context.sourceId, targetAtPos, damageClass, effect.reason);
                 const scaledAmount = traitScaled.amount;
+                simulationTargetId = targetAtPos?.id;
+                simulationPos = targetPos;
+                simulationAmount = scaledAmount;
                 nextState.visualEvents = [...(nextState.visualEvents || []),
                 { type: 'vfx', payload: { type: 'impact', position: targetPos } }
                 ];
@@ -689,12 +732,27 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                     nextState = addCorpseTraitAt(nextState, pos);
                 });
             }
+
+            if (simulationAmount > 0) {
+                nextState = appendSimulationEvent(nextState, {
+                    type: 'DamageTaken',
+                    targetId: simulationTargetId || targetActorId || undefined,
+                    position: simulationPos,
+                    payload: {
+                        amount: simulationAmount,
+                        reason: effect.reason,
+                        sourceId: context.sourceId
+                    }
+                });
+            }
             break;
         }
 
         case 'Heal': {
             const healActor = (actor: Actor): Actor => ({ ...actor, hp: Math.min(actor.maxHp, actor.hp + effect.amount) });
             const targetId = effect.target === 'targetActor' ? context.targetId : effect.target;
+            let healedTargetId: string | undefined;
+            let healedPos: Point | undefined;
 
             if (targetId) {
                 const victim = targetId === nextState.player.id ? nextState.player : (nextState.enemies.find(e => e.id === targetId) || nextState.companions?.find(e => e.id === targetId));
@@ -704,14 +762,26 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
                     if (targetId === nextState.player.id) {
                         nextState.player = healActor(nextState.player);
+                        healedTargetId = nextState.player.id;
+                        healedPos = nextState.player.position;
                     } else {
                         const updateHeal = (e: Actor) => e.id === targetId ? healActor(e) : e;
                         nextState.enemies = nextState.enemies.map(updateHeal);
                         if (nextState.companions) {
                             nextState.companions = nextState.companions.map(updateHeal);
                         }
+                        healedTargetId = victim.id;
+                        healedPos = victim.position;
                     }
                 }
+            }
+            if (healedTargetId) {
+                nextState = appendSimulationEvent(nextState, {
+                    type: 'Healed',
+                    targetId: healedTargetId,
+                    position: healedPos,
+                    payload: { amount: effect.amount, sourceId: context.sourceId }
+                });
             }
             break;
         }
@@ -778,6 +848,17 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
                 { type: 'combat_text', payload: { text: 'STUNNED', position: resolvedPos } }
                 ];
             }
+            const resolvedTargetId = targetActorId || (resolvedPos ? resolveActorAt(nextState, resolvedPos)?.id : undefined);
+            nextState = appendSimulationEvent(nextState, {
+                type: 'StatusApplied',
+                targetId: resolvedTargetId,
+                position: resolvedPos || undefined,
+                payload: {
+                    status: effect.status,
+                    duration: adjustedDuration,
+                    sourceId: context.sourceId
+                }
+            });
             break;
         }
 
@@ -916,6 +997,10 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 
         case 'Message': {
             nextState.message = [...nextState.message, tagMessage(effect.text, 'INFO', 'SYSTEM')].slice(-50);
+            nextState = appendSimulationEvent(nextState, {
+                type: 'MessageLogged',
+                payload: { text: effect.text }
+            });
             break;
         }
 
@@ -1133,15 +1218,35 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
 export const applyEffects = (state: GameState, effects: AtomicEffect[], context: { targetId?: string; sourceId?: string; stepId?: string } = {}): GameState => {
     // Legacy themeInterceptors decommissioned. 
     // Hazard logic is now unified in TileResolver and executed during Displacement or turn ends.
+    const baseTraceOffset = state.stackTrace?.length || 0;
+    const baseResolution = resolveLifoStack(state, effects, {
+        apply: (s, effect) => applyAtomicEffect(s, effect, context),
+        describe: (effect) => effect.type,
+        preserveInputOrder: true,
+        startTick: baseTraceOffset + 1
+    });
 
-    // Resolve final effects
-    let nextState = effects.reduce((s, eff) => applyAtomicEffect(s, eff, context), state);
+    let nextState = baseResolution.state;
+    let mergedTrace: StackResolutionTick[] = [
+        ...(state.stackTrace || []),
+        ...baseResolution.trace
+    ];
 
     // Post-Effect Vitals Check (Life & Death)
     const vitalEffects = checkVitals(nextState);
     if (vitalEffects.length > 0) {
-        nextState = vitalEffects.reduce((s, eff) => applyAtomicEffect(s, eff, {}), nextState);
+        const vitalResolution = resolveLifoStack(nextState, vitalEffects, {
+            apply: (s, effect) => applyAtomicEffect(s, effect, {}),
+            describe: (effect) => effect.type,
+            preserveInputOrder: true,
+            startTick: mergedTrace.length + 1
+        });
+        nextState = vitalResolution.state;
+        mergedTrace = [...mergedTrace, ...vitalResolution.trace];
     }
 
-    return nextState;
+    return {
+        ...nextState,
+        stackTrace: mergedTrace
+    };
 };

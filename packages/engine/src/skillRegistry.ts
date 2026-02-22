@@ -44,6 +44,7 @@ import { ABSORB_FIRE } from './skills/absorb_fire';
 import type { SkillDefinition } from './types';
 import type { SkillID } from './types/registry';
 import { hydrateSkillIntentProfiles } from './systems/skill-intent-profile';
+import { getCompositeSkillRuntimeRegistry } from './systems/composite-skill-bridge';
 
 /**
  * A registry of all skills using the new Compositional Skill Framework.
@@ -95,11 +96,16 @@ if (skillIntentCoverage.missing.length > 0 || skillIntentCoverage.invalid.length
     throw new Error(`Skill intent profile validation failed. missing=[${missing}] invalid=[${invalid}]`);
 }
 
+const getMergedRegistry = (): Record<string, SkillDefinition> => ({
+    ...(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>),
+    ...getCompositeSkillRuntimeRegistry()
+});
+
 /**
  * Creates an ActiveSkill instance from a SkillID.
  */
-export function createActiveSkill(id: SkillID): any {
-    const registry = COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>;
+export function createActiveSkill(id: SkillID | string): any {
+    const registry = getMergedRegistry();
     const def = registry[id];
     if (!def) return null;
 
@@ -138,14 +144,16 @@ const SkillRegistryBase = {
      * Find a skill definition by ID.
      */
     get: (id: string): SkillDefinition | undefined => {
-        return (COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>)[id];
+        const registry = getMergedRegistry();
+        return registry[id];
     },
 
     /**
      * Flattened list of all upgrades from all skills.
      */
     getAllUpgrades: () => {
-        return Object.values(COMPOSITIONAL_SKILLS).flatMap(s =>
+        const registry = getMergedRegistry();
+        return Object.values(registry).flatMap(s =>
             Object.values(s.upgrades || {}).map(u => ({ ...u, skillId: s.id }))
         );
     },
@@ -154,7 +162,8 @@ const SkillRegistryBase = {
      * Get a specific upgrade by ID.
      */
     getUpgrade: (upgradeId: string) => {
-        for (const skill of Object.values(COMPOSITIONAL_SKILLS)) {
+        const registry = getMergedRegistry();
+        for (const skill of Object.values(registry)) {
             if (skill.upgrades?.[upgradeId]) return skill.upgrades[upgradeId];
         }
         return undefined;
@@ -164,7 +173,8 @@ const SkillRegistryBase = {
      * Find which skill ID owns a given upgrade ID.
      */
     getSkillForUpgrade: (upgradeId: string): string | undefined => {
-        for (const [skillId, skill] of Object.entries(COMPOSITIONAL_SKILLS)) {
+        const registry = getMergedRegistry();
+        for (const [skillId, skill] of Object.entries(registry)) {
             if (skill.upgrades?.[upgradeId]) return skillId;
         }
         return undefined;
@@ -175,7 +185,7 @@ const SkillRegistryBase = {
      */
     getSkillRange: (actor: any, skillId: string): number => {
         const skill = (actor.activeSkills || []).find((s: any) => s.id === skillId);
-        const def = (COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>)[skillId];
+        const def = getMergedRegistry()[skillId];
         if (!def) return skill?.range || 0;
 
         let range = def.baseVariables.range;

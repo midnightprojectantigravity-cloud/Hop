@@ -1,0 +1,8 @@
+{
+  "turn": 1,
+  "stackTick": 0,
+  "actors": [
+    { "id": "player", "position": { "q": 4, "r": 9, "s": -13 } },
+    { "id": "enemy_0", "position": { "q": 4, "r": 5, "s": -9 } }
+  ]
+}
