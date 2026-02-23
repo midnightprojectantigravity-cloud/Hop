@@ -1146,18 +1146,24 @@ function App() {
 
   return (
     <div className="flex flex-col lg:flex-row w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
-      {/* Mobile Top HUD (compact) */}
-      <div className="lg:hidden shrink-0 h-[28svh] min-h-[170px] max-h-[280px] border-b border-white/5 bg-[#030712] z-20">
-        <UI
-          gameState={gameState}
-          onReset={handleReset}
-          onWait={handleWait}
-          onExitToHub={handleExitToHub}
-          inputLocked={isInputLocked}
-          compact
-          hideInitiativeQueue
-          hideLog
-        />
+      {/* Mobile Top HUD (essential only) */}
+      <div className="lg:hidden shrink-0 border-b border-white/5 bg-[#030712]/95 backdrop-blur-sm z-20">
+        <div className="px-4 py-3 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/35 font-bold">Level</div>
+            <div className="text-lg font-black text-white leading-none">
+              {gameState.floor}
+              <span className="text-white/25 text-sm ml-1">/ 10</span>
+            </div>
+          </div>
+          <div className="ml-auto min-w-0 text-right">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/35 font-bold">HP</div>
+            <div className="text-lg font-black text-red-400 leading-none">
+              {gameState.player.hp}
+              <span className="text-white/25 text-sm ml-1">/ {gameState.player.maxHp}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Left Sidebar: HUD & Tactical Log (desktop) */}
@@ -1197,11 +1203,34 @@ function App() {
       </main>
 
       {/* Mobile Bottom Skills */}
-      <aside className="lg:hidden shrink-0 h-[22svh] min-h-[138px] max-h-[220px] border-t border-white/5 bg-[#030712] z-20 overflow-y-auto">
+      <aside className="lg:hidden shrink-0 h-[26svh] min-h-[160px] max-h-[250px] border-t border-white/5 bg-[#030712] z-20 overflow-y-auto">
         <div className="p-3 flex flex-col gap-3 h-full">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Tactical Skills</h3>
-            <div className="text-[9px] font-bold uppercase tracking-widest text-white/20">Hop Engine v5.0</div>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Skills</h3>
+            <div className="flex items-center gap-1.5">
+              <button
+                disabled={isInputLocked}
+                onClick={handleWait}
+                className={`px-2.5 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isInputLocked
+                  ? 'bg-white/[0.03] border-white/5 text-white/30 opacity-50'
+                  : 'bg-white/5 border-white/10 text-white/70 active:bg-white/10'
+                  }`}
+              >
+                Wait
+              </button>
+              <button
+                onClick={handleExitToHub}
+                className="px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest text-white/70 active:bg-white/10"
+              >
+                Hub
+              </button>
+              <button
+                onClick={handleReset}
+                className="px-2.5 py-1.5 rounded-lg border border-red-500/20 bg-red-500/10 text-[10px] font-black uppercase tracking-widest text-red-300/90 active:bg-red-500/20"
+              >
+                Reset
+              </button>
+            </div>
           </div>
           <SkillTray
             skills={gameState.player.activeSkills || []}
