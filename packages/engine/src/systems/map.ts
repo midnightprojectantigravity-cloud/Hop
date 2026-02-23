@@ -46,35 +46,16 @@ export const generateDungeon = (
     // 1. Generate the base diamond grid
     const allHexes = getDiamondGrid(GRID_WIDTH, GRID_HEIGHT);
 
-    const topLimit = Math.floor(GRID_WIDTH / 2);
-    const bottomLimit = (GRID_WIDTH - 1) + (GRID_HEIGHT - 1) - topLimit;
-
-    // 4. Identify Outer Wall (Perimeter)
+    // 4. MVP map shape is directly playable (no perimeter wall ring)
     const wallPositions: Point[] = [];
-    const playableHexes: Point[] = [];
+    const playableHexes: Point[] = allHexes;
+    const centerQ = Math.floor(GRID_WIDTH / 2);
 
-    // A hex is perimeter if it's on the edge of the 9x11 diamond
-    for (const h of allHexes) {
-        const isMinQ = h.q === 0;
-        const isMaxQ = h.q === GRID_WIDTH - 1;
-        const isMinR = h.r === 0;
-        const isMaxR = h.r === GRID_HEIGHT - 1;
-        const sum = h.q + h.r;
-        const isMinSum = sum === topLimit;
-        const isMaxSum = sum === bottomLimit;
+    // 5. Determine Player Spawn (bottom-center edge)
+    const playerSpawn = createHex(centerQ, GRID_HEIGHT - 1);
 
-        if (isMinQ || isMaxQ || isMinR || isMaxR || isMinSum || isMaxSum) {
-            wallPositions.push(h);
-        } else {
-            playableHexes.push(h);
-        }
-    }
-
-    // 5. Determine Player Spawn (Bottom-center of playable area)
-    const playerSpawn = createHex(4, 9);
-
-    // 6. Place Stairs (Top-center of playable area)
-    const stairsPosition = createHex(4, 1);
+    // 6. Place Stairs (top-center edge)
+    const stairsPosition = createHex(centerQ, 0);
 
     // 7. Place Shrine (if applicable)
     let shrinePosition: Point | undefined;

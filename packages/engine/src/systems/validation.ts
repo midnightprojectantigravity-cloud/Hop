@@ -1,6 +1,6 @@
 import type { GameState, Point, Actor } from '../types';
 import { hexEquals, getHexLine, hexDistance, getDirectionFromTo } from '../hex';
-import { isPerimeter, getActorAt } from '../helpers';
+import { getActorAt } from '../helpers';
 import { pointToKey } from '../hex';
 import { UnifiedTileService } from './unified-tile-service';
 
@@ -10,12 +10,12 @@ import { UnifiedTileService } from './unified-tile-service';
  */
 
 /**
- * Checks if a position is blocked by a wall or is on the perimeter.
+ * Checks if a position is blocked by a wall tile.
  */
 export function isBlockedByWall(state: GameState, position: Point): boolean {
     const tile = state.tiles.get(pointToKey(position));
     const blocksLOS = tile?.traits.has('BLOCKS_LOS') || tile?.baseId === 'WALL';
-    return blocksLOS || isPerimeter(position, state.gridWidth, state.gridHeight);
+    return !!blocksLOS;
 }
 
 /**

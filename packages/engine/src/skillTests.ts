@@ -8,6 +8,9 @@ import { addStatus } from './systems/actor';
 import { pointToKey, UnifiedTileService } from './systems/unified-tile-service';
 import { createEnemy, createFalcon, createPlayer } from './systems/entity-factory';
 
+const SCENARIO_GRID_WIDTH = 9;
+const SCENARIO_GRID_HEIGHT = 11;
+
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
  */
@@ -260,6 +263,8 @@ async function runTests() {
             log(`  Scenario: ${scenario.title}`);
 
             const initialState = generateInitialState(1, 'test-seed');
+            initialState.gridWidth = SCENARIO_GRID_WIDTH;
+            initialState.gridHeight = SCENARIO_GRID_HEIGHT;
             initialState.enemies = [];
             initialState.shrinePosition = undefined;
             initialState.shrineOptions = undefined;

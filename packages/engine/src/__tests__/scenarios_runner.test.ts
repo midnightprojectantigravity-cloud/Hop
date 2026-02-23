@@ -6,6 +6,9 @@ import { buildInitiativeQueue, isPlayerTurn } from '../systems/initiative';
 import { SpatialSystem } from '../systems/SpatialSystem';
 import { StrategyRegistry } from '../systems/strategy-registry';
 
+const SCENARIO_GRID_WIDTH = 9;
+const SCENARIO_GRID_HEIGHT = 11;
+
 describe('Skill Scenarios Integration', () => {
     SCENARIO_COLLECTIONS.forEach(collection => {
         if (!collection.scenarios || collection.scenarios.length === 0) return;
@@ -18,6 +21,8 @@ describe('Skill Scenarios Integration', () => {
                     StrategyRegistry.reset();
 
                     const initialState = generateInitialState(1, 'test-seed');
+                    initialState.gridWidth = SCENARIO_GRID_WIDTH;
+                    initialState.gridHeight = SCENARIO_GRID_HEIGHT;
 
                     // Reset game board for test isolation
                     initialState.enemies = [];

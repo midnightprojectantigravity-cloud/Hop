@@ -4,8 +4,8 @@
  * TODO: Move balance-heavy stats (ENEMY_STATS, INITIAL_PLAYER_STATS) to an external JSON for easier modding.
  */
 // Grid configuration for mobile portrait (9 wide × 11 tall)
-export const GRID_WIDTH = 9;   // Tiles wide
-export const GRID_HEIGHT = 11; // Tiles tall
+export const GRID_WIDTH = 7;   // Tiles wide
+export const GRID_HEIGHT = 9;  // Tiles tall
 export const TILE_SIZE = 36;   // Pixel size for mobile-friendly rendering
 
 // Legacy constant for backwards compat (will be phased out)
