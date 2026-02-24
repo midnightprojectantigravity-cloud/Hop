@@ -99,7 +99,7 @@ export const FLOOR_ENEMY_BUDGET = [
     15,  // Floor 7
     18,  // Floor 8
     22,  // Floor 9
-    25,  // Floor 10
+    0,   // Floor 10 (reserved / empty for now)
 ];
 
 // Color palette from design doc
@@ -139,5 +139,5 @@ export const FLOOR_ENEMY_TYPES: Record<number, string[]> = {
     7: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter', 'pouncer'],
     8: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter', 'pouncer'],
     9: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter', 'pouncer'],
-    10: ['sentinel']
+    10: []
 };

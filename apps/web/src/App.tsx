@@ -118,6 +118,13 @@ type TurnTraceEntry = {
   details?: Record<string, unknown>;
 };
 
+type MobileToast = {
+  id: string;
+  text: string;
+  tone: 'damage' | 'heal' | 'status' | 'system';
+  createdAt: number;
+};
+
 const summarizeActionPayload = (action: Action): Record<string, unknown> | undefined => {
   const payload = (action as any).payload;
   if (!payload || typeof payload !== 'object') return undefined;
@@ -575,6 +582,15 @@ function App() {
   const simulationEventLogRef = useRef<SimulationEvent[]>([]);
   const latestUiMirrorSnapshotRef = useRef<StateMirrorSnapshot | null>(null);
   const lastMirrorValidationKeyRef = useRef('');
+  const [mobileToasts, setMobileToasts] = useState<MobileToast[]>([]);
+
+  const pushMobileToast = useCallback((toast: Omit<MobileToast, 'createdAt'>) => {
+    const now = Date.now();
+    setMobileToasts(prev => {
+      const next = [...prev, { ...toast, createdAt: now }];
+      return next.slice(-4);
+    });
+  }, []);
 
   const handleSimulationEvents = useCallback((events: SimulationEvent[]) => {
     if (!events || events.length === 0) return;
@@ -590,7 +606,64 @@ function App() {
       count: events.length,
       lastType: events[events.length - 1]?.type ?? 'unknown'
     });
-  }, [appendTurnTrace, gameState.turnNumber]);
+
+    for (const ev of events) {
+      if (ev.type === 'DamageTaken' && ev.targetId === gameState.player.id) {
+        const amount = Math.max(0, Number(ev.payload?.amount || 0));
+        if (amount > 0) {
+          pushMobileToast({
+            id: `sim-toast-${ev.id}`,
+            text: `-${amount} HP`,
+            tone: 'damage'
+          });
+        }
+      } else if (ev.type === 'Healed' && ev.targetId === gameState.player.id) {
+        const amount = Math.max(0, Number(ev.payload?.amount || 0));
+        if (amount > 0) {
+          pushMobileToast({
+            id: `sim-toast-${ev.id}`,
+            text: `+${amount} HP`,
+            tone: 'heal'
+          });
+        }
+      } else if (ev.type === 'StatusApplied' && ev.targetId === gameState.player.id) {
+        const raw = String(ev.payload?.status || 'Status');
+        const label = raw
+          .split('_')
+          .filter(Boolean)
+          .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+          .join(' ');
+        pushMobileToast({
+          id: `sim-toast-${ev.id}`,
+          text: label,
+          tone: 'status'
+        });
+      } else if (ev.type === 'MessageLogged') {
+        const text = String(ev.payload?.text || '').trim();
+        if (!text) continue;
+        const lower = text.toLowerCase();
+        const isImportant =
+          lower.includes('stun')
+          || lower.includes('snare')
+          || lower.includes('lava')
+          || lower.includes('fire')
+          || lower.includes('burn')
+          || lower.includes('heal')
+          || lower.includes('shrine')
+          || lower.includes('stairs')
+          || lower.includes('roll away')
+          || lower.includes('ward')
+          || lower.includes('orb');
+        if (!isImportant) continue;
+        const compact = text.length > 52 ? `${text.slice(0, 49)}...` : text;
+        pushMobileToast({
+          id: `sim-toast-${ev.id}`,
+          text: compact,
+          tone: 'system'
+        });
+      }
+    }
+  }, [appendTurnTrace, gameState.turnNumber, gameState.player.id, pushMobileToast]);
 
   const handleUiMirrorSnapshot = useCallback((snapshot: StateMirrorSnapshot) => {
     latestUiMirrorSnapshotRef.current = snapshot;
@@ -611,6 +684,15 @@ function App() {
       delete (window as any).__HOP_DUMP_MIRROR;
     };
   }, []);
+
+  useEffect(() => {
+    if (mobileToasts.length === 0) return;
+    const timer = window.setTimeout(() => {
+      const now = Date.now();
+      setMobileToasts(prev => prev.filter(t => (now - t.createdAt) < 2200));
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [mobileToasts]);
 
   useEffect(() => {
     const engineSnapshot = buildEngineMirrorSnapshot(gameState);
@@ -1193,14 +1275,41 @@ function App() {
             />
             {isInputLocked && gameState.gameStatus === 'playing' && (
               <div className="absolute inset-0 z-40 pointer-events-auto">
-                <div className="absolute top-3 sm:top-4 lg:top-6 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-black/55 border border-white/15 text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">
-                  Resolving Turn...
+                <div
+                  className="absolute top-3 sm:top-4 lg:top-6 left-1/2 -translate-x-1/2 h-10 w-10 rounded-full bg-black/55 border border-white/15 text-lg flex items-center justify-center text-white/80 animate-pulse"
+                  aria-label="Resolving turn"
+                  title="Resolving turn"
+                >
+                  ⏳
                 </div>
               </div>
             )}
           </div>
         </div>
       </main>
+
+      {gameState.gameStatus === 'playing' && mobileToasts.length > 0 && (
+        <div className="lg:hidden fixed left-1/2 -translate-x-1/2 top-16 z-50 pointer-events-none flex flex-col gap-2 w-[min(92vw,26rem)]">
+          {mobileToasts.map((toast) => {
+            const toneClass =
+              toast.tone === 'damage'
+                ? 'border-red-400/30 bg-red-950/75 text-red-100'
+                : toast.tone === 'heal'
+                  ? 'border-emerald-400/30 bg-emerald-950/70 text-emerald-100'
+                  : toast.tone === 'status'
+                    ? 'border-cyan-300/30 bg-cyan-950/70 text-cyan-100'
+                    : 'border-white/15 bg-black/65 text-white/85';
+            return (
+              <div
+                key={toast.id}
+                className={`rounded-xl border px-3 py-2 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.35)] text-xs font-bold tracking-wide ${toneClass}`}
+              >
+                {toast.text}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Mobile Bottom Skills */}
       <aside className="lg:hidden shrink-0 h-[26svh] min-h-[160px] max-h-[250px] border-t border-white/5 bg-[#030712] z-20 overflow-y-auto">

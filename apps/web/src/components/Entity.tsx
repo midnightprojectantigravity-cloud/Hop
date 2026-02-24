@@ -133,7 +133,6 @@ const EntityBase: React.FC<EntityProps> = ({
     const prevHp = useRef(entity.hp);
 
     const isPlayer = entity.type === 'player';
-    const targetPixel = entity.intentPosition ? hexToPixel(entity.intentPosition, TILE_SIZE) : null;
     const movementDebugEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_MOVEMENT);
     const [resolvedAssetHref, setResolvedAssetHref] = useState<string | undefined>(assetHref || fallbackAssetHref);
     const [usedFallbackAsset, setUsedFallbackAsset] = useState(false);
@@ -412,10 +411,12 @@ const EntityBase: React.FC<EntityProps> = ({
     const desiredUnitLuma = isPlayer ? 0.87 : 0.82;
     const baseContrast = contrastRatio(floorLuma, desiredUnitLuma);
     const contrastBoost = baseContrast < 4.5 ? 1.22 : 1.06;
-    const silhouetteOpacity = baseContrast < 4.5 ? 0.62 : 0.42;
-    const baseRingStroke = isPlayer ? '#22e7ff' : '#ff4fd0';
-    const baseRingFill = isPlayer ? 'rgba(34,231,255,0.22)' : 'rgba(255,79,208,0.22)';
-    const ringGlow = isPlayer ? 'rgba(34,231,255,0.48)' : 'rgba(255,79,208,0.46)';
+    const silhouetteOpacity = isPlayer
+        ? (baseContrast < 4.5 ? 0.62 : 0.42)
+        : (baseContrast < 4.5 ? 0.48 : 0.32);
+    const baseRingStroke = isPlayer ? '#22e7ff' : 'rgba(255,120,120,0.7)';
+    const baseRingFill = isPlayer ? 'rgba(34,231,255,0.22)' : 'rgba(255,68,68,0.08)';
+    const ringGlow = isPlayer ? 'rgba(34,231,255,0.48)' : 'rgba(255,90,90,0.18)';
     const ringRx = isPlayer ? TILE_SIZE * 0.5 : TILE_SIZE * 0.46;
     const ringRy = isPlayer ? TILE_SIZE * 0.2 : TILE_SIZE * 0.18;
     const ringPoints = useMemo(() => getHexRingPoints(ringRx, ringRy), [ringRx, ringRy]);
@@ -425,20 +426,6 @@ const EntityBase: React.FC<EntityProps> = ({
 
     return (
         <g style={{ pointerEvents: 'none' }}>
-            {/* Intent Line */}
-            {targetPixel && !isPlayer && !isStunned(entity) && (
-                <line
-                    x1={x}
-                    y1={y}
-                    x2={targetPixel.x}
-                    y2={targetPixel.y}
-                    stroke={entity.subtype === 'warlock' ? '#9333ea' : '#ef4444'}
-                    strokeWidth="3"
-                    strokeDasharray="4 2"
-                    opacity="0.6"
-                />
-            )}
-
             {/* Main Entity Group - Handles smooth movement translation */}
             <g
                 data-actor-node={entity.id}
@@ -470,13 +457,15 @@ const EntityBase: React.FC<EntityProps> = ({
                             strokeWidth={2}
                             style={{ filter: `drop-shadow(0 0 5px ${ringGlow})` }}
                         />
-                        <polygon
-                            points={innerRingPoints}
-                            fill="none"
-                            stroke={baseRingStroke}
-                            strokeWidth={1.4}
-                            opacity={0.82}
-                        />
+                        {isPlayer && (
+                            <polygon
+                                points={innerRingPoints}
+                                fill="none"
+                                stroke={baseRingStroke}
+                                strokeWidth={1.4}
+                                opacity={0.82}
+                            />
+                        )}
                     </g>
 
                     {/* Shadow if flying */}
@@ -490,14 +479,16 @@ const EntityBase: React.FC<EntityProps> = ({
 
                     {/* SVG icon */}
                     <g transform={`translate(0,${unitIconYOffset}) scale(${unitIconScale})`}>
-                        <circle
-                            r={Math.max(10, unitIconSize * 0.84)}
-                            fill="none"
-                            stroke={rimLightStroke}
-                            strokeWidth={2}
-                            opacity={0.68}
-                            style={{ filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.45))' }}
-                        />
+                        {isPlayer && (
+                            <circle
+                                r={Math.max(10, unitIconSize * 0.84)}
+                                fill="none"
+                                stroke={rimLightStroke}
+                                strokeWidth={2}
+                                opacity={0.68}
+                                style={{ filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.45))' }}
+                            />
+                        )}
                         {renderIcon(entity, isPlayer, unitIconSize, resolvedAssetHref, handleAssetError, contrastBoost)}
                     </g>
 
@@ -522,12 +513,6 @@ const EntityBase: React.FC<EntityProps> = ({
                         />
                     )}
 
-                    {/* Intent label for enemies */}
-                    {!isPlayer && entity.intent && !isStunned(entity) && (
-                        <text x={0} y={-TILE_SIZE * 0.6} textAnchor="middle" fontSize={8} fill="#ef4444" fontWeight="bold">
-                            {entity.intent}
-                        </text>
-                    )}
                     <title>{`${entity.subtype || entity.type} - HP ${entity.hp}/${entity.maxHp}${entity.intent ? ` - ${entity.intent}` : ''}`}</title>
                 </g>
             </g>

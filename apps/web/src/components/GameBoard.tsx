@@ -29,6 +29,20 @@ import {
     resolveDeathDecalAssetId,
     resolveUnitFallbackAssetHref
 } from '../visual/asset-selectors';
+import {
+    type CameraInsetsPx,
+    type CameraRect,
+    type CameraVec2,
+    type CameraZoomPreset,
+    CAMERA_ZOOM_PRESETS,
+    clampCameraCenter,
+    computeEffectiveScale,
+    computeFitScale,
+    computePresetScale,
+    computeViewBoxFromCamera,
+    computeVisibleWorldSize,
+    expandRect,
+} from '../visual/camera';
 
 interface GameBoardProps {
     gameState: GameState;
@@ -58,6 +72,7 @@ interface GameBoardProps {
         hasEnemy: boolean;
         target: Point;
     } | null;
+    cameraSafeInsetsPx?: Partial<CameraInsetsPx>;
 }
 
 type BoardDepthSprite = {
@@ -69,6 +84,14 @@ type BoardDepthSprite = {
     zAnchorY: number;
     fallback?: 'stairs' | 'shrine';
 };
+
+type CameraViewState = {
+    center: CameraVec2;
+    scale: number;
+    viewBox: CameraRect;
+};
+
+type PointerPoint = { x: number; y: number };
 
 const hashString = (input: string): number => {
     let hash = 2166136261 >>> 0;
@@ -204,7 +227,19 @@ const getHexPoints = (size: number): string => {
     return points.join(' ');
 };
 
-export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selectedSkillId, showMovementRange, onBusyStateChange, assetManifest, biomeDebug, onSimulationEvents, onMirrorSnapshot, enginePreviewGhost }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({
+    gameState,
+    onMove,
+    selectedSkillId,
+    showMovementRange,
+    onBusyStateChange,
+    assetManifest,
+    biomeDebug,
+    onSimulationEvents,
+    onMirrorSnapshot,
+    enginePreviewGhost,
+    cameraSafeInsetsPx,
+}) => {
     type BoardDecal = { id: string; position: Point; href: string; createdAt: number };
     type BoardProp = { id: string; kind: 'stairs' | 'shrine'; position: Point; asset?: VisualAssetEntry };
     const [isShaking, setIsShaking] = useState(false);
@@ -212,7 +247,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
     const [movementBusy, setMovementBusy] = useState(false);
     const [juiceBusy, setJuiceBusy] = useState(false);
     const [decals, setDecals] = useState<BoardDecal[]>([]);
+    const [zoomPreset, setZoomPreset] = useState<CameraZoomPreset>(11);
+    const [viewportSizePx, setViewportSizePx] = useState({ width: 0, height: 0 });
+    const [isCameraPanning, setIsCameraPanning] = useState(false);
     const svgRef = useRef<SVGSVGElement | null>(null);
+    const boardViewportRef = useRef<HTMLDivElement | null>(null);
     const movementQueueRef = useRef<MovementTrace[]>([]);
     const runningMovementRef = useRef(false);
     const activeAnimationsRef = useRef<Animation[]>([]);
@@ -221,6 +260,36 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
     const processedTimelineDecalCountRef = useRef(0);
     const processedVisualDecalCountRef = useRef(0);
     const processedSimulationEventCountRef = useRef(0);
+    const cameraViewRef = useRef<CameraViewState | null>(null);
+    const cameraAnimFrameRef = useRef<number | null>(null);
+    const cameraPanOffsetRef = useRef<CameraVec2>({ x: 0, y: 0 });
+    const isCameraPanningRef = useRef(false);
+    const isPinchingRef = useRef(false);
+    const suppressTileClickUntilRef = useRef(0);
+    const activePointersRef = useRef<Map<number, PointerPoint>>(new Map());
+    const dragStateRef = useRef<{
+        activePointerId: number | null;
+        startClient: PointerPoint | null;
+        lastWorld: CameraVec2 | null;
+        didPan: boolean;
+    }>({
+        activePointerId: null,
+        startClient: null,
+        lastWorld: null,
+        didPan: false,
+    });
+    const pinchStateRef = useRef<{
+        startDistance: number;
+        startPreset: CameraZoomPreset;
+        appliedPreset: CameraZoomPreset;
+    } | null>(null);
+    const lastPlayerKeyRef = useRef<string | null>(null);
+    const lastCameraFloorRef = useRef<number | null>(null);
+    const didInitCameraRef = useRef(false);
+    const lastViewportSignatureRef = useRef('');
+    const lastBoundsSignatureRef = useRef('');
+    const lastZoomPresetRef = useRef<CameraZoomPreset>(11);
+    const isAnimatingCameraRef = useRef(false);
     const playerPos = gameState.player.position;
 
     // Filter cells based on dynamic diamond geometry
@@ -273,6 +342,237 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
             height: maxY - minY
         };
     }, [cells]);
+
+    const playerWorld = useMemo(() => {
+        const { x, y } = hexToPixel(playerPos, TILE_SIZE);
+        return { x, y };
+    }, [playerPos]);
+
+    const baseViewBox = useMemo<CameraRect>(() => ({
+        x: bounds.minX,
+        y: bounds.minY,
+        width: bounds.width,
+        height: bounds.height
+    }), [bounds.minX, bounds.minY, bounds.width, bounds.height]);
+
+    const cancelCameraAnimation = useCallback(() => {
+        if (cameraAnimFrameRef.current !== null) {
+            window.cancelAnimationFrame(cameraAnimFrameRef.current);
+            cameraAnimFrameRef.current = null;
+        }
+        isAnimatingCameraRef.current = false;
+    }, []);
+
+    const applyViewBoxToSvg = useCallback((viewBox: CameraRect) => {
+        const svg = svgRef.current;
+        if (!svg) return;
+        svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+    }, []);
+
+    const commitCameraView = useCallback((next: CameraViewState) => {
+        cameraViewRef.current = next;
+        applyViewBoxToSvg(next.viewBox);
+    }, [applyViewBoxToSvg]);
+
+    const getCameraTarget = useCallback((options?: {
+        panOffset?: CameraVec2;
+        zoomPreset?: CameraZoomPreset;
+    }): CameraViewState => {
+        const viewportWidth = Math.max(1, viewportSizePx.width);
+        const viewportHeight = Math.max(1, viewportSizePx.height);
+        const preset = options?.zoomPreset ?? zoomPreset;
+        const panOffset = options?.panOffset ?? cameraPanOffsetRef.current;
+
+        const safeInsets = cameraSafeInsetsPx || {};
+        const viewport = {
+            width: viewportWidth,
+            height: viewportHeight,
+            insets: safeInsets
+        };
+
+        const paddingWorld = TILE_SIZE * 0.75;
+        const paddedBounds = expandRect(baseViewBox, paddingWorld);
+        const presetScale = computePresetScale(viewport, preset, TILE_SIZE, TILE_SIZE * 0.2);
+        const fitScale = computeFitScale(viewport, paddedBounds);
+        const scale = computeEffectiveScale(fitScale, presetScale);
+        const visibleWorld = computeVisibleWorldSize(viewport, scale);
+
+        const desiredCenter = {
+            x: playerWorld.x + panOffset.x,
+            y: playerWorld.y + panOffset.y,
+        };
+
+        const center = clampCameraCenter(desiredCenter, visibleWorld, paddedBounds);
+        const viewBox = computeViewBoxFromCamera(center, visibleWorld);
+
+        return { center, scale, viewBox };
+    }, [viewportSizePx.width, viewportSizePx.height, zoomPreset, cameraSafeInsetsPx, baseViewBox, playerWorld.x, playerWorld.y]);
+
+    const animateCameraTo = useCallback((target: CameraViewState, durationMs = 220) => {
+        const current = cameraViewRef.current;
+        if (!current) {
+            commitCameraView(target);
+            return;
+        }
+
+        cancelCameraAnimation();
+        const startCenter = current.center;
+        const startScale = current.scale;
+        const targetCenter = target.center;
+        const targetScale = target.scale;
+        const startedAt = performance.now();
+        isAnimatingCameraRef.current = true;
+
+        const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+        const step = (now: number) => {
+            const rawT = Math.min(1, (now - startedAt) / Math.max(1, durationMs));
+            const t = easeOutCubic(rawT);
+            const scale = startScale + (targetScale - startScale) * t;
+            const center = {
+                x: startCenter.x + (targetCenter.x - startCenter.x) * t,
+                y: startCenter.y + (targetCenter.y - startCenter.y) * t,
+            };
+
+            const viewport = {
+                width: Math.max(1, viewportSizePx.width),
+                height: Math.max(1, viewportSizePx.height),
+                insets: cameraSafeInsetsPx || {}
+            };
+            const visibleWorld = computeVisibleWorldSize(viewport, scale);
+            const viewBox = computeViewBoxFromCamera(center, visibleWorld);
+            commitCameraView({ center, scale, viewBox });
+
+            if (rawT < 1) {
+                cameraAnimFrameRef.current = window.requestAnimationFrame(step);
+            } else {
+                cameraAnimFrameRef.current = null;
+                isAnimatingCameraRef.current = false;
+                commitCameraView(target);
+            }
+        };
+
+        cameraAnimFrameRef.current = window.requestAnimationFrame(step);
+    }, [cancelCameraAnimation, commitCameraView, viewportSizePx.width, viewportSizePx.height, cameraSafeInsetsPx]);
+
+    const snapCameraToTarget = useCallback((options?: {
+        panOffset?: CameraVec2;
+        zoomPreset?: CameraZoomPreset;
+    }) => {
+        cancelCameraAnimation();
+        commitCameraView(getCameraTarget(options));
+    }, [cancelCameraAnimation, commitCameraView, getCameraTarget]);
+
+    const animateCameraToTarget = useCallback((options?: {
+        panOffset?: CameraVec2;
+        zoomPreset?: CameraZoomPreset;
+        durationMs?: number;
+    }) => {
+        const target = getCameraTarget(options);
+        animateCameraTo(target, options?.durationMs ?? 220);
+    }, [animateCameraTo, getCameraTarget]);
+
+    useEffect(() => {
+        const el = boardViewportRef.current;
+        if (!el) return;
+
+        const updateSize = () => {
+            const rect = el.getBoundingClientRect();
+            setViewportSizePx(prev => {
+                const width = Math.round(rect.width);
+                const height = Math.round(rect.height);
+                if (prev.width === width && prev.height === height) return prev;
+                return { width, height };
+            });
+        };
+
+        updateSize();
+
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', updateSize);
+            return () => window.removeEventListener('resize', updateSize);
+        }
+
+        const observer = new ResizeObserver(() => updateSize());
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (viewportSizePx.width <= 0 || viewportSizePx.height <= 0) return;
+
+        const boundsSignature = `${baseViewBox.x}:${baseViewBox.y}:${baseViewBox.width}:${baseViewBox.height}`;
+        const viewportSignature = `${viewportSizePx.width}:${viewportSizePx.height}:${cameraSafeInsetsPx?.top ?? 0}:${cameraSafeInsetsPx?.right ?? 0}:${cameraSafeInsetsPx?.bottom ?? 0}:${cameraSafeInsetsPx?.left ?? 0}`;
+        const playerKey = pointToKey(gameState.player.position);
+
+        if (!didInitCameraRef.current) {
+            didInitCameraRef.current = true;
+            lastPlayerKeyRef.current = playerKey;
+            lastCameraFloorRef.current = gameState.floor ?? null;
+            lastViewportSignatureRef.current = viewportSignature;
+            lastBoundsSignatureRef.current = boundsSignature;
+            lastZoomPresetRef.current = zoomPreset;
+            snapCameraToTarget({ panOffset: { x: 0, y: 0 } });
+            return;
+        }
+
+        if ((gameState.floor ?? null) !== lastCameraFloorRef.current) {
+            lastCameraFloorRef.current = gameState.floor ?? null;
+            lastBoundsSignatureRef.current = boundsSignature;
+            lastViewportSignatureRef.current = viewportSignature;
+            lastPlayerKeyRef.current = playerKey;
+            lastZoomPresetRef.current = zoomPreset;
+            cameraPanOffsetRef.current = { x: 0, y: 0 };
+            snapCameraToTarget({ panOffset: { x: 0, y: 0 } });
+            return;
+        }
+
+        if (gameState.floor !== undefined && boundsSignature !== lastBoundsSignatureRef.current) {
+            lastBoundsSignatureRef.current = boundsSignature;
+            lastViewportSignatureRef.current = viewportSignature;
+            lastPlayerKeyRef.current = playerKey;
+            lastZoomPresetRef.current = zoomPreset;
+            cameraPanOffsetRef.current = { x: 0, y: 0 };
+            snapCameraToTarget({ panOffset: { x: 0, y: 0 } });
+            return;
+        }
+
+        if (viewportSignature !== lastViewportSignatureRef.current) {
+            lastViewportSignatureRef.current = viewportSignature;
+            lastBoundsSignatureRef.current = boundsSignature;
+            snapCameraToTarget();
+            return;
+        }
+
+        if (zoomPreset !== lastZoomPresetRef.current) {
+            lastZoomPresetRef.current = zoomPreset;
+            animateCameraToTarget();
+            return;
+        }
+
+        if (playerKey !== lastPlayerKeyRef.current) {
+            lastPlayerKeyRef.current = playerKey;
+            const zeroPan = { x: 0, y: 0 };
+            cameraPanOffsetRef.current = zeroPan;
+            animateCameraToTarget({ panOffset: zeroPan, durationMs: 210 });
+            return;
+        }
+    }, [
+        viewportSizePx.width,
+        viewportSizePx.height,
+        baseViewBox.x,
+        baseViewBox.y,
+        baseViewBox.width,
+        baseViewBox.height,
+        cameraSafeInsetsPx,
+        gameState.floor,
+        gameState.player.position,
+        zoomPreset,
+        snapCameraToTarget,
+        animateCameraToTarget
+    ]);
+
+    const renderedViewBox = cameraViewRef.current?.viewBox || baseViewBox;
 
     const latestTraceByActor = useMemo(() => {
         const out: Record<string, any> = {};
@@ -352,14 +652,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         for (const t of targets) set.add(pointToKey(t));
         return set;
     }, [selectedSkillId, gameState, playerPos]);
-
-    const targetedIntentSet = useMemo(() => {
-        const set = new Set<string>();
-        for (const e of gameState.enemies) {
-            if (e.intentPosition) set.add(pointToKey(e.intentPosition));
-        }
-        return set;
-    }, [gameState.enemies]);
 
     const resolvedEnginePreviewGhost = useMemo(() => {
         if (enginePreviewGhost) return enginePreviewGhost;
@@ -1052,9 +1344,198 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         return () => window.clearTimeout(timer);
     }, [decals]);
 
+    const clientToWorld = useCallback((clientX: number, clientY: number): CameraVec2 | null => {
+        const svg = svgRef.current;
+        if (!svg || !svg.getScreenCTM) return null;
+        const ctm = svg.getScreenCTM();
+        if (!ctm) return null;
+        const point = svg.createSVGPoint();
+        point.x = clientX;
+        point.y = clientY;
+        const transformed = point.matrixTransform(ctm.inverse());
+        return { x: transformed.x, y: transformed.y };
+    }, []);
+
+    const updatePanFromWorldDelta = useCallback((deltaWorld: CameraVec2) => {
+        const nextPan = {
+            x: cameraPanOffsetRef.current.x + deltaWorld.x,
+            y: cameraPanOffsetRef.current.y + deltaWorld.y,
+        };
+        cameraPanOffsetRef.current = nextPan;
+        cancelCameraAnimation();
+        commitCameraView(getCameraTarget({ panOffset: nextPan }));
+    }, [cancelCameraAnimation, commitCameraView, getCameraTarget]);
+
+    const setZoomPresetAnimated = useCallback((nextPreset: CameraZoomPreset) => {
+        setZoomPreset(prev => (prev === nextPreset ? prev : nextPreset));
+    }, []);
+
+    const handleResetView = useCallback(() => {
+        cameraPanOffsetRef.current = { x: 0, y: 0 };
+        animateCameraToTarget({ panOffset: { x: 0, y: 0 }, durationMs: 220 });
+    }, [animateCameraToTarget]);
+
+    const handleTileClick = useCallback((hex: Point) => {
+        if (Date.now() < suppressTileClickUntilRef.current) return;
+        onMove(hex);
+    }, [onMove]);
+
     const handleHoverTile = useCallback((hex: Point) => {
+        if (isCameraPanningRef.current || isPinchingRef.current) return;
         setHoveredTile(hex);
     }, []);
+
+    const getActivePointerList = useCallback(() => Array.from(activePointersRef.current.entries()), []);
+
+    const handleBoardPointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+            // Pointer capture is optional across browsers.
+        }
+
+        const pointers = getActivePointerList();
+        if (pointers.length >= 2) {
+            isPinchingRef.current = true;
+            isCameraPanningRef.current = false;
+            setIsCameraPanning(false);
+            dragStateRef.current.didPan = true;
+            suppressTileClickUntilRef.current = Date.now() + 250;
+
+            const [a, b] = pointers;
+            const dx = a[1].x - b[1].x;
+            const dy = a[1].y - b[1].y;
+            pinchStateRef.current = {
+                startDistance: Math.hypot(dx, dy),
+                startPreset: zoomPreset,
+                appliedPreset: zoomPreset
+            };
+            return;
+        }
+
+        dragStateRef.current = {
+            activePointerId: e.pointerId,
+            startClient: { x: e.clientX, y: e.clientY },
+            lastWorld: clientToWorld(e.clientX, e.clientY),
+            didPan: false
+        };
+    }, [clientToWorld, getActivePointerList, zoomPreset]);
+
+    const handleBoardPointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+        if (!activePointersRef.current.has(e.pointerId)) return;
+        activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        const pointers = getActivePointerList();
+        if (isPinchingRef.current || pointers.length >= 2) {
+            if (pointers.length >= 2) {
+                isPinchingRef.current = true;
+                const [a, b] = pointers;
+                const dx = a[1].x - b[1].x;
+                const dy = a[1].y - b[1].y;
+                const distance = Math.max(1, Math.hypot(dx, dy));
+                if (!pinchStateRef.current) {
+                    pinchStateRef.current = {
+                        startDistance: distance,
+                        startPreset: zoomPreset,
+                        appliedPreset: zoomPreset
+                    };
+                } else {
+                    const ratio = distance / Math.max(1, pinchStateRef.current.startDistance);
+                    let nextPreset = pinchStateRef.current.startPreset;
+                    if (ratio > 1.08) nextPreset = 7;
+                    if (ratio < 0.92) nextPreset = 11;
+                    if (nextPreset !== pinchStateRef.current.appliedPreset) {
+                        pinchStateRef.current.appliedPreset = nextPreset;
+                        setZoomPresetAnimated(nextPreset);
+                    }
+                }
+                suppressTileClickUntilRef.current = Date.now() + 250;
+                e.preventDefault();
+            }
+            return;
+        }
+
+        const drag = dragStateRef.current;
+        if (!drag.startClient || drag.activePointerId !== e.pointerId) return;
+
+        const dxPx = e.clientX - drag.startClient.x;
+        const dyPx = e.clientY - drag.startClient.y;
+        const movedPx = Math.hypot(dxPx, dyPx);
+        const thresholdPx = 10;
+
+        if (!drag.didPan && movedPx > thresholdPx) {
+            drag.didPan = true;
+            isCameraPanningRef.current = true;
+            setIsCameraPanning(true);
+            suppressTileClickUntilRef.current = Date.now() + 250;
+            setHoveredTile(null);
+        }
+
+        if (!drag.didPan) return;
+
+        const currentWorld = clientToWorld(e.clientX, e.clientY);
+        if (!drag.lastWorld || !currentWorld) return;
+        const deltaWorld = {
+            x: drag.lastWorld.x - currentWorld.x,
+            y: drag.lastWorld.y - currentWorld.y
+        };
+        drag.lastWorld = currentWorld;
+        updatePanFromWorldDelta(deltaWorld);
+        e.preventDefault();
+    }, [clientToWorld, getActivePointerList, setZoomPresetAnimated, updatePanFromWorldDelta, zoomPreset]);
+
+    const endPointerInteraction = useCallback((pointerId: number) => {
+        activePointersRef.current.delete(pointerId);
+        const pointers = getActivePointerList();
+
+        if (pointers.length < 2) {
+            isPinchingRef.current = false;
+            pinchStateRef.current = null;
+        }
+
+        const drag = dragStateRef.current;
+        if (drag.activePointerId === pointerId) {
+            if (drag.didPan) {
+                suppressTileClickUntilRef.current = Date.now() + 250;
+            }
+            dragStateRef.current = {
+                activePointerId: pointers[0]?.[0] ?? null,
+                startClient: pointers[0] ? { ...pointers[0][1] } : null,
+                lastWorld: pointers[0] ? clientToWorld(pointers[0][1].x, pointers[0][1].y) : null,
+                didPan: false
+            };
+        }
+
+        if (activePointersRef.current.size === 0) {
+            isCameraPanningRef.current = false;
+            setIsCameraPanning(false);
+        }
+    }, [clientToWorld, getActivePointerList]);
+
+    const handleBoardPointerUp = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+        endPointerInteraction(e.pointerId);
+        try {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch {
+            // no-op
+        }
+    }, [endPointerInteraction]);
+
+    const handleBoardPointerCancel = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+        endPointerInteraction(e.pointerId);
+    }, [endPointerInteraction]);
+
+    const handleBoardWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
+        if (e.ctrlKey || e.deltaY !== 0) {
+            e.preventDefault();
+        }
+        if (Math.abs(e.deltaY) < 0.1) return;
+        const nextPreset: CameraZoomPreset = e.deltaY < 0 ? 7 : 11;
+        setZoomPresetAnimated(nextPreset);
+        suppressTileClickUntilRef.current = Date.now() + 120;
+    }, [setZoomPresetAnimated]);
 
     useEffect(() => {
         onBusyStateChange?.(movementBusy || juiceBusy);
@@ -1068,6 +1549,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         for (const e of gameState.dyingEntities || []) out.set(e.id, e.position);
         return out;
     }, [gameState.player.id, gameState.player.position, gameState.enemies, gameState.companions, gameState.dyingEntities]);
+
+    const juiceActorSnapshots = useMemo(() => ([
+        { id: gameState.player.id, position: gameState.player.position, subtype: gameState.player.subtype || 'player' },
+        ...gameState.enemies.map(e => ({ id: e.id, position: e.position, subtype: e.subtype })),
+        ...(gameState.companions || []).map(e => ({ id: e.id, position: e.position, subtype: e.subtype })),
+        ...(gameState.dyingEntities || []).map(e => ({ id: e.id, position: e.position, subtype: e.subtype }))
+    ]), [gameState.player.id, gameState.player.position, gameState.player.subtype, gameState.enemies, gameState.companions, gameState.dyingEntities]);
 
     useEffect(() => {
         if (!onMirrorSnapshot) return;
@@ -1137,6 +1625,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
 
     const runMovementTrace = useCallback(async (trace: MovementTrace, token: number, batchStartMs: number) => {
         if (token !== runTokenRef.current) return;
+        const playbackScale = 0.76;
         const node = svgRef.current?.querySelector(`[data-actor-node="${trace.actorId}"]`) as SVGElement | null;
         const toAbsoluteTransform = (p: Point) => {
             const px = hexToPixel(p, TILE_SIZE);
@@ -1144,13 +1633,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         };
         const startDelayMs = Math.max(0, trace.startDelayMs || 0);
         const elapsedSinceBatchStart = Math.max(0, performance.now() - batchStartMs);
-        const effectiveDelayMs = Math.max(0, startDelayMs - elapsedSinceBatchStart);
+        const scaledStartDelayMs = Math.round(startDelayMs * playbackScale);
+        const effectiveDelayMs = Math.max(0, scaledStartDelayMs - elapsedSinceBatchStart);
 
         const path = (trace.path && trace.path.length > 1)
             ? trace.path
             : [trace.origin, trace.destination];
         const segmentCount = Math.max(1, path.length - 1);
-        const slideDurationMs = Math.max(120, trace.durationMs || segmentCount * 110);
+        const slideDurationMs = Math.max(90, Math.round((trace.durationMs || segmentCount * 110) * playbackScale));
 
         if (!node) {
             const fallback = Math.max(0, effectiveDelayMs + slideDurationMs);
@@ -1166,7 +1656,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         }
 
         if ((trace.movementType || 'slide') === 'teleport') {
-            const duration = Math.max(120, trace.durationMs || 180);
+            const duration = Math.max(100, Math.round((trace.durationMs || 180) * playbackScale));
             await runKeyframedAnimation(node, [
                 { transform: toAbsoluteTransform(trace.origin), opacity: 1, offset: 0 },
                 { transform: toAbsoluteTransform(trace.origin), opacity: 0, offset: 0.45 },
@@ -1239,6 +1729,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
 
     useEffect(() => {
         return () => {
+            cancelCameraAnimation();
             runTokenRef.current++;
             movementQueueRef.current = [];
             runningMovementRef.current = false;
@@ -1248,11 +1739,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
             activeAnimationsRef.current = [];
             setMovementBusy(false);
         };
-    }, []);
+    }, [cancelCameraAnimation]);
 
     useEffect(() => {
         // Floor transitions remount board data in one reducer step; clear any in-flight
         // animation side-effects so actor visuals always rebind to new floor positions.
+        cancelCameraAnimation();
         runTokenRef.current++;
         movementQueueRef.current = [];
         runningMovementRef.current = false;
@@ -1265,7 +1757,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
         setDecals([]);
         processedTimelineDecalCountRef.current = 0;
         processedVisualDecalCountRef.current = 0;
-    }, [gameState.floor]);
+    }, [gameState.floor, cancelCameraAnimation]);
     const gridPoints = useMemo(() => getHexPoints(TILE_SIZE - 1), []);
     const maskHexPoints = useMemo(() => getHexPoints(TILE_SIZE + 1), []);
     const biomeClipPoints = useMemo(() => getHexPoints(TILE_SIZE - 2), []);
@@ -1278,16 +1770,25 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
     }), [bounds.minX, bounds.minY, bounds.width, bounds.height]);
 
     return (
-        <div className={`w-full h-full flex justify-center items-center overflow-hidden transition-transform duration-75 ${isShaking ? 'animate-shake' : ''}`}>
+        <div
+            ref={boardViewportRef}
+            className={`relative w-full h-full flex justify-center items-center overflow-hidden transition-transform duration-75 ${isShaking ? 'animate-shake' : ''} ${isCameraPanning ? 'cursor-grabbing' : ''}`}
+        >
             <svg
                 ref={svgRef}
                 width="100%"
                 height="100%"
-                viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
+                viewBox={`${renderedViewBox.x} ${renderedViewBox.y} ${renderedViewBox.width} ${renderedViewBox.height}`}
                 preserveAspectRatio="xMidYMid meet"
                 shapeRendering="geometricPrecision"
                 className="max-h-full max-w-full"
                 onMouseLeave={() => setHoveredTile(null)}
+                onWheel={handleBoardWheel}
+                onPointerDown={handleBoardPointerDown}
+                onPointerMove={handleBoardPointerMove}
+                onPointerUp={handleBoardPointerUp}
+                onPointerCancel={handleBoardPointerCancel}
+                style={{ touchAction: 'none' }}
             >
                 <defs>
                     <clipPath id={biomeClipId} clipPathUnits="userSpaceOnUse">
@@ -1559,7 +2060,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                             );
                         const isSkillHighlight = !!selectedSkillId && selectedSkillTargetSet.has(tileKey);
                         const showRangeHighlight = isSkillHighlight || isMoveHighlight;
-                        const isTargeted = targetedIntentSet.has(tileKey);
                         const isStairs = tileKey === stairsKey;
                         const isShrine = shrineKey ? tileKey === shrineKey : false;
                         const renderWallTile = isWall && !mountainCoveredWallKeys.has(tileKey);
@@ -1571,9 +2071,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                             <HexTile
                                 key={tileKey}
                                 hex={hex}
-                                onClick={() => onMove(hex)}
+                                onClick={handleTileClick}
                                 isValidMove={showRangeHighlight}
-                                isTargeted={isTargeted}
+                                isTargeted={false}
                                 isStairs={isStairs}
                                 isLava={isLava}
                                 isFire={isFire}
@@ -1877,6 +2377,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                     <JuiceManager
                         visualEvents={gameState.visualEvents || []}
                         timelineEvents={gameState.timelineEvents || []}
+                        simulationEvents={gameState.simulationEvents || []}
+                        actorSnapshots={juiceActorSnapshots}
                         onBusyStateChange={setJuiceBusy}
                         assetManifest={assetManifest}
                     />
@@ -1889,8 +2391,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                                 <polygon
                                     points={gridPoints}
                                     fill="none"
-                                    stroke="rgba(201,224,255,0.22)"
-                                    strokeWidth={1.1}
+                                    stroke="rgba(201,224,255,0.12)"
+                                    strokeWidth={0.9}
                                 />
                             </g>
                         );
@@ -1925,6 +2427,37 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onMove, selecte
                     })}
                 </g>
             </svg>
+            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-30 flex items-center gap-1.5 pointer-events-auto">
+                <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-black/35 backdrop-blur-sm p-1">
+                    {CAMERA_ZOOM_PRESETS.map((preset) => {
+                        const active = zoomPreset === preset;
+                        return (
+                            <button
+                                key={`zoom-${preset}`}
+                                type="button"
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={() => setZoomPresetAnimated(preset)}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${active
+                                    ? 'bg-white text-black'
+                                    : 'bg-white/5 text-white/70 hover:bg-white/10'
+                                    }`}
+                                aria-label={`Set zoom to ${preset} tiles wide`}
+                            >
+                                {preset}
+                            </button>
+                        );
+                    })}
+                    <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={handleResetView}
+                        className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/5 text-white/70 hover:bg-white/10"
+                        aria-label="Reset camera to player"
+                    >
+                        Fit
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };

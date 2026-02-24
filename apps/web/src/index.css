@@ -343,6 +343,74 @@ body::after {
 }
 
 /* ============================================
+   JUICE: ACTION-SHAPED DAMAGE CUES
+   ============================================ */
+@keyframes meleeLungeCue {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.6);
+  }
+
+  20% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scaleX(1.08);
+  }
+}
+
+.animate-melee-lunge {
+  transform-origin: center;
+  animation: meleeLungeCue 0.22s ease-out forwards;
+}
+
+@keyframes arrowShotCue {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 18;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-arrow-shot {
+  animation: arrowShotCue 0.24s ease-out forwards;
+}
+
+@keyframes arcaneBoltCue {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 22;
+    filter: drop-shadow(0 0 0 rgba(34, 211, 238, 0));
+  }
+
+  20% {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.75));
+  }
+
+  100% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+    filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0));
+  }
+}
+
+.animate-arcane-bolt {
+  animation: arcaneBoltCue 0.28s ease-out forwards;
+}
+
+/* ============================================
    JUICE: COMBAT TEXT FLOAT
    ============================================ */
 @keyframes floatUp {

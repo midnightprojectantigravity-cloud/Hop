@@ -112,11 +112,11 @@ const HexTileComponent: React.FC<HexTileProps> = ({
     }
 
     if (isValidMove) {
-        stroke = '#ffffff';
+        stroke = 'rgba(255,255,255,0.78)';
         cursor = 'pointer';
     }
     if (isTargeted) {
-        stroke = '#ff0000';
+        stroke = '#f97316';
     }
     const showTileImage = Boolean(assetHref) && !interactionOnly && !imageFailed;
 
@@ -183,7 +183,7 @@ const HexTileComponent: React.FC<HexTileProps> = ({
                             points={tilePoints}
                             fill="none"
                             stroke={stroke}
-                            strokeWidth={isTargeted || isValidMove ? "3" : "1"}
+                            strokeWidth={isTargeted || isValidMove ? "2" : "1"}
                         />
                     </g>
                 ) : (
@@ -191,7 +191,7 @@ const HexTileComponent: React.FC<HexTileProps> = ({
                         points={tilePoints}
                         fill={fill}
                         stroke={stroke}
-                        strokeWidth={isTargeted || isValidMove ? "3" : "1"}
+                        strokeWidth={isTargeted || isValidMove ? "2" : "1"}
                     />
                 )
             )}
@@ -217,7 +217,7 @@ const HexTileComponent: React.FC<HexTileProps> = ({
                         points={tilePoints}
                         fill="none"
                         stroke={stroke}
-                        strokeWidth={isTargeted || isValidMove ? "3" : "1"}
+                        strokeWidth={isTargeted || isValidMove ? "2" : "1"}
                     />
                 </>
             )}

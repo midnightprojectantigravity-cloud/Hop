@@ -163,38 +163,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
 
     return (
         <g pointerEvents="none">
-            {/* Tier 1: Movement Selection */}
-            {movementTiles.map((hex) => {
-                const { x, y } = hexToPixel(hex, TILE_SIZE);
-                return (
-                    <circle
-                        key={`mv-${hex.q}-${hex.r}`}
-                        cx={x} cy={y}
-                        r={TILE_SIZE * 0.55}
-                        fill="rgba(99, 102, 241, 0.15)"
-                        className="animate-soft-pulse"
-                    />
-                );
-            })}
-
-            {/* Tier 2: Skill Targeting */}
-            {skillTargets.map((entry) => {
-                const { p, isValidTarget, isBlocked } = entry;
-                const { x, y } = hexToPixel(p, TILE_SIZE);
-                return (
-                    <g key={`sk-${p.q}-${p.r}`}>
-                        <circle cx={x} cy={y} r={TILE_SIZE * 0.45} fill={isBlocked ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.04)'} />
-                        {isValidTarget && !isBlocked && (
-                            <circle cx={x} cy={y} r={TILE_SIZE * 0.55} fill="none" stroke="rgba(239, 68, 68, 0.4)" strokeWidth={1.5} />
-                        )}
-                        {isValidTarget && isBlocked && (
-                            <circle cx={x} cy={y} r={TILE_SIZE * 0.55} fill="none" stroke="rgba(255,255,255,0.1)" strokeDasharray="4 2" strokeWidth={1} />
-                        )}
-                    </g>
-                );
-            })}
-
-            {/* Tier 3: Hover Intent (Movement or Skill) */}
+            {/* Hover Intent only (movement/skill validity is already shown by tile highlights) */}
             {intentPreview && (
                 <g>
                     {/* Path Arrow */}
@@ -211,18 +180,17 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                             <g>
                                 <path
                                     d={d}
-                                    stroke="white"
-                                    strokeWidth="2"
+                                    stroke="rgba(255,255,255,0.9)"
+                                    strokeWidth="2.25"
                                     fill="none"
-                                    strokeDasharray="6 3"
-                                    className="animate-intent-dash"
-                                    opacity="0.6"
+                                    opacity="0.85"
+                                    style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.22))' }}
                                 />
                                 <path
                                     d={`M ${last.x} ${last.y} L ${last.x - headSize * Math.cos(angle - Math.PI / 6)} ${last.y - headSize * Math.sin(angle - Math.PI / 6)} M ${last.x} ${last.y} L ${last.x - headSize * Math.cos(angle + Math.PI / 6)} ${last.y - headSize * Math.sin(angle + Math.PI / 6)}`}
-                                    stroke="white"
+                                    stroke="rgba(255,255,255,0.95)"
                                     strokeWidth="2"
-                                    opacity="0.8"
+                                    opacity="0.9"
                                 />
                             </g>
                         );
@@ -238,6 +206,20 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                                 <line x1={x - r} y1={y} x2={x + r} y2={y} stroke="#ef4444" strokeWidth="1" />
                                 <line x1={x} y1={y - r} x2={x} y2={y + r} stroke="#ef4444" strokeWidth="1" />
                             </g>
+                        );
+                    })()}
+
+                    {!intentPreview.hasEnemy && (() => {
+                        const { x, y } = hexToPixel(intentPreview.target, TILE_SIZE);
+                        return (
+                            <circle
+                                cx={x}
+                                cy={y}
+                                r={TILE_SIZE * 0.36}
+                                fill="rgba(255,255,255,0.14)"
+                                stroke="rgba(255,255,255,0.65)"
+                                strokeWidth={1.5}
+                            />
                         );
                     })()}
 
