@@ -1390,10 +1390,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const handleBoardPointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        try {
-            e.currentTarget.setPointerCapture(e.pointerId);
-        } catch {
-            // Pointer capture is optional across browsers.
+        if (e.pointerType !== 'mouse') {
+            try {
+                e.currentTarget.setPointerCapture(e.pointerId);
+            } catch {
+                // Pointer capture is optional across browsers.
+            }
         }
 
         const pointers = getActivePointerList();
@@ -1768,6 +1770,34 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         width: bounds.width + TILE_SIZE * 4,
         height: bounds.height + TILE_SIZE * 4
     }), [bounds.minX, bounds.minY, bounds.width, bounds.height]);
+    const biomeCoverBleedPx = useMemo(() => {
+        const maxShift = Math.max(
+            Math.abs(Number(undercurrentOffset?.x ?? 0)),
+            Math.abs(Number(undercurrentOffset?.y ?? 0)),
+            Math.abs(Number(crustPatternShift?.x ?? 0)),
+            Math.abs(Number(crustPatternShift?.y ?? 0)),
+            Math.abs(Number(crustDetailAShift?.x ?? 0)),
+            Math.abs(Number(crustDetailAShift?.y ?? 0)),
+            Math.abs(Number(crustDetailBShift?.x ?? 0)),
+            Math.abs(Number(crustDetailBShift?.y ?? 0))
+        );
+        return Math.min(TILE_SIZE * 32, Math.max(TILE_SIZE * 8, Math.ceil(maxShift + TILE_SIZE * 6)));
+    }, [
+        undercurrentOffset?.x,
+        undercurrentOffset?.y,
+        crustPatternShift?.x,
+        crustPatternShift?.y,
+        crustDetailAShift?.x,
+        crustDetailAShift?.y,
+        crustDetailBShift?.x,
+        crustDetailBShift?.y
+    ]);
+    const biomeCoverFrame = useMemo(() => ({
+        x: biomeFrame.x - biomeCoverBleedPx,
+        y: biomeFrame.y - biomeCoverBleedPx,
+        width: biomeFrame.width + biomeCoverBleedPx * 2,
+        height: biomeFrame.height + biomeCoverBleedPx * 2
+    }), [biomeFrame.x, biomeFrame.y, biomeFrame.width, biomeFrame.height, biomeCoverBleedPx]);
 
     return (
         <div
@@ -1940,10 +1970,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     {undercurrentHref && undercurrentMode === 'cover' && (
                         <image
                             href={undercurrentHref}
-                            x={biomeFrame.x + undercurrentOffset.x}
-                            y={biomeFrame.y + undercurrentOffset.y}
-                            width={biomeFrame.width}
-                            height={biomeFrame.height}
+                            x={biomeCoverFrame.x + undercurrentOffset.x}
+                            y={biomeCoverFrame.y + undercurrentOffset.y}
+                            width={biomeCoverFrame.width}
+                            height={biomeCoverFrame.height}
                             preserveAspectRatio="xMidYMid slice"
                             opacity={undercurrentOpacity}
                         />
@@ -1964,10 +1994,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     {crustHref && crustMode === 'cover' && (
                         <image
                             href={crustHref}
-                            x={biomeFrame.x + crustPatternShift.x}
-                            y={biomeFrame.y + crustPatternShift.y}
-                            width={biomeFrame.width}
-                            height={biomeFrame.height}
+                            x={biomeCoverFrame.x + crustPatternShift.x}
+                            y={biomeCoverFrame.y + crustPatternShift.y}
+                            width={biomeCoverFrame.width}
+                            height={biomeCoverFrame.height}
                             preserveAspectRatio="xMidYMid slice"
                             opacity={crustOpacity}
                             mask={`url(#${crustMaskId})`}
@@ -1987,10 +2017,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     {crustDetailAHref && crustDetailAMode === 'cover' && crustDetailAOpacity > 0 && (
                         <image
                             href={crustDetailAHref}
-                            x={biomeFrame.x + crustDetailAShift.x}
-                            y={biomeFrame.y + crustDetailAShift.y}
-                            width={biomeFrame.width}
-                            height={biomeFrame.height}
+                            x={biomeCoverFrame.x + crustDetailAShift.x}
+                            y={biomeCoverFrame.y + crustDetailAShift.y}
+                            width={biomeCoverFrame.width}
+                            height={biomeCoverFrame.height}
                             preserveAspectRatio="xMidYMid slice"
                             opacity={crustDetailAOpacity}
                             mask={`url(#${crustMaskId})`}
@@ -2010,10 +2040,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     {crustDetailBHref && crustDetailBMode === 'cover' && crustDetailBOpacity > 0 && (
                         <image
                             href={crustDetailBHref}
-                            x={biomeFrame.x + crustDetailBShift.x}
-                            y={biomeFrame.y + crustDetailBShift.y}
-                            width={biomeFrame.width}
-                            height={biomeFrame.height}
+                            x={biomeCoverFrame.x + crustDetailBShift.x}
+                            y={biomeCoverFrame.y + crustDetailBShift.y}
+                            width={biomeCoverFrame.width}
+                            height={biomeCoverFrame.height}
                             preserveAspectRatio="xMidYMid slice"
                             opacity={crustDetailBOpacity}
                             mask={`url(#${crustMaskId})`}

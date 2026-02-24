@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Actor as EntityType, MovementTrace } from '@hop/engine';
 import { isStunned, hexToPixel, getDirectionFromTo, hexEquals, TILE_SIZE, getHexLine, getEntityVisual, isEntityFlying } from '@hop/engine';
 
@@ -26,16 +26,6 @@ const contrastRatio = (a: number, b: number): number => {
     const dark = Math.min(a, b);
     return (light + 0.05) / (dark + 0.05);
 };
-
-const getHexRingPoints = (rx: number, ry: number): string => {
-    const points: string[] = [];
-    for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i;
-        points.push(`${Math.cos(angle) * rx},${Math.sin(angle) * ry}`);
-    }
-    return points.join(' ');
-};
-
 
 const renderIcon = (
     entity: EntityType,
@@ -411,18 +401,12 @@ const EntityBase: React.FC<EntityProps> = ({
     const desiredUnitLuma = isPlayer ? 0.87 : 0.82;
     const baseContrast = contrastRatio(floorLuma, desiredUnitLuma);
     const contrastBoost = baseContrast < 4.5 ? 1.22 : 1.06;
-    const silhouetteOpacity = isPlayer
-        ? (baseContrast < 4.5 ? 0.62 : 0.42)
-        : (baseContrast < 4.5 ? 0.48 : 0.32);
     const baseRingStroke = isPlayer ? '#22e7ff' : 'rgba(255,120,120,0.7)';
-    const baseRingFill = isPlayer ? 'rgba(34,231,255,0.22)' : 'rgba(255,68,68,0.08)';
-    const ringGlow = isPlayer ? 'rgba(34,231,255,0.48)' : 'rgba(255,90,90,0.18)';
-    const ringRx = isPlayer ? TILE_SIZE * 0.5 : TILE_SIZE * 0.46;
-    const ringRy = isPlayer ? TILE_SIZE * 0.2 : TILE_SIZE * 0.18;
-    const ringPoints = useMemo(() => getHexRingPoints(ringRx, ringRy), [ringRx, ringRy]);
-    const innerRingPoints = useMemo(() => getHexRingPoints(ringRx * 0.86, ringRy * 0.84), [ringRx, ringRy]);
+    const baseRingFill = isPlayer ? 'rgba(34,231,255,0.20)' : 'rgba(239,68,68,0.16)';
+    const ringGlow = isPlayer ? 'rgba(34,231,255,0.36)' : 'rgba(255,90,90,0.28)';
+    const ringRx = isPlayer ? TILE_SIZE * 0.48 : TILE_SIZE * 0.42;
+    const ringRy = isPlayer ? TILE_SIZE * 0.17 : TILE_SIZE * 0.145;
     const ringY = isPlayer ? TILE_SIZE * 0.32 : TILE_SIZE * 0.3;
-    const rimLightStroke = isPlayer ? 'rgba(190,250,255,0.86)' : 'rgba(255,201,241,0.86)';
 
     return (
         <g style={{ pointerEvents: 'none' }}>
@@ -442,30 +426,29 @@ const EntityBase: React.FC<EntityProps> = ({
                     opacity={isInvisible ? 0.3 : (visual.opacity || 1)}
                     style={{ filter: isInvisible ? 'blur(1px)' : 'none' }}
                 >
-                    {/* Contrast plate + team ring for tactical readability. */}
-                    <circle
-                        r={isPlayer ? TILE_SIZE * 0.92 : TILE_SIZE * 0.84}
-                        cy={ringY - 2}
-                        fill={isPlayer ? 'rgba(6,15,23,0.84)' : 'rgba(22,7,18,0.84)'}
-                        opacity={silhouetteOpacity}
-                    />
+                    {/* Team pad (oval, aligned with shrine marker language). */}
                     <g transform={`translate(0,${ringY})`}>
-                        <polygon
-                            points={ringPoints}
+                        <ellipse
+                            cx={0}
+                            cy={0}
+                            rx={ringRx}
+                            ry={ringRy}
                             fill={baseRingFill}
                             stroke={baseRingStroke}
                             strokeWidth={2}
+                            opacity={0.95}
                             style={{ filter: `drop-shadow(0 0 5px ${ringGlow})` }}
                         />
-                        {isPlayer && (
-                            <polygon
-                                points={innerRingPoints}
-                                fill="none"
-                                stroke={baseRingStroke}
-                                strokeWidth={1.4}
-                                opacity={0.82}
-                            />
-                        )}
+                        <ellipse
+                            cx={0}
+                            cy={0}
+                            rx={ringRx * 1.14}
+                            ry={ringRy * 1.14}
+                            fill="none"
+                            stroke={baseRingStroke}
+                            strokeWidth={isPlayer ? 1.8 : 1.6}
+                            opacity={isPlayer ? 0.62 : 0.54}
+                        />
                     </g>
 
                     {/* Shadow if flying */}
@@ -479,16 +462,6 @@ const EntityBase: React.FC<EntityProps> = ({
 
                     {/* SVG icon */}
                     <g transform={`translate(0,${unitIconYOffset}) scale(${unitIconScale})`}>
-                        {isPlayer && (
-                            <circle
-                                r={Math.max(10, unitIconSize * 0.84)}
-                                fill="none"
-                                stroke={rimLightStroke}
-                                strokeWidth={2}
-                                opacity={0.68}
-                                style={{ filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.45))' }}
-                            />
-                        )}
                         {renderIcon(entity, isPlayer, unitIconSize, resolvedAssetHref, handleAssetError, contrastBoost)}
                     </g>
 
