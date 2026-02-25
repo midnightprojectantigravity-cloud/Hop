@@ -54,7 +54,22 @@ export const MULTI_SHOOT: SkillDefinition = {
             effects.push({ type: 'Damage', target: p, amount: combat.finalPower, reason: 'multi_shoot', scoreEvent: combat.scoreEvent });
         }
 
-        effects.push({ type: 'Juice', effect: 'flash', target, color: '#ffff00' });
+        effects.push({
+            type: 'Juice',
+            effect: 'flash',
+            target,
+            color: '#ffff00',
+            metadata: {
+                signature: 'ATK.SHOOT.PHYSICAL.MULTI_SHOOT',
+                family: 'attack',
+                primitive: 'shoot',
+                phase: 'impact',
+                element: 'physical',
+                variant: 'multi_shoot',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'MULTI_SHOOT'
+            }
+        });
         messages.push("Multi-Shoot!");
 
         return {

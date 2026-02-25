@@ -25,6 +25,22 @@ export interface ActionPreviewResult {
 
 const clonePoint = (p: Point): Point => ({ q: p.q, r: p.r, s: p.s });
 
+const cloneComponents = (components: Actor['components'] | Record<string, any> | undefined): Actor['components'] | undefined => {
+    if (!components) return undefined;
+    if (components instanceof Map) {
+        return new Map(Array.from(components.entries()).map(([k, v]) => [k, typeof v === 'object' && v !== null ? { ...v } : v])) as Actor['components'];
+    }
+    if (Array.isArray(components)) {
+        return new Map(components as any) as Actor['components'];
+    }
+    if (typeof components === 'object') {
+        return new Map(
+            Object.entries(components).map(([k, v]) => [k, typeof v === 'object' && v !== null ? { ...(v as any) } : v])
+        ) as Actor['components'];
+    }
+    return undefined;
+};
+
 const cloneActor = (actor: Actor): Actor => ({
     ...actor,
     position: clonePoint(actor.position),
@@ -36,7 +52,7 @@ const cloneActor = (actor: Actor): Actor => ({
         upgrades: [...(s.upgrades || [])],
         activeUpgrades: [...(s.activeUpgrades || [])]
     })),
-    components: actor.components ? new Map(actor.components) : undefined,
+    components: cloneComponents(actor.components as any),
     companionState: actor.companionState
         ? {
             ...actor.companionState,
@@ -134,4 +150,3 @@ export const previewActionOutcome = (
         stackTrace: (resolvedState.stackTrace || []).slice(beforeTrace)
     };
 };
-

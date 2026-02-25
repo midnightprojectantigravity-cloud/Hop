@@ -83,7 +83,23 @@ export const FALCON_COMMAND: SkillDefinition = {
         if (isTargetSelf) {
             // No target or target self = Roost mode
             messages.push('Falcon returns to roost.');
-            effects.push({ type: 'Juice', effect: 'combat_text', target: attacker.position, text: 'Roost' });
+            effects.push({
+                type: 'Juice',
+                effect: 'combat_text',
+                target: attacker.position,
+                text: 'Roost',
+                metadata: {
+                    signature: 'UI.TEXT.NEUTRAL.FALCON_ROOST',
+                    family: 'ui',
+                    primitive: 'text',
+                    phase: 'instant',
+                    element: 'neutral',
+                    variant: 'falcon_roost',
+                    targetRef: { kind: 'target_hex' },
+                    skillId: 'FALCON_COMMAND',
+                    textTone: 'system'
+                }
+            });
             effects.push({
                 type: 'UpdateCompanionState',
                 target: falcon.id,
@@ -101,7 +117,23 @@ export const FALCON_COMMAND: SkillDefinition = {
         if (targetActor && targetActor.factionId === 'enemy') {
             // Predator Mode: Mark enemy
             messages.push(`Falcon marks ${targetActor.subtype || 'enemy'} as prey!`);
-            effects.push({ type: 'Juice', effect: 'combat_text', target: target, text: '🎯 Marked' });
+            effects.push({
+                type: 'Juice',
+                effect: 'combat_text',
+                target: target,
+                text: '🎯 Marked',
+                metadata: {
+                    signature: 'UI.TEXT.NEUTRAL.FALCON_MARK',
+                    family: 'ui',
+                    primitive: 'text',
+                    phase: 'instant',
+                    element: 'neutral',
+                    variant: 'falcon_mark',
+                    targetRef: { kind: 'target_hex' },
+                    skillId: 'FALCON_COMMAND',
+                    textTone: 'status'
+                }
+            });
             effects.push({ type: 'ApplyStatus', target: targetActor.id, status: 'marked_predator', duration: -1 });
             effects.push({
                 type: 'UpdateCompanionState',
@@ -117,7 +149,23 @@ export const FALCON_COMMAND: SkillDefinition = {
         } else {
             // Scout Mode: Mark tile
             messages.push('Falcon set to patrol zone.');
-            effects.push({ type: 'Juice', effect: 'combat_text', target: target, text: '👁️ Patrol' });
+            effects.push({
+                type: 'Juice',
+                effect: 'combat_text',
+                target: target,
+                text: '👁️ Patrol',
+                metadata: {
+                    signature: 'UI.TEXT.NEUTRAL.FALCON_PATROL',
+                    family: 'ui',
+                    primitive: 'text',
+                    phase: 'instant',
+                    element: 'neutral',
+                    variant: 'falcon_patrol',
+                    targetRef: { kind: 'target_hex' },
+                    skillId: 'FALCON_COMMAND',
+                    textTone: 'system'
+                }
+            });
             effects.push({
                 type: 'UpdateCompanionState',
                 target: falcon.id,

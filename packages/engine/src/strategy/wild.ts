@@ -193,6 +193,10 @@ export class WildStrategy implements IStrategyProvider {
             type = 'USE_SKILL';
             skillId = 'SPEAR_THROW';
             targetHex = plannedActor.intentPosition;
+        } else if (legacyIntent === 'ARCHER_SHOT') {
+            type = 'USE_SKILL';
+            skillId = 'ARCHER_SHOT';
+            targetHex = plannedActor.intentPosition;
         } else if (legacyIntent === 'DASH') {
             type = 'USE_SKILL';
             skillId = 'DASH';
@@ -219,6 +223,15 @@ export class WildStrategy implements IStrategyProvider {
         }
 
         // Validate intent against skill loadout + valid targets to avoid zero-effect loops.
+        if (
+            skillId === 'ARCHER_SHOT'
+            && !(actor.activeSkills?.some(s => s.id === 'ARCHER_SHOT'))
+            && actor.activeSkills?.some(s => s.id === 'SPEAR_THROW')
+        ) {
+            // Compatibility for archers spawned before the dedicated ARCHER_SHOT rollout.
+            skillId = 'SPEAR_THROW';
+        }
+
         const hasSkill = skillId === 'WAIT_SKILL'
             || actor.activeSkills?.some(s => s.id === skillId);
 

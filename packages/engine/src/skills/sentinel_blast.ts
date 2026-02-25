@@ -40,7 +40,22 @@ export const SENTINEL_BLAST: SkillDefinition = {
 
         const effects: AtomicEffect[] = [
             { type: 'Damage', target: target, amount: primaryCombat.finalPower, scoreEvent: primaryCombat.scoreEvent },
-            { type: 'Juice', effect: 'shake', intensity: 'high' }
+            {
+                type: 'Juice',
+                effect: 'shake',
+                intensity: 'high',
+                metadata: {
+                    signature: 'ATK.BLAST.ARCANE.SENTINEL_BLAST',
+                    family: 'attack',
+                    primitive: 'blast',
+                    phase: 'impact',
+                    element: 'arcane',
+                    variant: 'sentinel_blast',
+                    targetRef: { kind: 'target_hex' },
+                    skillId: 'SENTINEL_BLAST',
+                    camera: { shake: 'high' }
+                }
+            }
         ];
 
         // Also hit neighbors

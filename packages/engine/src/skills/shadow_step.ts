@@ -43,7 +43,21 @@ export const SHADOW_STEP: SkillDefinition = {
         // Teleport + Stealth Extension
         effects.push({ type: 'Displacement', target: 'self', destination: target });
         effects.push({ type: 'SetStealth', target: 'self', amount: 2 });
-        effects.push({ type: 'Juice', effect: 'hiddenFade', target });
+        effects.push({
+            type: 'Juice',
+            effect: 'hiddenFade',
+            target,
+            metadata: {
+                signature: 'MOVE.BLINK.SHADOW.SHADOW_STEP',
+                family: 'movement',
+                primitive: 'blink',
+                phase: 'instant',
+                element: 'shadow',
+                variant: 'shadow_step_arrival',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'SHADOW_STEP'
+            }
+        });
 
         messages.push("Shadow stepped!");
 

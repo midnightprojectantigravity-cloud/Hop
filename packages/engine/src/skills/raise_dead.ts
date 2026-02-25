@@ -94,7 +94,22 @@ export const RAISE_DEAD: SkillDefinition = {
 
         effects.push({ type: 'SpawnActor', actor: skeleton });
 
-        effects.push({ type: 'Juice', effect: 'flash', target, color: '#aaaaaa' });
+        effects.push({
+            type: 'Juice',
+            effect: 'flash',
+            target,
+            color: '#aaaaaa',
+            metadata: {
+                signature: 'STATE.SPAWN.VOID.RAISE_DEAD',
+                family: 'status',
+                primitive: 'spawn',
+                phase: 'impact',
+                element: 'void',
+                variant: 'raise_dead',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'RAISE_DEAD'
+            }
+        });
         messages.push("Skeleton raised!");
 
         return {

@@ -6,7 +6,7 @@ import { isPlayerTurn } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
 import { addStatus } from './systems/actor';
 import { pointToKey, UnifiedTileService } from './systems/unified-tile-service';
-import { createEnemy, createFalcon, createPlayer } from './systems/entity-factory';
+import { createEnemy, createEnemyFromBestiary, createFalcon, createPlayer } from './systems/entity-factory';
 
 const SCENARIO_GRID_WIDTH = 9;
 const SCENARIO_GRID_HEIGHT = 11;
@@ -36,18 +36,43 @@ export class ScenarioEngine {
         };
     }
 
-    spawnEnemy(type: string, pos: Point, id: string) {
-        const stats = (ENEMY_STATS as any)[type] || { hp: 1, maxHp: 1, speed: 1, weightClass: 'Standard' };
-        const entity = createEnemy({
-            id,
-            subtype: type,
-            position: { ...pos },
-            hp: stats.hp,
-            maxHp: stats.maxHp,
-            speed: stats.speed || 1,
-            skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
-            weightClass: stats.weightClass || 'Standard'
-        });
+    spawnEnemy(type: string, pos: Point, id: string, overrides: Partial<Entity> = {}) {
+        const stats = (ENEMY_STATS as any)[type];
+        const entity = (() => {
+            try {
+                return createEnemyFromBestiary({
+                    id,
+                    subtype: type,
+                    position: { ...pos },
+                    hp: overrides.hp,
+                    maxHp: overrides.maxHp,
+                    speed: overrides.speed,
+                    weightClass: overrides.weightClass,
+                    enemyType: overrides.enemyType as any,
+                    actionCooldown: overrides.actionCooldown
+                });
+            } catch {
+                const fallback = stats || { hp: 1, maxHp: 1, speed: 1, weightClass: 'Standard' };
+                return createEnemy({
+                    id,
+                    subtype: type,
+                    position: { ...pos },
+                    hp: overrides.hp ?? fallback.hp,
+                    maxHp: overrides.maxHp ?? fallback.maxHp,
+                    speed: overrides.speed || fallback.speed || 1,
+                    skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
+                    weightClass: (overrides.weightClass as any) || fallback.weightClass || 'Standard',
+                    enemyType: overrides.enemyType as any
+                });
+            }
+        })();
+        if (overrides.activeSkills) entity.activeSkills = [...overrides.activeSkills];
+        if (overrides.factionId) entity.factionId = overrides.factionId;
+        if (overrides.statusEffects) entity.statusEffects = [...overrides.statusEffects];
+        if (overrides.components) entity.components = new Map(overrides.components as any);
+        if (overrides.enemyType) entity.enemyType = overrides.enemyType as any;
+        if (typeof overrides.hp === 'number') entity.hp = overrides.hp;
+        if (typeof overrides.maxHp === 'number') entity.maxHp = overrides.maxHp;
         entity.previousPosition = { ...pos };
         this.state.enemies.push(entity);
     }

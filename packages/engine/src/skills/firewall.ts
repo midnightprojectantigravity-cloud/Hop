@@ -78,7 +78,22 @@ export const FIREWALL: SkillDefinition = {
             }
         }
 
-        effects.push({ type: 'Juice', effect: 'flash', target, color: '#ffaa00' });
+        effects.push({
+            type: 'Juice',
+            effect: 'flash',
+            target,
+            color: '#ffaa00',
+            metadata: {
+                signature: 'ATK.BLAST.FIRE.FIREWALL',
+                family: 'attack',
+                primitive: 'blast',
+                phase: 'impact',
+                element: 'fire',
+                variant: 'firewall',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'FIREWALL'
+            }
+        });
         messages.push("Firewall raised!");
 
         return {

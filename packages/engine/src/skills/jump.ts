@@ -114,7 +114,18 @@ export const JUMP: SkillDefinition = {
             type: 'Juice',
             effect: 'shake',
             target: target,
-            intensity: 'medium'
+            intensity: 'medium',
+            metadata: {
+                signature: 'MOVE.LEAP.NEUTRAL.JUMP_LAND',
+                family: 'movement',
+                primitive: 'leap',
+                phase: 'impact',
+                element: 'neutral',
+                variant: 'jump_landing',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'JUMP',
+                camera: { shake: 'medium', kick: 'light' }
+            }
         });
 
         return { effects, messages, consumesTurn: !isFree };

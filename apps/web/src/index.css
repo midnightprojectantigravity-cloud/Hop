@@ -529,6 +529,374 @@ body::after {
 }
 
 /* ============================================
+   JUICE: BASIC ATTACK STRIKE (STATIC SPRITES)
+   ============================================ */
+.juice-basic-strike-anticipation,
+.juice-basic-strike-travel,
+.juice-basic-strike-impact-source,
+.juice-basic-strike-impact-target,
+.juice-basic-strike-aftermath-source,
+.juice-basic-strike-aftermath-target {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes juiceBasicStrikeAnticipationRing {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+.juice-basic-strike-anticipation-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeAnticipationRing 0.18s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikePhaseLabel {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translateY(0px) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(1.02);
+  }
+}
+
+.juice-basic-strike-phase-label {
+  animation: juiceBasicStrikePhaseLabel 0.34s ease-out forwards;
+  letter-spacing: 0.08em;
+}
+
+@keyframes juiceBasicStrikePhaseLine {
+  0% {
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.juice-basic-strike-phase-line {
+  animation: juiceBasicStrikePhaseLine 0.22s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeTargetLock {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+.juice-basic-strike-target-lock,
+.juice-basic-strike-target-lock-inner {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeTargetLock 0.28s ease-out forwards;
+}
+
+.juice-basic-strike-target-lock-inner {
+  animation-duration: 0.32s;
+}
+
+@keyframes juiceBasicStrikeSourceFocus {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+.juice-basic-strike-source-focus {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeSourceFocus 0.2s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeTravelWedge {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.5);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.juice-basic-strike-travel-wedge {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: juiceBasicStrikeTravelWedge 0.14s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeTravelGhost {
+  0% {
+    opacity: 0;
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.juice-basic-strike-travel-ghost {
+  animation: juiceBasicStrikeTravelGhost 0.18s linear forwards;
+}
+
+@keyframes juiceBasicStrikeImpactBurst {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+.juice-basic-strike-impact-burst {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeImpactBurst 0.22s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeDust {
+  0% {
+    opacity: 0;
+    transform: translateY(2px) scale(0.8);
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-4px) scale(1.25);
+  }
+}
+
+.juice-basic-strike-dust {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeDust 0.26s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeAnticipation {
+  0% {
+    opacity: 0;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+
+  25% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0.85;
+    transform: translate(var(--juice-ant-x, 0px), var(--juice-ant-y, 0px)) scale(0.94, 1.07);
+  }
+}
+
+.juice-basic-strike-anticipation {
+  animation: juiceBasicStrikeAnticipation 0.18s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeTravel {
+  0% {
+    opacity: 0.25;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+
+  65% {
+    opacity: 0.85;
+    transform: translate(var(--juice-travel-x, 0px), var(--juice-travel-y, 0px)) scale(1.12, 0.92);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--juice-travel-x, 0px) * 1.1), calc(var(--juice-travel-y, 0px) * 1.1)) scale(1.06, 0.94);
+  }
+}
+
+.juice-basic-strike-travel {
+  animation: juiceBasicStrikeTravel 0.12s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeTravelSmear {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 22;
+  }
+
+  30% {
+    opacity: 0.8;
+  }
+
+  100% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+  }
+}
+
+.juice-basic-strike-travel-smear,
+.juice-basic-strike-travel-smear-core {
+  stroke-dasharray: 18 14;
+  animation: juiceBasicStrikeTravelSmear 0.12s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeImpactSource {
+  0% {
+    opacity: 0.75;
+    transform: translate(var(--juice-impact-x, 0px), var(--juice-impact-y, 0px)) scale(1.08, 0.94);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--juice-impact-x, 0px) * 1.35), calc(var(--juice-impact-y, 0px) * 1.35)) scale(1.02, 0.98);
+  }
+}
+
+.juice-basic-strike-impact-source {
+  animation: juiceBasicStrikeImpactSource 0.14s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeImpactTarget {
+  0% {
+    opacity: 0.92;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+
+  35% {
+    transform: translate(var(--juice-flinch-x, 0px), var(--juice-flinch-y, 0px)) scale(1.05, 0.93);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--juice-flinch-x, 0px) * 0.35), calc(var(--juice-flinch-y, 0px) * 0.35)) scale(1.01, 0.99);
+  }
+}
+
+.juice-basic-strike-impact-target {
+  animation: juiceBasicStrikeImpactTarget 0.16s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeSpark {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+.juice-basic-strike-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeSpark 0.18s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeAfterSource {
+  0% {
+    opacity: 0.55;
+    transform: translate(var(--juice-aftermath-x, 0px), var(--juice-aftermath-y, 0px)) scale(0.98, 1.02);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+}
+
+.juice-basic-strike-aftermath-source {
+  animation: juiceBasicStrikeAfterSource 0.24s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeAfterTarget {
+  0% {
+    opacity: 0.65;
+    transform: translate(calc(var(--juice-flinch-x, 0px) * 0.35), calc(var(--juice-flinch-y, 0px) * 0.35)) scale(1.02, 0.98);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+}
+
+.juice-basic-strike-aftermath-target {
+  animation: juiceBasicStrikeAfterTarget 0.24s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeAfterRing {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+.juice-basic-strike-aftermath-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeAfterRing 0.26s ease-out forwards;
+}
+
+/* ============================================
    UTILITIES
    ============================================ */
 .custom-scrollbar::-webkit-scrollbar {

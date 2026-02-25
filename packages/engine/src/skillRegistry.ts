@@ -6,6 +6,7 @@
  */
 import { GRAPPLE_HOOK } from './skills/grapple_hook';
 import { SPEAR_THROW } from './skills/spear_throw';
+import { ARCHER_SHOT } from './skills/archer_shot';
 import { SHIELD_BASH } from './skills/shield_bash';
 import { JUMP } from './skills/jump';
 import { BULWARK_CHARGE } from './skills/bulwark_charge';
@@ -52,6 +53,7 @@ import { getCompositeSkillRuntimeRegistry } from './systems/composite-skill-brid
 export const COMPOSITIONAL_SKILLS = {
     GRAPPLE_HOOK,
     SPEAR_THROW,
+    ARCHER_SHOT,
     SHIELD_BASH,
     SHIELD_THROW,
     VAULT,

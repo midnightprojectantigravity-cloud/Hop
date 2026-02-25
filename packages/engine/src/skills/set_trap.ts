@@ -29,7 +29,23 @@ export const SET_TRAP: SkillDefinition = {
         }
 
         effects.push({ type: 'PlaceTrap', position: target, ownerId: attacker.id });
-        effects.push({ type: 'Juice', effect: 'combat_text', target, text: 'Trapped' });
+        effects.push({
+            type: 'Juice',
+            effect: 'combat_text',
+            target,
+            text: 'Trapped',
+            metadata: {
+                signature: 'UI.TEXT.NEUTRAL.SET_TRAP',
+                family: 'ui',
+                primitive: 'text',
+                phase: 'instant',
+                element: 'neutral',
+                variant: 'set_trap',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'SET_TRAP',
+                textTone: 'status'
+            }
+        });
 
         messages.push("Trap set.");
 

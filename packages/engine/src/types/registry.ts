@@ -48,6 +48,7 @@ export type SkillID =
     | 'SENTINEL_BLAST'
     | 'FIREBALL'
     | 'SPEAR_THROW'
+    | 'ARCHER_SHOT'
     | 'CORPSE_EXPLOSION'
     | 'FIREWALK'
     | 'FIREWALL'

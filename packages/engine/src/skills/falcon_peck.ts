@@ -84,7 +84,18 @@ export const FALCON_PECK: SkillDefinition = {
             effect: 'combat_text',
             target: target,
             text: 'Peck!',
-            intensity: 'low'
+            intensity: 'low',
+            metadata: {
+                signature: 'UI.TEXT.PHYSICAL.FALCON_PECK',
+                family: 'ui',
+                primitive: 'text',
+                phase: 'instant',
+                element: 'physical',
+                variant: 'falcon_peck',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'FALCON_PECK',
+                textTone: 'damage'
+            }
         });
 
         messages.push(hasTwinTalons && targetActors.length > 1

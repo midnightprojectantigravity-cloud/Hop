@@ -5,6 +5,7 @@ import { SpatialSystem } from '../systems/SpatialSystem';
 import { getSkillScenarios } from '../scenarios';
 import { canLandOnHazard, canPassHazard, isBlockedByActor } from '../systems/validation';
 import { UnifiedTileService } from '../systems/unified-tile-service';
+import { isFreeMoveMode } from '../systems/free-move';
 
 /**
  * BASIC_MOVE Skill
@@ -13,8 +14,7 @@ import { UnifiedTileService } from '../systems/unified-tile-service';
 
 // 1. Extract the shared logic
 const getEffectiveMoveRange = (state: GameState, actor: Actor): number => {
-    const hostileCount = state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy').length;
-    if (hostileCount === 0) return 20;
+    if (isFreeMoveMode(state)) return 20;
     return Math.max(actor.speed || 1, 1);
 };
 

@@ -42,6 +42,7 @@ import { buildRunSummary, createDailyObjectives, createDailySeed, toDateKey } fr
 import { UnifiedTileService } from './systems/unified-tile-service';
 import { appendTaggedMessage, appendTaggedMessages } from './systems/engine-messages';
 import { ensureTacticalDataBootstrapped } from './systems/tactical-data-bootstrap';
+import { resetCooldownsForFreeMove } from './systems/free-move';
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
@@ -611,6 +612,10 @@ export const processNextTurn = (state: GameState, isResuming: boolean = false): 
                     }))
                 };
             }
+
+            // Exploration/free-move mode is a global engine concept (no hostiles alive):
+            // unlock prep by clearing remaining cooldowns and trap resets.
+            curState = resetCooldownsForFreeMove(curState);
 
             // CHECK TILE INTERACTIONS (Shrines / Stairs)
             if (checkShrine(curState, curState.player.position)) {

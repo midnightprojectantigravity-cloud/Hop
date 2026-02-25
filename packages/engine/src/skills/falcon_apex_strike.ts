@@ -65,7 +65,19 @@ export const FALCON_APEX_STRIKE: SkillDefinition = {
             type: 'Juice',
             effect: 'impact',
             target: target,
-            intensity: 'high'
+            intensity: 'high',
+            metadata: {
+                signature: 'ATK.STRIKE.PHYSICAL.FALCON_APEX_STRIKE',
+                family: 'attack',
+                primitive: 'strike',
+                phase: 'impact',
+                element: 'physical',
+                variant: 'falcon_apex_strike',
+                sourceRef: { kind: 'source_actor' },
+                targetRef: { kind: 'target_hex' },
+                skillId: 'FALCON_APEX_STRIKE',
+                camera: { kick: 'medium' }
+            }
         });
 
         effects.push({

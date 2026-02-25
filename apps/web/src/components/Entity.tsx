@@ -11,6 +11,14 @@ interface EntityProps {
     assetHref?: string;
     fallbackAssetHref?: string;
     floorTheme?: string;
+    visualPose?: EntityVisualPose;
+}
+
+export interface EntityVisualPose {
+    offsetX?: number;
+    offsetY?: number;
+    scaleX?: number;
+    scaleY?: number;
 }
 
 const FLOOR_THEME_LUMA: Record<string, number> = {
@@ -106,7 +114,8 @@ const EntityBase: React.FC<EntityProps> = ({
     waapiControlled = false,
     assetHref,
     fallbackAssetHref,
-    floorTheme
+    floorTheme,
+    visualPose
 }) => {
     const [displayPos, setDisplayPos] = useState(entity.position);
     const [displayPixel, setDisplayPixel] = useState(() => hexToPixel(entity.position, TILE_SIZE));
@@ -407,6 +416,17 @@ const EntityBase: React.FC<EntityProps> = ({
     const ringRx = isPlayer ? TILE_SIZE * 0.48 : TILE_SIZE * 0.42;
     const ringRy = isPlayer ? TILE_SIZE * 0.17 : TILE_SIZE * 0.145;
     const ringY = isPlayer ? TILE_SIZE * 0.32 : TILE_SIZE * 0.3;
+    const poseOffsetX = visualPose?.offsetX ?? 0;
+    const poseOffsetY = visualPose?.offsetY ?? 0;
+    const poseScaleX = visualPose?.scaleX ?? 1;
+    const poseScaleY = visualPose?.scaleY ?? 1;
+    const hasPoseTransform = Math.abs(poseOffsetX) > 0.01
+        || Math.abs(poseOffsetY) > 0.01
+        || Math.abs(poseScaleX - 1) > 0.01
+        || Math.abs(poseScaleY - 1) > 0.01;
+    const poseTransform = hasPoseTransform
+        ? `translate(${poseOffsetX},${poseOffsetY}) scale(${poseScaleX},${poseScaleY})`
+        : undefined;
 
     return (
         <g style={{ pointerEvents: 'none' }}>
@@ -419,74 +439,76 @@ const EntityBase: React.FC<EntityProps> = ({
                 }}
                 className={isDying ? 'animate-lava-sink' : ''}
             >
-                {/* Visual Content Group - Handles idle animation, squash/stretch, and damage flash */}
-                <g
-                    transform={stretchTransform}
-                    className={`${isFlashing ? 'entity-damaged' : ''} ${!isDying && !isStunned(entity) ? 'animate-idle' : ''} ${teleportPhase === 'out' ? 'entity-teleport-out' : ''} ${teleportPhase === 'in' ? 'entity-teleport-in' : ''}`}
-                    opacity={isInvisible ? 0.3 : (visual.opacity || 1)}
-                    style={{ filter: isInvisible ? 'blur(1px)' : 'none' }}
-                >
-                    {/* Team pad (oval, aligned with shrine marker language). */}
-                    <g transform={`translate(0,${ringY})`}>
-                        <ellipse
-                            cx={0}
-                            cy={0}
-                            rx={ringRx}
-                            ry={ringRy}
-                            fill={baseRingFill}
-                            stroke={baseRingStroke}
-                            strokeWidth={2}
-                            opacity={0.95}
-                            style={{ filter: `drop-shadow(0 0 5px ${ringGlow})` }}
-                        />
-                        <ellipse
-                            cx={0}
-                            cy={0}
-                            rx={ringRx * 1.14}
-                            ry={ringRy * 1.14}
-                            fill="none"
-                            stroke={baseRingStroke}
-                            strokeWidth={isPlayer ? 1.8 : 1.6}
-                            opacity={isPlayer ? 0.62 : 0.54}
-                        />
-                    </g>
-
-                    {/* Shadow if flying */}
-                    {isFlying && (
-                        <ellipse
-                            cx={0} cy={TILE_SIZE * 0.3}
-                            rx={TILE_SIZE * 0.4} ry={TILE_SIZE * 0.15}
-                            fill="black" opacity={0.2}
-                        />
-                    )}
-
-                    {/* SVG icon */}
-                    <g transform={`translate(0,${unitIconYOffset}) scale(${unitIconScale})`}>
-                        {renderIcon(entity, isPlayer, unitIconSize, resolvedAssetHref, handleAssetError, contrastBoost)}
-                    </g>
-
-                    {/* Stun Icon */}
-                    {isStunned(entity) && (
-                        <g transform={`translate(0, -${TILE_SIZE * 0.8})`} className="stun-icon">
-                            <text fontSize="14" textAnchor="middle">*</text>
-                            <text fontSize="8" textAnchor="middle" dy="-3" dx="6">+</text>
+                <g transform={poseTransform}>
+                    {/* Visual Content Group - Handles idle animation, squash/stretch, and damage flash */}
+                    <g
+                        transform={stretchTransform}
+                        className={`${isFlashing ? 'entity-damaged' : ''} ${!isDying && !isStunned(entity) ? 'animate-idle' : ''} ${teleportPhase === 'out' ? 'entity-teleport-out' : ''} ${teleportPhase === 'in' ? 'entity-teleport-in' : ''}`}
+                        opacity={isInvisible ? 0.3 : (visual.opacity || 1)}
+                        style={{ filter: isInvisible ? 'blur(1px)' : 'none' }}
+                    >
+                        {/* Team pad (oval, aligned with shrine marker language). */}
+                        <g transform={`translate(0,${ringY})`}>
+                            <ellipse
+                                cx={0}
+                                cy={0}
+                                rx={ringRx}
+                                ry={ringRy}
+                                fill={baseRingFill}
+                                stroke={baseRingStroke}
+                                strokeWidth={2}
+                                opacity={0.95}
+                                style={{ filter: `drop-shadow(0 0 5px ${ringGlow})` }}
+                            />
+                            <ellipse
+                                cx={0}
+                                cy={0}
+                                rx={ringRx * 1.14}
+                                ry={ringRy * 1.14}
+                                fill="none"
+                                stroke={baseRingStroke}
+                                strokeWidth={isPlayer ? 1.8 : 1.6}
+                                opacity={isPlayer ? 0.62 : 0.54}
+                            />
                         </g>
-                    )}
 
-                    {/* Shield direction indicator */}
-                    {visual.showFacing && entity.facing !== undefined && !isStunned(entity) && (
-                        <line
-                            x1={0}
-                            y1={0}
-                            x2={Math.cos((entity.facing * 60 - 90) * Math.PI / 180) * TILE_SIZE * 0.5}
-                            y2={Math.sin((entity.facing * 60 - 90) * Math.PI / 180) * TILE_SIZE * 0.5}
-                            stroke={visual.borderColor}
-                            strokeWidth={3}
-                            strokeLinecap="round"
-                        />
-                    )}
+                        {/* Shadow if flying */}
+                        {isFlying && (
+                            <ellipse
+                                cx={0} cy={TILE_SIZE * 0.3}
+                                rx={TILE_SIZE * 0.4} ry={TILE_SIZE * 0.15}
+                                fill="black" opacity={0.2}
+                            />
+                        )}
 
-                    <title>{`${entity.subtype || entity.type} - HP ${entity.hp}/${entity.maxHp}${entity.intent ? ` - ${entity.intent}` : ''}`}</title>
+                        {/* SVG icon */}
+                        <g transform={`translate(0,${unitIconYOffset}) scale(${unitIconScale})`}>
+                            {renderIcon(entity, isPlayer, unitIconSize, resolvedAssetHref, handleAssetError, contrastBoost)}
+                        </g>
+
+                        {/* Stun Icon */}
+                        {isStunned(entity) && (
+                            <g transform={`translate(0, -${TILE_SIZE * 0.8})`} className="stun-icon">
+                                <text fontSize="14" textAnchor="middle">*</text>
+                                <text fontSize="8" textAnchor="middle" dy="-3" dx="6">+</text>
+                            </g>
+                        )}
+
+                        {/* Shield direction indicator */}
+                        {visual.showFacing && entity.facing !== undefined && !isStunned(entity) && (
+                            <line
+                                x1={0}
+                                y1={0}
+                                x2={Math.cos((entity.facing * 60 - 90) * Math.PI / 180) * TILE_SIZE * 0.5}
+                                y2={Math.sin((entity.facing * 60 - 90) * Math.PI / 180) * TILE_SIZE * 0.5}
+                                stroke={visual.borderColor}
+                                strokeWidth={3}
+                                strokeLinecap="round"
+                            />
+                        )}
+
+                        <title>{`${entity.subtype || entity.type} - HP ${entity.hp}/${entity.maxHp}${entity.intent ? ` - ${entity.intent}` : ''}`}</title>
+                    </g>
                 </g>
             </g>
         </g>
@@ -510,6 +532,10 @@ export const Entity = React.memo(EntityBase, (prev, next) => {
         && prev.assetHref === next.assetHref
         && prev.fallbackAssetHref === next.fallbackAssetHref
         && prev.floorTheme === next.floorTheme
+        && (prev.visualPose?.offsetX ?? 0) === (next.visualPose?.offsetX ?? 0)
+        && (prev.visualPose?.offsetY ?? 0) === (next.visualPose?.offsetY ?? 0)
+        && (prev.visualPose?.scaleX ?? 1) === (next.visualPose?.scaleX ?? 1)
+        && (prev.visualPose?.scaleY ?? 1) === (next.visualPose?.scaleY ?? 1)
         && movementTraceKey(prev.movementTrace) === movementTraceKey(next.movementTrace)
         && a.id === b.id
         && a.hp === b.hp

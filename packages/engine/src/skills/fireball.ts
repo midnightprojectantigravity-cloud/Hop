@@ -66,8 +66,37 @@ export const FIREBALL: SkillDefinition = {
             effects.push({ type: 'PlaceFire', position: p, duration: 3 });
         }
 
-        effects.push({ type: 'Juice', effect: 'flash', target, color: '#ff4400' });
-        effects.push({ type: 'Juice', effect: 'shake', intensity: 'medium' });
+        effects.push({
+            type: 'Juice',
+            effect: 'flash',
+            target,
+            color: '#ff4400',
+            metadata: {
+                signature: 'ATK.BLAST.FIRE.FIREBALL_IMPACT',
+                family: 'attack',
+                primitive: 'blast',
+                phase: 'impact',
+                element: 'fire',
+                variant: 'fireball',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'FIREBALL'
+            }
+        });
+        effects.push({
+            type: 'Juice',
+            effect: 'shake',
+            intensity: 'medium',
+            metadata: {
+                signature: 'UI.SHAKE.FIRE.FIREBALL',
+                family: 'ui',
+                primitive: 'shake',
+                phase: 'impact',
+                element: 'fire',
+                variant: 'fireball_shake',
+                skillId: 'FIREBALL',
+                camera: { shake: 'medium' }
+            }
+        });
 
         messages.push("Fireball!");
 

@@ -78,6 +78,12 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         estimates: { damage: 5 },
         risk: { requireEnemyContact: true, noContactPenalty: 4, noProgressCastPenalty: 5 }
     },
+    ARCHER_SHOT: {
+        intentTags: ['damage'],
+        target: { pattern: 'line' },
+        estimates: { damage: 2 },
+        risk: { requireEnemyContact: true, noContactPenalty: 4, noProgressCastPenalty: 4 }
+    },
     FIREBALL: { intentTags: ['damage', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 5, control: 1 } },
     FIREWALL: { intentTags: ['hazard', 'control', 'damage'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { damage: 5, control: 3 } },
     FIREWALK: {

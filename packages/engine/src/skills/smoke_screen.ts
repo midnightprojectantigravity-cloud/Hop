@@ -21,7 +21,21 @@ export const SMOKE_SCREEN: SkillDefinition = {
         const messages: string[] = [];
 
         effects.push({ type: 'SetStealth', target: 'self', amount: 2 });
-        effects.push({ type: 'Juice', effect: 'hiddenFade', target: attacker.position });
+        effects.push({
+            type: 'Juice',
+            effect: 'hiddenFade',
+            target: attacker.position,
+            metadata: {
+                signature: 'STATE.FADE.SHADOW.SMOKE_SCREEN',
+                family: 'status',
+                primitive: 'state_fade',
+                phase: 'instant',
+                element: 'shadow',
+                variant: 'smoke_screen',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'SMOKE_SCREEN'
+            }
+        });
 
         messages.push("Smoke Screen!");
 

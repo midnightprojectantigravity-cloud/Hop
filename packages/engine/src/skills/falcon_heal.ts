@@ -42,7 +42,17 @@ export const FALCON_HEAL: SkillDefinition = {
             type: 'Juice',
             effect: 'flash',
             target: hunter.position,
-            color: '#00ff88'
+            color: '#00ff88',
+            metadata: {
+                signature: 'STATE.APPLY.HOLY.FALCON_HEAL',
+                family: 'status',
+                primitive: 'status_apply',
+                phase: 'impact',
+                element: 'holy',
+                variant: 'falcon_heal',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'FALCON_HEAL'
+            }
         });
 
         effects.push({

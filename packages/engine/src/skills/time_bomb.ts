@@ -45,6 +45,16 @@ export const TIME_BOMB: SkillDefinition = {
             effect: 'explosion_ring',
             target: center,
             intensity: 'high',
+            metadata: {
+                signature: 'ATK.BLAST.FIRE.TIME_BOMB',
+                family: 'attack',
+                primitive: 'blast',
+                phase: 'impact',
+                element: 'fire',
+                variant: 'time_bomb',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'TIME_BOMB'
+            }
         });
 
         return {
@@ -56,4 +66,3 @@ export const TIME_BOMB: SkillDefinition = {
     getValidTargets: (_state: GameState, origin: Point) => [origin],
     upgrades: {},
 };
-

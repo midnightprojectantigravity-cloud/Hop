@@ -76,9 +76,53 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
             effects.push({ type: 'Damage', target: p, amount: combat.finalPower, reason: 'corpse_explosion', scoreEvent: combat.scoreEvent });
         }
 
-        effects.push({ type: 'Juice', effect: 'explosion_ring', target });
-        effects.push({ type: 'Juice', effect: 'shake', intensity: 'high' });
-        effects.push({ type: 'Juice', effect: 'combat_text', target, text: 'BOOM!' });
+        effects.push({
+            type: 'Juice',
+            effect: 'explosion_ring',
+            target,
+            metadata: {
+                signature: 'ATK.BLAST.VOID.CORPSE_EXPLOSION',
+                family: 'attack',
+                primitive: 'blast',
+                phase: 'impact',
+                element: 'void',
+                variant: 'corpse_explosion',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'CORPSE_EXPLOSION'
+            }
+        });
+        effects.push({
+            type: 'Juice',
+            effect: 'shake',
+            intensity: 'high',
+            metadata: {
+                signature: 'UI.SHAKE.VOID.CORPSE_EXPLOSION',
+                family: 'ui',
+                primitive: 'shake',
+                phase: 'impact',
+                element: 'void',
+                variant: 'corpse_explosion_shake',
+                skillId: 'CORPSE_EXPLOSION',
+                camera: { shake: 'high' }
+            }
+        });
+        effects.push({
+            type: 'Juice',
+            effect: 'combat_text',
+            target,
+            text: 'BOOM!',
+            metadata: {
+                signature: 'UI.TEXT.VOID.CORPSE_EXPLOSION',
+                family: 'ui',
+                primitive: 'text',
+                phase: 'impact',
+                element: 'void',
+                variant: 'corpse_explosion_text',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'CORPSE_EXPLOSION',
+                textTone: 'damage'
+            }
+        });
 
         messages.push("Corpse exploded!");
 

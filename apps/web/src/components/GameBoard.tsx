@@ -1,11 +1,11 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import type { GameState, Point, MovementTrace, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
+import React, { useMemo, useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import type { GameState, Point, MovementTrace, SimulationEvent, StateMirrorSnapshot, JuiceSignaturePayloadV1 } from '@hop/engine';
 import {
     isTileInDiamond, hexToPixel,
-    TILE_SIZE, SkillRegistry, pointToKey, UnifiedTileService, previewActionOutcome, getHexLine
+    TILE_SIZE, SkillRegistry, pointToKey, UnifiedTileService, previewActionOutcome, getHexLine, hexEquals
 } from '@hop/engine';
 import { HexTile } from './HexTile';
-import { Entity } from './Entity';
+import { Entity, type EntityVisualPose } from './Entity';
 import PreviewOverlay from './PreviewOverlay';
 import { JuiceManager } from './JuiceManager';
 import type {
@@ -92,6 +92,33 @@ type CameraViewState = {
 };
 
 type PointerPoint = { x: number; y: number };
+type JuiceDebugEntry = {
+    id: string;
+    sequenceId: string;
+    signature: string;
+    phase: string;
+    primitive: string;
+    timestamp: number;
+};
+
+type WorldPoint = { x: number; y: number };
+
+type PoseTransformFrame = {
+    offsetX: number;
+    offsetY: number;
+    scaleX: number;
+    scaleY: number;
+};
+
+type EntityPoseEffect = {
+    id: string;
+    actorId: string;
+    startTime: number;
+    endTime: number;
+    easing: 'out' | 'inOut';
+    from: PoseTransformFrame;
+    to: PoseTransformFrame;
+};
 
 const hashString = (input: string): number => {
     let hash = 2166136261 >>> 0;
@@ -227,6 +254,32 @@ const getHexPoints = (size: number): string => {
     return points.join(' ');
 };
 
+const normalizeBoardDirectionToScreen = (direction: Point | undefined): { x: number; y: number } | null => {
+    if (!direction || typeof direction.q !== 'number' || typeof direction.r !== 'number' || typeof direction.s !== 'number') {
+        return null;
+    }
+    const { x, y } = hexToPixel(direction, TILE_SIZE);
+    const mag = Math.hypot(x, y);
+    if (!Number.isFinite(mag) || mag <= 0.0001) return null;
+    return { x: x / mag, y: y / mag };
+};
+
+const resolveJuiceAnchorHex = (anchor: any): Point | undefined => {
+    const p = anchor?.hex;
+    if (p && typeof p.q === 'number' && typeof p.r === 'number' && typeof p.s === 'number') return p as Point;
+    return undefined;
+};
+
+const resolveJuiceAnchorWorld = (anchor: any): WorldPoint | undefined => {
+    const p = anchor?.world;
+    if (p && typeof p.x === 'number' && typeof p.y === 'number') return p as WorldPoint;
+    return undefined;
+};
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
 export const GameBoard: React.FC<GameBoardProps> = ({
     gameState,
     onMove,
@@ -243,6 +296,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     type BoardDecal = { id: string; position: Point; href: string; createdAt: number };
     type BoardProp = { id: string; kind: 'stairs' | 'shrine'; position: Point; asset?: VisualAssetEntry };
     const [isShaking, setIsShaking] = useState(false);
+    const [isFrozen, setIsFrozen] = useState(false);
+    const [cameraKickOffsetPx, setCameraKickOffsetPx] = useState<PointerPoint>({ x: 0, y: 0 });
     const [hoveredTile, setHoveredTile] = useState<Point | null>(null);
     const [movementBusy, setMovementBusy] = useState(false);
     const [juiceBusy, setJuiceBusy] = useState(false);
@@ -257,9 +312,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const activeAnimationsRef = useRef<Animation[]>([]);
     const runTokenRef = useRef(0);
     const lastMovementBatchSignatureRef = useRef('');
-    const processedTimelineDecalCountRef = useRef(0);
-    const processedVisualDecalCountRef = useRef(0);
+    const processedTimelineDecalBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
+    const processedVisualDecalBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
     const processedSimulationEventCountRef = useRef(0);
+    const processedSimulationPoseCountRef = useRef(0);
+    const processedCameraCueVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
+    const processedJuiceDebugVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
     const cameraViewRef = useRef<CameraViewState | null>(null);
     const cameraAnimFrameRef = useRef<number | null>(null);
     const cameraPanOffsetRef = useRef<CameraVec2>({ x: 0, y: 0 });
@@ -290,6 +348,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const lastBoundsSignatureRef = useRef('');
     const lastZoomPresetRef = useRef<CameraZoomPreset>(11);
     const isAnimatingCameraRef = useRef(false);
+    const [juiceDebugOverlayEnabled, setJuiceDebugOverlayEnabled] = useState(false);
+    const [juiceDebugEntries, setJuiceDebugEntries] = useState<JuiceDebugEntry[]>([]);
+    const [entityPoseEffects, setEntityPoseEffects] = useState<EntityPoseEffect[]>([]);
+    const [entityPoseNowMs, setEntityPoseNowMs] = useState(0);
+    const juiceDebugTraceEnabledRef = useRef(false);
+    const processedJuicePoseVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
+    const poseAnimFrameRef = useRef<number | null>(null);
     const playerPos = gameState.player.position;
 
     // Filter cells based on dynamic diamond geometry
@@ -311,15 +376,490 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         );
     }, [gameState.rooms, gameState.gridWidth, gameState.gridHeight]);
 
-    // Handle board shake
     useEffect(() => {
-        const shakeEvent = gameState.visualEvents?.find(e => e.type === 'shake');
-        if (shakeEvent) {
-            setIsShaking(true);
-            const timer = setTimeout(() => setIsShaking(false), 200);
-            return () => clearTimeout(timer);
+        if (!import.meta.env.DEV || typeof window === 'undefined') return;
+        const w = window as any;
+        const params = new URLSearchParams(window.location.search);
+        const syncFlags = () => {
+            const overlayEnabled = !!(w.__HOP_JUICE_DEBUG__ || params.get('juiceDebug') === '1');
+            const traceEnabled = !!(w.__HOP_JUICE_TRACE__ || overlayEnabled);
+            setJuiceDebugOverlayEnabled(overlayEnabled);
+            juiceDebugTraceEnabledRef.current = traceEnabled;
+        };
+        w.__HOP_SET_JUICE_DEBUG__ = (enabled: boolean) => {
+            w.__HOP_JUICE_DEBUG__ = !!enabled;
+            syncFlags();
+        };
+        syncFlags();
+    }, []);
+
+    // Visual-only actor pose channel (JUICE-owned presentation layer).
+    // First slice: BASIC_ATTACK strike phases drive source lunge + target flinch on real entities.
+    useEffect(() => {
+        const events = gameState.visualEvents || [];
+        if (processedJuicePoseVisualBatchRef.current === events) return;
+        processedJuicePoseVisualBatchRef.current = events;
+        const newEvents = events;
+        if (newEvents.length === 0) return;
+
+        const now = Date.now();
+        const additions: EntityPoseEffect[] = [];
+        const actors = [
+            gameState.player,
+            ...gameState.enemies,
+            ...(gameState.companions || []),
+            ...(gameState.dyingEntities || [])
+        ];
+        const actorByIdLocal = new Map(actors.map(a => [a.id, a]));
+        const findActorIdAtHex = (hex: Point | undefined): string | undefined => {
+            if (!hex) return undefined;
+            for (const a of actors) {
+                if (hexEquals(a.position, hex)) return a.id;
+            }
+            return undefined;
+        };
+
+        const pushPose = (
+            actorId: string | undefined,
+            phaseKey: string,
+            from: PoseTransformFrame,
+            to: PoseTransformFrame,
+            startTime: number,
+            durationMs: number,
+            easing: EntityPoseEffect['easing']
+        ) => {
+            if (!actorId) return;
+            additions.push({
+                id: `${phaseKey}:${actorId}:${startTime}`,
+                actorId,
+                startTime,
+                endTime: startTime + Math.max(30, durationMs),
+                easing,
+                from,
+                to
+            });
+        };
+
+        for (let i = 0; i < newEvents.length; i++) {
+            const ev = newEvents[i];
+            if (ev.type !== 'juice_signature') continue;
+            const payload = ev.payload as JuiceSignaturePayloadV1 | undefined;
+            if (!payload || payload.protocol !== 'juice-signature/v1') continue;
+            if (payload.signature !== 'ATK.STRIKE.PHYSICAL.BASIC_ATTACK' && payload.signature !== 'ATK.STRIKE.PHYSICAL.AUTO_ATTACK') continue;
+
+            const phase = String(payload.phase || 'impact');
+            const sourceHex = resolveJuiceAnchorHex(payload.source);
+            const targetHex = resolveJuiceAnchorHex(payload.target);
+            const sourceActorId = String(payload.meta?.sourceId || payload.source?.actorId || '') || findActorIdAtHex(sourceHex);
+            const targetActorId = payload.target?.actorId || findActorIdAtHex(targetHex);
+            if (!sourceHex || !targetHex || !sourceActorId) continue;
+
+            const srcPix = hexToPixel(sourceHex, TILE_SIZE);
+            const fallbackTarget = hexToPixel(targetHex, TILE_SIZE);
+            const contactWorld = resolveJuiceAnchorWorld(payload.contact) || fallbackTarget;
+            let dx = contactWorld.x - srcPix.x;
+            let dy = contactWorld.y - srcPix.y;
+            let dist = Math.hypot(dx, dy);
+            if (!Number.isFinite(dist) || dist < 0.001) {
+                const unit = normalizeBoardDirectionToScreen(payload.direction);
+                if (unit) {
+                    dx = unit.x;
+                    dy = unit.y;
+                    dist = 1;
+                } else {
+                    const tgtPix = hexToPixel(targetHex, TILE_SIZE);
+                    dx = tgtPix.x - srcPix.x;
+                    dy = tgtPix.y - srcPix.y;
+                    dist = Math.max(1, Math.hypot(dx, dy));
+                }
+            }
+            const ux = dx / Math.max(1, dist);
+            const uy = dy / Math.max(1, dist);
+            const delayMs = Math.max(0, Number(payload.timing?.delayMs || 0));
+            const durationMs = Math.max(40, Number(payload.timing?.durationMs || payload.timing?.ttlMs || 110));
+            const startTime = now + delayMs;
+            const seq = String(payload.meta?.sequenceId || `strike-${now}-${i}`);
+            const intensity = String(payload.intensity || 'medium');
+            const isAuto = payload.signature === 'ATK.STRIKE.PHYSICAL.AUTO_ATTACK';
+            const intensityFlinch = intensity === 'extreme' ? 16 : intensity === 'high' ? 13 : intensity === 'low' ? 8 : 11;
+            const backPull = Math.min(TILE_SIZE * (isAuto ? 0.3 : 0.46), dist * (isAuto ? 0.22 : 0.32));
+            const thrustReach = Math.min(TILE_SIZE * (isAuto ? 0.55 : 0.82), dist * (isAuto ? 0.62 : 0.9));
+            const impactReach = Math.min(TILE_SIZE * (isAuto ? 0.62 : 0.9), dist * (isAuto ? 0.72 : 0.98));
+            const recoilReach = Math.min(TILE_SIZE * (isAuto ? 0.22 : 0.34), dist * (isAuto ? 0.24 : 0.36));
+
+            if (phase === 'anticipation') {
+                pushPose(
+                    sourceActorId,
+                    `${seq}:anticipation`,
+                    { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                    { offsetX: -ux * backPull, offsetY: -uy * backPull, scaleX: 0.92, scaleY: 1.08 },
+                    startTime,
+                    durationMs,
+                    'out'
+                );
+                continue;
+            }
+
+            if (phase === 'travel') {
+                pushPose(
+                    sourceActorId,
+                    `${seq}:travel`,
+                    { offsetX: -ux * backPull, offsetY: -uy * backPull, scaleX: 0.94, scaleY: 1.06 },
+                    { offsetX: ux * thrustReach, offsetY: uy * thrustReach, scaleX: 1.09, scaleY: 0.93 },
+                    startTime,
+                    durationMs,
+                    'inOut'
+                );
+                continue;
+            }
+
+            if (phase === 'impact') {
+                pushPose(
+                    sourceActorId,
+                    `${seq}:impact-src`,
+                    { offsetX: ux * (impactReach * 0.92), offsetY: uy * (impactReach * 0.92), scaleX: 1.06, scaleY: 0.95 },
+                    { offsetX: ux * impactReach, offsetY: uy * impactReach, scaleX: 1.02, scaleY: 0.98 },
+                    startTime,
+                    durationMs,
+                    'out'
+                );
+                pushPose(
+                    targetActorId,
+                    `${seq}:impact-tgt`,
+                    { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                    { offsetX: ux * intensityFlinch, offsetY: uy * intensityFlinch, scaleX: 1.03, scaleY: 0.94 },
+                    startTime,
+                    durationMs,
+                    'out'
+                );
+                continue;
+            }
+
+            if (phase === 'aftermath') {
+                pushPose(
+                    sourceActorId,
+                    `${seq}:after-src`,
+                    { offsetX: ux * recoilReach, offsetY: uy * recoilReach, scaleX: 1.01, scaleY: 0.99 },
+                    { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                    startTime,
+                    durationMs,
+                    'out'
+                );
+                pushPose(
+                    targetActorId,
+                    `${seq}:after-tgt`,
+                    { offsetX: ux * (intensityFlinch * 0.35), offsetY: uy * (intensityFlinch * 0.35), scaleX: 1.01, scaleY: 0.99 },
+                    { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                    startTime,
+                    durationMs,
+                    'out'
+                );
+            }
         }
+
+        for (let i = 0; i < newEvents.length; i++) {
+            const ev = newEvents[i];
+            if (ev.type !== 'juice_signature') continue;
+            const payload = ev.payload as JuiceSignaturePayloadV1 | undefined;
+            if (!payload || payload.protocol !== 'juice-signature/v1') continue;
+
+            const sig = String(payload.signature || '');
+            const phase = String(payload.phase || 'impact');
+            if (phase !== 'impact') continue;
+
+            const delayMs = Math.max(0, Number(payload.timing?.delayMs || 0));
+            const durationMs = Math.max(45, Number(payload.timing?.durationMs || payload.timing?.ttlMs || 110));
+            const startTime = now + delayMs;
+            const sourceHex = resolveJuiceAnchorHex(payload.source);
+            const targetHex = resolveJuiceAnchorHex(payload.target);
+            const sourceWorld = resolveJuiceAnchorWorld(payload.source);
+            const targetWorld = resolveJuiceAnchorWorld(payload.target);
+            const contactWorld = resolveJuiceAnchorWorld(payload.contact);
+            const sourceIdFromMeta = String(payload.meta?.sourceId || payload.source?.actorId || '');
+            const sourceActor = sourceIdFromMeta ? actorByIdLocal.get(sourceIdFromMeta) : undefined;
+            const sourceActorId = sourceActor?.id || findActorIdAtHex(sourceHex);
+            const targetActorId = payload.target?.actorId || findActorIdAtHex(targetHex);
+
+            const resolveDir = (): { x: number; y: number } | null => {
+                const unitFromPayload = normalizeBoardDirectionToScreen(payload.direction);
+                if (unitFromPayload) return unitFromPayload;
+                const src = sourceHex ? hexToPixel(sourceHex, TILE_SIZE) : sourceWorld;
+                const tgt = (contactWorld || targetWorld || (targetHex ? hexToPixel(targetHex, TILE_SIZE) : undefined));
+                if (src && tgt) {
+                    const dx = tgt.x - src.x;
+                    const dy = tgt.y - src.y;
+                    const mag = Math.hypot(dx, dy);
+                    if (mag > 0.001) return { x: dx / mag, y: dy / mag };
+                }
+                return null;
+            };
+            const unit = resolveDir();
+            if (!unit) continue;
+
+            if (sig === 'ATK.PULSE.KINETIC.WAVE') {
+                const recoil = 8;
+                const castPush = 10;
+                // Caster pulse recoil (future ARCANE_FORCE / current kinetic pulses).
+                pushPose(
+                    sourceActorId,
+                    `${payload.meta?.sequenceId || sig}:pulse-caster`,
+                    { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                    { offsetX: -unit.x * recoil, offsetY: -unit.y * recoil, scaleX: 0.96, scaleY: 1.05 },
+                    startTime,
+                    Math.max(40, Math.floor(durationMs * 0.5)),
+                    'out'
+                );
+                pushPose(
+                    sourceActorId,
+                    `${payload.meta?.sequenceId || sig}:pulse-caster-return`,
+                    { offsetX: -unit.x * (recoil * 0.6), offsetY: -unit.y * (recoil * 0.6), scaleX: 0.98, scaleY: 1.02 },
+                    { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                    startTime + Math.floor(durationMs * 0.45),
+                    Math.max(50, Math.floor(durationMs * 0.65)),
+                    'out'
+                );
+                // Target shove anticipation / reaction if the target hex is occupied.
+                pushPose(
+                    targetActorId,
+                    `${payload.meta?.sequenceId || sig}:pulse-target`,
+                    { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                    { offsetX: unit.x * castPush, offsetY: unit.y * castPush, scaleX: 1.03, scaleY: 0.95 },
+                    startTime,
+                    durationMs,
+                    'out'
+                );
+                continue;
+            }
+
+            if (sig.startsWith('ENV.COLLISION.KINETIC.')) {
+                const collisionFlinch = sig === 'ENV.COLLISION.KINETIC.SHIELD_BASH' ? 14 : 10;
+                const sourceDrive = sig === 'ENV.COLLISION.KINETIC.SHIELD_BASH' ? 7 : 0;
+                if (sourceDrive > 0) {
+                    pushPose(
+                        sourceActorId,
+                        `${payload.meta?.sequenceId || sig}:collision-source`,
+                        { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                        { offsetX: unit.x * sourceDrive, offsetY: unit.y * sourceDrive, scaleX: 1.03, scaleY: 0.97 },
+                        startTime,
+                        Math.max(45, Math.floor(durationMs * 0.55)),
+                        'out'
+                    );
+                }
+                pushPose(
+                    targetActorId,
+                    `${payload.meta?.sequenceId || sig}:collision-target`,
+                    { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                    { offsetX: unit.x * collisionFlinch, offsetY: unit.y * collisionFlinch, scaleX: 1.02, scaleY: 0.92 },
+                    startTime,
+                    durationMs,
+                    'out'
+                );
+                continue;
+            }
+        }
+
+        if (additions.length > 0) {
+            setEntityPoseNowMs(now);
+            setEntityPoseEffects(prev => [...prev, ...additions]);
+        }
+    }, [gameState.visualEvents, gameState.player, gameState.enemies, gameState.companions, gameState.dyingEntities]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (entityPoseEffects.length === 0) return;
+
+        let cancelled = false;
+        const tick = () => {
+            if (cancelled) return;
+            const now = Date.now();
+            setEntityPoseNowMs(now);
+            setEntityPoseEffects(prev => {
+                const next = prev.filter(e => now < e.endTime + 16);
+                return next.length === prev.length ? prev : next;
+            });
+            poseAnimFrameRef.current = window.requestAnimationFrame(tick);
+        };
+        poseAnimFrameRef.current = window.requestAnimationFrame(tick);
+
+        return () => {
+            cancelled = true;
+            if (poseAnimFrameRef.current !== null) {
+                window.cancelAnimationFrame(poseAnimFrameRef.current);
+                poseAnimFrameRef.current = null;
+            }
+        };
+    }, [entityPoseEffects.length]);
+
+    // Handle camera cues (signature-first, legacy fallback during migration)
+    useEffect(() => {
+        const events = gameState.visualEvents || [];
+        if (processedCameraCueVisualBatchRef.current === events) return;
+        processedCameraCueVisualBatchRef.current = events;
+        const newEvents = events;
+        if (newEvents.length === 0) return;
+
+        let shakeDurationMs = 0;
+        let freezeDurationMs = 0;
+        let kickDurationMs = 0;
+        let kickOffset: PointerPoint = { x: 0, y: 0 };
+        let kickStrength = 0;
+
+        const shakeByIntensity: Record<string, number> = {
+            low: 110,
+            medium: 160,
+            high: 210,
+            extreme: 260
+        };
+        const kickDistanceByIntensity: Record<string, number> = {
+            light: 6,
+            medium: 10,
+            heavy: 14
+        };
+        const kickDurationByIntensity: Record<string, number> = {
+            light: 65,
+            medium: 85,
+            heavy: 110
+        };
+        const deferredCueTimers: number[] = [];
+        const triggerShakeNow = (durationMs: number) => {
+            if (durationMs <= 0) return;
+            setIsShaking(true);
+            deferredCueTimers.push(window.setTimeout(() => setIsShaking(false), durationMs));
+        };
+        const triggerFreezeNow = (durationMs: number) => {
+            if (durationMs <= 0) return;
+            setIsFrozen(true);
+            deferredCueTimers.push(window.setTimeout(() => setIsFrozen(false), durationMs));
+        };
+        const triggerKickNow = (offset: PointerPoint, durationMs: number) => {
+            if (durationMs <= 0 || (!offset.x && !offset.y)) return;
+            setCameraKickOffsetPx(offset);
+            deferredCueTimers.push(window.setTimeout(() => setCameraKickOffsetPx({ x: 0, y: 0 }), durationMs));
+        };
+
+        for (const ev of newEvents) {
+            if (ev.type === 'juice_signature') {
+                const payload = ev.payload as JuiceSignaturePayloadV1 | undefined;
+                if (payload?.protocol === 'juice-signature/v1') {
+                    const delayMs = Math.max(0, Number(payload.timing?.delayMs || 0));
+                    const shake = payload.camera?.shake;
+                    const freezeMs = Number(payload.camera?.freezeMs || 0);
+                    const kick = String(payload.camera?.kick || 'none');
+                    const delayedUnit = kick !== 'none' ? normalizeBoardDirectionToScreen(payload.direction) : null;
+                    const delayedKickPx = kickDistanceByIntensity[kick] || 0;
+                    const delayedKickDuration = kickDurationByIntensity[kick] || 80;
+                    if (delayMs > 0 && (shake || freezeMs > 0 || (delayedUnit && delayedKickPx > 0))) {
+                        deferredCueTimers.push(window.setTimeout(() => {
+                            if (shake) triggerShakeNow(shakeByIntensity[String(shake)] || 160);
+                            if (freezeMs > 0) triggerFreezeNow(Math.min(220, freezeMs));
+                            if (delayedUnit && delayedKickPx > 0) {
+                                triggerKickNow({ x: delayedUnit.x * delayedKickPx, y: delayedUnit.y * delayedKickPx }, delayedKickDuration);
+                            }
+                        }, delayMs));
+                        continue;
+                    }
+                    if (shake) {
+                        shakeDurationMs = Math.max(shakeDurationMs, shakeByIntensity[String(shake)] || 160);
+                    }
+                    if (freezeMs > 0) {
+                        freezeDurationMs = Math.max(freezeDurationMs, Math.min(220, freezeMs));
+                    }
+                    if (kick !== 'none') {
+                        const unit = normalizeBoardDirectionToScreen(payload.direction);
+                        const kickPx = kickDistanceByIntensity[kick] || 0;
+                        if (unit && kickPx > 0 && kickPx >= kickStrength) {
+                            kickStrength = kickPx;
+                            kickOffset = { x: unit.x * kickPx, y: unit.y * kickPx };
+                            kickDurationMs = Math.max(kickDurationMs, kickDurationByIntensity[kick] || 80);
+                        }
+                    }
+                    continue;
+                }
+            }
+            if (ev.type === 'shake') {
+                const intensity = String((ev.payload as any)?.intensity || 'medium');
+                shakeDurationMs = Math.max(shakeDurationMs, shakeByIntensity[intensity] || 160);
+            } else if (ev.type === 'freeze') {
+                freezeDurationMs = Math.max(
+                    freezeDurationMs,
+                    Math.min(220, Math.max(50, Number((ev.payload as any)?.durationMs || 80)))
+                );
+            }
+        }
+
+        let shakeTimer: number | undefined;
+        let freezeTimer: number | undefined;
+        let kickTimer: number | undefined;
+
+        if (shakeDurationMs > 0) {
+            setIsShaking(true);
+            shakeTimer = window.setTimeout(() => setIsShaking(false), shakeDurationMs);
+        }
+        if (freezeDurationMs > 0) {
+            setIsFrozen(true);
+            freezeTimer = window.setTimeout(() => setIsFrozen(false), freezeDurationMs);
+        }
+        if (kickDurationMs > 0 && (kickOffset.x !== 0 || kickOffset.y !== 0)) {
+            setCameraKickOffsetPx(kickOffset);
+            kickTimer = window.setTimeout(() => setCameraKickOffsetPx({ x: 0, y: 0 }), kickDurationMs);
+        }
+
+        return () => {
+            if (shakeTimer) window.clearTimeout(shakeTimer);
+            if (freezeTimer) window.clearTimeout(freezeTimer);
+            if (kickTimer) window.clearTimeout(kickTimer);
+            for (const t of deferredCueTimers) window.clearTimeout(t);
+        };
     }, [gameState.visualEvents]);
+
+    useEffect(() => {
+        if (!import.meta.env.DEV) return;
+        const events = gameState.visualEvents || [];
+        if (processedJuiceDebugVisualBatchRef.current === events) return;
+        processedJuiceDebugVisualBatchRef.current = events;
+        const newEvents = events;
+        if (newEvents.length === 0) return;
+
+        const shouldTrace = juiceDebugTraceEnabledRef.current;
+        if (!shouldTrace && !juiceDebugOverlayEnabled) return;
+
+        const now = Date.now();
+        const additions: JuiceDebugEntry[] = [];
+
+        for (let i = 0; i < newEvents.length; i++) {
+            const ev = newEvents[i];
+            if (ev.type !== 'juice_signature') continue;
+            const payload = ev.payload as JuiceSignaturePayloadV1 | undefined;
+            if (!payload || payload.protocol !== 'juice-signature/v1') continue;
+            const sequenceId = payload.meta?.sequenceId || `seq-missing-${now}-${i}`;
+            const entry: JuiceDebugEntry = {
+                id: `${sequenceId}-${i}`,
+                sequenceId,
+                signature: payload.signature,
+                phase: payload.phase,
+                primitive: payload.primitive,
+                timestamp: now
+            };
+            additions.push(entry);
+            if (shouldTrace) {
+                console.debug('[HOP_JUICE_SIG]', {
+                    sequenceId,
+                    signature: payload.signature,
+                    phase: payload.phase,
+                    primitive: payload.primitive,
+                    family: payload.family,
+                    element: payload.element,
+                    source: payload.source,
+                    target: payload.target,
+                    contact: payload.contact
+                });
+            }
+        }
+
+        if (juiceDebugOverlayEnabled && additions.length > 0) {
+            setJuiceDebugEntries(prev => [...additions.slice(-8), ...prev].slice(0, 12));
+        }
+    }, [gameState.visualEvents, juiceDebugOverlayEnabled]);
 
     // Dynamically calculate the Bounding Box of the actual hexes to maximize size
     const bounds = useMemo(() => {
@@ -1276,17 +1816,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         const timelineEvents = gameState.timelineEvents || [];
         const visualEvents = gameState.visualEvents || [];
 
-        if (timelineEvents.length < processedTimelineDecalCountRef.current) {
-            processedTimelineDecalCountRef.current = 0;
+        if (processedTimelineDecalBatchRef.current === timelineEvents
+            && processedVisualDecalBatchRef.current === visualEvents) {
+            return;
         }
-        const newTimeline = timelineEvents.slice(processedTimelineDecalCountRef.current);
-        processedTimelineDecalCountRef.current = timelineEvents.length;
+        const newTimeline = processedTimelineDecalBatchRef.current === timelineEvents ? [] : timelineEvents;
+        processedTimelineDecalBatchRef.current = timelineEvents;
 
-        if (visualEvents.length < processedVisualDecalCountRef.current) {
-            processedVisualDecalCountRef.current = 0;
-        }
-        const newVisual = visualEvents.slice(processedVisualDecalCountRef.current);
-        processedVisualDecalCountRef.current = visualEvents.length;
+        const newVisual = processedVisualDecalBatchRef.current === visualEvents ? [] : visualEvents;
+        processedVisualDecalBatchRef.current = visualEvents;
 
         const additions: BoardDecal[] = [];
         const now = Date.now();
@@ -1333,6 +1871,103 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             onSimulationEvents?.(newEvents);
         }
     }, [gameState.simulationEvents, onSimulationEvents]);
+
+    useEffect(() => {
+        const events = gameState.simulationEvents || [];
+        if (events.length < processedSimulationPoseCountRef.current) {
+            processedSimulationPoseCountRef.current = 0;
+        }
+        const newEvents = events.slice(processedSimulationPoseCountRef.current);
+        processedSimulationPoseCountRef.current = events.length;
+        if (newEvents.length === 0) return;
+
+        const now = Date.now();
+        const actors = [
+            gameState.player,
+            ...gameState.enemies,
+            ...(gameState.companions || []),
+            ...(gameState.dyingEntities || [])
+        ];
+        const actorByIdLocal = new Map(actors.map(a => [a.id, a]));
+        const additions: EntityPoseEffect[] = [];
+
+        const pushPose = (
+            actorId: string | undefined,
+            tag: string,
+            from: PoseTransformFrame,
+            to: PoseTransformFrame,
+            startTime: number,
+            durationMs: number
+        ) => {
+            if (!actorId) return;
+            additions.push({
+                id: `${tag}:${actorId}:${startTime}`,
+                actorId,
+                startTime,
+                endTime: startTime + Math.max(35, durationMs),
+                easing: 'out',
+                from,
+                to
+            });
+        };
+
+        for (const ev of newEvents) {
+            if (ev.type !== 'DamageTaken') continue;
+            const targetId = String(ev.targetId || '');
+            const targetActor = targetId ? actorByIdLocal.get(targetId) : undefined;
+            if (!targetActor) continue;
+
+            const payload = ev.payload || {};
+            const reason = String(payload.reason || '').toLowerCase();
+            const sourceId = String(payload.sourceId || '');
+            if (!sourceId || !reason || reason.includes('basic_attack')) continue;
+
+            const sourceActor = actorByIdLocal.get(sourceId);
+            const isProjectileLike = reason.includes('spear')
+                || reason.includes('multi_shoot')
+                || reason.includes('withdrawal')
+                || (sourceActor?.subtype === 'archer' && !reason.includes('crush'));
+            if (!isProjectileLike) continue;
+
+            const srcPix = sourceActor ? hexToPixel(sourceActor.position, TILE_SIZE) : undefined;
+            const tgtPix = hexToPixel(targetActor.position, TILE_SIZE);
+            let ux = 0;
+            let uy = 1;
+            if (srcPix) {
+                const dx = tgtPix.x - srcPix.x;
+                const dy = tgtPix.y - srcPix.y;
+                const mag = Math.hypot(dx, dy);
+                if (mag > 0.001) {
+                    ux = dx / mag;
+                    uy = dy / mag;
+                }
+            }
+
+            const flinch = sourceActor?.subtype === 'archer' ? 10 : 8;
+            const dur = 100;
+            pushPose(
+                targetActor.id,
+                `projectile-hit`,
+                { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                { offsetX: ux * flinch, offsetY: uy * flinch, scaleX: 1.02, scaleY: 0.95 },
+                now,
+                dur
+            );
+            pushPose(
+                targetActor.id,
+                `projectile-hit-return`,
+                { offsetX: ux * (flinch * 0.35), offsetY: uy * (flinch * 0.35), scaleX: 1.01, scaleY: 0.99 },
+                { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                now + Math.floor(dur * 0.5),
+                130
+            );
+        }
+
+        if (additions.length > 0) {
+            setEntityPoseNowMs(now);
+            setEntityPoseEffects(prev => [...prev, ...additions]);
+        }
+    }, [gameState.simulationEvents, gameState.player, gameState.enemies, gameState.companions, gameState.dyingEntities]);
 
     useEffect(() => {
         if (decals.length === 0) return;
@@ -1553,11 +2188,66 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     }, [gameState.player.id, gameState.player.position, gameState.enemies, gameState.companions, gameState.dyingEntities]);
 
     const juiceActorSnapshots = useMemo(() => ([
-        { id: gameState.player.id, position: gameState.player.position, subtype: gameState.player.subtype || 'player' },
-        ...gameState.enemies.map(e => ({ id: e.id, position: e.position, subtype: e.subtype })),
-        ...(gameState.companions || []).map(e => ({ id: e.id, position: e.position, subtype: e.subtype })),
-        ...(gameState.dyingEntities || []).map(e => ({ id: e.id, position: e.position, subtype: e.subtype }))
-    ]), [gameState.player.id, gameState.player.position, gameState.player.subtype, gameState.enemies, gameState.companions, gameState.dyingEntities]);
+        {
+            id: gameState.player.id,
+            position: gameState.player.position,
+            subtype: gameState.player.subtype || 'player',
+            assetHref: assetById.get(resolveUnitAssetId(gameState.player))?.path,
+            fallbackAssetHref: resolveUnitFallbackAssetHref(gameState.player)
+        },
+        ...gameState.enemies.map(e => ({
+            id: e.id,
+            position: e.position,
+            subtype: e.subtype,
+            assetHref: assetById.get(resolveUnitAssetId(e))?.path,
+            fallbackAssetHref: resolveUnitFallbackAssetHref(e)
+        })),
+        ...(gameState.companions || []).map(e => ({
+            id: e.id,
+            position: e.position,
+            subtype: e.subtype,
+            assetHref: assetById.get(resolveUnitAssetId(e))?.path,
+            fallbackAssetHref: resolveUnitFallbackAssetHref(e)
+        })),
+        ...(gameState.dyingEntities || []).map(e => ({
+            id: e.id,
+            position: e.position,
+            subtype: e.subtype,
+            assetHref: assetById.get(resolveUnitAssetId(e))?.path,
+            fallbackAssetHref: resolveUnitFallbackAssetHref(e)
+        }))
+    ]), [assetById, gameState.player, gameState.enemies, gameState.companions, gameState.dyingEntities]);
+
+    const entityVisualPoseById = useMemo(() => {
+        const out = new Map<string, EntityVisualPose>();
+        const now = entityPoseNowMs || Date.now();
+
+        for (const effect of entityPoseEffects) {
+            if (now < effect.startTime || now > effect.endTime) continue;
+            const duration = Math.max(1, effect.endTime - effect.startTime);
+            const tRaw = Math.max(0, Math.min(1, (now - effect.startTime) / duration));
+            const t = effect.easing === 'inOut' ? easeInOutCubic(tRaw) : easeOutCubic(tRaw);
+            const frame: EntityVisualPose = {
+                offsetX: lerp(effect.from.offsetX, effect.to.offsetX, t),
+                offsetY: lerp(effect.from.offsetY, effect.to.offsetY, t),
+                scaleX: lerp(effect.from.scaleX, effect.to.scaleX, t),
+                scaleY: lerp(effect.from.scaleY, effect.to.scaleY, t),
+            };
+            const prev = out.get(effect.actorId);
+            if (!prev) {
+                out.set(effect.actorId, frame);
+                continue;
+            }
+            out.set(effect.actorId, {
+                offsetX: (prev.offsetX ?? 0) + (frame.offsetX ?? 0),
+                offsetY: (prev.offsetY ?? 0) + (frame.offsetY ?? 0),
+                scaleX: (prev.scaleX ?? 1) * (frame.scaleX ?? 1),
+                scaleY: (prev.scaleY ?? 1) * (frame.scaleY ?? 1),
+            });
+        }
+
+        return out;
+    }, [entityPoseEffects, entityPoseNowMs]);
 
     useEffect(() => {
         if (!onMirrorSnapshot) return;
@@ -1743,7 +2433,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         };
     }, [cancelCameraAnimation]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         // Floor transitions remount board data in one reducer step; clear any in-flight
         // animation side-effects so actor visuals always rebind to new floor positions.
         cancelCameraAnimation();
@@ -1757,8 +2447,19 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         setMovementBusy(false);
         lastMovementBatchSignatureRef.current = '';
         setDecals([]);
-        processedTimelineDecalCountRef.current = 0;
-        processedVisualDecalCountRef.current = 0;
+        setEntityPoseEffects([]);
+        setEntityPoseNowMs(0);
+        setJuiceDebugEntries([]);
+        setIsShaking(false);
+        setIsFrozen(false);
+        setCameraKickOffsetPx({ x: 0, y: 0 });
+        processedTimelineDecalBatchRef.current = null;
+        processedVisualDecalBatchRef.current = null;
+        processedSimulationEventCountRef.current = 0;
+        processedSimulationPoseCountRef.current = 0;
+        processedCameraCueVisualBatchRef.current = null;
+        processedJuiceDebugVisualBatchRef.current = null;
+        processedJuicePoseVisualBatchRef.current = null;
     }, [gameState.floor, cancelCameraAnimation]);
     const gridPoints = useMemo(() => getHexPoints(TILE_SIZE - 1), []);
     const maskHexPoints = useMemo(() => getHexPoints(TILE_SIZE + 1), []);
@@ -1804,22 +2505,39 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             ref={boardViewportRef}
             className={`relative w-full h-full flex justify-center items-center overflow-hidden transition-transform duration-75 ${isShaking ? 'animate-shake' : ''} ${isCameraPanning ? 'cursor-grabbing' : ''}`}
         >
-            <svg
-                ref={svgRef}
-                width="100%"
-                height="100%"
-                viewBox={`${renderedViewBox.x} ${renderedViewBox.y} ${renderedViewBox.width} ${renderedViewBox.height}`}
-                preserveAspectRatio="xMidYMid meet"
-                shapeRendering="geometricPrecision"
-                className="max-h-full max-w-full"
-                onMouseLeave={() => setHoveredTile(null)}
-                onWheel={handleBoardWheel}
-                onPointerDown={handleBoardPointerDown}
-                onPointerMove={handleBoardPointerMove}
-                onPointerUp={handleBoardPointerUp}
-                onPointerCancel={handleBoardPointerCancel}
-                style={{ touchAction: 'none' }}
+            <div
+                className="relative w-full h-full"
+                style={{
+                    transform: `translate3d(${cameraKickOffsetPx.x}px, ${cameraKickOffsetPx.y}px, 0)`,
+                    transition: 'transform 85ms ease-out',
+                    willChange: cameraKickOffsetPx.x || cameraKickOffsetPx.y ? 'transform' : undefined
+                }}
             >
+                {isFrozen && (
+                    <div
+                        className="absolute inset-0 z-20 pointer-events-none bg-white/10"
+                        style={{
+                            boxShadow: 'inset 0 0 60px rgba(255,255,255,0.18)',
+                            animation: 'flash 120ms ease-out'
+                        }}
+                    />
+                )}
+                <svg
+                    ref={svgRef}
+                    width="100%"
+                    height="100%"
+                    viewBox={`${renderedViewBox.x} ${renderedViewBox.y} ${renderedViewBox.width} ${renderedViewBox.height}`}
+                    preserveAspectRatio="xMidYMid meet"
+                    shapeRendering="geometricPrecision"
+                    className="max-h-full max-w-full"
+                    onMouseLeave={() => setHoveredTile(null)}
+                    onWheel={handleBoardWheel}
+                    onPointerDown={handleBoardPointerDown}
+                    onPointerMove={handleBoardPointerMove}
+                    onPointerUp={handleBoardPointerUp}
+                    onPointerCancel={handleBoardPointerCancel}
+                    style={{ touchAction: 'none' }}
+                >
                 <defs>
                     <clipPath id={biomeClipId} clipPathUnits="userSpaceOnUse">
                         {cells.map((hex) => {
@@ -1936,12 +2654,20 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                         </pattern>
                     )}
                     {crustMaskEnabled && (
-                        <mask id={crustMaskId} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
+                        <mask
+                            id={crustMaskId}
+                            maskUnits="userSpaceOnUse"
+                            maskContentUnits="userSpaceOnUse"
+                            x={biomeCoverFrame.x}
+                            y={biomeCoverFrame.y}
+                            width={biomeCoverFrame.width}
+                            height={biomeCoverFrame.height}
+                        >
                             <rect
-                                x={biomeFrame.x}
-                                y={biomeFrame.y}
-                                width={biomeFrame.width}
-                                height={biomeFrame.height}
+                                x={biomeCoverFrame.x}
+                                y={biomeCoverFrame.y}
+                                width={biomeCoverFrame.width}
+                                height={biomeCoverFrame.height}
                                 fill="white"
                             />
                             {crustMaskHoles.map((hole) => (
@@ -2376,6 +3102,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                         entity={gameState.player}
                         movementTrace={latestTraceByActor[gameState.player.id]}
                         waapiControlled={true}
+                        visualPose={entityVisualPoseById.get(gameState.player.id)}
                         assetHref={assetById.get(resolveUnitAssetId(gameState.player))?.path}
                         fallbackAssetHref={resolveUnitFallbackAssetHref(gameState.player)}
                         floorTheme={biomeThemeKey}
@@ -2386,6 +3113,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                             entity={e}
                             movementTrace={latestTraceByActor[e.id]}
                             waapiControlled={true}
+                            visualPose={entityVisualPoseById.get(e.id)}
                             assetHref={assetById.get(resolveUnitAssetId(e))?.path}
                             fallbackAssetHref={resolveUnitFallbackAssetHref(e)}
                             floorTheme={biomeThemeKey}
@@ -2398,6 +3126,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                             isDying={true}
                             movementTrace={latestTraceByActor[e.id]}
                             waapiControlled={true}
+                            visualPose={entityVisualPoseById.get(e.id)}
                             assetHref={assetById.get(resolveUnitAssetId(e))?.path}
                             fallbackAssetHref={resolveUnitFallbackAssetHref(e)}
                             floorTheme={biomeThemeKey}
@@ -2405,6 +3134,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     ))}
 
                     <JuiceManager
+                        key={`juice-${gameState.floor}`}
                         visualEvents={gameState.visualEvents || []}
                         timelineEvents={gameState.timelineEvents || []}
                         simulationEvents={gameState.simulationEvents || []}
@@ -2456,7 +3186,25 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                         );
                     })}
                 </g>
-            </svg>
+                </svg>
+            </div>
+            {import.meta.env.DEV && juiceDebugOverlayEnabled && (
+                <div className="absolute left-2 bottom-2 z-30 max-w-[min(24rem,calc(100%-1rem))] pointer-events-none rounded-xl border border-cyan-200/20 bg-black/55 backdrop-blur-sm px-2 py-1.5 text-[10px] leading-tight text-cyan-100/90">
+                    <div className="mb-1 font-black tracking-wider text-cyan-200/90">JUICE TRACE</div>
+                    <div className="space-y-0.5">
+                        {juiceDebugEntries.length === 0 && (
+                            <div className="text-cyan-100/55">No signature events yet.</div>
+                        )}
+                        {juiceDebugEntries.map((entry) => (
+                            <div key={entry.id} className="truncate">
+                                <span className="text-cyan-200/70">{entry.sequenceId}</span>
+                                <span className="text-white/55"> :: </span>
+                                <span className="text-white/85">{entry.signature}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-30 flex items-center gap-1.5 pointer-events-auto">
                 <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-black/35 backdrop-blur-sm p-1">
                     {CAMERA_ZOOM_PRESETS.map((preset) => {

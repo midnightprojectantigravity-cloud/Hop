@@ -13,6 +13,33 @@
 
 import type { AtomicEffect, Point } from '../types';
 
+type JuiceMeta = Record<string, any>;
+
+const withJuiceMetadata = (effect: AtomicEffect, metadata: JuiceMeta): AtomicEffect => {
+    if (effect.type !== 'Juice') return effect;
+    return {
+        ...effect,
+        metadata: {
+            ...(effect.metadata || {}),
+            ...metadata
+        }
+    };
+};
+
+const isPoint = (value: unknown): value is Point =>
+    !!value
+    && typeof (value as any).q === 'number'
+    && typeof (value as any).r === 'number'
+    && typeof (value as any).s === 'number';
+
+const isUnitHexVector = (value: unknown): value is Point => {
+    if (!isPoint(value)) return false;
+    const mag = Math.abs(value.q) + Math.abs(value.r) + Math.abs(value.s);
+    return mag === 2; // cube distance 1 direction vector
+};
+
+const subtractHex = (a: Point, b: Point): Point => ({ q: a.q - b.q, r: a.r - b.r, s: a.s - b.s });
+
 export interface JuiceSignature {
     anticipation?: AtomicEffect[];
     execution: AtomicEffect[];
@@ -31,7 +58,27 @@ export const JuiceHelpers = {
         type: 'Juice',
         effect: 'shake',
         intensity,
-        direction
+        direction,
+        metadata: {
+            signature: 'UI.SHAKE.NEUTRAL.CAMERA',
+            family: 'ui',
+            primitive: 'shake',
+            phase: 'instant',
+            element: 'neutral',
+            variant: 'camera_shake',
+            camera: {
+                shake: intensity,
+                ...(direction
+                    ? {
+                        kick: intensity === 'extreme'
+                            ? 'heavy'
+                            : intensity === 'high'
+                                ? 'medium'
+                                : 'light'
+                    }
+                    : {})
+            }
+        }
     }),
 
     /**
@@ -41,7 +88,15 @@ export const JuiceHelpers = {
         type: 'Juice',
         effect: 'flash',
         intensity: 'high',
-        color
+        color,
+        metadata: {
+            signature: 'ATK.BLAST.NEUTRAL.FLASH',
+            family: 'attack',
+            primitive: 'blast',
+            phase: 'impact',
+            element: 'neutral',
+            variant: 'flash'
+        }
     }),
 
     /**
@@ -50,7 +105,17 @@ export const JuiceHelpers = {
     freeze: (duration: number = 80): AtomicEffect => ({
         type: 'Juice',
         effect: 'freeze',
-        duration
+        duration,
+        metadata: {
+            signature: 'UI.FREEZE.NEUTRAL.HITSTOP',
+            family: 'ui',
+            primitive: 'freeze',
+            phase: 'instant',
+            element: 'neutral',
+            variant: 'hitstop',
+            camera: { freezeMs: duration },
+            timing: { durationMs: duration, ttlMs: duration }
+        }
     }),
 
     /**
@@ -146,6 +211,136 @@ export const JuiceHelpers = {
         target: position
     })
 };
+
+// Attach explicit signatures to the high-frequency helper outputs.
+JuiceHelpers.combatText = ((orig) => (text: string, target: Point | string, color?: string) =>
+    withJuiceMetadata(orig(text, target, color), {
+        signature: 'UI.TEXT.NEUTRAL.POPUP',
+        family: 'ui',
+        primitive: 'text',
+        phase: 'instant',
+        element: 'neutral',
+        variant: 'combat_text',
+        targetRef: typeof target === 'string' ? { kind: 'target_actor' } : { kind: 'target_hex' },
+        textTone: /^[-]/.test(text) ? 'damage' : (/^\+/.test(text) ? 'heal' : 'system')
+    })
+)(JuiceHelpers.combatText);
+
+JuiceHelpers.momentumTrail = ((orig) => (path: Point[], intensity: 'low' | 'medium' | 'high') =>
+    withJuiceMetadata(orig(path, intensity), {
+        signature: 'MOVE.DASH.KINETIC.MOMENTUM_TRAIL',
+        family: 'movement',
+        primitive: 'dash',
+        phase: 'travel',
+        element: 'kinetic',
+        variant: 'momentum_trail'
+    })
+)(JuiceHelpers.momentumTrail);
+
+JuiceHelpers.heavyImpact = ((orig) => (target: Point | string, direction?: Point) => {
+    const meta: JuiceMeta = {
+        signature: 'ATK.STRIKE.PHYSICAL.HEAVY',
+        family: 'attack',
+        primitive: 'strike',
+        phase: 'impact',
+        element: 'physical',
+        variant: 'heavy_impact',
+        sourceRef: { kind: 'source_actor' }
+    };
+    if (isPoint(target)) {
+        meta.targetRef = { kind: 'target_hex' };
+        if (direction && isUnitHexVector(direction)) {
+            meta.contactHex = target;
+            meta.contactToHex = target;
+            meta.contactFromHex = subtractHex(target, direction);
+            meta.contactRef = { kind: 'contact_world' };
+        }
+    } else {
+        meta.targetRef = { kind: 'target_actor' };
+    }
+    return withJuiceMetadata(orig(target, direction), meta);
+})(JuiceHelpers.heavyImpact);
+
+JuiceHelpers.lightImpact = ((orig) => (target: Point | string) =>
+    withJuiceMetadata(orig(target), {
+        signature: 'ATK.STRIKE.PHYSICAL.LIGHT',
+        family: 'attack',
+        primitive: 'strike',
+        phase: 'impact',
+        element: 'physical',
+        variant: 'light_impact',
+        sourceRef: { kind: 'source_actor' },
+        targetRef: typeof target === 'string' ? { kind: 'target_actor' } : { kind: 'target_hex' }
+    })
+)(JuiceHelpers.lightImpact);
+
+JuiceHelpers.kineticWave = ((orig) => (origin: Point, direction: Point, intensity: 'low' | 'medium' | 'high') =>
+    withJuiceMetadata(orig(origin, direction, intensity), {
+        signature: 'ATK.PULSE.KINETIC.WAVE',
+        family: 'attack',
+        primitive: 'pulse',
+        phase: 'impact',
+        element: 'kinetic',
+        variant: 'kinetic_wave',
+        targetRef: { kind: 'target_hex' },
+        sourceRef: { kind: 'source_hex' }
+    })
+)(JuiceHelpers.kineticWave);
+
+JuiceHelpers.stunBurst = ((orig) => (target: Point | string) =>
+    withJuiceMetadata(orig(target), {
+        signature: 'STATE.APPLY.NEUTRAL.STUN_BURST',
+        family: 'status',
+        primitive: 'status_apply',
+        phase: 'impact',
+        element: 'neutral',
+        variant: 'stun_burst',
+        targetRef: typeof target === 'string' ? { kind: 'target_actor' } : { kind: 'target_hex' }
+    })
+)(JuiceHelpers.stunBurst);
+
+JuiceHelpers.lavaRipple = ((orig) => (position: Point) =>
+    withJuiceMetadata(orig(position), {
+        signature: 'ENV.HAZARD.FIRE.LAVA_RIPPLE',
+        family: 'environment',
+        primitive: 'hazard_burst',
+        phase: 'impact',
+        element: 'fire',
+        variant: 'lava_ripple',
+        targetRef: { kind: 'target_hex' }
+    })
+)(JuiceHelpers.lavaRipple);
+
+JuiceHelpers.wallCrack = ((orig) => (position: Point, direction: Point) => {
+    const meta: JuiceMeta = {
+        signature: 'ENV.COLLISION.KINETIC.WALL_CRACK',
+        family: 'environment',
+        primitive: 'collision',
+        phase: 'impact',
+        element: 'kinetic',
+        variant: 'wall_crack',
+        targetRef: { kind: 'target_hex' }
+    };
+    if (isUnitHexVector(direction)) {
+        meta.contactHex = position;
+        meta.contactToHex = position;
+        meta.contactFromHex = subtractHex(position, direction);
+        meta.contactRef = { kind: 'contact_world' };
+    }
+    return withJuiceMetadata(orig(position, direction), meta);
+})(JuiceHelpers.wallCrack);
+
+JuiceHelpers.explosionRing = ((orig) => (position: Point) =>
+    withJuiceMetadata(orig(position), {
+        signature: 'ATK.BLAST.FIRE.EXPLOSION_RING',
+        family: 'attack',
+        primitive: 'blast',
+        phase: 'impact',
+        element: 'fire',
+        variant: 'explosion_ring',
+        targetRef: { kind: 'target_hex' }
+    })
+)(JuiceHelpers.explosionRing);
 
 /**
  * SKILL JUICE SIGNATURES

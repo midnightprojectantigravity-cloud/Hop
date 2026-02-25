@@ -49,7 +49,11 @@ export const resolveTelegraphedAttacks = (
       let enemyHandled = false;
       // 1. Try to find a compositional skill that matches the intent
       const skillDef = SkillRegistry.get(liveEnemy.intent);
-      const activeSkill = liveEnemy.activeSkills?.find(s => s.id === liveEnemy.intent);
+      let activeSkill = liveEnemy.activeSkills?.find(s => s.id === liveEnemy.intent);
+      if (!activeSkill && liveEnemy.intent === 'ARCHER_SHOT') {
+        // Compatibility for archers spawned before the dedicated ARCHER_SHOT rollout.
+        activeSkill = liveEnemy.activeSkills?.find(s => s.id === 'SPEAR_THROW');
+      }
 
       if (skillDef && activeSkill) {
         // FLEXIBLE INTENT: Reassess if player is still a valid target

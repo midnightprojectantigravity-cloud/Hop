@@ -34,7 +34,23 @@ export const SWIFT_ROLL: SkillDefinition = {
         }
 
         effects.push({ type: 'Displacement', target: 'self', destination: target });
-        effects.push({ type: 'Juice', effect: 'dashBlur', target: target, path: [attacker.position, target] });
+        effects.push({
+            type: 'Juice',
+            effect: 'dashBlur',
+            target: target,
+            path: [attacker.position, target],
+            metadata: {
+                signature: 'MOVE.DASH.NEUTRAL.SWIFT_ROLL',
+                family: 'movement',
+                primitive: 'dash',
+                phase: 'travel',
+                element: 'neutral',
+                variant: 'swift_roll',
+                sourceRef: { kind: 'source_hex' },
+                targetRef: { kind: 'target_hex' },
+                skillId: 'SWIFT_ROLL'
+            }
+        });
 
         messages.push("Swift roll!");
 

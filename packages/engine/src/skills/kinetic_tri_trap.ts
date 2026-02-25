@@ -125,7 +125,17 @@ export const KINETIC_TRI_TRAP: SkillDefinition = {
                 effect: 'flash',
                 target: pos,
                 intensity: 'low',
-                color: '#ffaa00'
+                color: '#ffaa00',
+                metadata: {
+                    signature: 'ENV.TRAP.KINETIC.DEPLOY',
+                    family: 'environment',
+                    primitive: 'spawn',
+                    phase: 'impact',
+                    element: 'kinetic',
+                    variant: 'kinetic_tri_trap_deploy',
+                    targetRef: { kind: 'target_hex' },
+                    skillId: 'KINETIC_TRI_TRAP'
+                }
             });
         }
 

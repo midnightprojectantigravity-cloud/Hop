@@ -3,6 +3,7 @@ import type { GameComponent } from './components';
 import { deriveMaxHpFromTrinity, type TrinityStats } from './trinity-resolver';
 import { getTrinityProfile } from './trinity-profiles';
 import { resolveDefaultCombatProfile, type CombatProfile } from './combat-traits';
+import { getEnemyBestiaryEntry, getEnemyBestiarySkillLoadout } from '../data/bestiary';
 
 /**
  * ENTITY FACTORY SYSTEM
@@ -271,6 +272,44 @@ export function createEnemy(config: {
     return entity;
 }
 
+export function createEnemyFromBestiary(config: {
+    id: string;
+    subtype: string;
+    position: Point;
+    hp?: number;
+    maxHp?: number;
+    speed?: number;
+    skills?: string[];
+    weightClass?: WeightClass;
+    enemyType?: 'melee' | 'ranged' | 'boss';
+    trinity?: TrinityStats;
+    actionCooldown?: number;
+}): Actor {
+    const bestiary = getEnemyBestiaryEntry(config.subtype);
+    if (!bestiary) {
+        throw new Error(`Unknown enemy subtype "${config.subtype}" in createEnemyFromBestiary`);
+    }
+
+    const entity = createEnemy({
+        id: config.id,
+        subtype: config.subtype,
+        position: config.position,
+        hp: config.hp ?? bestiary.stats.hp,
+        maxHp: config.maxHp ?? bestiary.stats.maxHp,
+        speed: config.speed ?? bestiary.stats.speed,
+        skills: config.skills ?? getEnemyBestiarySkillLoadout(config.subtype),
+        weightClass: config.weightClass ?? (bestiary.stats.weightClass as WeightClass),
+        enemyType: config.enemyType ?? bestiary.stats.type,
+        trinity: config.trinity ?? bestiary.trinity
+    });
+
+    if (config.actionCooldown !== undefined || bestiary.stats.actionCooldown !== undefined) {
+        entity.actionCooldown = config.actionCooldown ?? bestiary.stats.actionCooldown;
+    }
+
+    return entity;
+}
+
 /**
  * Create a companion entity (falcon today; extensible for future companions).
  */
@@ -315,7 +354,7 @@ export function createCompanion(config: {
             maxHp: 2,
             speed: 50,
             factionId: 'player',
-            skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'],
+            skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
             companionOf: config.ownerId,
             weightClass: 'Standard',
             trinity: config.trinity,
@@ -354,21 +393,9 @@ export function createFalcon(config: {
  * Helper: Get default skill loadout for an enemy type
  */
 export function getEnemySkillLoadout(enemyType: string): string[] {
-    // Base skills all enemies get
-    const baseSkills = ['BASIC_MOVE', 'BASIC_ATTACK'];
+    const bestiarySkills = getEnemyBestiarySkillLoadout(enemyType);
+    if (bestiarySkills.length > 0) return bestiarySkills;
 
-    // Type-specific skills
-    const typeSkills: Record<string, string[]> = {
-        footman: ['AUTO_ATTACK'],
-        sprinter: [],
-        raider: ['DASH'],
-        pouncer: ['GRAPPLE_HOOK'],
-        shieldBearer: ['SHIELD_BASH'],
-        archer: ['SPEAR_THROW'],
-        bomber: ['BOMB_TOSS'],
-        warlock: [],
-        sentinel: ['SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'],
-    };
-
-    return [...baseSkills, ...(typeSkills[enemyType] || [])];
+    // Legacy fallback for unknown/custom subtypes outside the bestiary.
+    return ['BASIC_MOVE'];
 }

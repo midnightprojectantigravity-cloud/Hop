@@ -1,5 +1,6 @@
 import type { GameComponent } from './systems/components';
 import type { SkillID, StatusID, ArchetypeID, JuiceEffectID } from './types/registry';
+import type { JuiceSignaturePayloadV1 } from './types/juice-signature';
 import type { CombatScoreEvent } from './systems/combat-calculator';
 
 /**
@@ -149,8 +150,8 @@ export type AtomicEffect =
     | { type: 'GameOver'; reason: 'PLAYER_DIED' | 'OUT_OF_TIME' };
 
 export interface VisualEvent {
-    type: 'shake' | 'freeze' | 'combat_text' | 'vfx' | 'kinetic_trace';
-    payload: any;
+    type: 'shake' | 'freeze' | 'combat_text' | 'vfx' | 'kinetic_trace' | 'juice_signature';
+    payload: any | JuiceSignaturePayloadV1;
 }
 
 export type SimulationEventType =

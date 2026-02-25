@@ -21,7 +21,23 @@ export const SENTINEL_TELEGRAPH: SkillDefinition = {
         if (!target) return { effects: [], messages: [], consumesTurn: true };
 
         const effects: AtomicEffect[] = [
-            { type: 'Juice', effect: 'combat_text', target, text: 'TELEGRAPH' }
+            {
+                type: 'Juice',
+                effect: 'combat_text',
+                target,
+                text: 'TELEGRAPH',
+                metadata: {
+                    signature: 'UI.TEXT.ARCANE.SENTINEL_TELEGRAPH',
+                    family: 'ui',
+                    primitive: 'text',
+                    phase: 'telegraph',
+                    element: 'arcane',
+                    variant: 'sentinel_telegraph',
+                    targetRef: { kind: 'target_hex' },
+                    skillId: 'SENTINEL_TELEGRAPH',
+                    textTone: 'system'
+                }
+            }
         ];
 
         return {
@@ -36,4 +52,3 @@ export const SENTINEL_TELEGRAPH: SkillDefinition = {
     upgrades: {},
     scenarios: getSkillScenarios('SENTINEL_TELEGRAPH')
 };
-

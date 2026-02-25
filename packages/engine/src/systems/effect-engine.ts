@@ -14,6 +14,7 @@ import { computeStatusDuration, extractTrinityStats } from './combat-calculator'
 import { getIncomingDamageMultiplier, getOutgoingDamageMultiplier } from './combat-traits';
 import { appendTaggedMessage, appendTaggedMessages, tagMessage } from './engine-messages';
 import { resolveLifoStack } from './resolution-stack';
+import { appendJuiceSignature, buildJuiceSequenceId, getHexEdgeContactWorld, getLegacyJuiceSignatureTemplate } from './juice-signature';
 
 const addCorpseTraitAt = (state: GameState, position: Point): GameState => {
     const key = pointToKey(position);
@@ -167,6 +168,7 @@ const resolveActorAt = (state: GameState, pos?: Point | null): Actor | undefined
 };
 
 const HAZARD_REASONS = new Set(['lava_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage', 'burning', 'oil_explosion']);
+const LEGACY_MIRRORED_JUICE_IDS = new Set(['impact', 'flash', 'spearTrail', 'shake']);
 
 const scaleCombatProfileDamage = (
     state: GameState,
@@ -980,9 +982,42 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
             const targetId = effect.target;
             const actor = targetId === nextState.player.id ? nextState.player : nextState.enemies.find(e => e.id === targetId);
             if (actor) {
-                nextState.visualEvents = [...(nextState.visualEvents || []),
-                { type: 'vfx', payload: { type: 'impact', position: actor.position } }
-                ];
+                const collisionDir = effect.direction;
+                const projectedContactHex = collisionDir
+                    ? {
+                        q: actor.position.q + collisionDir.q,
+                        r: actor.position.r + collisionDir.r,
+                        s: actor.position.s + collisionDir.s
+                    }
+                    : undefined;
+                const contactWorld = projectedContactHex ? getHexEdgeContactWorld(actor.position, projectedContactHex) : undefined;
+                nextState = appendJuiceSignature(nextState, {
+                    template: {
+                        signature: collisionDir ? 'ENV.COLLISION.KINETIC.IMPACT' : 'ATK.STRIKE.PHYSICAL.IMPACT',
+                        family: collisionDir ? 'environment' : 'attack',
+                        primitive: collisionDir ? 'collision' : 'strike',
+                        phase: 'impact',
+                        element: collisionDir ? 'kinetic' : 'physical',
+                        variant: collisionDir ? 'impact' : 'impact',
+                        sourceRef: { kind: 'source_actor' },
+                        targetRef: { kind: 'target_actor' },
+                        contactRef: { kind: 'contact_world' }
+                    },
+                    sourceId: context.sourceId,
+                    targetId,
+                    sourceHex: resolveActorById(nextState, context.sourceId)?.position,
+                    targetHex: actor.position,
+                    contactHex: projectedContactHex,
+                    contactWorld,
+                    direction: effect.direction,
+                    intensity: effect.damage > 1 ? 'high' : 'medium',
+                    flags: { blocked: Boolean(collisionDir) },
+                    meta: {
+                        legacyJuiceId: 'impact',
+                        legacyMirrored: true,
+                        reason: 'impact'
+                    }
+                });
                 if (effect.damage > 0) {
                     if (targetId === nextState.player.id) {
                         nextState.player = applyDamage(nextState.player, effect.damage);
@@ -1008,8 +1043,113 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
         }
 
         case 'Juice': {
+            const juiceMeta = (effect.metadata || {}) as Record<string, any>;
+            const signaturePhase = (typeof juiceMeta.phase === 'string' ? juiceMeta.phase : undefined) as any;
+            const legacyTemplate = getLegacyJuiceSignatureTemplate(effect.effect, {
+                color: effect.color,
+                text: effect.text
+            });
+            const template = {
+                ...legacyTemplate,
+                ...(typeof juiceMeta.signature === 'string' ? { signature: juiceMeta.signature } : {}),
+                ...(typeof juiceMeta.family === 'string' ? { family: juiceMeta.family } : {}),
+                ...(typeof juiceMeta.primitive === 'string' ? { primitive: juiceMeta.primitive } : {}),
+                ...(typeof juiceMeta.element === 'string' ? { element: juiceMeta.element } : {}),
+                ...(typeof juiceMeta.variant === 'string' ? { variant: juiceMeta.variant } : {}),
+                ...(typeof juiceMeta.sourceRef === 'object' && juiceMeta.sourceRef ? { sourceRef: juiceMeta.sourceRef } : {}),
+                ...(typeof juiceMeta.targetRef === 'object' && juiceMeta.targetRef ? { targetRef: juiceMeta.targetRef } : {}),
+                ...(typeof juiceMeta.contactRef === 'object' && juiceMeta.contactRef ? { contactRef: juiceMeta.contactRef } : {})
+            } as typeof legacyTemplate;
+            const sourceActor = resolveActorById(nextState, context.sourceId);
+            let signatureTargetId: string | undefined;
+            let signatureTargetHex: Point | undefined;
+            if (typeof effect.target === 'string') {
+                signatureTargetId = effect.target === 'targetActor' ? (context.targetId || undefined) : effect.target;
+                signatureTargetHex = resolveActorById(nextState, signatureTargetId)?.position;
+            } else if (effect.target) {
+                signatureTargetHex = effect.target;
+                signatureTargetId = resolveActorAt(nextState, effect.target)?.id;
+            } else if (context.targetId) {
+                signatureTargetId = context.targetId;
+                signatureTargetHex = resolveActorById(nextState, context.targetId)?.position;
+            }
+
+            const contactHex = (juiceMeta.contactHex && typeof juiceMeta.contactHex.q === 'number')
+                ? juiceMeta.contactHex as Point
+                : undefined;
+            let contactWorld = (juiceMeta.contactWorld && typeof juiceMeta.contactWorld.x === 'number')
+                ? juiceMeta.contactWorld as { x: number; y: number }
+                : undefined;
+            if (!contactWorld) {
+                const contactFromHex = (juiceMeta.contactFromHex && typeof juiceMeta.contactFromHex.q === 'number')
+                    ? juiceMeta.contactFromHex as Point
+                    : undefined;
+                const contactToHex = (juiceMeta.contactToHex && typeof juiceMeta.contactToHex.q === 'number')
+                    ? juiceMeta.contactToHex as Point
+                    : undefined;
+                contactWorld = getHexEdgeContactWorld(contactFromHex, contactToHex);
+            }
+
+            nextState = appendJuiceSignature(nextState, {
+                template,
+                sourceId: context.sourceId,
+                targetId: signatureTargetId,
+                skillId: typeof juiceMeta.skillId === 'string' ? juiceMeta.skillId : undefined,
+                reason: typeof juiceMeta.reason === 'string' ? juiceMeta.reason : undefined,
+                sourceHex: sourceActor?.position,
+                targetHex: signatureTargetHex,
+                contactHex,
+                contactWorld,
+                path: effect.path,
+                direction: effect.direction,
+                phase: signaturePhase,
+                sequenceId: typeof juiceMeta.sequenceId === 'string'
+                    ? juiceMeta.sequenceId
+                    : buildJuiceSequenceId(nextState, {
+                        sourceId: context.sourceId,
+                        skillId: typeof juiceMeta.skillId === 'string' ? juiceMeta.skillId : undefined,
+                        phase: (signaturePhase || template.phase),
+                        salt: effect.effect
+                    }),
+                intensity: effect.intensity,
+                text: effect.text ? {
+                    value: effect.text,
+                    tone: (typeof juiceMeta.textTone === 'string' ? juiceMeta.textTone : 'system') as any,
+                    color: effect.color
+                } : undefined,
+                timing: (typeof juiceMeta.timing === 'object' && juiceMeta.timing)
+                    ? juiceMeta.timing
+                    : effect.duration ? { durationMs: effect.duration, ttlMs: effect.duration } : undefined,
+                camera: (typeof juiceMeta.camera === 'object' && juiceMeta.camera)
+                    ? juiceMeta.camera
+                    : effect.effect === 'shake'
+                    ? { shake: effect.intensity || 'medium' }
+                    : effect.effect === 'freeze'
+                        ? { freezeMs: Math.max(0, Number(effect.duration || 80)) }
+                        : undefined,
+                area: (typeof juiceMeta.area === 'object' && juiceMeta.area) ? juiceMeta.area : undefined,
+                flags: (typeof juiceMeta.flags === 'object' && juiceMeta.flags) ? juiceMeta.flags : undefined,
+                meta: {
+                    legacyJuiceId: effect.effect,
+                    legacyMirrored: LEGACY_MIRRORED_JUICE_IDS.has(effect.effect),
+                    ...(typeof juiceMeta.statusId === 'string' ? { statusId: juiceMeta.statusId } : {})
+                }
+            });
+
             if (effect.effect === 'combat_text' && effect.text) {
                 nextState.message = appendTaggedMessage(nextState.message, effect.text, 'VERBOSE', 'SYSTEM');
+            }
+            if (effect.effect === 'shake') {
+                nextState.visualEvents = [...(nextState.visualEvents || []), {
+                    type: 'shake',
+                    payload: { intensity: effect.intensity || 'medium', direction: effect.direction }
+                }];
+            }
+            if (effect.effect === 'freeze') {
+                nextState.visualEvents = [...(nextState.visualEvents || []), {
+                    type: 'freeze',
+                    payload: { durationMs: Math.max(0, Number(effect.duration || 80)) }
+                }];
             }
             if (effect.effect === 'impact' && effect.target) {
                 const targetPos = typeof effect.target === 'string'

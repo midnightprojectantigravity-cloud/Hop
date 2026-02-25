@@ -56,7 +56,23 @@ export const SNEAK_ATTACK: SkillDefinition = {
         });
 
         if (isStealthed) {
-            effects.push({ type: 'Juice', effect: 'flash', target, color: '#ff0000' });
+            effects.push({
+                type: 'Juice',
+                effect: 'flash',
+                target,
+                color: '#ff0000',
+                metadata: {
+                    signature: 'ATK.STRIKE.SHADOW.SNEAK_ATTACK',
+                    family: 'attack',
+                    primitive: 'strike',
+                    phase: 'impact',
+                    element: 'shadow',
+                    variant: 'sneak_attack',
+                    targetRef: { kind: 'target_hex' },
+                    skillId: 'SNEAK_ATTACK',
+                    flags: { crit: true }
+                }
+            });
             messages.push("SNEAK ATTACK!");
         } else {
             messages.push("Sneak attack (No stealth bonus).");

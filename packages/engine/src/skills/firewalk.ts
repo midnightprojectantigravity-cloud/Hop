@@ -54,7 +54,22 @@ export const FIREWALK: SkillDefinition = {
         // Grant Immunity
         effects.push({ type: 'ApplyStatus', target: 'self', status: 'fire_immunity', duration: 2 });
 
-        effects.push({ type: 'Juice', effect: 'flash', target, color: '#ff8800' });
+        effects.push({
+            type: 'Juice',
+            effect: 'flash',
+            target,
+            color: '#ff8800',
+            metadata: {
+                signature: 'MOVE.BLINK.FIRE.FIREWALK',
+                family: 'movement',
+                primitive: 'blink',
+                phase: 'impact',
+                element: 'fire',
+                variant: 'firewalk',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'FIREWALK'
+            }
+        });
         messages.push("Firewalk!");
 
         return {

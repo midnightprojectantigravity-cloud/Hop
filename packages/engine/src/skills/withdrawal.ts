@@ -128,7 +128,22 @@ export const WITHDRAWAL: SkillDefinition = {
 
         // 1. Quick shot
         effects.push({ type: 'Damage', target: targetActor.id, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
-        effects.push({ type: 'Juice', effect: 'impact', target: target });
+        effects.push({
+            type: 'Juice',
+            effect: 'impact',
+            target: target,
+            metadata: {
+                signature: 'ATK.SHOOT.PHYSICAL.WITHDRAWAL',
+                family: 'attack',
+                primitive: 'shoot',
+                phase: 'impact',
+                element: 'physical',
+                variant: 'withdrawal_shot',
+                sourceRef: { kind: 'source_actor' },
+                targetRef: { kind: 'target_hex' },
+                skillId: 'WITHDRAWAL'
+            }
+        });
         messages.push(`Withdrawal shot hits ${targetActor.subtype || 'enemy'}!`);
 
         // 2. Calculate backroll
@@ -146,7 +161,18 @@ export const WITHDRAWAL: SkillDefinition = {
                 type: 'Juice',
                 effect: 'dashBlur',
                 target: safeSpot,
-                path: [attacker.position, safeSpot]
+                path: [attacker.position, safeSpot],
+                metadata: {
+                    signature: 'MOVE.DASH.NEUTRAL.WITHDRAWAL_BACKROLL',
+                    family: 'movement',
+                    primitive: 'dash',
+                    phase: 'travel',
+                    element: 'neutral',
+                    variant: 'withdrawal_backroll',
+                    sourceRef: { kind: 'source_actor' },
+                    targetRef: { kind: 'target_hex' },
+                    skillId: 'WITHDRAWAL'
+                }
             });
             messages.push('Backroll!');
         } else {

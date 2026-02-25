@@ -90,7 +90,24 @@ export const SHIELD_BASH: SkillDefinition = {
                 // Collision!
                 effects.push({ type: 'ApplyStatus', target: targetActor.id, status: 'stunned', duration: 1 });
                 messages.push(`Bashed ${targetActor.subtype || 'enemy'} into obstacle!`);
-                effects.push({ type: 'Juice', effect: 'shake' });
+                effects.push({
+                    type: 'Juice',
+                    effect: 'shake',
+                    target: currentTargetPos,
+                    direction: dirVec,
+                    intensity: 'medium',
+                    metadata: {
+                        signature: 'ENV.COLLISION.KINETIC.SHIELD_BASH',
+                        family: 'environment',
+                        primitive: 'collision',
+                        phase: 'impact',
+                        element: 'kinetic',
+                        variant: 'shield_bash_collision',
+                        targetRef: { kind: 'target_hex' },
+                        skillId: 'SHIELD_BASH',
+                        camera: { shake: 'medium', kick: 'medium' }
+                    }
+                });
 
                 if (blockingActor && hasWallSlam) {
                     resolveBash(currentTargetPos, pushDest);

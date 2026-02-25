@@ -212,7 +212,18 @@ export const SPEAR_THROW: SkillDefinition = {
                 type: 'Juice',
                 effect: 'spearTrail',
                 path: returnLine,
-                intensity: 'medium'
+                intensity: 'medium',
+                metadata: {
+                    signature: 'ATK.SHOOT.PHYSICAL.SPEAR_RETURN',
+                    family: 'attack',
+                    primitive: 'shoot',
+                    phase: 'travel',
+                    element: 'physical',
+                    variant: 'spear_return',
+                    sourceRef: { kind: 'source_hex' },
+                    targetRef: { kind: 'target_hex' },
+                    skillId: 'SPEAR_THROW'
+                }
             });
         }
 

@@ -1,5 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { getNeighbors, hexEquals } from '../hex';
+import { getDirectionFromTo, getNeighbors, hexDirection, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
@@ -100,8 +100,114 @@ export const BASIC_ATTACK: SkillDefinition = {
         });
         const damage = combat.finalPower;
 
+        const netDamage = Math.max(0, damage - (targetActor.temporaryArmor || 0));
+        const predictedLethal = (targetActor.hp - netDamage) <= 0;
+        const attackDirIdx = getDirectionFromTo(attacker.position, targetActor.position);
+        const attackDirVec = attackDirIdx >= 0 ? hexDirection(attackDirIdx) : undefined;
+        const strikeIntensity: 'low' | 'medium' | 'high' | 'extreme' =
+            predictedLethal ? 'extreme'
+                : damage >= 4 ? 'high'
+                    : damage >= 2 ? 'medium'
+                        : 'low';
+
+        // Four-phase signature sequence for strike readability (migration-safe via Juice metadata).
+        effects.push({
+            type: 'Juice',
+            effect: 'lightImpact',
+            target: 'targetActor',
+            intensity: 'low',
+            metadata: {
+                signature: 'ATK.STRIKE.PHYSICAL.BASIC_ATTACK',
+                family: 'attack',
+                primitive: 'strike',
+                phase: 'anticipation',
+                element: 'physical',
+                variant: 'basic_attack',
+                sourceRef: { kind: 'source_actor' },
+                targetRef: { kind: 'target_actor' },
+                skillId: 'BASIC_ATTACK',
+                timing: { delayMs: 0, durationMs: 110, ttlMs: 140 }
+            }
+        });
+        effects.push({
+            type: 'Juice',
+            effect: 'dashBlur',
+            target: targetActor.id,
+            path: [attacker.position, targetActor.position],
+            intensity: strikeIntensity === 'extreme' ? 'high' : 'medium',
+            metadata: {
+                signature: 'ATK.STRIKE.PHYSICAL.BASIC_ATTACK',
+                family: 'attack',
+                primitive: 'strike',
+                phase: 'travel',
+                element: 'physical',
+                variant: 'basic_attack',
+                sourceRef: { kind: 'source_actor' },
+                targetRef: { kind: 'target_actor' },
+                skillId: 'BASIC_ATTACK',
+                timing: { delayMs: 110, durationMs: 70, ttlMs: 100 }
+            }
+        });
+
+        // Emit impact juice before Damage so target anchors still resolve on lethal first hits.
+        effects.push({
+            type: 'Juice',
+            effect: 'heavyImpact',
+            target: targetActor.id,
+            intensity: strikeIntensity,
+            direction: attackDirVec,
+            metadata: {
+                signature: 'ATK.STRIKE.PHYSICAL.BASIC_ATTACK',
+                family: 'attack',
+                primitive: 'strike',
+                phase: 'impact',
+                element: 'physical',
+                variant: 'basic_attack',
+                sourceRef: { kind: 'source_actor' },
+                targetRef: { kind: 'target_actor' },
+                ...(attackDirVec ? {
+                    contactRef: { kind: 'contact_world' },
+                    contactHex: targetActor.position,
+                    contactToHex: targetActor.position,
+                    contactFromHex: attacker.position
+                } : {}),
+                skillId: 'BASIC_ATTACK',
+                camera: {
+                    kick: strikeIntensity === 'extreme'
+                        ? 'heavy'
+                        : strikeIntensity === 'high'
+                            ? 'medium'
+                            : 'light',
+                    freezeMs: strikeIntensity === 'extreme' ? 80 : 55
+                },
+                timing: { delayMs: 180, durationMs: 90, ttlMs: 150 },
+                flags: {
+                    lethal: predictedLethal,
+                    ...(strikeIntensity === 'extreme' ? { crit: true } : {})
+                }
+            }
+        });
         // Apply damage
-        effects.push({ type: 'Damage', target: 'targetActor', amount: damage, scoreEvent: combat.scoreEvent });
+        effects.push({ type: 'Damage', target: 'targetActor', amount: damage, reason: 'basic_attack', scoreEvent: combat.scoreEvent });
+        effects.push({
+            type: 'Juice',
+            effect: 'lightImpact',
+            target: targetActor.id,
+            intensity: 'low',
+            metadata: {
+                signature: 'ATK.STRIKE.PHYSICAL.BASIC_ATTACK',
+                family: 'attack',
+                primitive: 'strike',
+                phase: 'aftermath',
+                element: 'physical',
+                variant: 'basic_attack',
+                sourceRef: { kind: 'source_actor' },
+                targetRef: { kind: 'target_actor' },
+                skillId: 'BASIC_ATTACK',
+                timing: { delayMs: 280, durationMs: 130, ttlMs: 170 }
+            }
+        });
+
         const attackerName = attacker.type === 'player'
             ? 'You'
             : `${attacker.subtype || 'enemy'}#${attacker.id}`;
@@ -112,7 +218,6 @@ export const BASIC_ATTACK: SkillDefinition = {
 
         // Vampiric upgrade: heal on kill (TODO: Add Heal effect type when implemented)
         if (activeUpgrades.includes('VAMPIRIC')) {
-            const netDamage = Math.max(0, damage - (targetActor.temporaryArmor || 0));
             if ((targetActor.hp - netDamage) <= 0) {
                 const vampiricHeal = 1;
                 effects.push({ type: 'Heal', target: attacker.id, amount: vampiricHeal });

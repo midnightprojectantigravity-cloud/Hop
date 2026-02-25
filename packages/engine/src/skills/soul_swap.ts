@@ -37,8 +37,38 @@ export const SOUL_SWAP: SkillDefinition = {
         effects.push({ type: 'Displacement', target: attacker.id, destination: target });
         effects.push({ type: 'Displacement', target: minion.id, destination: attacker.position });
 
-        effects.push({ type: 'Juice', effect: 'flash', target, color: '#330066' });
-        effects.push({ type: 'Juice', effect: 'flash', target: attacker.position, color: '#330066' });
+        effects.push({
+            type: 'Juice',
+            effect: 'flash',
+            target,
+            color: '#330066',
+            metadata: {
+                signature: 'MOVE.BLINK.ARCANE.SOUL_SWAP_ARRIVE',
+                family: 'movement',
+                primitive: 'blink',
+                phase: 'instant',
+                element: 'arcane',
+                variant: 'soul_swap_arrival',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'SOUL_SWAP'
+            }
+        });
+        effects.push({
+            type: 'Juice',
+            effect: 'flash',
+            target: attacker.position,
+            color: '#330066',
+            metadata: {
+                signature: 'MOVE.BLINK.ARCANE.SOUL_SWAP_DEPART',
+                family: 'movement',
+                primitive: 'blink',
+                phase: 'instant',
+                element: 'arcane',
+                variant: 'soul_swap_departure',
+                targetRef: { kind: 'target_hex' },
+                skillId: 'SOUL_SWAP'
+            }
+        });
 
         messages.push("Soul Swapped!");
 

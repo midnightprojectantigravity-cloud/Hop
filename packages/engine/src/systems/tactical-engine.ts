@@ -2,6 +2,7 @@ import type { Intent } from '../types/intent';
 import type { GameState, Actor, AtomicEffect, Point } from '../types';
 import { SkillRegistry } from '../skillRegistry';
 import { getActorAt } from '../helpers';
+import { isFreeMoveMode } from './free-move';
 
 /**
  * Layer 3: The Tactical Executor (The "Body").
@@ -51,7 +52,8 @@ export class TacticalEngine {
         }
 
         const actorSkill = actor.activeSkills.find(s => s.id === intent.skillId);
-        if (actorSkill && (actorSkill.currentCooldown || 0) > 0) {
+        const cooldownsBypassed = actor.factionId === 'player' && isFreeMoveMode(gameState);
+        if (!cooldownsBypassed && actorSkill && (actorSkill.currentCooldown || 0) > 0) {
             return {
                 effects: [],
                 messages: [`${intent.skillId} is on cooldown (${actorSkill.currentCooldown}).`],
@@ -86,7 +88,7 @@ export class TacticalEngine {
         const execution = skillDef!.execute(gameState, actor, targetHex, upgrades);
         const executionEffects = [...effects, ...execution.effects];
 
-        if (execution.consumesTurn !== false) {
+        if (execution.consumesTurn !== false && !cooldownsBypassed) {
             const baseCooldown = skillDef!.baseVariables.cooldown || 0;
             let cooldown = baseCooldown;
             for (const upId of upgrades) {

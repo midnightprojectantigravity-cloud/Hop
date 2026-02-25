@@ -1,4 +1,5 @@
 import type { BaseUnitDefinition, CompositeSkillDefinition, TacticalDataPack } from '../contracts';
+import { getEnemyBestiaryEntry, type EnemySubtypeId } from '../bestiary';
 
 type UnitWeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
 
@@ -84,6 +85,36 @@ const createEnemyUnit = (config: {
         isVisible: true
     }
 });
+
+const MVP_PACK_UNIT_IDS: Record<EnemySubtypeId, string> = {
+    footman: 'ENEMY_FOOTMAN_V1',
+    sprinter: 'ENEMY_SPRINTER_V1',
+    raider: 'ENEMY_RAIDER_V1',
+    pouncer: 'ENEMY_POUNCER_V1',
+    shieldBearer: 'ENEMY_SHIELDBEARER_V1',
+    archer: 'ENEMY_ARCHER_V1',
+    bomber: 'ENEMY_BOMBER_V1',
+    warlock: 'ENEMY_WARLOCK_V1',
+    sentinel: 'ENEMY_SENTINEL_V1'
+};
+
+const createEnemyUnitFromBestiary = (
+    subtype: EnemySubtypeId,
+    overrides: Partial<Pick<Parameters<typeof createEnemyUnit>[0], 'baseSkills' | 'passiveSkills'>> = {}
+): BaseUnitDefinition => {
+    const def = getEnemyBestiaryEntry(subtype);
+    if (!def) throw new Error(`Missing bestiary entry for ${subtype}`);
+    return createEnemyUnit({
+        id: MVP_PACK_UNIT_IDS[subtype],
+        name: def.name,
+        subtype: def.subtype,
+        weightClass: def.stats.weightClass as UnitWeightClass,
+        speed: def.stats.speed,
+        trinity: def.trinity,
+        baseSkills: overrides.baseSkills ?? def.skills.base,
+        passiveSkills: overrides.passiveSkills ?? def.skills.passive
+    });
+};
 
 const SHIELD_BASH_V1: CompositeSkillDefinition = {
     version: '1.0.0',
@@ -173,95 +204,15 @@ const SHIELD_BASH_V1: CompositeSkillDefinition = {
 export const TACTICAL_CORE_MVP_PACK: TacticalDataPack = {
     version: '1.0.0',
     units: [
-        createEnemyUnit({
-            id: 'ENEMY_FOOTMAN_V1',
-            name: 'Footman',
-            subtype: 'footman',
-            weightClass: 'Standard',
-            speed: 1,
-            trinity: { body: 0, mind: 0, instinct: 0 },
-            baseSkills: ['BASIC_MOVE', 'BASIC_ATTACK'],
-            passiveSkills: ['AUTO_ATTACK']
-        }),
-        createEnemyUnit({
-            id: 'ENEMY_SPRINTER_V1',
-            name: 'Sprinter',
-            subtype: 'sprinter',
-            weightClass: 'Standard',
-            speed: 2,
-            trinity: { body: 0, mind: 0, instinct: 0 },
-            baseSkills: ['BASIC_MOVE', 'BASIC_ATTACK']
-        }),
-        createEnemyUnit({
-            id: 'ENEMY_RAIDER_V1',
-            name: 'Raider',
-            subtype: 'raider',
-            weightClass: 'Standard',
-            speed: 1,
-            trinity: { body: 0.4, mind: 0, instinct: 0.2 },
-            baseSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'DASH'],
-            passiveSkills: ['AUTO_ATTACK']
-        }),
-        createEnemyUnit({
-            id: 'ENEMY_POUNCER_V1',
-            name: 'Pouncer',
-            subtype: 'pouncer',
-            weightClass: 'Standard',
-            speed: 1,
-            trinity: { body: 0.4, mind: 0, instinct: 0.2 },
-            baseSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'GRAPPLE_HOOK'],
-            passiveSkills: ['AUTO_ATTACK']
-        }),
-        createEnemyUnit({
-            id: 'ENEMY_SHIELDBEARER_V1',
-            name: 'Shield Bearer',
-            subtype: 'shieldBearer',
-            weightClass: 'Heavy',
-            speed: 1,
-            trinity: { body: 1, mind: 0, instinct: 0.4 },
-            baseSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'SHIELD_BASH'],
-            passiveSkills: ['AUTO_ATTACK']
-        }),
-        createEnemyUnit({
-            id: 'ENEMY_ARCHER_V1',
-            name: 'Archer',
-            subtype: 'archer',
-            weightClass: 'Standard',
-            speed: 1,
-            trinity: { body: 0.2, mind: 0, instinct: 0.2 },
-            baseSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'SPEAR_THROW'],
-            passiveSkills: ['AUTO_ATTACK']
-        }),
-        createEnemyUnit({
-            id: 'ENEMY_BOMBER_V1',
-            name: 'Bomber',
-            subtype: 'bomber',
-            weightClass: 'Standard',
-            speed: 1,
-            trinity: { body: 0.4, mind: 0.2, instinct: 0.2 },
-            baseSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'BOMB_TOSS'],
-            passiveSkills: ['AUTO_ATTACK']
-        }),
-        createEnemyUnit({
-            id: 'ENEMY_WARLOCK_V1',
-            name: 'Warlock',
-            subtype: 'warlock',
-            weightClass: 'Standard',
-            speed: 1,
-            trinity: { body: 0.4, mind: 0.6, instinct: 0.2 },
-            baseSkills: ['BASIC_MOVE', 'BASIC_ATTACK'],
-            passiveSkills: ['AUTO_ATTACK']
-        }),
-        createEnemyUnit({
-            id: 'ENEMY_SENTINEL_V1',
-            name: 'Sentinel',
-            subtype: 'sentinel',
-            weightClass: 'Heavy',
-            speed: 1,
-            trinity: { body: 4, mind: 2, instinct: 2 },
-            baseSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'],
-            passiveSkills: ['AUTO_ATTACK']
-        })
+        createEnemyUnitFromBestiary('footman', { passiveSkills: [] }),
+        createEnemyUnitFromBestiary('sprinter'),
+        createEnemyUnitFromBestiary('raider', { baseSkills: ['DASH'], passiveSkills: [] }),
+        createEnemyUnitFromBestiary('pouncer', { baseSkills: ['BASIC_MOVE', 'GRAPPLE_HOOK'], passiveSkills: [] }),
+        createEnemyUnitFromBestiary('shieldBearer', { baseSkills: ['BASIC_MOVE', 'SHIELD_BASH'], passiveSkills: [] }),
+        createEnemyUnitFromBestiary('archer', { baseSkills: ['BASIC_MOVE', 'ARCHER_SHOT'], passiveSkills: [] }),
+        createEnemyUnitFromBestiary('bomber', { baseSkills: ['BASIC_MOVE', 'BOMB_TOSS'], passiveSkills: [] }),
+        createEnemyUnitFromBestiary('warlock', { baseSkills: ['BASIC_MOVE', 'SENTINEL_BLAST'], passiveSkills: [] }),
+        createEnemyUnitFromBestiary('sentinel', { baseSkills: ['BASIC_MOVE', 'SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'], passiveSkills: [] })
     ],
     skills: [SHIELD_BASH_V1]
 };

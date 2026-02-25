@@ -1,5 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexEquals, getNeighbors } from '../hex';
+import { getDirectionFromTo, hexDirection, hexEquals, getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
 import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
@@ -80,6 +80,114 @@ export const AUTO_ATTACK: SkillDefinition = {
         // Calculate damage
         let damage = 1;
         if (activeUpgrades.includes('HEAVY_HANDS')) damage += 1;
+        let strikeSeqIndex = 0;
+
+        const pushAutoAttackStrikeJuice = (
+            targetActor: Actor,
+            targetPos: Point,
+            finalDamage: number
+        ) => {
+            const attackDirIdx = getDirectionFromTo(attacker.position, targetPos);
+            const attackDirVec = attackDirIdx >= 0 ? hexDirection(attackDirIdx) : undefined;
+            const netDamage = Math.max(0, finalDamage - (targetActor.temporaryArmor || 0));
+            const predictedLethal = (targetActor.hp - netDamage) <= 0;
+            const strikeIntensity: 'low' | 'medium' | 'high' | 'extreme' =
+                predictedLethal ? 'extreme'
+                    : finalDamage >= 4 ? 'high'
+                        : finalDamage >= 2 ? 'medium'
+                            : 'low';
+            const delayBase = strikeSeqIndex * 80;
+            strikeSeqIndex += 1;
+
+            effects.push({
+                type: 'Juice',
+                effect: 'lightImpact',
+                target: targetActor.id,
+                intensity: 'low',
+                metadata: {
+                    signature: 'ATK.STRIKE.PHYSICAL.AUTO_ATTACK',
+                    family: 'attack',
+                    primitive: 'strike',
+                    phase: 'anticipation',
+                    element: 'physical',
+                    variant: 'auto_attack',
+                    sourceRef: { kind: 'source_actor' },
+                    targetRef: { kind: 'target_actor' },
+                    skillId: 'AUTO_ATTACK',
+                    timing: { delayMs: delayBase, durationMs: 70, ttlMs: 90 }
+                }
+            });
+
+            effects.push({
+                type: 'Juice',
+                effect: 'dashBlur',
+                target: targetActor.id,
+                path: [attacker.position, targetPos],
+                intensity: strikeIntensity === 'extreme' ? 'high' : 'medium',
+                metadata: {
+                    signature: 'ATK.STRIKE.PHYSICAL.AUTO_ATTACK',
+                    family: 'attack',
+                    primitive: 'strike',
+                    phase: 'travel',
+                    element: 'physical',
+                    variant: 'auto_attack',
+                    sourceRef: { kind: 'source_actor' },
+                    targetRef: { kind: 'target_actor' },
+                    skillId: 'AUTO_ATTACK',
+                    timing: { delayMs: delayBase + 70, durationMs: 50, ttlMs: 80 }
+                }
+            });
+
+            effects.push({
+                type: 'Juice',
+                effect: 'heavyImpact',
+                target: targetActor.id,
+                intensity: strikeIntensity,
+                direction: attackDirVec,
+                metadata: {
+                    signature: 'ATK.STRIKE.PHYSICAL.AUTO_ATTACK',
+                    family: 'attack',
+                    primitive: 'strike',
+                    phase: 'impact',
+                    element: 'physical',
+                    variant: 'auto_attack',
+                    sourceRef: { kind: 'source_actor' },
+                    targetRef: { kind: 'target_actor' },
+                    ...(attackDirVec ? {
+                        contactRef: { kind: 'contact_world' },
+                        contactHex: targetPos,
+                        contactToHex: targetPos,
+                        contactFromHex: attacker.position
+                    } : {}),
+                    skillId: 'AUTO_ATTACK',
+                    camera: {
+                        kick: strikeIntensity === 'extreme' ? 'medium' : 'light',
+                        freezeMs: strikeIntensity === 'extreme' ? 50 : 35
+                    },
+                    timing: { delayMs: delayBase + 120, durationMs: 60, ttlMs: 120 },
+                    flags: { lethal: predictedLethal }
+                }
+            });
+
+            effects.push({
+                type: 'Juice',
+                effect: 'lightImpact',
+                target: targetActor.id,
+                intensity: 'low',
+                metadata: {
+                    signature: 'ATK.STRIKE.PHYSICAL.AUTO_ATTACK',
+                    family: 'attack',
+                    primitive: 'strike',
+                    phase: 'aftermath',
+                    element: 'physical',
+                    variant: 'auto_attack',
+                    sourceRef: { kind: 'source_actor' },
+                    targetRef: { kind: 'target_actor' },
+                    skillId: 'AUTO_ATTACK',
+                    timing: { delayMs: delayBase + 180, durationMs: 80, ttlMs: 110 }
+                }
+            });
+        };
 
         // WORLD-CLASS LOGIC: Identity Persistence
         // This list represents "Actors that were adjacent at the start of the action".
@@ -119,7 +227,8 @@ export const AUTO_ATTACK: SkillDefinition = {
                     scaling: [{ attribute: 'body', coefficient: 0.4 }],
                     statusMultipliers: []
                 });
-                effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
+                pushAutoAttackStrikeJuice(targetActor, neighborPos, combat.finalPower);
+                effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, reason: 'auto_attack', scoreEvent: combat.scoreEvent });
 
                 const attackerName = attacker.factionId === 'player'
                     ? 'You'
@@ -164,7 +273,8 @@ export const AUTO_ATTACK: SkillDefinition = {
                     scaling: [{ attribute: 'body', coefficient: 0.4 }],
                     statusMultipliers: []
                 });
-                effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
+                pushAutoAttackStrikeJuice(targetActor, neighborPos, combat.finalPower);
+                effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, reason: 'auto_attack', scoreEvent: combat.scoreEvent });
 
                 const attackerName = attacker.factionId === 'player'
                     ? 'You'

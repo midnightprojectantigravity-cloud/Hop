@@ -11,6 +11,7 @@ import { TileResolver } from './tile-effects';
 import { pointToKey } from '../hex';
 import { SpatialSystem } from './SpatialSystem';
 import { UnifiedTileService } from './unified-tile-service';
+import { SkillRegistry } from '../skillRegistry';
 
 
 /**
@@ -538,11 +539,26 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
         }
 
         case 'archer': {
-            // Archer AI
-            const isInLine = (bt.position.q === playerMovedTo.q) || (bt.position.r === playerMovedTo.r) || (bt.position.s === playerMovedTo.s);
-            if (isInLine && dist > 1 && dist <= 4) {
+            const rangedIntentSkill = bt.activeSkills?.some(s => s.id === 'ARCHER_SHOT')
+                ? 'ARCHER_SHOT'
+                : 'SPEAR_THROW';
+            const rangedSkillDef = SkillRegistry.get(rangedIntentSkill);
+            const canShootPlayer =
+                dist > 1
+                && !!rangedSkillDef?.getValidTargets
+                && rangedSkillDef.getValidTargets(state, bt.position).some(p => hexEquals(p, playerMovedTo));
+
+            if (canShootPlayer) {
                 return {
-                    entity: { ...bt, intent: 'SPEAR_THROW', intentPosition: { ...playerMovedTo } },
+                    entity: { ...bt, intent: rangedIntentSkill, intentPosition: { ...playerMovedTo } },
+                    nextState: state
+                };
+            }
+
+            // If forced adjacent, use melee fallback instead of idling behind a failed ranged plan.
+            if (dist === 1 && bt.activeSkills?.some(s => s.id === 'BASIC_ATTACK')) {
+                return {
+                    entity: { ...bt, intent: 'BASIC_ATTACK', intentPosition: { ...playerMovedTo } },
                     nextState: state
                 };
             }

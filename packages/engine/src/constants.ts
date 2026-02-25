@@ -3,6 +3,7 @@
  * Central repository for stats, types, and grid configuration.
  * TODO: Move balance-heavy stats (ENEMY_STATS, INITIAL_PLAYER_STATS) to an external JSON for easier modding.
  */
+import { ENEMY_BESTIARY } from './data/bestiary';
 // Grid configuration for mobile portrait (9 wide × 11 tall)
 export const GRID_WIDTH = 7;   // Tiles wide
 export const GRID_HEIGHT = 9;  // Tiles tall
@@ -64,24 +65,33 @@ export const STATUS_REGISTRY: Record<string, { tickWindow: 'START_OF_TURN' | 'EN
     time_bomb: { tickWindow: 'END_OF_TURN' },
 };
 
-// Enemy stats with simplified tiers
+const bestiaryStat = <T extends keyof typeof ENEMY_BESTIARY>(subtype: T) => {
+    const def = ENEMY_BESTIARY[subtype];
+    return {
+        hp: def.stats.hp,
+        maxHp: def.stats.maxHp,
+        range: def.stats.range,
+        damage: def.stats.damage,
+        type: def.stats.type,
+        cost: def.stats.cost,
+        skills: [...def.skills.base, ...def.skills.passive],
+        actionCooldown: def.stats.actionCooldown,
+        weightClass: def.stats.weightClass,
+        speed: def.stats.speed,
+    };
+};
+
+// Enemy stats with simplified tiers (derived from the bestiary baseline)
 export const ENEMY_STATS = {
-    // Melee enemies (Standard weight)
-    footman: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'], actionCooldown: 2, weightClass: 'Standard', speed: 1 },
-    sprinter: { hp: 1, maxHp: 1, range: 1, damage: 1, type: 'melee', cost: 1, skills: ['BASIC_MOVE', 'BASIC_ATTACK'], actionCooldown: 1, weightClass: 'Standard', speed: 2 },
-    raider: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'DASH'], actionCooldown: 1, weightClass: 'Standard', speed: 1 },
-    pouncer: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'GRAPPLE_HOOK'], actionCooldown: 1, weightClass: 'Standard', speed: 1 },
-
-    // Heavy enemies
-    shieldBearer: { hp: 2, maxHp: 2, range: 1, damage: 1, type: 'melee', cost: 2, skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'SHIELD_BASH'], actionCooldown: 2, weightClass: 'Heavy', speed: 1 },
-
-    // Ranged enemies (Standard weight)
-    archer: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 1, skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'SPEAR_THROW'], actionCooldown: 3, weightClass: 'Standard', speed: 1 },
-    bomber: { hp: 1, maxHp: 1, range: 3, damage: 1, type: 'ranged', cost: 1, skills: ['BASIC_MOVE', 'BASIC_ATTACK'], actionCooldown: 2, weightClass: 'Standard', speed: 1 },
-    warlock: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 2, skills: ['BASIC_MOVE', 'BASIC_ATTACK'], actionCooldown: 2, weightClass: 'Standard', speed: 1 },
-
-    // Boss
-    sentinel: { hp: 30, maxHp: 30, range: 4, damage: 2, type: 'boss', cost: 25, skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'SENTINEL_BLAST'], actionCooldown: 1, weightClass: 'Heavy', speed: 1 },
+    footman: bestiaryStat('footman'),
+    sprinter: bestiaryStat('sprinter'),
+    raider: bestiaryStat('raider'),
+    pouncer: bestiaryStat('pouncer'),
+    shieldBearer: bestiaryStat('shieldBearer'),
+    archer: bestiaryStat('archer'),
+    bomber: bestiaryStat('bomber'),
+    warlock: bestiaryStat('warlock'),
+    sentinel: bestiaryStat('sentinel'),
 };
 
 // Hazard percentage (15-20% of map)

@@ -1,4 +1,5 @@
 export * from './types';
+export * from './types/juice-signature';
 export * from './hex';
 export * from './logic';
 export * from './constants';
@@ -58,6 +59,7 @@ export * from './systems/hex-bridge';
 
 // Juice & VFX
 export * from './systems/juice-manifest';
+export * from './systems/juice-signature';
 
 // Tile Effects System (Observer-Based)
 export * from './systems/tile-effects';

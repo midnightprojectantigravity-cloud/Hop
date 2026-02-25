@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { BaseUnitDefinition } from '../data/contracts';
 import { TACTICAL_CORE_MVP_PACK } from '../data/packs/mvp-pack';
-import { registerBaseUnitDefinition } from '../systems/base-unit-registry';
+import { getBaseUnitDefinitionBySubtype, registerBaseUnitDefinition } from '../systems/base-unit-registry';
 import { generateDungeon, generateEnemies } from '../systems/map';
 import { bootstrapTacticalData, resetTacticalDataBootstrap } from '../systems/tactical-data-bootstrap';
+import { createEnemyFromBestiary } from '../systems/entity-factory';
 
 const summarizeEnemies = (enemies: ReturnType<typeof generateEnemies>) =>
     enemies.map(enemy => ({
@@ -62,5 +63,31 @@ describe('map spawn registry', () => {
         expect(
             enemies.every(enemy => enemy.activeSkills.some(skill => String(skill.id) === 'TEST_ONLY_SKILL'))
         ).toBe(true);
+    });
+
+    it('bootstrapped archer base-unit loadout uses ARCHER_SHOT instead of player SPEAR_THROW', () => {
+        const archerDef = getBaseUnitDefinitionBySubtype('archer');
+        expect(archerDef).toBeDefined();
+
+        const baseSkillIds = archerDef?.skillLoadout.baseSkillIds || [];
+        expect(baseSkillIds).toContain('ARCHER_SHOT');
+        expect(baseSkillIds).not.toContain('SPEAR_THROW');
+    });
+
+    it('creates enemies from bestiary baselines and respects overrides', () => {
+        const archer = createEnemyFromBestiary({
+            id: 'archer-test',
+            subtype: 'archer',
+            position: { q: 0, r: 0, s: 0 },
+            hp: 2,
+            maxHp: 2
+        });
+
+        expect(archer.subtype).toBe('archer');
+        expect(archer.hp).toBe(2); // override respected
+        expect(archer.maxHp).toBe(2); // override respected
+        expect(archer.enemyType).toBe('ranged');
+        expect(archer.speed).toBe(1); // baseline preserved
+        expect(archer.activeSkills.map(s => s.id)).toContain('ARCHER_SHOT');
     });
 });
