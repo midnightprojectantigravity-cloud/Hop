@@ -2,7 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getDirectionFromTo, hexDirection, hexEquals, getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 import { isStunned } from '../systems/status';
 
 import { getSkillScenarios } from '../scenarios';

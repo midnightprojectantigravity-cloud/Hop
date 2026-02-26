@@ -4,9 +4,9 @@ import { ENEMY_STATS } from './constants';
 import { hexEquals } from './hex';
 import { isPlayerTurn } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
-import { addStatus } from './systems/actor';
-import { pointToKey, UnifiedTileService } from './systems/unified-tile-service';
-import { createEnemy, createEnemyFromBestiary, createFalcon, createPlayer } from './systems/entity-factory';
+import { addStatus } from './systems/entities/actor';
+import { pointToKey, UnifiedTileService } from './systems/tiles/unified-tile-service';
+import { createEnemy, createEnemyFromBestiary, createFalcon, createPlayer } from './systems/entities/entity-factory';
 
 const SCENARIO_GRID_WIDTH = 9;
 const SCENARIO_GRID_HEIGHT = 11;

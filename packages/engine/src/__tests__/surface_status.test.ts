@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Actor, GameState, Point } from '../types';
 import { pointToKey } from '../hex';
 import { FIREBALL } from '../skills/fireball';
-import { getSurfaceSkillPowerMultiplier, getSurfaceStatus } from '../systems/surface-status';
+import { getSurfaceSkillPowerMultiplier, getSurfaceStatus } from '../systems/tiles/surface-status';
 
 const makeActor = (id: string, type: 'player' | 'enemy', factionId: string, position: Point): Actor => ({
     id,

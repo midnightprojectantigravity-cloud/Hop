@@ -9,27 +9,19 @@ export * from './skillRegistry';
 // Systems
 export * from './systems/combat';
 export * from './systems/ai';
-export * from './systems/actor';
+export * from './systems/entities';
 export * from './systems/effect-engine';
 // 
 export * from './systems/initiative';
 export * from './systems/map';
 export * from './systems/rng';
 export * from './systems/theme';
-export * from './systems/SpatialSystem';
+export * from './systems/spatial-system';
 export * from './systems/score';
 export * from './systems/run-objectives';
-export * from './systems/balance-harness';
 export * from './systems/upa';
 export * from './systems/evaluation';
-export * from './systems/combat-calculator';
-export * from './systems/combat-traits';
-export * from './systems/trinity-resolver';
-export * from './systems/trinity-profiles';
 export * from './systems/skill-intent-profile';
-export * from './systems/skill-grading';
-export * from './systems/calibration';
-export * from './systems/evaluation-baselines';
 export * from './systems/challenge-design';
 export * from './systems/serialization';
 export * from './systems/replay-validation';
@@ -37,38 +29,21 @@ export * from './systems/commands';
 export * from './systems/mask';
 export * from './systems/loadout';
 export * from './systems/components';
-export * from './systems/strategic-policy';
 export * from './systems/movement';
 export * from './systems/status';
-export * from './systems/unified-tile-service';
-export * from './systems/entity-factory';
-export * from './systems/emergent-bestiary';
-export * from './systems/propensity-instantiation';
+export * from './systems/tiles';
 export * from './systems/resolution-stack';
-export * from './systems/force';
 export * from './systems/composite-skill-factory';
 export * from './systems/composite-skill-bridge';
 export * from './systems/action-preview';
 export * from './systems/state-mirror';
-export * from './systems/base-unit-registry';
 export * from './systems/tactical-data-bootstrap';
 
-// Kinetic Pulse System
-export * from './systems/kinetic-kernel';
-export * from './systems/hex-bridge';
-
 // Juice & VFX
-export * from './systems/juice-manifest';
-export * from './systems/juice-signature';
-
-// Tile Effects System (Observer-Based)
-export * from './systems/tile-effects';
-export * from './systems/surface-status';
-export * from './hex';
 
 // Falcon Companion System
 export * from './systems/falcon';
 
 // Visual Registry (for frontend rendering)
-export * from './systems/visual-registry';
+export * from './systems/visual';
 export * from './data';

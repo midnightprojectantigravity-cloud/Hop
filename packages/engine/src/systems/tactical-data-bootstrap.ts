@@ -1,7 +1,7 @@
 import type { TacticalDataPack } from '../data/contracts';
 import { parseTacticalDataPack } from '../data/contract-parser';
 import { TACTICAL_CORE_MVP_PACK } from '../data/packs/mvp-pack';
-import { clearBaseUnitRegistry, registerBaseUnitDefinitions } from './base-unit-registry';
+import { clearBaseUnitRegistry, registerBaseUnitDefinitions } from './entities/base-unit-registry';
 import { clearCompositeSkillRegistry, registerCompositeSkillDefinitions } from './composite-skill-bridge';
 
 let bootstrapped = false;

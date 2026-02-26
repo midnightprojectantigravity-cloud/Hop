@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createHex } from '../hex';
 import { generateInitialState } from '../logic';
 import { compileBaseUnitBlueprint, parseBaseUnitDefinition } from '../data';
-import { instantiateActorFromBlueprint, instantiateActorFromDefinition } from '../systems/propensity-instantiation';
+import { instantiateActorFromBlueprint, instantiateActorFromDefinition } from '../systems/entities/propensity-instantiation';
 
 const loadBaseUnit = () => {
     const url = new URL('../data/examples/base-unit.raider.v1.json', import.meta.url);

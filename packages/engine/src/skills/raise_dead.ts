@@ -3,7 +3,7 @@ import { hexDistance } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { stableIdFromSeed } from '../systems/rng';
-import { createCompanion } from '../systems/entity-factory';
+import { createCompanion } from '../systems/entities/entity-factory';
 import { pointToKey } from '../hex';
 import { getActorAt } from '../helpers';
 import { resolveSummonPlacement } from '../systems/summon-placement';

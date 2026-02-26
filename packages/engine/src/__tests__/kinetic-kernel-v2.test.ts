@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { processKineticPulse, type KineticPulseRequest } from '../systems/kinetic-kernel';
+import { processKineticPulse, type KineticPulseRequest } from '../systems/movement/kinetic-kernel';
 import { GameState, Point } from '../types';
 
 // Mock GameState helper

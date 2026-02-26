@@ -2,9 +2,9 @@
  * ACTOR SYSTEM (ECS-Lite)
  * Pure functions for modifying Actor data.
  */
-import type { Entity, StatusEffect } from '../types';
-import { STATUS_REGISTRY } from '../constants';
-import type { StatusID } from '../types/registry';
+import type { Entity, StatusEffect } from '../../types';
+import { STATUS_REGISTRY } from '../../constants';
+import type { StatusID } from '../../types/registry';
 
 /** Apply damage with Armor Absorption logic */
 export const applyDamage = (actor: Entity, amount: number): Entity => {
@@ -95,7 +95,7 @@ export const removeStatus = (actor: Entity, statusId: string): Entity => {
   };
 };
 
-import type { GameState, AtomicEffect } from '../types';
+import type { GameState, AtomicEffect } from '../../types';
 
 /**
  * Single source of truth for life/death state checks.

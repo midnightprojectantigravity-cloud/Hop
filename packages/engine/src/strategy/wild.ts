@@ -4,8 +4,8 @@ import { computeEnemyAction } from '../systems/ai';
 import { SkillRegistry } from '../skillRegistry';
 import { getNeighbors, hexDistance, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
-import { UnifiedTileService } from '../systems/unified-tile-service';
-import { SpatialSystem } from '../systems/SpatialSystem';
+import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
+import { SpatialSystem } from '../systems/spatial-system';
 
 export class WildStrategy implements IStrategyProvider {
     private getFalconIntent(gameState: GameState, actor: Actor): Intent {

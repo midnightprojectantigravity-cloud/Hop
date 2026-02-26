@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createHex } from '../hex';
 import { createActiveSkill } from '../skillRegistry';
-import { evaluateEntity, evaluateTile } from '../systems/evaluation';
+import { evaluateEntity, evaluateTile } from '../systems/evaluation/evaluation';
 import type { Actor } from '../types';
-import type { Tile } from '../systems/tile-types';
+import type { Tile } from '../systems/tiles/tile-types';
 
 describe('Evaluation monotonic sanity', () => {
     it('hazardous lava tile is harder than plain stone tile', () => {

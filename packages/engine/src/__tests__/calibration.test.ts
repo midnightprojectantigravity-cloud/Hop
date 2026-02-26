@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createHex } from '../hex';
 import { createActiveSkill } from '../skillRegistry';
-import { DEFAULT_CALIBRATION_PROFILE, FIREMAGE_BASELINE_PROFILE, getCalibrationProfile } from '../systems/calibration';
-import { createDefaultEvaluationRegistry, evaluateEntity } from '../systems/evaluation';
+import { DEFAULT_CALIBRATION_PROFILE, FIREMAGE_BASELINE_PROFILE, getCalibrationProfile } from '../systems/evaluation/calibration';
+import { createDefaultEvaluationRegistry, evaluateEntity } from '../systems/evaluation/evaluation';
 import type { Actor, SkillIntentProfile } from '../types';
 
 describe('Calibration surfaces', () => {

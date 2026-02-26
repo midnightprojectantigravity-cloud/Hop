@@ -1,10 +1,10 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getNeighbors, hexDistance, hexDirection, hexAdd, getDirectionFromTo } from '../hex';
 import { getSkillScenarios } from '../scenarios';
-import { SpatialSystem } from '../systems/SpatialSystem';
-import { UnifiedTileService } from '../systems/unified-tile-service';
+import { SpatialSystem } from '../systems/spatial-system';
+import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { getActorAt } from '../helpers';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 // import { isBlockedByWall, isBlockedByLava, isBlockedByActor } from '../systems/validation';
 
 /**

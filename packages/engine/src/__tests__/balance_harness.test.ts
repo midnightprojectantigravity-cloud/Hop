@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runBatch, runHeadToHeadBatch, simulateRun, summarizeBatch, summarizeMatchup } from '../systems/balance-harness';
+import { runBatch, runHeadToHeadBatch, simulateRun, summarizeBatch, summarizeMatchup } from '../systems/evaluation/balance-harness';
 
 describe('Balance Harness', () => {
     it('is deterministic for the same seed set', () => {

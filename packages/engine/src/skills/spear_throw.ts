@@ -3,8 +3,8 @@ import { getHexLine, hexDistance, getNeighbors } from '../hex';
 import { getActorAt, getEnemyAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange, validateAxialDirection, hasClearLineToActor } from '../systems/validation';
-import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { SKILL_JUICE_SIGNATURES } from '../systems/visual/juice-manifest';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
 /**
  * Implementation of the Spear Throw skill using the Compositional Skill Framework.

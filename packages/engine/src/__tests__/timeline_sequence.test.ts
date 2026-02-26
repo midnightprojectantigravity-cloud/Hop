@@ -3,7 +3,7 @@ import { generateInitialState } from '../logic';
 import { ScenarioEngine } from '../skillTests';
 import { isPlayerTurn } from '../systems/initiative';
 import { applyEffects } from '../systems/effect-engine';
-import { createEnemy } from '../systems/entity-factory';
+import { createEnemy } from '../systems/entities/entity-factory';
 
 describe('timeline sequencing', () => {
     it('rejects unsafe lava entry without emitting movement timeline phases', () => {

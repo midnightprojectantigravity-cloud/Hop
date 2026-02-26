@@ -1,8 +1,8 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexEquals, getNeighbors, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
-import { SpatialSystem } from '../systems/SpatialSystem';
-import { UnifiedTileService } from '../systems/unified-tile-service';
+import { SpatialSystem } from '../systems/spatial-system';
+import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 
 /**
  * FALCON_SCOUT Skill

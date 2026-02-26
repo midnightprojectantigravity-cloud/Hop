@@ -2,11 +2,11 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getNeighbors, hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, validateRange } from '../systems/validation';
-import { SpatialSystem } from '../systems/SpatialSystem';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { SpatialSystem } from '../systems/spatial-system';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 import { getActorAt } from '../helpers';
 import { pointToKey } from '../hex';
-import { getSurfaceStatus, getSurfaceSkillPowerMultiplier } from '../systems/surface-status';
+import { getSurfaceStatus, getSurfaceSkillPowerMultiplier } from '../systems/tiles/surface-status';
 
 
 

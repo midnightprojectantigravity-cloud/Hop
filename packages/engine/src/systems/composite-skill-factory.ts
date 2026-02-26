@@ -8,8 +8,8 @@ import type { Actor, AtomicEffect, GameState, Point, SkillDefinition, SkillModif
 import { createHex, hexDistance, isHexInRectangularGrid } from '../hex';
 import { getActorAt } from '../helpers';
 import { validateLineOfSight } from './validation';
-import { extractTrinityStats } from './combat-calculator';
-import { resolveForce } from './force';
+import { extractTrinityStats } from './combat/combat-calculator';
+import { resolveForce } from './combat/force';
 
 interface RuntimeScalarContext {
     body: number;

@@ -1,7 +1,7 @@
 import type { Actor, AtomicEffect, GameState, IntentPreview, Point, TelegraphProjectionEntry } from '../types';
 import type { Intent } from '../types/intent';
-import { pointToKey } from './unified-tile-service';
-import { StrategyRegistry } from './strategy-registry';
+import { pointToKey } from './tiles/unified-tile-service';
+import { StrategyRegistry } from './ai/strategy-registry';
 import { processIntent } from './intent-middleware';
 import { TacticalEngine } from './tactical-engine';
 import { getActorAt } from '../helpers';

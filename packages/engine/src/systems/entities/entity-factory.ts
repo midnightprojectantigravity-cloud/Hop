@@ -1,9 +1,9 @@
-import type { Actor, Point, Skill, WeightClass } from '../types';
-import type { GameComponent } from './components';
-import { deriveMaxHpFromTrinity, type TrinityStats } from './trinity-resolver';
-import { getTrinityProfile } from './trinity-profiles';
-import { resolveDefaultCombatProfile, type CombatProfile } from './combat-traits';
-import { getEnemyBestiaryEntry, getEnemyBestiarySkillLoadout } from '../data/bestiary';
+import type { Actor, Point, Skill, WeightClass } from '../../types';
+import type { GameComponent } from '../components';
+import { deriveMaxHpFromTrinity, type TrinityStats } from '../combat/trinity-resolver';
+import { getTrinityProfile } from '../combat/trinity-profiles';
+import { resolveDefaultCombatProfile, type CombatProfile } from '../combat/combat-traits';
+import { getEnemyBestiaryEntry, getEnemyBestiarySkillLoadout } from '../../data/bestiary';
 
 /**
  * ENTITY FACTORY SYSTEM
@@ -354,7 +354,7 @@ export function createCompanion(config: {
             maxHp: 2,
             speed: 50,
             factionId: 'player',
-            skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
+            skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'],
             companionOf: config.ownerId,
             weightClass: 'Standard',
             trinity: config.trinity,

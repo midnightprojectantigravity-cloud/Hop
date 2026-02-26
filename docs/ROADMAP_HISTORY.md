@@ -22,7 +22,7 @@ This file is the archived snapshot of the previous `docs/NEXT_LEVEL.md` (capture
     - [x] Hub can start a normal run and a daily run explicitly (`onStartRun('normal' | 'daily')`).
     - [x] `START_RUN` dispatch receives selected mode.
 
-### Priority 2 - ECS Lite Consistency Review (against `docs/ECS_REFACTOR_PLAN.md`)
+### Priority 2 - ECS Lite Consistency Review (against `docs/archive/ECS_REFACTOR_PLAN.md`)
 - [x] **Entity Factory Coverage**
   - Acceptance:
     - [x] `createPlayer` and `createEnemy` exist in `packages/engine/src/systems/entity-factory.ts`.

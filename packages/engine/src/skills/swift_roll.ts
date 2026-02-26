@@ -2,7 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { isBlockedByWall, isBlockedByLava, isBlockedByActor, validateRange } from '../systems/validation';
-import { SpatialSystem } from '../systems/SpatialSystem';
+import { SpatialSystem } from '../systems/spatial-system';
 
 /**
  * SWIFT_ROLL Skill

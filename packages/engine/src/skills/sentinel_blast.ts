@@ -3,8 +3,8 @@ import { getNeighbors } from '../hex';
 import { pointToKey } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
-import { SpatialSystem } from '../systems/SpatialSystem';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { SpatialSystem } from '../systems/spatial-system';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
 /**
  * SENTINEL_BLAST

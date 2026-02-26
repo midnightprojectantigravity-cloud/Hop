@@ -2,7 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getNeighbors, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
 /**
  * FALCON_PECK Skill

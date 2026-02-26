@@ -18,7 +18,7 @@
 import type { Actor, Point, GameState, InitiativeEntry, InitiativeQueue } from '../types';
 import { getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
-import { extractTrinityStats, computeInitiativeBonus } from './combat-calculator';
+import { extractTrinityStats, computeInitiativeBonus } from './combat/combat-calculator';
 
 /** Default initiative values by actor type */
 export const DEFAULT_INITIATIVE = {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateInitialState } from '../logic';
-import { createCompanion, createEnemy, createPlayer, ensureActorTrinity } from '../systems/entity-factory';
+import { createCompanion, createEnemy, createPlayer, ensureActorTrinity } from '../systems/entities/entity-factory';
 import type { TrinityComponent } from '../systems/components';
 
 const readTrinity = (components?: Map<string, any>): TrinityComponent | undefined =>

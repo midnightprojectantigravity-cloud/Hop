@@ -1,16 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { createHex, pointToKey } from '../hex';
 import { generateInitialState } from '../logic';
-import { resolveForce } from '../systems/force';
-import { BASE_TILES } from '../systems/tile-registry';
+import { resolveForce } from '../systems/combat/force';
+import { BASE_TILES } from '../systems/tiles/tile-registry';
 
 const setupLineState = () => {
     const state = generateInitialState(1, 'force-seed');
-    const playerPos = createHex(4, 5);
-    const enemyPos = createHex(5, 5);
+    const playerPos = createHex(3, 5);
+    const enemyPos = createHex(4, 5);
     const player = { ...state.player, position: playerPos };
     const enemies = state.enemies.map((e, idx) => idx === 0 ? { ...e, position: enemyPos } : e);
-    return { ...state, player, enemies };
+    const tiles = new Map(state.tiles);
+    for (const pos of [createHex(3, 5), createHex(4, 5), createHex(5, 5), createHex(6, 5)]) {
+        tiles.set(pointToKey(pos), {
+            baseId: 'STONE',
+            position: pos,
+            traits: new Set(BASE_TILES.STONE.defaultTraits),
+            effects: []
+        });
+    }
+    return { ...state, player, enemies, tiles };
 };
 
 describe('force resolution', () => {
@@ -63,7 +72,7 @@ describe('force resolution', () => {
         const targetId = state.enemies[0]!.id;
         const movedEnemyState = {
             ...state,
-            enemies: state.enemies.map((e, idx) => idx === 0 ? { ...e, position: createHex(7, 5) } : e)
+            enemies: state.enemies.map((e, idx) => idx === 0 ? { ...e, position: createHex(6, 5) } : e)
         };
 
         const result = resolveForce(movedEnemyState, {
@@ -80,4 +89,3 @@ describe('force resolution', () => {
         expect(result.collided).toBe(true);
     });
 });
-

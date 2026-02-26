@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runPvpBatch, summarizePvpBatch } from '../systems/pvp-harness';
+import { runPvpBatch, summarizePvpBatch } from '../systems/evaluation/pvp-harness';
 
 describe('PVP Harness', () => {
     it('is deterministic for fixed seeds and policies', () => {
@@ -21,4 +21,3 @@ describe('PVP Harness', () => {
         expect(typeof summary.rightSkillUsageTotals).toBe('object');
     });
 });
-

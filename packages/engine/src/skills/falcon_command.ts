@@ -2,9 +2,9 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexEquals, getNeighbors } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { getActorAt } from '../helpers';
-import { SpatialSystem } from '../systems/SpatialSystem';
+import { SpatialSystem } from '../systems/spatial-system';
 import { getFalconForHunter } from '../systems/falcon';
-import { createFalcon } from '../systems/entity-factory';
+import { createFalcon } from '../systems/entities/entity-factory';
 
 /**
  * FALCON_COMMAND Skill

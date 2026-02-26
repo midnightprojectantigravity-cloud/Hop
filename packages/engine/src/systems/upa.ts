@@ -1,4 +1,4 @@
-import type { BatchSummary } from './balance-harness';
+import type { BatchSummary } from './evaluation/balance-harness';
 
 export interface UpaTelemetryInput {
     winRate: number;

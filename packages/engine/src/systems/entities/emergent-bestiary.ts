@@ -1,10 +1,10 @@
-import { randomFromSeed } from './rng';
+import { randomFromSeed } from '../rng';
 import {
     calculateCombat,
     type CombatAttribute,
     type TrinityStats
-} from './combat-calculator';
-import { deriveMaxHpFromTrinity } from './trinity-resolver';
+} from '../combat/combat-calculator';
+import { deriveMaxHpFromTrinity } from '../combat/trinity-resolver';
 
 export type EcosystemBiome = 'red' | 'blue' | 'green' | 'white' | 'black';
 export type RgbBiome = 'red' | 'blue' | 'green';

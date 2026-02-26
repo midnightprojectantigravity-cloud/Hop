@@ -3,7 +3,7 @@ import { getDirectionFromTo, getNeighbors, hexDirection, hexEquals } from '../he
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 import { isStunned } from '../systems/status';
 
 /**

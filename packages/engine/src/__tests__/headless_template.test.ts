@@ -8,7 +8,7 @@
  * Purpose: This file serves as a starting point for automated skill-balance tests.
  */
 import { describe, it, expect } from 'vitest';
-import { applyAction } from '../engine/core';
+import { applyAction } from '../logic';
 import { createHex } from '../hex';
 import { Actor, GameState } from '../types';
 import { buildInitiativeQueue } from '../systems/initiative';

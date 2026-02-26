@@ -1,7 +1,7 @@
 import { generateDungeon, generateEnemies } from './map';
-import { evaluateEncounter, type GradeResult } from './evaluation';
-import { getCalibrationProfile, type CalibrationProfile } from './calibration';
-import { computeEvaluatorBaselines } from './evaluation-baselines';
+import { evaluateEncounter, type GradeResult } from './evaluation/evaluation';
+import { getCalibrationProfile, type CalibrationProfile } from './evaluation/calibration';
+import { computeEvaluatorBaselines } from './evaluation/evaluation-baselines';
 
 export interface EncounterTargetResult {
     targetDifficulty: number;

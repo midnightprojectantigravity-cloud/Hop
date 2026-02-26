@@ -4,7 +4,7 @@ import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { pointToKey } from '../hex';
-import { SpatialSystem } from '../systems/SpatialSystem';
+import { SpatialSystem } from '../systems/spatial-system';
 
 /**
  * Implementation of the Shield Bash skill using the Compositional Skill Framework.

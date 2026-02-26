@@ -11,7 +11,7 @@ import {
     getDisplacement,
     type BoardState,
     type KineticEntity
-} from '../systems/kinetic-kernel';
+} from '../systems/movement/kinetic-kernel';
 
 describe.skip('Kinetic Kernel', () => {
     describe('Momentum Costing', () => {

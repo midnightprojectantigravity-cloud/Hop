@@ -1,8 +1,8 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getActorAt } from '../helpers';
 import { validateRange } from '../systems/validation';
-import { UnifiedTileService } from '../systems/unified-tile-service';
-import { createEntity } from '../systems/entity-factory';
+import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
+import { createEntity } from '../systems/entities/entity-factory';
 
 /**
  * BOMB_TOSS

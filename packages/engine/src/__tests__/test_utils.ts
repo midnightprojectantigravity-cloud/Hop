@@ -1,6 +1,6 @@
 import { generateInitialState } from '../logic';
 import { type GameState, type Point, type Skill } from '../types';
-import { type TileTrait } from '../systems/tile-types';
+import { type TileTrait } from '../systems/tiles/tile-types';
 import { pointToKey } from '../hex';
 import { buildInitiativeQueue } from '../systems/initiative';
 

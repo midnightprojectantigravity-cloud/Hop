@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateCombat } from '../systems/combat-calculator';
+import { calculateCombat } from '../systems/combat/combat-calculator';
 
 describe('triangle emergence (formula-driven)', () => {
     it('Body pressure outperforms Instinct-heavy target in physical exchanges', () => {

@@ -1,9 +1,9 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexEquals, getNeighbors, getHexLine } from '../hex';
 import { getActorAt, getEnemyAt } from '../helpers';
-import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
+import { SKILL_JUICE_SIGNATURES } from '../systems/visual/juice-manifest';
 import { isBlockedByWall, isBlockedByActor, validateRange, canLandOnHazard } from '../systems/validation';
-import { SpatialSystem } from '../systems/SpatialSystem';
+import { SpatialSystem } from '../systems/spatial-system';
 
 /**
  * Implementation of the Vault skill

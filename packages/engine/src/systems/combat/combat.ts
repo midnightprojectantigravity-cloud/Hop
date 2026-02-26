@@ -3,21 +3,21 @@
  * Manages telegraphed attacks and enemy turn resolution.
  * TODO: Fully migrate telegraphed attacks to the SkillDefinition/COMPOSITIONAL_SKILLS system.
  */
-import type { GameState, Point, Entity, AtomicEffect, Actor } from '../types';
-import { hexEquals, getNeighbors } from '../hex';
-import { computeEnemyAction } from './ai';
-import { getActorAt } from '../helpers';
-import { applyAutoAttack } from '../skills/auto_attack';
-import { getTurnStartNeighborIds } from './initiative';
-import { SkillRegistry } from '../skillRegistry';
-import { applyEffects } from './effect-engine';
-import { isStunned, tickStatuses, handleStunReset } from './status';
-import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from './juice-manifest';
-import { TileResolver } from './tile-effects';
-import { UnifiedTileService } from './unified-tile-service';
-import { applyDamage } from './actor';
-import { createEntity } from './entity-factory';
-import { addToQueue } from './initiative';
+import type { GameState, Point, Entity, AtomicEffect, Actor } from '../../types';
+import { hexEquals, getNeighbors } from '../../hex';
+import { computeEnemyAction } from '../ai';
+import { getActorAt } from '../../helpers';
+import { applyAutoAttack } from '../../skills/auto_attack';
+import { getTurnStartNeighborIds } from '../initiative';
+import { SkillRegistry } from '../../skillRegistry';
+import { applyEffects } from '../effect-engine';
+import { isStunned, tickStatuses, handleStunReset } from '../status';
+import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../visual/juice-manifest';
+import { TileResolver } from '../tiles/tile-effects';
+import { UnifiedTileService } from '../tiles/unified-tile-service';
+import { applyDamage } from '../entities/actor';
+import { createEntity } from '../entities/entity-factory';
+import { addToQueue } from '../initiative';
 
 export const resolveTelegraphedAttacks = (
   state: GameState,

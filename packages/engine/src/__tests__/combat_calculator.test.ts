@@ -7,7 +7,7 @@ import {
     computeCriticalMultiplier,
     computeSparkCost,
     GrandCalculator
-} from '../systems/combat-calculator';
+} from '../systems/combat/combat-calculator';
 import type { Actor } from '../types';
 
 describe('combat-calculator', () => {

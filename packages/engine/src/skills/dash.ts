@@ -1,12 +1,12 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { processKineticPulse } from '../systems/kinetic-kernel';
+import { processKineticPulse } from '../systems/movement/kinetic-kernel';
 import { hexEquals, hexDirection, getHexLine } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { applyEffects } from '../systems/effect-engine';
-import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
+import { SKILL_JUICE_SIGNATURES } from '../systems/visual/juice-manifest';
 import { validateAxialDirection, validateRange, findFirstObstacle, canLandOnHazard } from '../systems/validation';
-import { SpatialSystem } from '../systems/SpatialSystem';
+import { SpatialSystem } from '../systems/spatial-system';
 
 /**
  * KINETIC DASH Skill

@@ -1,6 +1,5 @@
 import React from 'react';
-import { COMPOSITIONAL_SKILLS, SkillRegistry, generateInitialState, ENEMY_STATS, addStatus, buildInitiativeQueue, type GameState, type Point, type SkillDefinition, type ScenarioV2, pointToKey } from '@hop/engine';
-import { BASE_TILES } from '@hop/engine/systems/tile-registry';
+import { COMPOSITIONAL_SKILLS, SkillRegistry, generateInitialState, ENEMY_STATS, addStatus, buildInitiativeQueue, BASE_TILES, type GameState, type Point, type SkillDefinition, type ScenarioV2, pointToKey } from '@hop/engine';
 import type { TileID } from '@hop/engine/types/registry';
 
 interface TutorialManagerProps {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runEmergentBestiarySimulation } from '../systems/emergent-bestiary';
+import { runEmergentBestiarySimulation } from '../systems/entities/emergent-bestiary';
 
 describe('emergent bestiary simulation', () => {
     it('is deterministic for a fixed seed and config', () => {

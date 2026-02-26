@@ -1,6 +1,6 @@
 import type { Actor, AtomicEffect, GameState, Point, SkillDefinition } from '../types';
 import { getSkillScenarios } from '../scenarios';
-import { SpatialSystem } from '../systems/SpatialSystem';
+import { SpatialSystem } from '../systems/spatial-system';
 
 /**
  * SENTINEL_TELEGRAPH

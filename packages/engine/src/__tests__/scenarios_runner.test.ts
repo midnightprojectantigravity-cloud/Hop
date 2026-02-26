@@ -3,8 +3,8 @@ import { SCENARIO_COLLECTIONS } from '../scenarios';
 import { ScenarioEngine } from '../skillTests';
 import { generateInitialState } from '../logic';
 import { buildInitiativeQueue, isPlayerTurn } from '../systems/initiative';
-import { SpatialSystem } from '../systems/SpatialSystem';
-import { StrategyRegistry } from '../systems/strategy-registry';
+import { SpatialSystem } from '../systems/spatial-system';
+import { StrategyRegistry } from '../systems/ai/strategy-registry';
 
 const SCENARIO_GRID_WIDTH = 9;
 const SCENARIO_GRID_HEIGHT = 11;

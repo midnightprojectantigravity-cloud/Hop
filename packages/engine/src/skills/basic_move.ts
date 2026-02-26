@@ -1,10 +1,10 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getNeighbors, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
-import { SpatialSystem } from '../systems/SpatialSystem';
+import { SpatialSystem } from '../systems/spatial-system';
 import { getSkillScenarios } from '../scenarios';
 import { canLandOnHazard, canPassHazard, isBlockedByActor } from '../systems/validation';
-import { UnifiedTileService } from '../systems/unified-tile-service';
+import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { isFreeMoveMode } from '../systems/free-move';
 
 /**

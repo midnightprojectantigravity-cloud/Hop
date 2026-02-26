@@ -3,46 +3,28 @@
  * Follows the Command Pattern & Immutable State.
  * resolveEnemyActions and gameReducer are the primary entry points.
  */
-import type { GameState, Action, Entity, AtomicEffect, PendingFrame, PendingFrameType } from './types';
-import { hexEquals, getNeighbors } from './hex';
-import { resolveTelegraphedAttacks } from './systems/combat';
+import type { GameState, Action, AtomicEffect } from './types';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
-import { checkShrine, checkStairs, getEnemyAt } from './helpers';
 import { generateDungeon, generateEnemies, getFloorTheme } from './systems/map';
-import { tickActorSkills, addUpgrade, increaseMaxHp } from './systems/actor';
-import { SkillRegistry, createDefaultSkills } from './skillRegistry';
+import { createDefaultSkills } from './skillRegistry';
 import { applyEffects } from './systems/effect-engine';
 
-import { applyAutoAttack } from './skills/auto_attack';
-import { SpatialSystem } from './systems/SpatialSystem';
+import { SpatialSystem } from './systems/spatial-system';
 import { createCommand, createDelta } from './systems/commands';
-import {
-    buildInitiativeQueue,
-    advanceInitiative,
-    startActorTurn,
-    endActorTurn,
-    removeFromQueue,
-    getTurnStartPosition,
-    getTurnStartNeighborIds,
-    getCurrentEntry,
-    isPlayerTurn,
-} from './systems/initiative';
-import { isStunned, tickStatuses } from './systems/status';
-import { createEntity, ensureActorTrinity } from './systems/entity-factory';
+import { buildInitiativeQueue, isPlayerTurn, startActorTurn } from './systems/initiative';
+import { createEntity } from './systems/entities/entity-factory';
 
 
 /**
  * Generate initial state with the new tactical arena generation
  */
-import { consumeRandom } from './systems/rng';
 import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS, ensureMobilitySkill, ensurePlayerLoadoutIntegrity } from './systems/loadout';
-import { tickTileEffects } from './systems/tile-tick';
-import { buildIntentPreview } from './systems/telegraph-projection';
-import { buildRunSummary, createDailyObjectives, createDailySeed, toDateKey } from './systems/run-objectives';
-import { UnifiedTileService } from './systems/unified-tile-service';
-import { appendTaggedMessage, appendTaggedMessages } from './systems/engine-messages';
+import { appendTaggedMessage } from './systems/engine-messages';
 import { ensureTacticalDataBootstrapped } from './systems/tactical-data-bootstrap';
-import { resetCooldownsForFreeMove } from './systems/free-move';
+import { withPendingFrame } from './systems/pending-frame';
+import { applyPlayerEndOfTurnRules, hydrateLoadedState } from './logic-rules';
+import { resolveGameStateAction } from './logic-reducer-actions';
+import { createProcessNextTurn } from './logic-turn-loop';
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
@@ -55,37 +37,6 @@ const warnTurnStackInvariant = (message: string, payload?: Record<string, unknow
         return;
     }
     console.warn(`[TURN_STACK] ${message}`);
-};
-
-const createPendingFrame = (
-    state: GameState,
-    type: PendingFrameType,
-    status: PendingFrame['status'],
-    payload?: Record<string, unknown>
-): PendingFrame => {
-    const idx = (state.pendingFrames?.length ?? 0) + 1;
-    return {
-        id: `${state.turnNumber}:${status}:${type}:${idx}`,
-        type,
-        status,
-        createdTurn: state.turnNumber,
-        blocking: true,
-        payload
-    };
-};
-
-const withPendingFrame = (
-    state: GameState,
-    pendingStatus: NonNullable<GameState['pendingStatus']>,
-    frameType: PendingFrameType,
-    framePayload?: Record<string, unknown>
-): GameState => {
-    const frame = createPendingFrame(state, frameType, pendingStatus.status as PendingFrame['status'], framePayload);
-    return {
-        ...state,
-        pendingStatus,
-        pendingFrames: [...(state.pendingFrames || []), frame]
-    };
 };
 
 export const generateHubState = (): GameState => {
@@ -246,462 +197,14 @@ const executeStatusWindow = (
     return { state: newState, messages };
 };
 
-// NEW PIPELINE IMPORTS
-import { StrategyRegistry } from './systems/strategy-registry';
-import { processIntent } from './systems/intent-middleware';
-import { TacticalEngine } from './systems/tactical-engine';
-import type { Intent } from './types/intent';
-import { ManualStrategy } from './strategy/manual';
-
-export const processNextTurn = (state: GameState, isResuming: boolean = false): GameState => {
-    if (state.pendingStatus || (state.pendingFrames?.length ?? 0) > 0) {
-        warnTurnStackInvariant('Blocked processNextTurn while pendingStatus is active.', {
-            status: state.pendingStatus?.status,
-            pendingFrames: state.pendingFrames?.length ?? 0,
-            turnNumber: state.turnNumber
-        });
-        return state;
-    }
-    let curState = state;
-    const messages: string[] = [];
-    const dyingEntities: Entity[] = [];
-
-    // Safety brake for recursive/infinite loops
-    let iterations = 0;
-    const MAX_ITERATIONS = 100;
-
-    let skipAdvance = false;
-
-    while (iterations < MAX_ITERATIONS) {
-        iterations++;
-
-        // GLOBAL DEATH CHECK: If player is dead, the game is over.
-        if (curState.player.hp <= 0 && curState.pendingStatus?.status !== 'lost') {
-            const completedRun = buildRunSummary(curState);
-            return withPendingFrame(
-                {
-                    ...curState,
-                    message: appendTaggedMessage(curState.message, 'You have fallen...', 'CRITICAL', 'COMBAT')
-                },
-                {
-                    status: 'lost',
-                    completedRun
-                },
-                'RUN_LOST',
-                { reason: 'GLOBAL_DEATH_CHECK' }
-            );
-        }
-        curState.occupancyMask = SpatialSystem.refreshOccupancyMask(curState);
-
-        let actorId: string | undefined;
-
-        if (((isResuming && iterations === 1) || skipAdvance) && curState.initiativeQueue) {
-            skipAdvance = false;
-            const q = curState.initiativeQueue;
-            if (q.entries.length > 0 && q.currentIndex >= 0 && q.currentIndex < q.entries.length) {
-                actorId = q.entries[q.currentIndex].actorId;
-            }
-        } else {
-            // 1. Advance Initiative normally
-            const res = advanceInitiative(curState);
-            curState = { ...curState, initiativeQueue: res.queue };
-            actorId = res.actorId ?? undefined;
-        }
-
-        if (!actorId) break; // End of round?
-
-        const actor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
-        const actorStepId = `${curState.turnNumber}:${curState.initiativeQueue?.round ?? 0}:${actorId}:${iterations}`;
-
-        // If actor is missing/dead, remove from queue and continue
-        if (!actor || actor.hp <= 0) {
-            curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
-            continue;
-        }
-
-        // 2. Start Turn Logic
-        const entry = getCurrentEntry(curState.initiativeQueue!);
-        if (!entry?.turnStartPosition) {
-            curState = { ...curState, initiativeQueue: startActorTurn(curState, actor) };
-        }
-
-        if (!isResuming || iterations > 1) {
-            const sotResult = executeStatusWindow(curState, actorId, 'START_OF_TURN', actorStepId);
-            curState = sotResult.state;
-            messages.push(...sotResult.messages);
-
-            if (actorId === 'player' && curState.upgrades?.includes('RELIC_STEADY_PLATES')) {
-                const boostedArmor = Math.min(2, (curState.player.temporaryArmor || 0) + 1);
-                if (boostedArmor !== (curState.player.temporaryArmor || 0)) {
-                    curState = {
-                        ...curState,
-                        player: {
-                            ...curState.player,
-                            temporaryArmor: boostedArmor
-                        }
-                    };
-                    messages.push(appendTaggedMessage([], 'Steady Plates harden your stance.', 'INFO', 'COMBAT')[0]);
-                }
-            }
-
-            if (actorId === 'player') {
-                const shieldSkill = curState.player.activeSkills?.find(s => s.id === 'SHIELD_BASH');
-                const hasPassiveProtection = !!shieldSkill?.activeUpgrades?.includes('PASSIVE_PROTECTION');
-                if (hasPassiveProtection && (shieldSkill?.currentCooldown || 0) === 0) {
-                    const hardenedArmor = Math.max(curState.player.temporaryArmor || 0, 1);
-                    if (hardenedArmor !== (curState.player.temporaryArmor || 0)) {
-                        curState = {
-                            ...curState,
-                            player: {
-                                ...curState.player,
-                                temporaryArmor: hardenedArmor
-                            }
-                        };
-                        messages.push(appendTaggedMessage([], 'Passive Protection braces your guard.', 'INFO', 'COMBAT')[0]);
-                    }
-                }
-            }
-
-            const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId, actorStepId);
-            curState = tele.state;
-            messages.push(...tele.messages);
-        }
-
-
-        // Re-fetch actor after status updates (might have died?)
-        const activeActor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
-        if (!activeActor || activeActor.hp <= 0) {
-            curState = {
-                ...curState,
-                initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId),
-                message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM')
-            };
-            continue;
-        }
-
-        // 5. THE AGENCY PIPELINE
-        const actorForIntent = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
-        if (!actorForIntent || actorForIntent.hp <= 0) {
-            continue;
-        }
-        let intent: Intent;
-        let forcedStunSkip = false;
-        if (isStunned(actorForIntent)) {
-            forcedStunSkip = true;
-            intent = {
-                type: 'WAIT',
-                actorId: actorForIntent.id,
-                skillId: 'WAIT_SKILL',
-                priority: 0,
-                metadata: {
-                    expectedValue: 0,
-                    reasoningCode: 'STATUS_STUNNED_AUTOSKIP',
-                    isGhost: false
-                }
-            };
-            if (actorId === 'player') {
-                messages.push('You are stunned and skip your turn.');
-            } else {
-                messages.push(`${actorForIntent.subtype || 'Enemy'} is stunned and skips its turn.`);
-            }
-        } else {
-            const strategy = StrategyRegistry.resolve(actorForIntent);
-            const intentOrPromise = strategy.getIntent(curState, actorForIntent);
-
-            // Check if we need to wait for input (Manual Strategy)
-            if (intentOrPromise instanceof Promise) {
-                // HALT EXECUTION: Return state and wait for input action
-                const intentPreview = buildIntentPreview(curState);
-                return {
-                    ...curState,
-                    intentPreview,
-                    message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
-                    dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
-                };
-            }
-
-            // We have a synchronous Intent
-            intent = intentOrPromise as Intent;
-        }
-
-        // DEEP DIAGNOSTIC: Log Loadout and Intent
-        const loadoutStr = activeActor.activeSkills.map(s => s.id).join(', ');
-        if (ENGINE_DEBUG) {
-            console.log(`[ENGINE] Actor: ${actorId} | Loadout: [${loadoutStr}] | Pos: ${JSON.stringify(activeActor.position)}`);
-            console.log(`[ENGINE] Intent: ${intent.type} | Skill: ${intent.skillId} | TargetHex: ${intent.targetHex ? JSON.stringify(intent.targetHex) : 'none'} | TargetId: ${intent.primaryTargetId || 'none'}`);
-        }
-
-        // Apply RNG Consumption from Strategy (if any)
-        if (intent.metadata.rngConsumption) {
-            curState = {
-                ...curState,
-                rngCounter: (curState.rngCounter || 0) + intent.metadata.rngConsumption
-            };
-        }
-
-        // 6. Middleware Layer
-        intent = processIntent(intent, curState, actorForIntent);
-
-        // 7. Tactical Execution Layer
-        const { effects, messages: tacticalMessages, consumesTurn, targetId, kills } = TacticalEngine.execute(intent, actorForIntent, curState);
-        // Console log for headless debugging (Intent Fidelity)
-        if (ENGINE_DEBUG) {
-            console.log(`[ENGINE] ${actorId} intends ${intent.type} (${intent.skillId}) onto ${targetId || (intent.targetHex ? JSON.stringify(intent.targetHex) : 'self')}`);
-        }
-
-
-        // WORLD-CLASS LOGIC: The "Smoking Gun" Debug Log
-        // If an intent produces zero effects, we need to know why in headless mode.
-        if (ENGINE_WARN && effects.length === 0 && intent.type !== 'WAIT') {
-            const warnMsg = `[ENGINE] WARNING: Intent ${intent.type} (${intent.skillId}) for actor ${actorId} produced ZERO effects!`;
-            console.warn(warnMsg);
-        }
-
-        // 8. Apply Effects
-        // Note: applyEffects handles damage, healing, movement, etc.
-        const stateBeforeEffects = curState;
-        const nextState = applyEffects(curState, effects, { sourceId: actorId, targetId, stepId: actorStepId });
-
-        if (actorId === 'player') {
-            nextState.kills = (nextState.kills || 0) + (kills || 0);
-        }
-
-        // 9. Post-Action Cleanup / End of Turn
-
-        // Handle Turn Consumption (FIDELITY GUARD)
-        if (consumesTurn === false) {
-            // Revert state for non-consuming actions (except MESSAGES)
-            curState = {
-                ...stateBeforeEffects,
-                message: appendTaggedMessages(curState.message, tacticalMessages, 'INFO', 'COMBAT')
-            };
-            skipAdvance = true;
-            continue; // Loop back for SAME actor!
-        }
-
-        // Success Path
-        curState = nextState;
-        messages.push(...tacticalMessages);
-
-        // Preserve bomber cast cadence until enemy skill cooldowns are fully unified.
-        if (actorId !== 'player') {
-            const actingEnemy = curState.enemies.find(e => e.id === actorId);
-            if (actingEnemy?.subtype === 'bomber') {
-                const nextCooldown = intent.skillId === 'BOMB_TOSS'
-                    ? 2
-                    : Math.max(0, (actingEnemy.actionCooldown ?? 0) - 1);
-                if (actingEnemy.actionCooldown !== nextCooldown) {
-                    curState = {
-                        ...curState,
-                        enemies: curState.enemies.map(e => e.id === actorId ? { ...e, actionCooldown: nextCooldown } : e)
-                    };
-                }
-            }
-        }
-
-        // Check Death
-        const postActionActor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
-        if (!postActionActor || postActionActor.hp <= 0) {
-            // Actor died during their own turn (e.g. walked into lava)
-            if (actorId === 'player') {
-                const completedRun = buildRunSummary(curState);
-                return withPendingFrame(
-                    {
-                        ...curState,
-                        message: appendTaggedMessage(
-                            appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
-                            'You have fallen...',
-                            'CRITICAL',
-                            'COMBAT'
-                        )
-                    },
-                    { status: 'lost', completedRun },
-                    'RUN_LOST',
-                    { reason: 'SELF_ACTION_DEATH' }
-                );
-            }
-            curState = {
-                ...curState,
-                enemies: curState.enemies.filter(e => e.id !== actorId),
-                initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId),
-                message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM')
-            };
-            continue; // Next actor
-        }
-
-        // End of Turn Statuses
-        const eotResult = executeStatusWindow(curState, actorId, 'END_OF_TURN', actorStepId);
-        curState = eotResult.state;
-        messages.push(...eotResult.messages);
-
-        curState = {
-            ...curState,
-            enemies: curState.enemies.map(e => e.id === actorId ? tickActorSkills(tickStatuses(e)) : e),
-            player: actorId === 'player' ? tickActorSkills(tickStatuses(curState.player)) : curState.player,
-            initiativeQueue: endActorTurn(curState, actorId)
-        };
-
-        // 10. Passives / After-Turn Cleanup (Auto-Attack, etc)
-        const actorAfterTurn = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
-        const skipPassivesThisTurn =
-            forcedStunSkip
-            || intent.metadata?.reasoningCode === 'STATUS_STUNNED'
-            || intent.metadata?.reasoningCode === 'STATUS_STUNNED_AUTOSKIP';
-
-        if (!skipPassivesThisTurn && actorAfterTurn && actorAfterTurn.hp > 0) {
-            const playerStartPos = getTurnStartPosition(curState, actorId) || actorAfterTurn.previousPosition || actorAfterTurn.position;
-            const persistentNeighborIds = getTurnStartNeighborIds(curState, actorId) ?? undefined;
-
-            const autoAttackResult = applyAutoAttack(
-                curState,
-                actorAfterTurn,
-                getNeighbors(playerStartPos),
-                playerStartPos,
-                persistentNeighborIds,
-                actorStepId
-            );
-            curState = autoAttackResult.state;
-            messages.push(...autoAttackResult.messages);
-            if (actorId === 'player') {
-                curState.kills = (curState.kills || 0) + autoAttackResult.kills;
-            }
-        }
-
-        if (actorId === 'player') {
-            const playerPos = curState.player.position;
-
-            // 1. Pick up spear if on it
-            if (curState.spearPosition && hexEquals(playerPos, curState.spearPosition)) {
-                const spearSkill = curState.player.activeSkills?.find(s => s.id === 'SPEAR_THROW');
-                const hasSpearCleave = !!spearSkill?.activeUpgrades?.some(up => up === 'SPEAR_CLEAVE' || up === 'CLEAVE');
-                if (hasSpearCleave) {
-                    const cleaveTargets = getNeighbors(playerPos)
-                        .map(pos => curState.enemies.find(e => e.hp > 0 && hexEquals(e.position, pos)))
-                        .filter((e): e is Entity => !!e && e.factionId !== curState.player.factionId);
-                    if (cleaveTargets.length > 0) {
-                        const cleaveEffects: AtomicEffect[] = cleaveTargets.map(e => ({
-                            type: 'Damage',
-                            target: e.id,
-                            amount: 1,
-                            reason: 'spear_cleave_pickup'
-                        }));
-                        curState = applyEffects(curState, cleaveEffects, { sourceId: curState.player.id, stepId: actorStepId });
-                        messages.push(`Spear cleave hit ${cleaveTargets.length} target(s).`);
-                    }
-                }
-                curState = {
-                    ...curState,
-                    hasSpear: true,
-                    spearPosition: undefined,
-                    message: appendTaggedMessage(curState.message, 'Picked up your spear.', 'INFO', 'OBJECTIVE')
-                };
-            }
-
-            // 2. Tile Ticks (Lava damage, etc)
-            const tileTickResult = tickTileEffects(curState);
-            curState = tileTickResult.state;
-            messages.push(...tileTickResult.messages);
-
-            curState = { ...curState, turnNumber: curState.turnNumber + 1, turnsSpent: (curState.turnsSpent || 0) + 1 };
-            if (curState.traps && curState.traps.length > 0) {
-                curState = {
-                    ...curState,
-                    traps: curState.traps.map(t => ({
-                        ...t,
-                        cooldown: Math.max(0, t.cooldown - 1)
-                    }))
-                };
-            }
-
-            // Exploration/free-move mode is a global engine concept (no hostiles alive):
-            // unlock prep by clearing remaining cooldowns and trap resets.
-            curState = resetCooldownsForFreeMove(curState);
-
-            // CHECK TILE INTERACTIONS (Shrines / Stairs)
-            if (checkShrine(curState, curState.player.position)) {
-                const playerSkills = curState.player.activeSkills || [];
-                const playerSkillIds = new Set(playerSkills.map(s => s.id));
-                const appliedBySkill = new Map<string, Set<string>>();
-                for (const sk of playerSkills) {
-                    appliedBySkill.set(sk.id, new Set(sk.activeUpgrades || []));
-                }
-                const available = SkillRegistry.getAllUpgrades()
-                    .filter(u => playerSkillIds.has(u.skillId))
-                    .filter(u => {
-                        if (curState.upgrades.includes(u.id)) return false;
-                        const owned = appliedBySkill.get(u.skillId);
-                        return !owned || !owned.has(u.id);
-                    })
-                    .map(u => u.id)
-                    .filter((id, idx, arr) => arr.indexOf(id) === idx);
-                const picked: string[] = [];
-                let rngState = { ...curState };
-                for (let i = 0; i < 3 && available.length > 0; i++) {
-                    const res = consumeRandom(rngState);
-                    rngState = res.nextState;
-                    const idx = Math.floor(res.value * available.length);
-                    picked.push(available[idx]);
-                    available.splice(idx, 1);
-                }
-                const shrineOptions = picked.length > 0 ? picked : ['EXTRA_HP'];
-                return withPendingFrame(
-                    {
-                        ...curState,
-                        rngCounter: rngState.rngCounter,
-                        message: appendTaggedMessage(curState.message, 'A holy shrine! Choose an upgrade.', 'INFO', 'OBJECTIVE')
-                    },
-                    {
-                        status: 'choosing_upgrade',
-                        shrineOptions
-                    },
-                    'SHRINE_CHOICE',
-                    { shrineOptions }
-                );
-            }
-
-            if (checkStairs(curState, curState.player.position)) {
-                const arcadeMax = 10;
-                if (curState.floor >= arcadeMax) {
-                    const completedRun = buildRunSummary(curState);
-                    return withPendingFrame(
-                        {
-                            ...curState,
-                            message: appendTaggedMessage(curState.message, `Arcade Cleared! Final Score: ${completedRun.score}`, 'INFO', 'OBJECTIVE')
-                        },
-                        {
-                            status: 'won',
-                            completedRun
-                        },
-                        'RUN_WON',
-                        { score: completedRun.score ?? 0 }
-                    );
-                }
-
-                return withPendingFrame(
-                    {
-                        ...curState,
-                        message: appendTaggedMessage(curState.message, 'Descending to the next level...', 'INFO', 'OBJECTIVE')
-                    },
-                    {
-                        status: 'playing',
-                    },
-                    'STAIRS_TRANSITION',
-                    { nextFloor: curState.floor + 1 }
-                );
-            }
-        }
-
-        // Loop continues to next actor
-    }
-
-    const intentPreview = buildIntentPreview(curState);
-    return {
-        ...curState,
-        intentPreview,
-        message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
-        dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
-    };
-};
+export const processNextTurn = createProcessNextTurn({
+    executeStatusWindow,
+    withPendingFrame,
+    applyPlayerEndOfTurnRules,
+    warnTurnStackInvariant,
+    engineDebug: ENGINE_DEBUG,
+    engineWarn: ENGINE_WARN
+});
 
 
 
@@ -725,24 +228,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
 
     switch (action.type) {
         case 'LOAD_STATE': {
-            const loaded = action.payload;
-            if (Array.isArray(loaded.tiles)) {
-                loaded.tiles = new Map(
-                    loaded.tiles.map(([key, tile]: [string, any]) => [
-                        key,
-                        {
-                            ...tile,
-                            traits: new Set(tile.traits), // Hydrate the Set!
-                        }
-                    ])
-                );
-            }
-            loaded.player = ensurePlayerLoadoutIntegrity(ensureActorTrinity(loaded.player));
-            loaded.enemies = (loaded.enemies || []).map(ensureActorTrinity);
-            if (loaded.companions) {
-                loaded.companions = loaded.companions.map(ensureActorTrinity);
-            }
-            return loaded;
+            return hydrateLoadedState(action.payload);
         }
         case 'RESET': {
             const currentArchetype = state.player.archetype;
@@ -766,296 +252,12 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         initiativeQueue: clearedState.initiativeQueue
     };
 
-    const resolveGameState = (s: GameState, a: Action): GameState => {
-        const playerActions = ['MOVE', 'THROW_SPEAR', 'WAIT', 'USE_SKILL', 'JUMP', 'SHIELD_BASH', 'ATTACK', 'LEAP'];
-        if (playerActions.includes(a.type) && !isPlayerTurn(s)) {
-            return s;
-        }
-
-        switch (a.type) {
-            case 'SELECT_UPGRADE': {
-                if (!('payload' in a)) return s;
-                const upgradeId = a.payload;
-                const offered = s.pendingStatus?.shrineOptions || s.shrineOptions || [];
-                if (!offered.includes(upgradeId)) {
-                    return {
-                        ...s,
-                        message: appendTaggedMessage(s.message, `Upgrade ${upgradeId} was not offered.`, 'CRITICAL', 'SYSTEM')
-                    };
-                }
-
-                let player = s.player;
-                let applied = false;
-                const upgradeDef = SkillRegistry.getUpgrade(upgradeId);
-                if (upgradeDef) {
-                    // Find which skill this upgrade belongs to
-                    const skillId = SkillRegistry.getSkillForUpgrade(upgradeId);
-                    const ownsSkill = !!skillId && player.activeSkills.some(sk => sk.id === skillId);
-                    if (skillId && ownsSkill) {
-                        const beforeSerialized = JSON.stringify(player.activeSkills);
-                        player = addUpgrade(player, skillId, upgradeId);
-                        applied = JSON.stringify(player.activeSkills) !== beforeSerialized;
-                    }
-                } else if (upgradeId === 'EXTRA_HP') {
-                    player = increaseMaxHp(player, 1, true);
-                    applied = true;
-                }
-
-                if (!applied && upgradeId !== 'EXTRA_HP') {
-                    return {
-                        ...s,
-                        message: appendTaggedMessage(s.message, `Upgrade ${upgradeId} could not be applied.`, 'CRITICAL', 'SYSTEM')
-                    };
-                }
-
-                return {
-                    ...s,
-                    player,
-                    upgrades: s.upgrades.includes(upgradeId) ? s.upgrades : [...s.upgrades, upgradeId],
-                    gameStatus: 'playing',
-                    shrinePosition: undefined,
-                    shrineOptions: undefined,
-                    pendingStatus: undefined,
-                    pendingFrames: undefined,
-                    message: appendTaggedMessage(s.message, `Gained ${upgradeDef?.name || upgradeId}!`, 'INFO', 'OBJECTIVE')
-                };
-            }
-
-            case 'USE_SKILL': {
-                const { skillId, target } = a.payload;
-                // Handle Player Action via ManualStrategy
-                const strategy = StrategyRegistry.resolve(s.player);
-                if (strategy instanceof ManualStrategy) {
-                    strategy.pushIntent({
-                        type: 'USE_SKILL',
-                        actorId: s.player.id,
-                        skillId,
-                        targetHex: target,
-                        priority: 10,
-                        metadata: { expectedValue: 0, reasoningCode: 'PLAYER_INPUT', isGhost: false }
-                    });
-                }
-                return processNextTurn(s, true); // Resume! Action was added to intent queue.
-            }
-
-            case 'MOVE': {
-                if (!('payload' in a)) return s;
-                const target = a.payload;
-
-                const playerSkills = s.player.activeSkills || [];
-                const enemyAtTarget = getEnemyAt(s.enemies, target);
-
-                const preferredOrder = ['BASIC_ATTACK', 'BASIC_MOVE', 'DASH'];
-                const passiveSkills = playerSkills.filter(sk => sk.slot === 'passive');
-                const sortedSkills = [
-                    ...passiveSkills.filter(sk => preferredOrder.includes(sk.id)),
-                    ...passiveSkills.filter(sk => !preferredOrder.includes(sk.id))
-                ];
-
-                // Pick the first skill whose valid targets include this tile.
-                let chosenSkillId: string | undefined;
-                for (const sk of sortedSkills) {
-                    const def = SkillRegistry.get(sk.id);
-                    if (!def?.getValidTargets) continue;
-                    const validTargets = def.getValidTargets(s, s.player.position);
-                    if (validTargets.some(v => hexEquals(v, target))) {
-                        chosenSkillId = sk.id;
-                        break;
-                    }
-                }
-
-                if (!chosenSkillId) {
-                    // Preserve click contracts without inventing skills:
-                    // route to basic interaction only if this actor actually has it.
-                    const hasBasicAttack = playerSkills.some(sk => sk.id === 'BASIC_ATTACK');
-                    const hasBasicMove = playerSkills.some(sk => sk.id === 'BASIC_MOVE');
-
-                    if (enemyAtTarget && hasBasicAttack) {
-                        chosenSkillId = 'BASIC_ATTACK';
-                    } else if (!enemyAtTarget && hasBasicMove) {
-                        chosenSkillId = 'BASIC_MOVE';
-                    } else {
-                        return {
-                            ...s,
-                            message: appendTaggedMessage(
-                                s.message,
-                                enemyAtTarget ? 'No valid passive attack for target.' : 'No valid passive movement for target.',
-                                'CRITICAL',
-                                'SYSTEM'
-                            )
-                        };
-                    }
-                }
-
-                // Intent type: if targeting an enemy, mark as ATTACK; otherwise MOVE.
-                const intentType: any = enemyAtTarget ? 'ATTACK' : 'MOVE';
-                const skillId = chosenSkillId;
-
-                const strategy = StrategyRegistry.resolve(s.player);
-                if (strategy instanceof ManualStrategy) {
-                    strategy.pushIntent({
-                        type: intentType,
-                        actorId: s.player.id,
-                        skillId,
-                        targetHex: target,
-                        primaryTargetId: enemyAtTarget?.id,
-                        priority: 10,
-                        metadata: { expectedValue: 0, reasoningCode: 'PLAYER_INPUT', isGhost: false }
-                    });
-                }
-                return processNextTurn(s, true); // Resume!
-            }
-
-            case 'WAIT': {
-                const strategy = StrategyRegistry.resolve(s.player);
-                if (strategy instanceof ManualStrategy) {
-                    strategy.pushIntent({
-                        type: 'WAIT',
-                        actorId: s.player.id,
-                        skillId: 'WAIT',
-                        priority: 10,
-                        metadata: { expectedValue: 0, reasoningCode: 'PLAYER_INPUT', isGhost: false }
-                    });
-                }
-                return processNextTurn(s, true); // Resume!
-            }
-
-            case 'APPLY_LOADOUT': {
-                if (!('payload' in a)) return s;
-                const loadout = a.payload as Loadout;
-                const applied = applyLoadoutToPlayer(loadout);
-                return {
-                    ...s,
-                    player: {
-                        ...s.player,
-                        activeSkills: applied.activeSkills,
-                        archetype: applied.archetype,
-                    },
-                    upgrades: applied.upgrades,
-                    hasSpear: loadout.startingSkills.includes('SPEAR_THROW'),
-                    hasShield: loadout.startingSkills.includes('SHIELD_THROW') || s.hasShield,
-                    selectedLoadoutId: loadout.id,
-                    message: appendTaggedMessage(s.message, `${loadout.name} selected.`, 'INFO', 'SYSTEM')
-                };
-            }
-
-            case 'START_RUN': {
-                const { loadoutId, seed, mode, date } = a.payload;
-                const loadout = DEFAULT_LOADOUTS[loadoutId];
-                if (!loadout) return s;
-                if (mode === 'daily') {
-                    const dateKey = toDateKey(date);
-                    const dailySeed = createDailySeed(dateKey);
-                    const next = generateInitialState(1, seed || dailySeed, undefined, undefined, loadout);
-                    return {
-                        ...next,
-                        dailyRunDate: dateKey,
-                        runObjectives: createDailyObjectives(dailySeed),
-                        hazardBreaches: 0
-                    };
-                }
-                return generateInitialState(1, seed, undefined, undefined, loadout);
-            }
-
-            case 'ADVANCE_TURN': {
-                if (s.pendingStatus || (s.pendingFrames?.length ?? 0) > 0) {
-                    warnTurnStackInvariant('Ignored ADVANCE_TURN while pendingStatus is active.', {
-                        status: s.pendingStatus?.status,
-                        pendingFrames: s.pendingFrames?.length ?? 0,
-                        turnNumber: s.turnNumber
-                    });
-                    return s;
-                }
-                return processNextTurn(s, false);
-            }
-
-            case 'RESOLVE_PENDING': {
-                const pendingFrames = s.pendingFrames || [];
-                if (pendingFrames.length > 1) {
-                    return {
-                        ...s,
-                        pendingFrames: pendingFrames.slice(1)
-                    };
-                }
-                if (!s.pendingStatus) {
-                    if (pendingFrames.length === 1) {
-                        return {
-                            ...s,
-                            pendingFrames: []
-                        };
-                    }
-                    return s;
-                }
-                const { status, shrineOptions, completedRun } = s.pendingStatus;
-                if (status === 'playing' && s.gameStatus === 'playing') {
-                    const baseSeed = s.initialSeed ?? s.rngSeed ?? '0';
-                    const nextSeed = `${baseSeed}:${s.floor + 1}`;
-                    const migratingSummons = s.enemies
-                        .filter(e => e.hp > 0 && e.factionId === 'player' && e.companionOf === s.player.id)
-                        .sort((a, b) => a.id.localeCompare(b.id));
-                    const next = generateInitialState(s.floor + 1, nextSeed, baseSeed, {
-                        ...s.player,
-                        hp: Math.min(s.player.maxHp, s.player.hp + 1),
-                        upgrades: s.upgrades,
-                    });
-                    if (migratingSummons.length > 0) {
-                        const candidates = [next.player.position, ...getNeighbors(next.player.position)];
-                        const occupied: Entity[] = [next.player, ...next.enemies];
-                        const migrated: Entity[] = [];
-
-                        for (let i = 0; i < migratingSummons.length; i++) {
-                            const summon = migratingSummons[i];
-                            const fallback = candidates[candidates.length - 1] || next.player.position;
-                            const spawnPos = candidates.find(pos => {
-                                const unoccupied = !occupied.some(a => hexEquals(a.position, pos));
-                                return unoccupied && UnifiedTileService.isWalkable(next, pos);
-                            }) || fallback;
-                            const migratedSummon: Entity = {
-                                ...summon,
-                                position: spawnPos,
-                                previousPosition: spawnPos
-                            };
-                            occupied.push(migratedSummon);
-                            migrated.push(migratedSummon);
-                        }
-
-                        next.enemies = [...next.enemies, ...migrated];
-                        next.companions = [
-                            ...(next.companions || []),
-                            ...migrated.filter(e => e.companionOf === s.player.id)
-                        ];
-                        next.initiativeQueue = buildInitiativeQueue(next);
-                        next.occupancyMask = SpatialSystem.refreshOccupancyMask(next);
-                    }
-                    return {
-                        ...next,
-                        actionLog: [...(s.actionLog || [])],
-                        dailyRunDate: s.dailyRunDate,
-                        runObjectives: s.runObjectives,
-                        hazardBreaches: s.hazardBreaches || 0,
-                        pendingFrames: undefined
-                    };
-                }
-                return {
-                    ...s,
-                    gameStatus: status,
-                    shrineOptions: shrineOptions || s.shrineOptions,
-                    completedRun: completedRun || (s as any).completedRun,
-                    pendingStatus: undefined,
-                    pendingFrames: undefined
-                };
-            }
-
-            case 'EXIT_TO_HUB': {
-                return generateHubState();
-            }
-
-
-
-            default:
-                return s;
-        }
-    };
+    const resolveGameState = (s: GameState, a: Action): GameState => resolveGameStateAction(s, a, {
+        processNextTurn,
+        generateInitialState,
+        generateHubState,
+        warnTurnStackInvariant
+    });
 
     const intermediateState = resolveGameState(curState, action);
     const delta = createDelta(oldState, intermediateState, state);
@@ -1067,6 +269,28 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         undoStack: [...(intermediateState.undoStack || []), delta],
         actionLog: [...(intermediateState.actionLog || []), action]
     };
+};
+
+/**
+ * Legacy headless wrapper preserved for tests/integration callers.
+ * Delegates to the canonical reducer while preserving the historical { newState } shape.
+ */
+export const applyAction = (state: GameState, action: Action): { newState: GameState } => {
+    let curState = state;
+    const playerActionsRequiringIdentityCapture: Action['type'][] = ['MOVE', 'WAIT', 'USE_SKILL', 'ATTACK'];
+
+    if (playerActionsRequiringIdentityCapture.includes(action.type) && isPlayerTurn(curState)) {
+        const queue = curState.initiativeQueue;
+        const playerEntry = queue?.entries.find(e => e.actorId === curState.player.id);
+        if (playerEntry && !playerEntry.turnStartPosition) {
+            curState = {
+                ...curState,
+                initiativeQueue: startActorTurn(curState, curState.player)
+            };
+        }
+    }
+
+    return { newState: gameReducer(curState, action) };
 };
 
 export const fingerprintFromState = (state: GameState): string => {

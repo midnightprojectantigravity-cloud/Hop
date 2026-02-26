@@ -5,14 +5,14 @@ import {
 } from '../hex';
 import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
-import { pullToward, swap, kineticFling } from '../systems/displacement-system';
+import { pullToward, swap, kineticFling } from '../systems/movement/displacement-system';
 import { getSkillScenarios } from '../scenarios';
-import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../systems/juice-manifest';
-import { TileResolver } from '../systems/tile-effects';
-import { UnifiedTileService } from '../systems/unified-tile-service';
+import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../systems/visual/juice-manifest';
+import { TileResolver } from '../systems/tiles/tile-effects';
+import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 
 import { validateLineOfSight, validateAxialDirection, canLandOnHazard } from '../systems/validation';
-import { SpatialSystem } from '../systems/SpatialSystem';
+import { SpatialSystem } from '../systems/spatial-system';
 
 
 export const GRAPPLE_HOOK: SkillDefinition = {

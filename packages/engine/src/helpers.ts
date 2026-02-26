@@ -12,7 +12,7 @@ import { hexEquals, isHexInRectangularGrid, hexDistance } from './hex';
  * Determines if a point is a special tile (stairs, shrine, or hazardous).
  * Primarily used during map generation.
  */
-import { UnifiedTileService } from './systems/unified-tile-service';
+import { UnifiedTileService } from './systems/tiles/unified-tile-service';
 
 export const isSpecialTile = (
     point: Point,

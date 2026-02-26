@@ -5,10 +5,10 @@ import {
 } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
-import { processKineticPulse } from '../systems/kinetic-kernel';
-import { SKILL_JUICE_SIGNATURES } from '../systems/juice-manifest';
+import { processKineticPulse } from '../systems/movement/kinetic-kernel';
+import { SKILL_JUICE_SIGNATURES } from '../systems/visual/juice-manifest';
 import { validateLineOfSight, validateAxialDirection } from '../systems/validation';
-import { SpatialSystem } from '../systems/SpatialSystem';
+import { SpatialSystem } from '../systems/spatial-system';
 
 /**
  * Implementation of the Shield Throw skill.

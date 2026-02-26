@@ -3,7 +3,7 @@ import { getNeighbors } from '../hex';
 import { getEnemyAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
 /**
  * SNEAK_ATTACK Skill

@@ -31,7 +31,7 @@ describe('UPA Telemetry', () => {
         const targets = [
             path.resolve(__dirname, '../logic.ts'),
             path.resolve(__dirname, '../systems/tactical-engine.ts'),
-            path.resolve(__dirname, '../systems/ai.ts')
+            path.resolve(__dirname, '../systems/ai/ai.ts')
         ];
         const found = targets.some(file => fs.readFileSync(file, 'utf8').includes('computeUPA('));
         expect(found).toBe(false);

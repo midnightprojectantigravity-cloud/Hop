@@ -10,11 +10,11 @@
 import type { Actor, GameState, Point, AtomicEffect } from '../types';
 import { hexEquals, getNeighbors, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
-import { SpatialSystem } from './SpatialSystem';
-import { UnifiedTileService } from './unified-tile-service';
+import { SpatialSystem } from './spatial-system';
+import { UnifiedTileService } from './tiles/unified-tile-service';
 import { applyEffects } from './effect-engine';
 import { SkillRegistry } from '../skillRegistry';
-import { createFalcon as createFalconEntity } from './entity-factory';
+import { createFalcon as createFalconEntity } from './entities/entity-factory';
 import { appendTaggedMessage, tagMessage } from './engine-messages';
 
 // ============================================================================

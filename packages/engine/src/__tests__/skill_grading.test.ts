@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeDynamicSkillGrades, computeSkillNumericGrade } from '../systems/skill-grading';
+import { computeDynamicSkillGrades, computeSkillNumericGrade } from '../systems/evaluation/skill-grading';
 import type { SkillIntentProfile } from '../types';
 
 const baseProfile: SkillIntentProfile = {

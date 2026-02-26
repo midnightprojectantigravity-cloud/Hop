@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { generateInitialState, processNextTurn } from '../logic';
-import { StrategyRegistry } from '../systems/strategy-registry';
+import { StrategyRegistry } from '../systems/ai/strategy-registry';
 import { WildStrategy } from '../strategy/wild';
 import { GhostStrategy } from '../strategy/ghost';
 import { Intent } from '../types/intent';

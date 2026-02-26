@@ -6,9 +6,19 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./ai": "./src/ai/index.ts",
+    "./combat": "./src/combat/index.ts",
+    "./effects": "./src/effects/index.ts",
+    "./entities": "./src/entities/index.ts",
+    "./evaluation": "./src/evaluation/index.ts",
+    "./movement": "./src/movement/index.ts",
+    "./tiles": "./src/tiles/index.ts",
+    "./visual": "./src/visual/index.ts",
     "./*": "./src/*.ts"
   },
   "scripts": {
+    "generate-skill-registry": "npx tsx ./scripts/generateSkillRegistry.ts",
+    "prebuild": "npm run generate-skill-registry",
     "build": "tsc",
     "test": "vitest run",
     "validate-replay": "npx tsx ./scripts/validateReplay.ts",

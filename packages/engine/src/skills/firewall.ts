@@ -3,9 +3,9 @@ import { hexAdd, hexDirection } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, isBlockedByWall } from '../systems/validation';
-import { SpatialSystem } from '../systems/SpatialSystem';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
-import { getSurfaceStatus, getSurfaceSkillPowerMultiplier } from '../systems/surface-status';
+import { SpatialSystem } from '../systems/spatial-system';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { getSurfaceStatus, getSurfaceSkillPowerMultiplier } from '../systems/tiles/surface-status';
 
 /**
  * FIREWALL Skill

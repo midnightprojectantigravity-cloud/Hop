@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fingerprintFromState, gameReducer, generateInitialState, processNextTurn } from '../logic';
 import * as combatSystem from '../systems/combat';
 import { getNeighbors } from '../hex';
-import { UnifiedTileService } from '../systems/unified-tile-service';
+import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { applyEffects } from '../systems/effect-engine';
 
 describe('turn stack guard rails', () => {

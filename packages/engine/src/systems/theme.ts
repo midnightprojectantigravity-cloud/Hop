@@ -1,6 +1,6 @@
 import type { GameState, AtomicEffect } from '../types';
 import { getDirectionFromTo, hexAdd, hexDirection } from '../hex';
-import { UnifiedTileService } from './unified-tile-service';
+import { UnifiedTileService } from './tiles/unified-tile-service';
 import { isOccupied } from '../helpers';
 import { pointToKey } from '../hex';
 

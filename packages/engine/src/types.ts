@@ -1,7 +1,7 @@
 import type { GameComponent } from './systems/components';
 import type { SkillID, StatusID, ArchetypeID, JuiceEffectID } from './types/registry';
 import type { JuiceSignaturePayloadV1 } from './types/juice-signature';
-import type { CombatScoreEvent } from './systems/combat-calculator';
+import type { CombatScoreEvent } from './systems/combat/combat-calculator';
 
 /**
  * ARCHITECTURE OVERVIEW: "Gold Standard" Tech Stack
@@ -443,7 +443,7 @@ export interface GameState {
     stairsPosition: Point;
 
     /** The World-Class Data-Driven Tile Grid */
-    tiles: Map<string, import('./systems/tile-types').Tile>;
+    tiles: Map<string, import('./systems/tiles/tile-types').Tile>;
 
 
     // Spatial Hashing / Bitmasks (Goal 3)

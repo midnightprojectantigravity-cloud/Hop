@@ -1,6 +1,6 @@
-import type { AtomicEffect, GameState, Point } from '../types';
-import { DIRECTIONS, hexAdd, hexEquals } from '../hex';
-import { UnifiedTileService } from './unified-tile-service';
+import type { AtomicEffect, GameState, Point } from '../../types';
+import { DIRECTIONS, hexAdd, hexEquals } from '../../hex';
+import { UnifiedTileService } from '../tiles/unified-tile-service';
 
 export interface ForceResolutionInput {
     source: Point;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveTrinityLevers, computeSparkCostFromTrinity, deriveMaxHpFromTrinity } from '../systems/trinity-resolver';
+import { resolveTrinityLevers, computeSparkCostFromTrinity, deriveMaxHpFromTrinity } from '../systems/combat/trinity-resolver';
 
 describe('trinity-resolver', () => {
     it('computes deterministic lever bundle from trinity stats', () => {

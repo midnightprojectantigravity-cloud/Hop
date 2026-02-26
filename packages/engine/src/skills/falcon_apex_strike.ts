@@ -1,7 +1,7 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
 /**
  * FALCON_APEX_STRIKE Skill

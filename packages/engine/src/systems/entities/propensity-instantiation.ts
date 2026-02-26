@@ -1,13 +1,13 @@
-import type { Actor, GameState, Point } from '../types';
+import type { Actor, GameState, Point } from '../../types';
 import type {
     BaseUnitDefinition,
     CompiledBaseUnitBlueprint,
     DerivedStatDefinition,
     PropensityDefinition
-} from '../data/contracts';
-import { compileBaseUnitBlueprint } from '../data/contract-parser';
-import { randomFromSeed } from './rng';
-import { deriveMaxHpFromTrinity, type TrinityStats } from './trinity-resolver';
+} from '../../data/contracts';
+import { compileBaseUnitBlueprint } from '../../data/contract-parser';
+import { randomFromSeed } from '../rng';
+import { deriveMaxHpFromTrinity, type TrinityStats } from '../combat/trinity-resolver';
 import { createEntity } from './entity-factory';
 
 export interface PropensityRollTraceEntry {

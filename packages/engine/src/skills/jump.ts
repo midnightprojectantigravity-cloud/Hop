@@ -3,8 +3,8 @@ import { getNeighbors, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { isBlockedByWall, validateRange, canLandOnHazard } from '../systems/validation';
-import { SpatialSystem } from '../systems/SpatialSystem';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { SpatialSystem } from '../systems/spatial-system';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
 /**
  * Implementation of the Jump skill using the Compositional Skill Framework.

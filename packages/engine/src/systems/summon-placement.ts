@@ -1,7 +1,7 @@
 import type { Actor, AtomicEffect, GameState, Point } from '../types';
 import { getNeighbors, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
-import { UnifiedTileService } from './unified-tile-service';
+import { UnifiedTileService } from './tiles/unified-tile-service';
 
 export type SummonPlacementPolicy = 'fail' | 'push_friendly';
 

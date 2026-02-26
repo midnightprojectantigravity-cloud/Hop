@@ -3,7 +3,7 @@ import { getHexLine, hexEquals, hexDirection } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange, validateAxialDirection, hasClearLineToActor } from '../systems/validation';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
 /**
  * ARCHER_SHOT

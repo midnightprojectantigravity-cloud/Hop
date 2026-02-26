@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateCombat } from '../systems/combat-calculator';
+import { calculateCombat } from '../systems/combat/combat-calculator';
 
 describe('combat range layer', () => {
     it('rewards close engagement for melee-biased attackers', () => {

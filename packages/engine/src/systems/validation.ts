@@ -2,7 +2,7 @@ import type { GameState, Point, Actor } from '../types';
 import { hexEquals, getHexLine, hexDistance, getDirectionFromTo } from '../hex';
 import { getActorAt } from '../helpers';
 import { pointToKey } from '../hex';
-import { UnifiedTileService } from './unified-tile-service';
+import { UnifiedTileService } from './tiles/unified-tile-service';
 
 /**
  * Validation System

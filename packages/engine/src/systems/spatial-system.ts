@@ -15,7 +15,7 @@ import {
 import { getActorAt } from '../helpers';
 // Ensure these helpers in mask.ts support bigint[] (Array of bitmasks)
 import { createOccupancyMask, setOccupancy, isOccupiedMask } from './mask';
-import { UnifiedTileService } from './unified-tile-service';
+import { UnifiedTileService } from './tiles/unified-tile-service';
 
 export const SpatialSystem = {
     /**

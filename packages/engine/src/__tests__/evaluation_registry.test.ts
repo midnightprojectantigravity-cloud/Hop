@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createHex } from '../hex';
-import { createDefaultEvaluationRegistry, type GradeEnvelope } from '../systems/evaluation';
+import { createDefaultEvaluationRegistry, type GradeEnvelope } from '../systems/evaluation/evaluation';
 import type { SkillIntentProfile, Actor } from '../types';
-import type { Tile } from '../systems/tile-types';
+import type { Tile } from '../systems/tiles/tile-types';
 
 const validateEnvelope = (env: GradeEnvelope) => {
     expect(typeof env.power).toBe('number');

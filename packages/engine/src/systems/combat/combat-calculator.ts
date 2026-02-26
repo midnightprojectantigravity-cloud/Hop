@@ -1,7 +1,7 @@
-import type { Actor } from '../types';
-import type { StatusID } from '../types/registry';
-import type { TrinityComponent, StatsComponent } from './components';
-import { getComponent } from './components';
+import type { Actor } from '../../types';
+import type { StatusID } from '../../types/registry';
+import type { TrinityComponent, StatsComponent } from '../components';
+import { getComponent } from '../components';
 import {
     resolveTrinityLevers,
     computeSparkCostFromTrinity,

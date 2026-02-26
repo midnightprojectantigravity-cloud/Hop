@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateDungeon, generateEnemies } from '../systems/map';
-import { evaluateEncounter, evaluateMap, type MapEvaluationInput } from '../systems/evaluation';
+import { evaluateEncounter, evaluateMap, type MapEvaluationInput } from '../systems/evaluation/evaluation';
 
 describe('Map and Encounter evaluation', () => {
     it('produces deterministic map grades', () => {

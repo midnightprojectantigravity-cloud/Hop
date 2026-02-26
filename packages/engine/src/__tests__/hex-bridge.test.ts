@@ -7,14 +7,14 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { KineticEntity } from '../systems/kinetic-kernel';
+import { KineticEntity } from '../systems/movement/kinetic-kernel';
 import {
     prepareKineticSimulation,
     translate1DToHex,
     translateKineticResultToHex,
     getDirectionKey,
     HEX_DIRECTIONS
-} from '../systems/hex-bridge';
+} from '../systems/movement/hex-bridge';
 import type { GameState, Point, Actor } from '../types';
 import { createHex } from '../hex';
 

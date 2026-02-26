@@ -5,8 +5,8 @@
  * TODO: Implement "Hazard Generation" (e.g. dynamic spikes or traps) using the same RNG seed.
  */
 import type { Point, Room, FloorTheme, Entity } from '../types';
-import type { Tile } from './tile-types';
-import { BASE_TILES } from './tile-registry';
+import type { Tile } from './tiles/tile-types';
+import { BASE_TILES } from './tiles/tile-registry';
 import { createHex, hexEquals, hexDistance, getDiamondGrid } from '../hex';
 import { createRng, stableIdFromSeed } from './rng';
 import {
@@ -19,10 +19,10 @@ import {
     HAZARD_PERCENTAGE
 } from '../constants';
 import { isSpecialTile } from '../helpers';
-import { createEnemy, getEnemySkillLoadout } from './entity-factory';
+import { createEnemy, getEnemySkillLoadout } from './entities/entity-factory';
 import { ensureTacticalDataBootstrapped } from './tactical-data-bootstrap';
-import { getBaseUnitDefinitionBySubtype } from './base-unit-registry';
-import { instantiateActorFromDefinitionWithCursor, type PropensityRngCursor } from './propensity-instantiation';
+import { getBaseUnitDefinitionBySubtype } from './entities/base-unit-registry';
+import { instantiateActorFromDefinitionWithCursor, type PropensityRngCursor } from './entities/propensity-instantiation';
 
 export interface DungeonResult {
     rooms: Room[];

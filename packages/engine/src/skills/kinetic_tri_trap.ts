@@ -1,8 +1,8 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDirection, hexAdd } from '../hex';
 import { getSkillScenarios } from '../scenarios';
-import { SpatialSystem } from '../systems/SpatialSystem';
-import { UnifiedTileService } from '../systems/unified-tile-service';
+import { SpatialSystem } from '../systems/spatial-system';
+import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { consumeRandom } from '../systems/rng';
 import { getActorAt } from '../helpers';
 

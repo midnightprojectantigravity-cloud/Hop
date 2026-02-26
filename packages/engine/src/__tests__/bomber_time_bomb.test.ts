@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { generateInitialState } from '../logic';
 import { BOMB_TOSS } from '../skills/bomb_toss';
 import { TIME_BOMB } from '../skills/time_bomb';
-import { createEnemy } from '../systems/entity-factory';
+import { createEnemy } from '../systems/entities/entity-factory';
 import { applyEffects } from '../systems/effect-engine';
 
 describe('bomber summon contract', () => {

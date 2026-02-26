@@ -1,6 +1,6 @@
-import type { Actor } from '../types';
-import type { CombatProfileComponent } from './components';
-import { getComponent } from './components';
+import type { Actor } from '../../types';
+import type { CombatProfileComponent } from '../components';
+import { getComponent } from '../components';
 export const COMBAT_PROFILE_SET_VERSION = 'mvp-v1';
 
 export interface CombatProfile {

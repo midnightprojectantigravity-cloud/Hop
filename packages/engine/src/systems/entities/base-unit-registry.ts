@@ -1,4 +1,4 @@
-import type { BaseUnitDefinition } from '../data/contracts';
+import type { BaseUnitDefinition } from '../../data/contracts';
 
 const unitsById = new Map<string, BaseUnitDefinition>();
 const unitsBySubtype = new Map<string, BaseUnitDefinition>();

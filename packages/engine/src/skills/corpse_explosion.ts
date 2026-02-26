@@ -3,7 +3,7 @@ import { hexDistance, getNeighbors, hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { pointToKey } from '../hex';
-import { calculateCombat, extractTrinityStats } from '../systems/combat-calculator';
+import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 import { getActorAt } from '../helpers';
 
 const hasCorpseAt = (state: GameState, target: Point): boolean => {

@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { BaseUnitDefinition } from '../data/contracts';
 import { TACTICAL_CORE_MVP_PACK } from '../data/packs/mvp-pack';
-import { getBaseUnitDefinitionBySubtype, registerBaseUnitDefinition } from '../systems/base-unit-registry';
+import { getBaseUnitDefinitionBySubtype, registerBaseUnitDefinition } from '../systems/entities/base-unit-registry';
 import { generateDungeon, generateEnemies } from '../systems/map';
 import { bootstrapTacticalData, resetTacticalDataBootstrap } from '../systems/tactical-data-bootstrap';
-import { createEnemyFromBestiary } from '../systems/entity-factory';
+import { createEnemyFromBestiary } from '../systems/entities/entity-factory';
 
 const summarizeEnemies = (enemies: ReturnType<typeof generateEnemies>) =>
     enemies.map(enemy => ({
