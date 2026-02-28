@@ -10,14 +10,12 @@ import { BASE_TILES } from './tiles/tile-registry';
 import { createHex, hexEquals, hexDistance, getDiamondGrid } from '../hex';
 import { createRng, stableIdFromSeed } from './rng';
 import {
-    ENEMY_STATS,
-    FLOOR_ENEMY_BUDGET,
-    FLOOR_ENEMY_TYPES,
     FLOOR_THEMES,
     GRID_WIDTH,
     GRID_HEIGHT,
     HAZARD_PERCENTAGE
 } from '../constants';
+import { getEnemyCatalogEntry, getEnemyCatalogSkillLoadout, getFloorSpawnProfile } from '../data/enemies';
 import { isSpecialTile } from '../helpers';
 import { createEnemy, getEnemySkillLoadout } from './entities/entity-factory';
 import { ensureTacticalDataBootstrapped } from './tactical-data-bootstrap';
@@ -166,8 +164,9 @@ export const generateEnemies = (
     ensureTacticalDataBootstrapped();
 
     const rng = createRng(seed + ':enemies');
-    const budget = FLOOR_ENEMY_BUDGET[Math.min(floor, FLOOR_ENEMY_BUDGET.length - 1)];
-    const availableTypes = (FLOOR_ENEMY_TYPES as any)[floor] || (FLOOR_ENEMY_TYPES as any)[Math.max(...Object.keys(FLOOR_ENEMY_TYPES).map(Number))];
+    const spawnProfile = getFloorSpawnProfile(floor);
+    const budget = spawnProfile.budget;
+    const availableTypes = spawnProfile.allowedSubtypes;
     let propensityCursor: PropensityRngCursor = {
         rngSeed: `${seed}:enemy-propensity`,
         rngCounter: 0
@@ -178,16 +177,18 @@ export const generateEnemies = (
     const usedPositions: Point[] = [];
 
     while (remainingBudget > 0 && usedPositions.length < spawnPositions.length) {
-        const affordableTypes = availableTypes.filter((t: string) => {
-            const stats = (ENEMY_STATS as any)[t];
-            return stats && stats.cost <= remainingBudget;
+        const affordableTypes = availableTypes.filter((subtype) => {
+            const entry = getEnemyCatalogEntry(subtype);
+            return !!entry && entry.bestiary.stats.cost <= remainingBudget;
         });
 
         if (affordableTypes.length === 0) break;
 
         const typeIdx = Math.floor(rng.next() * affordableTypes.length);
         const enemyType = affordableTypes[typeIdx];
-        const stats = (ENEMY_STATS as any)[enemyType];
+        const catalogEntry = getEnemyCatalogEntry(enemyType);
+        if (!catalogEntry) break;
+        const stats = catalogEntry.bestiary.stats;
 
         const availablePositions = spawnPositions.filter(
             p => !usedPositions.some(u => hexEquals(u, p))
@@ -220,9 +221,11 @@ export const generateEnemies = (
                 id: enemyId,
                 subtype: enemyType,
                 position,
-                speed: stats.speed || 50,
-                skills: getEnemySkillLoadout(enemyType),
-                weightClass: weightClass,
+                speed: stats.speed || 1,
+                skills: getEnemyCatalogSkillLoadout(enemyType, { source: 'runtime', includePassive: true }).length > 0
+                    ? getEnemyCatalogSkillLoadout(enemyType, { source: 'runtime', includePassive: true })
+                    : getEnemySkillLoadout(enemyType),
+                weightClass,
                 enemyType: stats.type as 'melee' | 'ranged',
             });
         }

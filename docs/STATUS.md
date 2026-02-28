@@ -1,17 +1,28 @@
 # Codebase Status - February 28, 2026
 
 ## Major Accomplishment
-AI Convergence tranche is complete.
+Post-AI roadmap tranches are complete (content pipeline closure, frontend decomposition, harness core unification).
 
 Delivered outcomes:
-1. Shared AI core for scoring/tie-break contracts.
-2. Full enemy decision migration to framework modules.
-3. `WildStrategy` convergence to shared intent path for standard enemies.
-4. Harness convergence with extracted player selector and evaluation module boundaries.
-5. Strict parity and regression suite in place (corpus, strategy, scorer, tiebreak, harness drift, golden runs).
+1. Content pipeline closure:
+   - canonical enemy catalog + floor spawn profile modules
+   - map/evaluator runtime paths decoupled from `ENEMY_STATS` ownership
+   - bootstrap-time enemy content consistency validation
+2. Frontend decomposition:
+   - biome sandbox state/normalization/storage extracted into dedicated modules
+   - `UI.tsx` split into shell + log/status panels
+   - entity icon/animation helpers extracted into dedicated modules
+3. Harness core unification:
+   - shared `harness-batch` contracts used by both `balance-harness` and `pvp-harness`
+   - public harness API preserved
+4. New regression coverage for all three tranches:
+   - content consistency + spawn profile + evaluator source tests
+   - biome sandbox state/preview and entity animation helper tests
+   - harness batch wrapper parity tests
 
-Reference:
+References:
 - `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+- `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
 
 ## Validation Snapshot (Current)
 
@@ -22,18 +33,19 @@ Engine:
   - `13` files / `93` tests passed
 
 Web:
-- `npm --workspace @hop/web exec vitest run` -> pass
-  - `8` files / `15` tests passed
+- `npm --workspace @hop/web run test:run` -> pass
+  - `11` files / `21` tests passed
+- `npm --workspace @hop/web run build` -> pass
 
 ## Current Risk Posture
 
 1. No known blocking regressions in the strict AI acceptance gate.
-2. Determinism/parity checks are active and should remain mandatory for AI-affecting PRs.
-3. Diagnostics (`oracle/shadow` diff scripts/tests) are retained for investigation workflows.
+2. Determinism/parity checks are active and should remain mandatory for AI-affecting and content-spawn-affecting PRs.
+3. Compatibility exports (`ENEMY_STATS`, `FLOOR_ENEMY_*`) remain temporary and should not be used for new runtime ownership.
+4. Diagnostics (`oracle/shadow` diff scripts/tests) are retained for investigation workflows.
 
 ## Next Documentation Focus
 
 1. Keep architecture references aligned with grouped system directories (`ai`, `evaluation`, `combat`, `entities`, `tiles`).
-2. Update plan docs when milestones move from planned -> completed.
+2. Keep completed implementation plans under `docs/archive/`; keep only living trackers and runbooks at `docs/` root.
 3. Keep generated/audit artifacts in `artifacts/upa/`; keep stable references in `docs/`.
-

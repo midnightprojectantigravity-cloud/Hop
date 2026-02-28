@@ -10,9 +10,9 @@ import type {
     SimulatedRunDetailed
 } from './harness-types';
 import {
-    runSeededHeadToHeadBatch,
-    runSeededSimulationBatch,
-} from './harness-core';
+    runHarnessHeadToHeadBatch,
+    runHarnessSimulationBatch,
+} from './harness-batch';
 export { summarizeBatch } from './balance-harness-summary';
 export { summarizeMatchup } from './harness-matchup';
 export type {
@@ -60,8 +60,8 @@ export const runBatch = (
     loadoutId: ArchetypeLoadoutId = 'VANGUARD',
     policyProfileId = 'sp-v1-default'
 ): RunResult[] => {
-    return runSeededSimulationBatch(
-        seeds,
+    return runHarnessSimulationBatch(
+        { seeds },
         seed => simulateRun(seed, policy, maxTurns, loadoutId, policyProfileId)
     );
 };
@@ -74,8 +74,8 @@ export const runHeadToHeadBatch = (
     leftPolicyProfileId = 'sp-v1-default',
     rightPolicyProfileId = 'sp-v1-default'
 ): MatchupRun[] => {
-    return runSeededHeadToHeadBatch(
-        seeds,
+    return runHarnessHeadToHeadBatch(
+        { seeds },
         seed => simulateRun(seed, left.policy, maxTurns, left.loadoutId, leftPolicyProfileId),
         seed => simulateRun(seed, right.policy, maxTurns, right.loadoutId, rightPolicyProfileId),
         (seed, leftRun, rightRun) => ({

@@ -1,6 +1,6 @@
 import { createHex } from '../../hex';
 import { createActiveSkill } from '../../skillRegistry';
-import { ENEMY_STATS } from '../../constants';
+import { listEnemyCatalogEntries } from '../../data/enemies';
 import { DEFAULT_LOADOUTS } from '../loadout';
 import { BASE_TILES } from '../tiles/tile-registry';
 import { generateDungeon, generateEnemies } from '../map';
@@ -56,7 +56,9 @@ export const computeEvaluatorBaselines = (
         return evaluateEntity(actor, { calibration });
     });
 
-    const enemyGrades = Object.entries(ENEMY_STATS).map(([subtype, stats]) => {
+    const enemyGrades = listEnemyCatalogEntries().map(entry => {
+        const subtype = entry.subtype;
+        const stats = entry.bestiary.stats;
         const actor: Actor = {
             id: `enemy_${subtype}`,
             type: 'enemy',
@@ -68,7 +70,7 @@ export const computeEvaluatorBaselines = (
             factionId: 'enemy',
             statusEffects: [],
             temporaryArmor: 0,
-            activeSkills: (stats.skills || [])
+            activeSkills: [...entry.runtimeSkills.base, ...entry.runtimeSkills.passive]
                 .map(s => createActiveSkill(s as any))
                 .filter(Boolean)
         };

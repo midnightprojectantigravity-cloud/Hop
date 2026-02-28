@@ -1,4 +1,4 @@
-import type { BiomeSandboxSettings, BlendMode, MountainBlendMode } from '../BiomeSandbox';
+import type { BiomeSandboxSettings, BlendMode, MountainBlendMode } from './types';
 import type {
   VisualAssetManifest,
   VisualBiomeMaterialProfile,

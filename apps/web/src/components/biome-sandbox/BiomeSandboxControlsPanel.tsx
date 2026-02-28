@@ -7,7 +7,18 @@ import type {
   LayerMode,
   MountainBlendMode,
   WallMode
-} from '../BiomeSandbox';
+} from './types';
+import {
+  DETAIL_SCALE_MAX,
+  DETAIL_SCALE_MIN,
+  UNDERCURRENT_SCALE_MAX,
+  UNDERCURRENT_SCALE_MIN,
+  clamp,
+  normalizeHexColor,
+  readBlendMode,
+  readMountainBlendMode,
+  toNumber
+} from './state/settings-utils';
 
 interface BiomeSandboxControlsPanelProps {
   settings: BiomeSandboxSettings;
@@ -23,52 +34,10 @@ interface BiomeSandboxControlsPanelProps {
 
 const FLOOR_THEMES: FloorTheme[] = ['catacombs', 'inferno', 'throne', 'frozen', 'void'];
 const MODE_OPTIONS: LayerMode[] = ['off', 'repeat', 'cover'];
-const UNDERCURRENT_SCALE_MIN = 64;
-const UNDERCURRENT_SCALE_MAX = 192;
-const DETAIL_SCALE_MIN = 64;
-const DETAIL_SCALE_MAX = 512;
 const BLEND_OPTIONS: BlendMode[] = ['normal', 'multiply', 'overlay', 'soft-light', 'screen', 'color-dodge'];
 const MOUNTAIN_BLEND_OPTIONS: MountainBlendMode[] = ['off', 'multiply', 'overlay', 'soft-light', 'screen', 'color-dodge', 'normal'];
 const TINT_SWATCHES: string[] = ['#8b6f4a', '#8f4a2e', '#5b6d41', '#536e8e', '#5f5977', '#b79a73', '#d15a3a', '#3e4f3a'];
 const WALL_MODE_OPTIONS: WallMode[] = ['native', 'additive', 'custom'];
-
-const clamp = (v: number, min: number, max: number): number => Math.min(max, Math.max(min, v));
-
-const toNumber = (value: string, fallback: number): number => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-
-const normalizeHexColor = (value: string, fallback = '#8b6f4a'): string => {
-  const raw = String(value || '').trim();
-  const fullHex = /^#([0-9a-f]{6})$/i;
-  if (fullHex.test(raw)) return raw.toLowerCase();
-  const shortHex = /^#([0-9a-f]{3})$/i;
-  if (shortHex.test(raw)) {
-    const [r, g, b] = raw.slice(1).split('');
-    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
-  }
-  return fallback;
-};
-
-const readBlendMode = (blend: unknown): BlendMode => {
-  if (
-    blend === 'normal'
-    || blend === 'multiply'
-    || blend === 'overlay'
-    || blend === 'soft-light'
-    || blend === 'screen'
-    || blend === 'color-dodge'
-  ) {
-    return blend;
-  }
-  return 'multiply';
-};
-
-const readMountainBlendMode = (blend: unknown): MountainBlendMode => {
-  if (blend === 'off') return 'off';
-  return readBlendMode(blend);
-};
 
 export const BiomeSandboxControlsPanel: React.FC<BiomeSandboxControlsPanelProps> = ({
   settings,

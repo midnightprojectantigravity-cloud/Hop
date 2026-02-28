@@ -1,6 +1,6 @@
 import type { Action, GameState, Point, Entity, VisualEvent } from './types';
 import { gameReducer, generateInitialState } from './logic';
-import { ENEMY_STATS } from './constants';
+import { getEnemyCatalogEntry } from './data/enemies';
 import { hexEquals } from './hex';
 import { isPlayerTurn } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
@@ -37,7 +37,7 @@ export class ScenarioEngine {
     }
 
     spawnEnemy(type: string, pos: Point, id: string, overrides: Partial<Entity> = {}) {
-        const stats = (ENEMY_STATS as any)[type];
+        const stats = getEnemyCatalogEntry(type)?.bestiary.stats;
         const entity = (() => {
             try {
                 return createEnemyFromBestiary({

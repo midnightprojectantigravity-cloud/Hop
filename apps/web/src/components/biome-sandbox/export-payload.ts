@@ -2,7 +2,7 @@ import type {
   BiomeSandboxSettings,
   BlendMode,
   MountainBlendMode
-} from '../BiomeSandbox';
+} from './types';
 
 const BASE_URL = import.meta.env.BASE_URL || '/';
 const UNDERCURRENT_SCALE_MIN = 64;

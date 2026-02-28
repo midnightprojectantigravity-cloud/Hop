@@ -77,6 +77,35 @@ This document is the high-level source of truth for current engine/runtime archi
 Reference milestone:
 - `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 
+## Post-AI + Post-Tranche Baseline (February 28, 2026)
+
+1. Content pipeline closure
+- Canonical enemy runtime accessors:
+  - `packages/engine/src/data/enemies/enemy-catalog.ts`
+  - `packages/engine/src/data/enemies/floor-spawn-profile.ts`
+- Content consistency validation:
+  - `packages/engine/src/data/enemies/content-consistency.ts`
+  - bootstrap gate in `packages/engine/src/systems/tactical-data-bootstrap.ts`
+- Compatibility constants (`ENEMY_STATS`, floor enemy constants) are deprecated facades only.
+
+2. Frontend decomposition (behavior-preserving)
+- Biome sandbox state modules:
+  - `apps/web/src/components/biome-sandbox/state/`
+- Entity rendering helpers:
+  - `apps/web/src/components/entity/`
+- UI shell/panel decomposition:
+  - `apps/web/src/components/ui/`
+
+3. Harness core unification
+- Shared batch contracts and orchestration:
+  - `packages/engine/src/systems/evaluation/harness-batch.ts`
+- Runtime harness entry points (API preserved):
+  - `packages/engine/src/systems/evaluation/balance-harness.ts`
+  - `packages/engine/src/systems/evaluation/pvp-harness.ts`
+
+Reference milestone:
+- `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
+
 ## Quality Gates
 
 1. Engine build
@@ -89,14 +118,19 @@ Reference milestone:
 - `npm --workspace @hop/engine run test:ai-acceptance:strict`
 
 4. Web tests (non-watch)
-- `npm --workspace @hop/web exec vitest run`
+- `npm --workspace @hop/web run test:run`
+
+5. Web build
+- `npm --workspace @hop/web run build`
 
 ## Related Docs
 
 1. Contribution workflow: `docs/CONTRIBUTING.md`
 2. Current status: `docs/STATUS.md`
 3. Active tracker: `docs/NEXT_LEVEL.md`
-4. Historical archive: `docs/ROADMAP_HISTORY.md`
-5. UPA operations: `docs/UPA_GUIDE.md`
-6. Rules/guardrails: `docs/GOLD_STANDARD_MANIFESTO.md`
-
+4. AI milestone: `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+5. Post-AI phases milestone: `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
+6. Historical archive: `docs/ROADMAP_HISTORY.md`
+7. Archived completed plans: `docs/archive/`
+8. UPA operations: `docs/UPA_GUIDE.md`
+9. Rules/guardrails: `docs/GOLD_STANDARD_MANIFESTO.md`

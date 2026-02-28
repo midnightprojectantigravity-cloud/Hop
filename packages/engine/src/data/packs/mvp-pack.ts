@@ -87,8 +87,7 @@ const createEnemyUnit = (config: {
 });
 
 const createEnemyUnitFromBestiary = (
-    subtype: EnemySubtypeId,
-    overrides: Partial<Pick<Parameters<typeof createEnemyUnit>[0], 'baseSkills' | 'passiveSkills'>> = {}
+    subtype: EnemySubtypeId
 ): BaseUnitDefinition => {
     const content = getMvpEnemyContentEntry(subtype);
     if (!content) throw new Error(`Missing MVP enemy content for ${subtype}`);
@@ -100,8 +99,8 @@ const createEnemyUnitFromBestiary = (
         weightClass: def.stats.weightClass as UnitWeightClass,
         speed: def.stats.speed,
         trinity: def.trinity,
-        baseSkills: overrides.baseSkills ?? def.skills.base,
-        passiveSkills: overrides.passiveSkills ?? def.skills.passive
+        baseSkills: content.runtimeSkills.base,
+        passiveSkills: content.runtimeSkills.passive
     });
 };
 
@@ -193,15 +192,15 @@ const SHIELD_BASH_V1: CompositeSkillDefinition = {
 export const TACTICAL_CORE_MVP_PACK: TacticalDataPack = {
     version: '1.0.0',
     units: [
-        createEnemyUnitFromBestiary('footman', { passiveSkills: [] }),
+        createEnemyUnitFromBestiary('footman'),
         createEnemyUnitFromBestiary('sprinter'),
-        createEnemyUnitFromBestiary('raider', { baseSkills: ['DASH'], passiveSkills: [] }),
-        createEnemyUnitFromBestiary('pouncer', { baseSkills: ['BASIC_MOVE', 'GRAPPLE_HOOK'], passiveSkills: [] }),
-        createEnemyUnitFromBestiary('shieldBearer', { baseSkills: ['BASIC_MOVE', 'SHIELD_BASH'], passiveSkills: [] }),
-        createEnemyUnitFromBestiary('archer', { baseSkills: ['BASIC_MOVE', 'ARCHER_SHOT'], passiveSkills: [] }),
-        createEnemyUnitFromBestiary('bomber', { baseSkills: ['BASIC_MOVE', 'BOMB_TOSS'], passiveSkills: [] }),
-        createEnemyUnitFromBestiary('warlock', { baseSkills: ['BASIC_MOVE', 'SENTINEL_BLAST'], passiveSkills: [] }),
-        createEnemyUnitFromBestiary('sentinel', { baseSkills: ['BASIC_MOVE', 'SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'], passiveSkills: [] })
+        createEnemyUnitFromBestiary('raider'),
+        createEnemyUnitFromBestiary('pouncer'),
+        createEnemyUnitFromBestiary('shieldBearer'),
+        createEnemyUnitFromBestiary('archer'),
+        createEnemyUnitFromBestiary('bomber'),
+        createEnemyUnitFromBestiary('warlock'),
+        createEnemyUnitFromBestiary('sentinel')
     ],
     skills: [SHIELD_BASH_V1]
 };

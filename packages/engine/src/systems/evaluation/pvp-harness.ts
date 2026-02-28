@@ -13,8 +13,8 @@ import { getActorAt } from '../../helpers';
 import {
     chooseFromSeeded,
     incrementHistogram,
-    runSeededSimulationBatch,
 } from './harness-core';
+import { runHarnessSimulationBatch } from './harness-batch';
 export { summarizePvpBatch } from './pvp-harness-summary';
 
 type DuelSide = 'left' | 'right';
@@ -455,8 +455,8 @@ export const runPvpBatch = (
     rightPolicy: BotPolicy,
     maxRounds = 60
 ): PvpRunResult[] => {
-    return runSeededSimulationBatch(
-        seeds,
+    return runHarnessSimulationBatch(
+        { seeds },
         seed => simulatePvpRun(seed, leftLoadoutId, rightLoadoutId, leftPolicy, rightPolicy, maxRounds)
     );
 };

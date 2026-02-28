@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { BiomeSandboxPathSets } from '../BiomeSandbox';
+import type { BiomeSandboxPathSets } from './types';
 import type { VisualAssetManifest, VisualBiomeTextureLayer } from '../../visual/asset-manifest';
 
 export const useBiomeSandboxPathSets = (assetManifest: VisualAssetManifest | null): BiomeSandboxPathSets => (

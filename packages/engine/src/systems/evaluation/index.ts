@@ -1,4 +1,5 @@
 export * from './balance-harness';
+export * from './harness-batch';
 export * from './harness-core';
 export * from './harness-matchup';
 export * from './harness-simulation';
