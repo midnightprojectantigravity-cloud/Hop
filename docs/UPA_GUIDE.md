@@ -4,6 +4,7 @@ Roadmap docs:
 - Active tracker: `docs/NEXT_LEVEL.md`
 - Backlog: `docs/BALANCE_BACKLOG.md`
 - Historical milestones: `docs/ROADMAP_HISTORY.md`
+- AI convergence milestone: `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 
 Artifact policy:
 - Stable/reference reports can stay in `docs/`.
@@ -17,6 +18,21 @@ Use it to compare policies, loadout IDs, and head-to-head archetype performance 
 - Run commands from repo root.
 - Use `tsx` to execute TypeScript scripts directly:
   - `npx tsx ...`
+- For stable CI-style runs, use non-watch test commands:
+  - `npm --workspace @hop/engine run test:ai-acceptance:strict`
+  - `npm --workspace @hop/web exec vitest run`
+
+## AI Convergence Gate (Recommended Before AI Changes)
+
+1. Build + import integrity
+- `npm --workspace @hop/engine run build`
+- `npm --workspace @hop/engine run check-script-imports`
+
+2. Strict AI acceptance suite
+- `npm --workspace @hop/engine run test:ai-acceptance:strict`
+
+3. Web non-watch tests
+- `npm --workspace @hop/web exec vitest run`
 
 ## Core Scripts
 

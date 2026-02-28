@@ -1,10 +1,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DEFAULT_LOADOUTS } from '../src/systems/loadout';
-import { runBatch, summarizeBatch, type ArchetypeLoadoutId } from '../src/systems/balance-harness';
+import { runBatch, summarizeBatch, type ArchetypeLoadoutId } from '../src/systems/evaluation/balance-harness';
 import { computeUPAFromSummary } from '../src/systems/upa';
-import { COMBAT_PROFILE_SET_VERSION } from '../src/systems/combat-traits';
-import { TRINITY_PROFILE_SET_VERSION, getActiveTrinityProfileId } from '../src/systems/trinity-profiles';
+import { COMBAT_PROFILE_SET_VERSION } from '../src/systems/combat/combat-traits';
+import { TRINITY_PROFILE_SET_VERSION, getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {

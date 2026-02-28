@@ -1,0 +1,12 @@
+[
+  { "id": "floor1_seed_a", "floor": 1, "seed": "enemy-parity-a" },
+  { "id": "floor2_seed_a", "floor": 2, "seed": "enemy-parity-b" },
+  { "id": "floor3_seed_a", "floor": 3, "seed": "enemy-parity-c" },
+  { "id": "floor4_seed_a", "floor": 4, "seed": "enemy-parity-d" },
+  { "id": "floor5_seed_a", "floor": 5, "seed": "enemy-parity-e" },
+  { "id": "floor6_seed_a", "floor": 6, "seed": "enemy-parity-f" },
+  { "id": "floor7_seed_a", "floor": 7, "seed": "enemy-parity-g" },
+  { "id": "floor8_seed_a", "floor": 8, "seed": "enemy-parity-h" },
+  { "id": "floor9_seed_a", "floor": 9, "seed": "enemy-parity-i" }
+]
+

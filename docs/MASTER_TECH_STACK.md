@@ -1,142 +1,102 @@
-# 🏆 Hop Engine Master Documentation
+# Hop Master Tech Stack
 
-This document serves as the unified source of truth for the **Hop** game engine, consolidating information on architecture, mechanics, and visual integration.
+This document is the high-level source of truth for current engine/runtime architecture.
 
----
+## Core Principles
 
-## 1. Core Principles & Architecture
+1. Headless-first referee
+- All gameplay truth lives in `packages/engine`.
+- The web client renders and orchestrates UX only.
 
-The engine is built on a "Logic-First" philosophy, ensuring that the game's "brain" is entirely decoupled from its "body" (the UI).
+2. Determinism
+- Engine RNG and `rngCounter` are authoritative.
+- No `Math.random` in engine logic paths.
+- Same seed + same actions must reproduce identical outcomes.
 
-Every line of code must adhere to these four non-negotiable principles:
+3. Intent before execution
+- Actions/intents are validated before mutation.
+- Execution emits atomic effects; handlers perform state transitions.
 
-* **The Referee is Absolute (Headless-First)**: All game logic must run in a pure Node.js environment without a DOM. If it doesn't work in a headless script, it's broken.
-* **Determinism or Death**: All logic, including RNG (Mulberry32) and AI, must be bit-for-bit identical across environments based on an `initialSeed`.
-* **State is a River (Immutability)**: The `gameReducer` returns a fresh state object every turn, enabling "Infinite Undo" and frame-perfect replays.
-* **Logic Before "Juice"**: The engine only emits **Atomic Effects** (Damage, Displace, Stun). The frontend interprets these to create animations.
+4. Tile and movement contract
+- `state.tiles` is the tile source of truth.
+- Movement resolves through tile hooks (`onPass`, `onEnter`) and tile services.
 
-**Repository Structure (Monorepo)**:
+## Repository Topology
 
-* `packages/engine`: Pure TypeScript game logic (The "Referee").
-* `packages/shared`: Common types and constants.
-* `apps/web`: React/PixiJS frontend (The "Juice").
-* `apps/server`: Node.js backend for validation and leaderboards.
+- `packages/engine` - deterministic game engine, AI, simulation, and evaluation.
+- `apps/web` - React/Pixi presentation layer.
+- `apps/server` - leaderboard/validation service.
 
----
+## Engine Architecture (Current)
 
-## 2. Technical Architecture: ECS-Lite
+1. Turn and reducer core
+- `packages/engine/src/logic.ts`
+- `packages/engine/src/logic-turn-loop.ts`
 
-We use a formalized **ECS-Lite** structure to separate data from logic.
+2. Effects runtime
+- `packages/engine/src/systems/effect-engine.ts`
+- decomposed effect handlers in `packages/engine/src/systems/effects/`
 
-* **Entities (Actors)**: Thin data containers identified by a persistent ID.
-* **Components**: Strictly typed data blocks (e.g., `PhysicsComponent`, `HealthComponent`) stored in a `Map`.
-* **Systems**: Pure functions in `src/systems/` that process components (e.g., `movement.ts`, `combat.ts`). - IN PROGRESS, still need to move more files to the folder.
-* **Spatial Data**: Occupancy lookups use **BigInt bitmasks** for speed, but the physical world properties (Lava, Walls, Snare) are managed by the **Unified Tile Map**.
----
+3. Grouped systems
+- AI: `packages/engine/src/systems/ai/`
+- Combat: `packages/engine/src/systems/combat/`
+- Entities: `packages/engine/src/systems/entities/`
+- Evaluation/harness: `packages/engine/src/systems/evaluation/`
+- Movement: `packages/engine/src/systems/movement/`
+- Tiles: `packages/engine/src/systems/tiles/`
+- Visual metadata: `packages/engine/src/systems/visual/`
 
-## 3. Tile Effects System (Observer-Based)
+4. Skills and registry
+- Skills live in `packages/engine/src/skills/`.
+- Registry generation:
+  - source: `packages/engine/scripts/generateSkillRegistry.ts`
+  - generated: `packages/engine/src/generated/skill-registry.generated.ts`
 
-The engine has transitioned from action-driven effects to an **observer-based** architecture where tiles monitor units passing over or landing on them.
+## AI Stack (Post-Convergence)
 
-### Core Hooks
+1. Shared AI core
+- `packages/engine/src/systems/ai/core/types.ts`
+- `packages/engine/src/systems/ai/core/scoring.ts`
+- `packages/engine/src/systems/ai/core/tiebreak.ts`
 
-* **`onPass(context)`**: Triggered when a unit moves **through** a tile. Used for mid-slide damage or momentum modifications (e.g., Lava viscosity slowing a push).
-* **`onEnter(context)`**: Triggered when a unit's movement **terminates** on a tile. Used for landing damage or status application (e.g., sinking into Lava).
+2. Enemy runtime framework
+- `packages/engine/src/systems/ai/enemy/candidates.ts`
+- `packages/engine/src/systems/ai/enemy/features.ts`
+- `packages/engine/src/systems/ai/enemy/policies.ts`
+- `packages/engine/src/systems/ai/enemy/selector.ts`
+- `packages/engine/src/systems/ai/enemy/decision-adapter.ts`
 
-### Momentum & Physics
+3. Runtime wrappers and strategy integration
+- API-compatible wrapper: `packages/engine/src/systems/ai/ai.ts`
+- strategy adapter use: `packages/engine/src/strategy/wild.ts`
 
-Tiles can actively modify the `remainingMomentum` of a kinetic request:
+4. Player/harness selector layer
+- `packages/engine/src/systems/ai/player/`
+- evaluation orchestration and contracts in `packages/engine/src/systems/evaluation/`
 
-* **Lava**: Reduces momentum by 2 (viscosity).
-* **Ice**: Preserves momentum (no friction).
-* **Snare Trap**: Sets momentum to 0 (immediate stop).
+Reference milestone:
+- `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 
----
+## Quality Gates
 
-## 4. The Juice System
+1. Engine build
+- `npm --workspace @hop/engine run build`
 
-"Juice" is the sensory vocabulary the engine uses to communicate **Intent, Impact, and Weight** to the player. Every skill follows a 4-phase signature:
+2. Script import integrity
+- `npm --workspace @hop/engine run check-script-imports`
 
-| Phase | Description | Example Effects |
-| --- | --- | --- |
-| **1. Anticipation** | Pre-action telegraphs | Aiming lasers, trajectory arcs, charge-up vortexes |
-| **2. Execution** | The action in progress | Projectile trails, motion blur, cable tension |
-| **3. Impact** | The moment of collision | Screen shake, freeze frames, particle explosions, "IMPACT!" text |
-| **4. Resolution** | Aftermath and settling | Kinetic shockwaves, status bursts, settling dust |
+3. Strict AI acceptance
+- `npm --workspace @hop/engine run test:ai-acceptance:strict`
 
-### Key "Juice" Signatures
+4. Web tests (non-watch)
+- `npm --workspace @hop/web exec vitest run`
 
-* **Shield Throw**: Blue trajectory arc → 720° spinning animation → Heavy impact + high shake + freeze frame.
-* **Grapple Hook**: Green laser → Hook cable with tension wobble → Winch effect on swap.
-* **Lava Sink**: Lava ripple + high shake + "CONSUMED" combat text.
+## Related Docs
 
----
+1. Contribution workflow: `docs/CONTRIBUTING.md`
+2. Current status: `docs/STATUS.md`
+3. Active tracker: `docs/NEXT_LEVEL.md`
+4. Historical archive: `docs/ROADMAP_HISTORY.md`
+5. UPA operations: `docs/UPA_GUIDE.md`
+6. Rules/guardrails: `docs/GOLD_STANDARD_MANIFESTO.md`
 
-## 5. Smooth Movement & Displacement
-
-Units no longer "teleport" between hexes. Every displacement effect includes a full `path` array.
-
-**Displacement Structure**:
-
-```typescript
-{
-    type: 'Displacement',
-    target: 'player-1',
-    destination: { q: 5, r: 3, s: -8 },
-    path: [{ q: 3, r: 3, s: -6 }, { q: 4, r: 3, s: -7 }, { q: 5, r: 3, s: -8 }],
-    animationDuration: 180 // Speed varies by skill (Dash is fast, Vault is slow)
-}
-
-```
-
-**Timing Recommendations**:
-
-* **Dash**: 60ms per tile (aggressive).
-* **Kinetic Pulse**: 80ms-100ms per tile (forceful).
-* **Vault**: 250ms total for the parabolic arc.
-
----
-
-## 6. Development & Testing
-
-* **Scenario-Driven Testing**: All new mechanics should have a test case in `packages/engine/src/scenarios/`.
-* **Determinism Validation**: Use the `validateReplay` script to ensure that engine changes don't break existing `ActionLog` replays.
-* **Running Tests**: `npm test` or `npx vitest run` to verify the "Juice" stream and logic parity.
-
-
-
-## 7. Technical Architecture: ECS-Lite
-
-We use a formalized **ECS-Lite** structure to separate data from logic.
-
-* **Entities (Actors)**: Thin data containers identified by a persistent ID.
-* **Components**: Strictly typed data blocks (e.g., `PhysicsComponent`, `HealthComponent`) stored in a `Map`.
-* **Systems**: Pure functions in `src/systems/` that process components (e.g., `movement.ts`, `combat.ts`). - IN PROGRESS, still need to move more files to the folder.
-* **Spatial Bitmasks**: High-speed occupancy lookups use **BigInt bitmasks** to represent the **Flat-Top Hex Grid**.
-
----
-
-## 8. UI/UX: The Strategic Wrapper
-
-The out-of-combat experience must feel as robust as the tactical grid.
-
-* **Strategic Hub**: The main SPA entry point for loadout selection and meta-progression.
-* **Tactical Academy**: Interactive tutorials generated from the `src/scenarios/` registry.
-* **The Replay Gallery**: Uses the `ActionLog` to re-simulate matches bit-for-bit.
-* **The Preview System**:
-* **Level 1 (Movement)**: BFS-based "Bloom" showing reachable hexes and 1-tile threat rings.
-* **Level 2 (Targeting)**: Axial "Star" patterns with Line-of-Sight shadowing.
-
-
-
----
-
-## 9. Quality & Validation Pipeline
-
-* **Scenario-Driven TDD**: Every skill must be accompanied by a tactical test in `src/scenarios/`.
-* **Fuzz Testing**: A headless script performs 10,000+ random actions to ensure no illegal states occur.
-* **Server Validator**: A Node.js CLI to verify `ActionLog` authenticity before leaderboard submission. - TO DO
-
-### Quality Gates
-A PR is not ready for review if:
-* `npx knip` reports unused exports or files in the new logic.

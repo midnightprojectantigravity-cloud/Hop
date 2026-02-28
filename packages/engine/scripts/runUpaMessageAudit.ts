@@ -6,9 +6,9 @@ import { isPlayerTurn } from '../src/systems/initiative';
 import { createRng } from '../src/systems/rng';
 import { getNeighbors, hexEquals } from '../src/hex';
 import { SkillRegistry } from '../src/skillRegistry';
-import { UnifiedTileService } from '../src/systems/unified-tile-service';
+import { UnifiedTileService } from '../src/systems/tiles/unified-tile-service';
 import type { Action, GameState, Point } from '../src/types';
-import type { ArchetypeLoadoutId } from '../src/systems/balance-harness';
+import type { ArchetypeLoadoutId } from '../src/systems/evaluation/balance-harness';
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {

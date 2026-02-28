@@ -8,10 +8,10 @@ import {
     summarizeMatchup,
     type ArchetypeLoadoutId,
     type BatchSummary,
-} from '../src/systems/balance-harness';
-import { computeStaticSkillGrades } from '../src/systems/skill-grading';
+} from '../src/systems/evaluation/balance-harness';
+import { computeStaticSkillGrades } from '../src/systems/evaluation/skill-grading';
 import { COMPOSITIONAL_SKILLS } from '../src/skillRegistry';
-import type { TrinityProfileId } from '../src/systems/trinity-profiles';
+import type { TrinityProfileId } from '../src/systems/combat/trinity-profiles';
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {
@@ -330,4 +330,3 @@ const wrote = {
 };
 
 originalLog(JSON.stringify({ wrote, count, maxTurns }, null, 2));
-

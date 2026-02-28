@@ -1,15 +1,15 @@
 
-import { useRef, useState, useEffect, useCallback } from 'react';
-import { hexEquals, validateReplayActions } from '@hop/engine';
+import { useRef, useState, useCallback } from 'react';
+import { hexEquals } from '@hop/engine';
 import type { Point, Action, GameState } from '@hop/engine';
-import type { ReplayRecord } from './components/ReplayManager';
 import { BiomeSandbox } from './components/BiomeSandbox';
-import { buildReplayDiagnostics } from './app/replay-diagnostics';
 import { useAssetManifest } from './app/use-asset-manifest';
 import { useDebugPerfLogger } from './app/use-debug-perf-logger';
 import { useDebugQueryBridge } from './app/use-debug-query-bridge';
+import { useFloorIntro } from './app/use-floor-intro';
 import { usePersistedGameState } from './app/use-persisted-game-state';
 import { useReplayController } from './app/use-replay-controller';
+import { useRunRecording } from './app/use-run-recording';
 import { useSimulationFeedback } from './app/use-simulation-feedback';
 import { useTurnFlowCoordinator } from './app/use-turn-flow-coordinator';
 import { useTurnDriverTrace } from './app/use-turn-driver-trace';
@@ -90,7 +90,6 @@ function App() {
     startReplay,
     stepReplay
   } = useReplayController({ dispatchWithTrace: dispatchReplayAction });
-  const lastRecordedRunRef = useRef<string | null>(null);
   useDebugPerfLogger([gameState.gameStatus, isReplayMode]);
 
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
@@ -129,28 +128,8 @@ function App() {
   });
 
   const [tutorialInstructions, setTutorialInstructions] = useState<string | null>(null);
-  const [floorIntro, setFloorIntro] = useState<{ floor: number; theme: string } | null>(null);
-
-  // Trigger floor intro on floor change
-  const lastFloorRef = useRef(gameState.floor);
-  useEffect(() => {
-    if (gameState.gameStatus === 'playing' && gameState.floor !== lastFloorRef.current) {
-      setFloorIntro({ floor: gameState.floor, theme: gameState.theme || 'Inferno' });
-      lastFloorRef.current = gameState.floor;
-      const timer = setTimeout(() => setFloorIntro(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [gameState.floor, gameState.gameStatus, gameState.theme]);
-
-  // Also trigger intro on initial start
-  useEffect(() => {
-    if (gameState.gameStatus === 'playing' && gameState.floor === 1 && !lastFloorRef.current) {
-      setFloorIntro({ floor: 1, theme: gameState.theme || 'Inferno' });
-      lastFloorRef.current = 1;
-      const timer = setTimeout(() => setFloorIntro(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [gameState.gameStatus]);
+  const floorIntro = useFloorIntro(gameState);
+  useRunRecording(gameState, isReplayMode);
 
   const handleSelectSkill = (skillId: string | null) => {
     if (isInputLocked) return;
@@ -194,63 +173,6 @@ function App() {
   const handleLoadScenario = (state: GameState, instructions: string) => { dispatchWithTrace({ type: 'LOAD_STATE', payload: state }, 'scenario_load'); setTutorialInstructions(instructions); setSelectedSkillId(null); };
 
   const handleExitToHub = () => { dispatchWithTrace({ type: 'EXIT_TO_HUB' }, 'exit_to_hub'); setSelectedSkillId(null); resetReplayUi(); navigateTo(hubPath); };
-
-  // Auto-record runs on win/loss
-  useEffect(() => {
-    if (isReplayMode) return;
-    if ((gameState.gameStatus === 'won' || gameState.gameStatus === 'lost') && lastRecordedRunRef.current !== gameState.initialSeed) {
-      lastRecordedRunRef.current = gameState.initialSeed || 'default';
-      // Record to local storage
-      const seed = gameState.initialSeed ?? gameState.rngSeed ?? '0';
-      const score = gameState.completedRun?.score || (gameState.player.hp || 0) + (gameState.floor || 0) * 100;
-      const replayValidation = validateReplayActions(gameState.actionLog || []);
-      if (!replayValidation.valid) {
-        console.error('[HOP_REPLAY] Refusing to persist replay with invalid action log', {
-          errors: replayValidation.errors
-        });
-        return;
-      }
-      const diagnostics = buildReplayDiagnostics(replayValidation.actions, gameState.floor || 0);
-      const rec: ReplayRecord = {
-        id: `run-${Date.now()}`,
-        seed,
-        loadoutId: gameState.player.archetype,
-        actions: replayValidation.actions,
-        score,
-        floor: gameState.floor,
-        date: new Date().toISOString(),
-        replayVersion: 2,
-        diagnostics
-      };
-
-      const raw = localStorage.getItem('hop_replays_v1');
-      const list = raw ? JSON.parse(raw) as ReplayRecord[] : [];
-      const next = [rec, ...list].slice(0, 100);
-      localStorage.setItem('hop_replays_v1', JSON.stringify(next));
-
-      // Also update leaderboard if top 5
-      const rawLB = localStorage.getItem('hop_leaderboard_v1');
-      let lb = rawLB ? JSON.parse(rawLB) as any[] : [];
-      lb.push({
-        id: rec.id,
-        name: 'Player',
-        score: rec.score,
-        floor: rec.floor,
-        date: rec.date,
-        seed: rec.seed,
-        loadoutId: rec.loadoutId,
-        actions: rec.actions,
-        replayVersion: rec.replayVersion,
-        diagnostics: rec.diagnostics
-      });
-      lb.sort((a, b) => b.score - a.score);
-      lb = lb.slice(0, 5);
-      localStorage.setItem('hop_leaderboard_v1', JSON.stringify(lb));
-    }
-    if (gameState.gameStatus === 'hub') {
-      lastRecordedRunRef.current = null;
-    }
-  }, [gameState.gameStatus, isReplayMode, gameState.initialSeed]);
 
   const handleStartRun = (mode: 'normal' | 'daily') => {
     const id = gameState.selectedLoadoutId;

@@ -50,7 +50,7 @@
     - `artifacts/upa/UPA_MATCHUP_FIREMAGE_VANGUARD.json` (60-seed fast slice)
     - `artifacts/upa/UPA_MATCHUP_FIREMAGE_SKIRMISHER.json` (60-seed fast slice)
     - `artifacts/upa/UPA_MATCHUP_FIREMAGE_NECROMANCER.json` (60-seed fast slice)
-    - Reinforcement changes: `packages/engine/src/systems/trinity-profiles.ts`
+    - Reinforcement changes: `packages/engine/src/systems/combat/trinity-profiles.ts`
 
 ## Priority C: Hazard Discipline
 - [x] Reduce high hazard-breach archetypes (`NECROMANCER`, `HUNTER`, `ASSASSIN`, `VANGUARD`).
@@ -61,7 +61,7 @@
     - `artifacts/upa/UPA_BALANCE_HUNTER_FAST.json`
     - `artifacts/upa/UPA_BALANCE_ASSASSIN_FAST.json`
     - `artifacts/upa/UPA_BALANCE_VANGUARD_FAST.json`
-    - Hazard-discipline evaluator changes: `packages/engine/src/systems/balance-harness.ts`
+    - Hazard-discipline evaluator changes: `packages/engine/src/systems/evaluation/balance-harness.ts`
 
 ## Priority D: Coverage and Cold Skills
 - [x] Keep player-facing policy-blocked set pinned to `AUTO_ATTACK`, `BASIC_MOVE` only.

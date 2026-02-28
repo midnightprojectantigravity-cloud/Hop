@@ -1,0 +1,1377 @@
+{
+  "fixture": {
+    "id": "necromancer_floor6_timeout",
+    "version": 1,
+    "seed": "necromancer-4",
+    "loadoutId": "NECROMANCER",
+    "floorsTarget": 4,
+    "maxTurnsPerFloor": 20,
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "expected": {
+      "outcome": "timeout",
+      "finalFloor": [
+        5,
+        7
+      ],
+      "totalKills": [
+        0,
+        2
+      ],
+      "totalTurns": [
+        80,
+        80
+      ],
+      "playerHp": [
+        1,
+        40
+      ],
+      "fingerprint": "6c652745085e2a21"
+    }
+  },
+  "maxTurns": 80,
+  "strictMode": true,
+  "run": {
+    "seed": "necromancer-4",
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "loadoutId": "NECROMANCER",
+    "result": "timeout",
+    "turnsSpent": 80,
+    "floor": 6,
+    "kills": 0,
+    "hazardBreaches": 0,
+    "score": 5060,
+    "finalPlayerHp": 15,
+    "finalPlayerMaxHp": 59,
+    "finalPlayerHpRatio": 0.2542372881355932,
+    "playerActionCounts": {
+      "MOVE": 103,
+      "USE_SKILL": 31
+    },
+    "playerSkillUsage": {
+      "BASIC_ATTACK": 16,
+      "RAISE_DEAD": 5,
+      "SOUL_SWAP": 5,
+      "CORPSE_EXPLOSION": 5
+    },
+    "strategicIntentCounts": {
+      "offense": 8,
+      "defense": 126,
+      "positioning": 0,
+      "control": 0
+    },
+    "totalPlayerSkillCasts": 31,
+    "playerSkillTelemetry": {
+      "BASIC_ATTACK": {
+        "casts": 16,
+        "enemyDamage": 105,
+        "killShots": 0,
+        "healingReceived": 7,
+        "hazardDamage": 38,
+        "stairsProgress": 0,
+        "shrineProgress": 2,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "RAISE_DEAD": {
+        "casts": 5,
+        "enemyDamage": 52,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 9,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "SOUL_SWAP": {
+        "casts": 5,
+        "enemyDamage": 34,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 9,
+        "stairsProgress": 1,
+        "shrineProgress": 2,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "CORPSE_EXPLOSION": {
+        "casts": 5,
+        "enemyDamage": 15,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 0,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      }
+    },
+    "autoAttackTriggersByActionType": {},
+    "triangleSignal": {
+      "samples": 7,
+      "avgHitPressure": 0,
+      "avgMitigationPressure": 0,
+      "avgCritPressure": 0,
+      "avgResistancePressure": 0
+    },
+    "trinityContribution": {
+      "samples": 7,
+      "bodyContribution": 0.5885714285714286,
+      "mindContribution": 0.2454285714285714,
+      "instinctContribution": 0.16599999999999998
+    },
+    "combatProfileSignal": {
+      "samples": 7,
+      "avgOutgoingMultiplier": 1,
+      "avgIncomingMultiplier": 1,
+      "avgTotalMultiplier": 1
+    }
+  },
+  "diagnostics": {
+    "actionCount": 157,
+    "stateFingerprint": "{\"player\":{\"hp\":15,\"maxHp\":59,\"position\":{\"q\":1,\"r\":6,\"s\":-7},\"upgrades\":[\"POWER_STRIKE\",\"EXTENDED_REACH\",\"VAMPIRIC\",\"EXTRA_HP\"]},\"enemies\":[{\"id\":\"enemy_2_1a6og2\",\"subtype\":\"footman\",\"hp\":21,\"position\":{\"q\":0,\"r\":8,\"s\":-8}}],\"floor\":6,\"turnNumber\":81,\"kills\":0,\"rngCounter\":12}"
+  },
+  "strictFingerprint": "1b20d05d25482914",
+  "actions": [
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 5,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 4,
+        "s": -9
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "POWER_STRIKE"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 3,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 3,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 6,
+        "r": 4,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 4,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "RAISE_DEAD",
+        "target": {
+          "q": 5,
+          "r": 4,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SOUL_SWAP",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 6,
+        "s": -11
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "RAISE_DEAD",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 7,
+        "s": -11
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 1,
+        "s": -4
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 8,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "RAISE_DEAD",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SOUL_SWAP",
+        "target": {
+          "q": 5,
+          "r": 6,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 7,
+        "s": -11
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "CORPSE_EXPLOSION",
+        "target": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 1,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "EXTENDED_REACH"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SOUL_SWAP",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 6,
+        "s": -10
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 6,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 7,
+        "s": -11
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SOUL_SWAP",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "CORPSE_EXPLOSION",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 5,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 4,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 3,
+        "s": -8
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "VAMPIRIC"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 4,
+          "r": 6,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 4,
+          "r": 6,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "CORPSE_EXPLOSION",
+        "target": {
+          "q": 4,
+          "r": 6,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "RAISE_DEAD",
+        "target": {
+          "q": 4,
+          "r": 6,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SOUL_SWAP",
+        "target": {
+          "q": 4,
+          "r": 6,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "CORPSE_EXPLOSION",
+        "target": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 5,
+        "s": -9
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 1,
+        "s": -4
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 4,
+          "r": 6,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 1,
+          "r": 6,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 1,
+          "r": 6,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "RAISE_DEAD",
+        "target": {
+          "q": 1,
+          "r": 6,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 0,
+        "r": 5,
+        "s": -5
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "CORPSE_EXPLOSION",
+        "target": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 0,
+        "r": 6,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 5,
+        "s": -6
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "EXTRA_HP"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 0,
+        "r": 6,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 5,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    }
+  ]
+}

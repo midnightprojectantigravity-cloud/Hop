@@ -1,5 +1,5 @@
 import type { GameState, Actor, Point } from '../../types';
-import type { ArchetypeLoadoutId, BotPolicy } from './balance-harness';
+import type { ArchetypeLoadoutId, BotPolicy } from './harness-types';
 import { generateInitialState } from '../../logic';
 import { DEFAULT_LOADOUTS, applyLoadoutToPlayer } from '../loadout';
 import { createEntity, ensureActorTrinity } from '../entities/entity-factory';

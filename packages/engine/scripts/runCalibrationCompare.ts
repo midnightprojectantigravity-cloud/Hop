@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { computeEvaluatorBaselines } from '../src/systems/evaluation-baselines';
+import { computeEvaluatorBaselines } from '../src/systems/evaluation/evaluation-baselines';
 
 const beforeVersion = process.argv[2] || 'cal-v1';
 const afterVersion = process.argv[3] || 'cal-v1-firemage-baseline';

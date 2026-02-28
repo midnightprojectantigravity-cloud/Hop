@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { computeEvaluatorBaselines } from '../src/systems/evaluation-baselines';
+import { computeEvaluatorBaselines } from '../src/systems/evaluation/evaluation-baselines';
 
 const outFile = process.argv[2] || 'docs/UPA_EVALUATOR_BASELINES.json';
 const modelVersion = process.argv[3] || 'uel-v1';

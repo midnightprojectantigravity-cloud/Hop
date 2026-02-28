@@ -1,9 +1,9 @@
 import { generateInitialState } from '../../src/logic';
 import { DEFAULT_LOADOUTS } from '../../src/systems/loadout';
-import type { ArchetypeLoadoutId } from '../../src/systems/balance-harness';
+import type { ArchetypeLoadoutId } from '../../src/systems/evaluation/balance-harness';
 import { SkillRegistry } from '../../src/skillRegistry';
-import { extractTrinityStats } from '../../src/systems/combat-calculator';
-import { computeSparkCostFromTrinity, resolveTrinityLevers } from '../../src/systems/trinity-resolver';
+import { extractTrinityStats } from '../../src/systems/combat/combat-calculator';
+import { computeSparkCostFromTrinity, resolveTrinityLevers } from '../../src/systems/combat/trinity-resolver';
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 

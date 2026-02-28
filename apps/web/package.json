@@ -9,6 +9,8 @@
         "lint": "eslint .",
         "preview": "vite preview",
         "test": "vitest",
+        "test:run": "vitest run",
+        "test:run:dot": "vitest run --reporter=dot",
         "test:skills": "tsx src/scripts/testSkills.ts"
     },
     "dependencies": {

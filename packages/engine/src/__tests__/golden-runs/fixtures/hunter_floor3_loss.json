@@ -1,0 +1,18 @@
+{
+  "id": "hunter_floor3_loss",
+  "version": 1,
+  "seed": "hunter-23",
+  "loadoutId": "HUNTER",
+  "floorsTarget": 2,
+  "maxTurnsPerFloor": 20,
+  "policy": "heuristic",
+  "policyProfileId": "sp-v1-default",
+  "expected": {
+    "outcome": "lost",
+    "finalFloor": [2, 4],
+    "totalKills": [0, 1],
+    "totalTurns": [1, 10],
+    "playerHp": [0, 5],
+    "fingerprint": "baa401d1c99e9210"
+  }
+}

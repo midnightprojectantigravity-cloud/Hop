@@ -6,7 +6,7 @@ import { createRng } from '../src/systems/rng';
 import { DEFAULT_LOADOUTS } from '../src/systems/loadout';
 import { SkillRegistry } from '../src/skillRegistry';
 import { getNeighbors, hexEquals } from '../src/hex';
-import { UnifiedTileService } from '../src/systems/unified-tile-service';
+import { UnifiedTileService } from '../src/systems/tiles/unified-tile-service';
 import type { Action, GameState, Point, TimelineEvent } from '../src/types';
 
 type LoadoutId = keyof typeof DEFAULT_LOADOUTS;

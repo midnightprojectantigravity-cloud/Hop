@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { getCalibrationProfile } from '../src/systems/calibration';
-import { computeEvaluatorBaselines } from '../src/systems/evaluation-baselines';
+import { getCalibrationProfile } from '../src/systems/evaluation/calibration';
+import { computeEvaluatorBaselines } from '../src/systems/evaluation/evaluation-baselines';
 
 const outFile = process.argv[2] || 'docs/UPA_CALIBRATION_SNAPSHOT.json';
 const calibrationVersion = process.argv[3] || 'cal-v1';

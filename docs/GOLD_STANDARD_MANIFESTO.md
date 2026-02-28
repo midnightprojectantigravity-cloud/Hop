@@ -46,9 +46,11 @@ Use it as the decision filter for engine, client, and balance changes.
    - `npm run upa:health:check`
 
 ## 8) Documentation Topology
-1. Active tracker: `docs/NEXT_LEVEL.md`
-2. Active balance backlog: `docs/BALANCE_BACKLOG.md`
-3. UPA operations: `docs/UPA_GUIDE.md`
-4. Historical archive: `docs/ROADMAP_HISTORY.md`
-5. Biome + bestiary + trinity contract: `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`
-6. Generated audit/test artifacts: `artifacts/upa/` (not `docs/` root)
+1. Current status board: `docs/STATUS.md`
+2. Active tracker: `docs/NEXT_LEVEL.md`
+3. AI convergence milestone: `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+4. Active balance backlog: `docs/BALANCE_BACKLOG.md`
+5. UPA operations: `docs/UPA_GUIDE.md`
+6. Historical archive: `docs/ROADMAP_HISTORY.md`
+7. Biome + bestiary + trinity contract: `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`
+8. Generated audit/test artifacts: `artifacts/upa/` (not `docs/` root)

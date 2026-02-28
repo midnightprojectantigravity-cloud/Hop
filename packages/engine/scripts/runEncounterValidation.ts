@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DEFAULT_LOADOUTS } from '../src/systems/loadout';
-import { runBatch, summarizeBatch, type ArchetypeLoadoutId } from '../src/systems/balance-harness';
+import { runBatch, summarizeBatch, type ArchetypeLoadoutId } from '../src/systems/evaluation/balance-harness';
 import { runChallengeDesignWorkflow } from '../src/systems/challenge-design';
 
 const originalLog = console.log.bind(console);

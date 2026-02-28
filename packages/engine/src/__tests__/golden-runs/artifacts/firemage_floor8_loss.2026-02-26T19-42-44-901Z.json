@@ -1,0 +1,1113 @@
+{
+  "fixture": {
+    "id": "firemage_floor8_loss",
+    "version": 1,
+    "seed": "firemage-10",
+    "loadoutId": "FIREMAGE",
+    "floorsTarget": 5,
+    "maxTurnsPerFloor": 20,
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "expected": {
+      "outcome": "lost",
+      "finalFloor": [
+        7,
+        9
+      ],
+      "totalKills": [
+        0,
+        1
+      ],
+      "totalTurns": [
+        8,
+        20
+      ],
+      "playerHp": [
+        0,
+        5
+      ],
+      "fingerprint": "636fbae907a5af31"
+    }
+  },
+  "maxTurns": 100,
+  "strictMode": true,
+  "run": {
+    "seed": "firemage-10",
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "loadoutId": "FIREMAGE",
+    "result": "lost",
+    "turnsSpent": 12,
+    "floor": 6,
+    "kills": 0,
+    "hazardBreaches": 0,
+    "score": 4104,
+    "finalPlayerHp": 0,
+    "finalPlayerMaxHp": 40,
+    "finalPlayerHpRatio": 0,
+    "playerActionCounts": {
+      "USE_SKILL": 69,
+      "MOVE": 20
+    },
+    "playerSkillUsage": {
+      "FIREWALL": 19,
+      "ABSORB_FIRE": 12,
+      "FIREWALK": 4,
+      "FIREBALL": 21,
+      "BASIC_ATTACK": 13
+    },
+    "strategicIntentCounts": {
+      "offense": 66,
+      "defense": 9,
+      "positioning": 8,
+      "control": 6
+    },
+    "totalPlayerSkillCasts": 69,
+    "playerSkillTelemetry": {
+      "FIREWALL": {
+        "casts": 19,
+        "enemyDamage": 99,
+        "killShots": 0,
+        "healingReceived": 1,
+        "hazardDamage": 51,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "ABSORB_FIRE": {
+        "casts": 12,
+        "enemyDamage": 8,
+        "killShots": 0,
+        "healingReceived": 2,
+        "hazardDamage": 0,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "FIREWALK": {
+        "casts": 4,
+        "enemyDamage": 8,
+        "killShots": 0,
+        "healingReceived": 1,
+        "hazardDamage": 16,
+        "stairsProgress": 4,
+        "shrineProgress": 7,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "FIREBALL": {
+        "casts": 21,
+        "enemyDamage": 134,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 54,
+        "stairsProgress": 2,
+        "shrineProgress": 1,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "BASIC_ATTACK": {
+        "casts": 13,
+        "enemyDamage": 42,
+        "killShots": 0,
+        "healingReceived": 2,
+        "hazardDamage": 56,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      }
+    },
+    "autoAttackTriggersByActionType": {},
+    "triangleSignal": {
+      "samples": 9,
+      "avgHitPressure": 0,
+      "avgMitigationPressure": 0,
+      "avgCritPressure": 0,
+      "avgResistancePressure": 0
+    },
+    "trinityContribution": {
+      "samples": 9,
+      "bodyContribution": 0.09644444444444444,
+      "mindContribution": 0.7933333333333334,
+      "instinctContribution": 0.11022222222222222
+    },
+    "combatProfileSignal": {
+      "samples": 9,
+      "avgOutgoingMultiplier": 1,
+      "avgIncomingMultiplier": 1,
+      "avgTotalMultiplier": 1
+    }
+  },
+  "diagnostics": {
+    "actionCount": 103,
+    "stateFingerprint": "{\"player\":{\"hp\":0,\"maxHp\":40,\"position\":{\"q\":2,\"r\":5,\"s\":-7},\"upgrades\":[\"VAMPIRIC\"]},\"enemies\":[{\"id\":\"enemy_0_4c5eau\",\"subtype\":\"warlock\",\"hp\":4,\"position\":{\"q\":0,\"r\":4,\"s\":-4}},{\"id\":\"enemy_2_1ny7q2\",\"subtype\":\"footman\",\"hp\":4,\"position\":{\"q\":1,\"r\":5,\"s\":-6}},{\"id\":\"enemy_4_f81w0c\",\"subtype\":\"pouncer\",\"hp\":1,\"position\":{\"q\":2,\"r\":6,\"s\":-8}}],\"floor\":6,\"turnNumber\":13,\"kills\":0,\"rngCounter\":30}"
+  },
+  "strictFingerprint": "a95fc3b7036eac16",
+  "actions": [
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 3,
+          "r": 4,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALK",
+        "target": {
+          "q": 1,
+          "r": 6,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 4,
+          "r": 6,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 1,
+          "r": 6,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 2,
+          "r": 5,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 0,
+        "r": 7,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 6,
+        "s": -7
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 2,
+          "r": 5,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 8,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 8,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 8,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 8,
+        "s": -10
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 1,
+        "s": -4
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "VAMPIRIC"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 0,
+          "r": 8,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 2,
+          "r": 8,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 8,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 7,
+        "s": -11
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 6,
+        "s": -11
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 5,
+          "r": 4,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 5,
+          "r": 4,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 5,
+          "r": 6,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 5,
+          "r": 6,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 5,
+          "r": 4,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 1,
+        "s": -3
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 6,
+          "r": 5,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 5,
+          "r": 6,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 5,
+          "r": 6,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 1,
+        "s": -4
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 6,
+          "r": 5,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "ABSORB_FIRE",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 6,
+          "r": 5,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 7,
+        "s": -11
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 4,
+          "r": 5,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 6,
+        "s": -11
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALK",
+        "target": {
+          "q": 1,
+          "r": 7,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 1,
+          "r": 8,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 1,
+          "r": 8,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 1,
+          "r": 7,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 2,
+        "s": -4
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 7,
+        "s": -11
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALK",
+        "target": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 2,
+          "r": 5,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 2,
+          "r": 5,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 7,
+        "s": -8
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 1,
+          "r": 5,
+          "s": -6
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALK",
+        "target": {
+          "q": 2,
+          "r": 5,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREWALL",
+        "target": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 1,
+          "r": 5,
+          "s": -6
+        }
+      }
+    }
+  ]
+}

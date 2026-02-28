@@ -1,0 +1,6 @@
+[
+  { "id": "lowhp_floor3_seed_a", "floor": 3, "seed": "enemy-lowhp-a", "enemyHpRatio": 0.25 },
+  { "id": "lowhp_floor5_seed_a", "floor": 5, "seed": "enemy-lowhp-b", "enemyHpRatio": 0.2 },
+  { "id": "lowhp_floor7_seed_a", "floor": 7, "seed": "enemy-lowhp-c", "enemyHpRatio": 0.15 },
+  { "id": "lowhp_floor9_seed_a", "floor": 9, "seed": "enemy-lowhp-d", "enemyHpRatio": 0.2 }
+]

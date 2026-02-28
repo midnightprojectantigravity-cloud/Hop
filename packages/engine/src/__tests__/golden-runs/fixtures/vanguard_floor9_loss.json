@@ -1,0 +1,18 @@
+{
+  "id": "vanguard_floor9_loss",
+  "version": 1,
+  "seed": "vanguard-17",
+  "loadoutId": "VANGUARD",
+  "floorsTarget": 6,
+  "maxTurnsPerFloor": 20,
+  "policy": "heuristic",
+  "policyProfileId": "sp-v1-default",
+  "expected": {
+    "outcome": "lost",
+    "finalFloor": [8, 10],
+    "totalKills": [1, 6],
+    "totalTurns": [5, 20],
+    "playerHp": [0, 5],
+    "fingerprint": "465a4a893c532fb1"
+  }
+}

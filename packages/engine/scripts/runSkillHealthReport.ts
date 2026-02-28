@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DEFAULT_LOADOUTS } from '../src/systems/loadout';
-import { runBatch, summarizeBatch, type ArchetypeLoadoutId, type BatchSummary } from '../src/systems/balance-harness';
-import { computeStaticSkillGrades } from '../src/systems/skill-grading';
+import { runBatch, summarizeBatch, type ArchetypeLoadoutId, type BatchSummary } from '../src/systems/evaluation/balance-harness';
+import { computeStaticSkillGrades } from '../src/systems/evaluation/skill-grading';
 import { COMPOSITIONAL_SKILLS } from '../src/skillRegistry';
 
 const originalLog = console.log.bind(console);

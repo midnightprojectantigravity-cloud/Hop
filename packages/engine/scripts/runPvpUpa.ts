@@ -1,7 +1,7 @@
-import type { ArchetypeLoadoutId, BotPolicy } from '../src/systems/balance-harness';
-import { runPvpBatch, summarizePvpBatch } from '../src/systems/pvp-harness';
+import type { ArchetypeLoadoutId, BotPolicy } from '../src/systems/evaluation/balance-harness';
+import { runPvpBatch, summarizePvpBatch } from '../src/systems/evaluation/pvp-harness';
 import { buildUpaEntitySnapshot } from './lib/upaEntitySnapshot';
-import { getActiveTrinityProfileId } from '../src/systems/trinity-profiles';
+import { getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
 
 if (!process.env.HOP_TRINITY_PROFILE) {
     process.env.HOP_TRINITY_PROFILE = 'live';

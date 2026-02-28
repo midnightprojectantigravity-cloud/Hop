@@ -1,3 +1,10 @@
 export * from './ai';
 export * from './strategic-policy';
 export * from './strategy-registry';
+export * from './core/types';
+export * from './core/scoring';
+export * from './core/tiebreak';
+export * from './enemy/types';
+export * from './enemy/policies';
+export { selectEnemyDecision } from './enemy/selector';
+export * from './enemy/intent-adapter';

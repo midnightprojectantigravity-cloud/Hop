@@ -1,0 +1,18 @@
+{
+  "id": "firemage_floor8_loss",
+  "version": 1,
+  "seed": "firemage-10",
+  "loadoutId": "FIREMAGE",
+  "floorsTarget": 5,
+  "maxTurnsPerFloor": 20,
+  "policy": "heuristic",
+  "policyProfileId": "sp-v1-default",
+  "expected": {
+    "outcome": "lost",
+    "finalFloor": [7, 9],
+    "totalKills": [0, 1],
+    "totalTurns": [8, 20],
+    "playerHp": [0, 5],
+    "fingerprint": "636fbae907a5af31"
+  }
+}

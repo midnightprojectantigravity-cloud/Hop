@@ -1,5 +1,5 @@
 import type { BaseUnitDefinition, CompositeSkillDefinition, TacticalDataPack } from '../contracts';
-import { getEnemyBestiaryEntry, type EnemySubtypeId } from '../bestiary';
+import { getMvpEnemyContentEntry, type EnemySubtypeId } from './mvp-enemy-content';
 
 type UnitWeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
 
@@ -86,26 +86,15 @@ const createEnemyUnit = (config: {
     }
 });
 
-const MVP_PACK_UNIT_IDS: Record<EnemySubtypeId, string> = {
-    footman: 'ENEMY_FOOTMAN_V1',
-    sprinter: 'ENEMY_SPRINTER_V1',
-    raider: 'ENEMY_RAIDER_V1',
-    pouncer: 'ENEMY_POUNCER_V1',
-    shieldBearer: 'ENEMY_SHIELDBEARER_V1',
-    archer: 'ENEMY_ARCHER_V1',
-    bomber: 'ENEMY_BOMBER_V1',
-    warlock: 'ENEMY_WARLOCK_V1',
-    sentinel: 'ENEMY_SENTINEL_V1'
-};
-
 const createEnemyUnitFromBestiary = (
     subtype: EnemySubtypeId,
     overrides: Partial<Pick<Parameters<typeof createEnemyUnit>[0], 'baseSkills' | 'passiveSkills'>> = {}
 ): BaseUnitDefinition => {
-    const def = getEnemyBestiaryEntry(subtype);
-    if (!def) throw new Error(`Missing bestiary entry for ${subtype}`);
+    const content = getMvpEnemyContentEntry(subtype);
+    if (!content) throw new Error(`Missing MVP enemy content for ${subtype}`);
+    const def = content.bestiary;
     return createEnemyUnit({
-        id: MVP_PACK_UNIT_IDS[subtype],
+        id: content.packUnitId,
         name: def.name,
         subtype: def.subtype,
         weightClass: def.stats.weightClass as UnitWeightClass,

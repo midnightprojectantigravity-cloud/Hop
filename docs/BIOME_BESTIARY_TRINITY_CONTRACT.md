@@ -10,7 +10,7 @@ This document is authoritative for architecture-level decisions touching these s
 
 ## Scope
 - Web runtime: `apps/web/src/components/GameBoard.tsx`, `apps/web/src/components/Entity.tsx`, `apps/web/src/visual/*`.
-- Engine runtime: `packages/engine/src/systems/surface-status.ts`, `packages/engine/src/systems/combat-calculator.ts`, `packages/engine/src/systems/trinity-resolver.ts`, `packages/engine/src/systems/emergent-bestiary.ts`.
+- Engine runtime: `packages/engine/src/systems/tiles/surface-status.ts`, `packages/engine/src/systems/combat/combat-calculator.ts`, `packages/engine/src/systems/combat/trinity-resolver.ts`, `packages/engine/src/systems/entities/emergent-bestiary.ts`.
 
 ## 1) Biome Runtime Strategy
 
@@ -193,4 +193,3 @@ Validation anchor:
 3. Keep biome readability rules as hard requirements, not art-only guidance.
 4. Keep bestiary hardship simulation formula-driven and reproducible.
 5. Keep this contract synchronized with runtime code when formulas or layer semantics change.
-

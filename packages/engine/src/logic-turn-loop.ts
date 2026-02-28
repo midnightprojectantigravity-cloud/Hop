@@ -198,7 +198,27 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 }
             } else {
                 const strategy = StrategyRegistry.resolve(actorForIntent);
-                const intentOrPromise = strategy.getIntent(curState, actorForIntent);
+                const traceContext = actorId !== 'player'
+                    ? {
+                        actorId: actorForIntent.id,
+                        floor: curState.floor,
+                        turnNumber: curState.turnNumber,
+                        rngCounter: curState.rngCounter
+                    }
+                    : undefined;
+
+                if (traceContext) {
+                    (globalThis as any).__HOP_ENEMY_AI_RUNTIME_DECISION_CONTEXT__ = traceContext;
+                }
+
+                let intentOrPromise: Intent | Promise<Intent>;
+                try {
+                    intentOrPromise = strategy.getIntent(curState, actorForIntent);
+                } finally {
+                    if (traceContext) {
+                        delete (globalThis as any).__HOP_ENEMY_AI_RUNTIME_DECISION_CONTEXT__;
+                    }
+                }
 
                 if (intentOrPromise instanceof Promise) {
                     const intentPreview = buildIntentPreview(curState);

@@ -1,7 +1,7 @@
-import { runBatch, summarizeBatch, runHeadToHeadBatch } from '../src/systems/balance-harness';
-import type { ArchetypeLoadoutId } from '../src/systems/balance-harness';
+import { runBatch, summarizeBatch, runHeadToHeadBatch } from '../src/systems/evaluation/balance-harness';
+import type { ArchetypeLoadoutId } from '../src/systems/evaluation/balance-harness';
 import { writeFileSync } from 'node:fs';
-import { getActiveTrinityProfileId } from '../src/systems/trinity-profiles';
+import { getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {

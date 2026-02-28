@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { runBatch, summarizeBatch, type ArchetypeLoadoutId } from '../src/systems/balance-harness';
+import { runBatch, summarizeBatch, type ArchetypeLoadoutId } from '../src/systems/evaluation/balance-harness';
 import { DEFAULT_LOADOUTS } from '../src/systems/loadout';
 import { computeUPAFromSummary } from '../src/systems/upa';
 

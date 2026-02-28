@@ -5,6 +5,8 @@ import { gameReducer } from '../logic';
 describe('DASH Momentum Validation', () => {
     it('DASH should travel exactly to target in normal conditions', () => {
         const state = createMockState();
+        state.gridWidth = 9;
+        state.gridHeight = 11;
         const startPos = p(4, 4);
         state.player.position = startPos;
 
@@ -24,6 +26,8 @@ describe('DASH Momentum Validation', () => {
 
     it('DASH should travel further when passing through SLIPPERY tiles', () => {
         const state = createMockState();
+        state.gridWidth = 9;
+        state.gridHeight = 11;
         const startPos = p(4, 4);
         state.player.position = startPos;
 

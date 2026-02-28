@@ -1,0 +1,1266 @@
+{
+  "fixture": {
+    "id": "vanguard_floor9_loss",
+    "version": 1,
+    "seed": "vanguard-17",
+    "loadoutId": "VANGUARD",
+    "floorsTarget": 6,
+    "maxTurnsPerFloor": 20,
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "expected": {
+      "outcome": "lost",
+      "finalFloor": [
+        8,
+        10
+      ],
+      "totalKills": [
+        1,
+        6
+      ],
+      "totalTurns": [
+        5,
+        20
+      ],
+      "playerHp": [
+        0,
+        5
+      ],
+      "fingerprint": "465a4a893c532fb1"
+    }
+  },
+  "maxTurns": 120,
+  "strictMode": true,
+  "run": {
+    "seed": "vanguard-17",
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "loadoutId": "VANGUARD",
+    "result": "lost",
+    "turnsSpent": 12,
+    "floor": 7,
+    "kills": 2,
+    "hazardBreaches": 0,
+    "score": 5244,
+    "finalPlayerHp": 0,
+    "finalPlayerMaxHp": 68,
+    "finalPlayerHpRatio": 0,
+    "playerActionCounts": {
+      "USE_SKILL": 47,
+      "MOVE": 62,
+      "WAIT": 2
+    },
+    "playerSkillUsage": {
+      "JUMP": 5,
+      "SPEAR_THROW": 19,
+      "BASIC_ATTACK": 19,
+      "AUTO_ATTACK": 26,
+      "SHIELD_BASH": 4
+    },
+    "strategicIntentCounts": {
+      "offense": 40,
+      "defense": 49,
+      "positioning": 5,
+      "control": 17
+    },
+    "totalPlayerSkillCasts": 47,
+    "playerSkillTelemetry": {
+      "JUMP": {
+        "casts": 5,
+        "enemyDamage": 0,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 0,
+        "stairsProgress": 6,
+        "shrineProgress": 6,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "SPEAR_THROW": {
+        "casts": 19,
+        "enemyDamage": 216,
+        "killShots": 2,
+        "healingReceived": 0,
+        "hazardDamage": 9,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "BASIC_ATTACK": {
+        "casts": 19,
+        "enemyDamage": 164,
+        "killShots": 7,
+        "healingReceived": 0,
+        "hazardDamage": 49,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "AUTO_ATTACK": {
+        "casts": 26,
+        "enemyDamage": 185,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 0,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "SHIELD_BASH": {
+        "casts": 4,
+        "enemyDamage": 4,
+        "killShots": 4,
+        "healingReceived": 0,
+        "hazardDamage": 2,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      }
+    },
+    "autoAttackTriggersByActionType": {
+      "USE_SKILL:BASIC_ATTACK": 14,
+      "USE_SKILL:SHIELD_BASH": 4,
+      "WAIT": 2,
+      "MOVE": 4,
+      "USE_SKILL:SPEAR_THROW": 2
+    },
+    "triangleSignal": {
+      "samples": 11,
+      "avgHitPressure": 0,
+      "avgMitigationPressure": 0,
+      "avgCritPressure": 0,
+      "avgResistancePressure": 0
+    },
+    "trinityContribution": {
+      "samples": 11,
+      "bodyContribution": 0.8377272727272728,
+      "mindContribution": 0,
+      "instinctContribution": 0.16227272727272724
+    },
+    "combatProfileSignal": {
+      "samples": 11,
+      "avgOutgoingMultiplier": 1,
+      "avgIncomingMultiplier": 1,
+      "avgTotalMultiplier": 1
+    }
+  },
+  "diagnostics": {
+    "actionCount": 139,
+    "stateFingerprint": "{\"player\":{\"hp\":0,\"maxHp\":68,\"position\":{\"q\":3,\"r\":5,\"s\":-8},\"upgrades\":[\"DEEP_BREATH\",\"FREE_JUMP\",\"CLEAVE\",\"RECALL\",\"RECALL_DAMAGE\"]},\"enemies\":[{\"id\":\"enemy_0_wykkmj\",\"subtype\":\"warlock\",\"hp\":4,\"position\":{\"q\":1,\"r\":4,\"s\":-5}},{\"id\":\"enemy_6_61yd11\",\"subtype\":\"warlock\",\"hp\":4,\"position\":{\"q\":6,\"r\":1,\"s\":-7}}],\"floor\":7,\"turnNumber\":13,\"kills\":2,\"rngCounter\":78}"
+  },
+  "strictFingerprint": "6f001ab941003b0c",
+  "actions": [
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "JUMP",
+        "target": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 2,
+          "r": 5,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 7,
+        "s": -8
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 2,
+        "s": -4
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "DEEP_BREATH"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "JUMP",
+        "target": {
+          "q": 1,
+          "r": 8,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 1,
+          "r": 6,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "JUMP",
+        "target": {
+          "q": 1,
+          "r": 6,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 2,
+          "r": 5,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "JUMP",
+        "target": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 2,
+          "r": 5,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SHIELD_BASH",
+        "target": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "JUMP",
+        "target": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "FREE_JUMP"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 0,
+          "r": 8,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 4,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 4,
+        "s": -5
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 5,
+        "s": -6
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 1,
+          "r": 7,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 1,
+          "r": 7,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 7,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 5,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 3,
+        "s": -6
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SHIELD_BASH",
+        "target": {
+          "q": 4,
+          "r": 3,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 3,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 4,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 4,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 4,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 4,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 3,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 2,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 2,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 1,
+        "s": -5
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 1,
+        "s": -4
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 1,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "CLEAVE"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 2,
+        "s": -4
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 8,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 1,
+          "r": 8,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 8,
+        "s": -11
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "RECALL"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 1,
+          "r": 7,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 1,
+          "r": 7,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 7,
+        "s": -8
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SHIELD_BASH",
+        "target": {
+          "q": 0,
+          "r": 7,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 5,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 6,
+        "s": -8
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 5,
+        "s": -7
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 3,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 3,
+        "s": -5
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 2,
+        "s": -4
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 3,
+        "s": -4
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 2,
+        "s": -3
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 1,
+        "s": -3
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 1,
+        "s": -4
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 0,
+          "r": 8,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 5,
+          "r": 6,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SHIELD_BASH",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 3,
+          "r": 4,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 6,
+          "r": 5,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 8,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 3,
+          "r": 3,
+          "s": -6
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 5,
+        "s": -9
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "RECALL_DAMAGE"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 5,
+        "s": -8
+      }
+    }
+  ]
+}

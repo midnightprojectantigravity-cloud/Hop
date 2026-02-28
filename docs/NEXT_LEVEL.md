@@ -1,11 +1,19 @@
 # NEXT_LEVEL Active Tracker
 
-## Status (February 9, 2026)
+## Status (February 28, 2026)
 - Completed phases are archived in `docs/ROADMAP_HISTORY.md`.
 - UPA operations and commands are documented in `docs/UPA_GUIDE.md`.
 - Active tuning queue is tracked in `docs/BALANCE_BACKLOG.md`.
 - Architecture rules and terminology are defined in `docs/GOLD_STANDARD_MANIFESTO.md`.
 - Biome visual runtime + emergent bestiary hardship + triangle formulas are codified in `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md` (updated February 15, 2026).
+- AI convergence completion details are recorded in `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`.
+
+## Milestone Update: AI Convergence (Completed)
+- [x] Shared AI core added (`systems/ai/core/*`).
+- [x] Enemy runtime AI migrated onto framework selectors/candidates/features/policies.
+- [x] `WildStrategy` now consumes shared enemy intent decisions for standard enemies.
+- [x] Harness decomposition completed (`systems/ai/player/*` + `systems/evaluation/harness-*`).
+- [x] Strict acceptance gates passing (`test:ai-acceptance:strict`, golden runs, parity, harness drift).
 
 ## Execution Posture (Current)
 - 80/20 over perfection: prioritize speed of instrumentation and feedback loops.

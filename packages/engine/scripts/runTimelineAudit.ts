@@ -4,9 +4,9 @@ import { generateInitialState, gameReducer } from '../src/logic';
 import { isPlayerTurn } from '../src/systems/initiative';
 import { createRng } from '../src/systems/rng';
 import { getNeighbors } from '../src/hex';
-import { UnifiedTileService } from '../src/systems/unified-tile-service';
+import { UnifiedTileService } from '../src/systems/tiles/unified-tile-service';
 import { applyEffects } from '../src/systems/effect-engine';
-import { createEnemy } from '../src/systems/entity-factory';
+import { createEnemy } from '../src/systems/entities/entity-factory';
 import type { Action, GameState, Point, TimelineEvent } from '../src/types';
 
 const originalLog = console.log.bind(console);

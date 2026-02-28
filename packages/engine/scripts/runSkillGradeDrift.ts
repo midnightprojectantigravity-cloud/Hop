@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { computeSkillGradeDrift } from '../src/systems/skill-grading';
+import { computeSkillGradeDrift } from '../src/systems/evaluation/skill-grading';
 
 const staticFile = process.argv[2] || 'docs/UPA_SKILL_GRADES_STATIC.json';
 const dynamicFile = process.argv[3] || 'docs/UPA_SKILL_GRADES_DYNAMIC.json';
@@ -22,4 +22,3 @@ const output = {
 const target = resolve(process.cwd(), outFile);
 writeFileSync(target, JSON.stringify(output, null, 2), 'utf8');
 console.log(JSON.stringify({ wrote: target, rows: drift.length }, null, 2));
-

@@ -2,6 +2,33 @@
 
 This file is the archived snapshot of the previous `docs/NEXT_LEVEL.md` (captured February 9, 2026) before the tracker was reset to a clean forward-only board.
 
+## AI Convergence Milestone (February 28, 2026)
+
+- [x] Shared AI core contracts landed:
+  - `packages/engine/src/systems/ai/core/types.ts`
+  - `packages/engine/src/systems/ai/core/scoring.ts`
+  - `packages/engine/src/systems/ai/core/tiebreak.ts`
+- [x] Enemy AI convergence completed under:
+  - `packages/engine/src/systems/ai/enemy/*`
+- [x] Runtime API compatibility preserved in:
+  - `packages/engine/src/systems/ai/ai.ts`
+- [x] `WildStrategy` converged for standard enemies:
+  - `packages/engine/src/strategy/wild.ts`
+- [x] Harness decomposition completed:
+  - `packages/engine/src/systems/ai/player/*`
+  - `packages/engine/src/systems/evaluation/harness-types.ts`
+  - `packages/engine/src/systems/evaluation/harness-simulation.ts`
+  - `packages/engine/src/systems/evaluation/harness-matchup.ts`
+- [x] Validation gates green:
+  - `npm --workspace @hop/engine run build`
+  - `npm --workspace @hop/engine run check-script-imports`
+  - `npm --workspace @hop/engine run test:ai-acceptance:strict` (`13` files, `93` tests)
+  - `npm --workspace @hop/web exec vitest run` (`8` files, `15` tests)
+
+Reference:
+- `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+- Historical sections below preserve original wording and original file paths from when each milestone was recorded.
+
 ---
 
 # NEXT_LEVEL Milestone Checklist

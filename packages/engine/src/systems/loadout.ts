@@ -5,63 +5,74 @@
  * TODO: Implement "Cloud Save" by integrating with an external database/API.
  */
 import type { Skill, Actor } from '../types';
-import { createActiveSkill } from '../skillRegistry';
+import { SkillRegistry, createActiveSkill } from '../skillRegistry';
+import { DEFAULT_LOADOUT_DEFINITIONS } from '../data/loadouts/default-loadouts';
+import { cloneLoadoutCatalog, parseLoadoutCatalog } from '../data/loadouts/parser';
+import type { LoadoutDefinition } from '../data/loadouts/contracts';
 
-export interface Loadout {
-    id: string;
-    name: string;
-    description: string;
-    startingUpgrades: string[];
-    startingSkills: string[];
-}
+export type Loadout = LoadoutDefinition;
+export type { LoadoutDefinition };
+
+const parsedDefaultLoadouts = parseLoadoutCatalog(DEFAULT_LOADOUT_DEFINITIONS);
 
 /**
- * Default Loadouts for the "Strategic Hub"
+ * Default Loadouts for the "Strategic Hub" (data-driven source + runtime facade).
  */
-export const DEFAULT_LOADOUTS: Record<string, Loadout> = {
-    VANGUARD: {
-        id: 'VANGUARD',
-        name: 'Vanguard',
-        description: 'Direct damage, brawling, and area denial.',
-        startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK', 'SPEAR_THROW', 'SHIELD_BASH', 'JUMP']
-    },
-    SKIRMISHER: {
-        id: 'SKIRMISHER',
-        name: 'Skirmisher',
-        description: 'Zero direct damage. Kinetic momentum and environmental lethality.',
-        startingUpgrades: [],
-        startingSkills: ['DASH', 'GRAPPLE_HOOK', 'SHIELD_THROW', 'VAULT']
-    },
-    FIREMAGE: {
-        id: 'FIREMAGE',
-        name: 'Fire Mage',
-        description: 'Area control with fire and high-damage spells.',
-        startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'ABSORB_FIRE', 'FIREBALL', 'FIREWALL', 'FIREWALK']
-    },
-    NECROMANCER: {
-        id: 'NECROMANCER',
-        name: 'Necromancer',
-        description: 'Utilize death and reanimation.',
-        startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'CORPSE_EXPLOSION', 'RAISE_DEAD', 'SOUL_SWAP']
-    },
-    HUNTER: {
-        id: 'HUNTER',
-        name: 'Hunter',
-        description: 'Ranged precision and traps.',
-        startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'FALCON_COMMAND', 'KINETIC_TRI_TRAP', 'WITHDRAWAL']
-    },
-    ASSASSIN: {
-        id: 'ASSASSIN',
-        name: 'Assassin',
-        description: 'Stealth and high burst damage.',
-        startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'SNEAK_ATTACK', 'SMOKE_SCREEN', 'SHADOW_STEP']
+export const DEFAULT_LOADOUTS: Record<string, Loadout> = cloneLoadoutCatalog(parsedDefaultLoadouts);
+
+let defaultLoadoutsValidated = false;
+
+export interface LoadoutRegistryValidationIssue {
+    loadoutId: string;
+    field: 'startingSkills' | 'startingUpgrades';
+    value: string;
+    message: string;
+}
+
+export const validateLoadoutCatalogAgainstSkillRegistry = (
+    loadouts: Record<string, Loadout> = DEFAULT_LOADOUTS
+): LoadoutRegistryValidationIssue[] => {
+    const issues: LoadoutRegistryValidationIssue[] = [];
+    for (const [loadoutId, loadout] of Object.entries(loadouts)) {
+        for (const skillId of loadout.startingSkills) {
+            if (!SkillRegistry.get(skillId)) {
+                issues.push({
+                    loadoutId,
+                    field: 'startingSkills',
+                    value: skillId,
+                    message: `Unknown skill "${skillId}"`
+                });
+            }
+        }
+        for (const upgradeId of loadout.startingUpgrades) {
+            if (!SkillRegistry.getUpgrade(upgradeId)) {
+                issues.push({
+                    loadoutId,
+                    field: 'startingUpgrades',
+                    value: upgradeId,
+                    message: `Unknown upgrade "${upgradeId}"`
+                });
+            }
+        }
     }
+    return issues;
 };
+
+export const validateDefaultLoadouts = (): number => {
+    if (defaultLoadoutsValidated) return Object.keys(DEFAULT_LOADOUTS).length;
+    const issues = validateLoadoutCatalogAgainstSkillRegistry(DEFAULT_LOADOUTS);
+    if (issues.length > 0) {
+        const message = issues
+            .map(i => `${i.loadoutId}.${i.field}: ${i.message}`)
+            .join(' | ');
+        throw new Error(`Default loadout validation failed: ${message}`);
+    }
+    defaultLoadoutsValidated = true;
+    return Object.keys(DEFAULT_LOADOUTS).length;
+};
+
+// Fail fast during module import and keep an explicit validation seam for bootstrap/tests.
+validateDefaultLoadouts();
 
 /**
  * Serialize a loadout to JSON for storage.
