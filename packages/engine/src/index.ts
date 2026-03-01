@@ -31,6 +31,7 @@ export * from './systems/loadout';
 export * from './systems/components';
 export * from './systems/movement';
 export * from './systems/status';
+export * from './systems/ailments';
 export * from './systems/tiles';
 export * from './systems/resolution-stack';
 export * from './systems/composite-skill-factory';

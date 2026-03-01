@@ -1,4 +1,5 @@
 import type { WeightClass } from '../types';
+import type { AilmentID } from '../types/registry';
 
 /**
  * Base Interface for all Components
@@ -51,6 +52,32 @@ export interface CombatProfileComponent extends Component {
 }
 
 /**
+ * ACAE ailment counter balances.
+ */
+export interface AilmentCountersComponent extends Component {
+    type: 'ailments';
+    counters: Partial<Record<AilmentID, number>>;
+}
+
+/**
+ * ACAE per-ailment hardening progression (per run).
+ */
+export interface AilmentResilienceComponent extends Component {
+    type: 'ailment_resilience';
+    xp: Partial<Record<AilmentID, number>>;
+    resistancePct: Partial<Record<AilmentID, number>>;
+}
+
+/**
+ * ACAE actor profile for base resistance and growth propensity.
+ */
+export interface AilmentProfileComponent extends Component {
+    type: 'ailment_profile';
+    baseResistancePct: Partial<Record<AilmentID, number>>;
+    resistanceGrowthRate: number;
+}
+
+/**
  * Visibility / Stealth Component
  */
 export interface VisibilityComponent extends Component {
@@ -83,6 +110,9 @@ export type GameComponent =
     | StatsComponent
     | TrinityComponent
     | CombatProfileComponent
+    | AilmentCountersComponent
+    | AilmentResilienceComponent
+    | AilmentProfileComponent
     | VisibilityComponent
     | VaultComponent
     | ArchetypeComponent;

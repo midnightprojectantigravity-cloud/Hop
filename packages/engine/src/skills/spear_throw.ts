@@ -28,6 +28,7 @@ export const SPEAR_THROW: SkillDefinition = {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
         const trinity = extractTrinityStats(shooter);
+        const acaeEnabled = state.ruleset?.ailments?.acaeEnabled === true;
 
         // 1. Upgrade Detection
         const hasRange = activeUpgrades.includes('SPEAR_RANGE');
@@ -62,6 +63,9 @@ export const SPEAR_THROW: SkillDefinition = {
                     });
                     effects.push({ type: 'Displacement', target: 'self', destination: target, simulatePath: true });
                     effects.push({ type: 'Damage', target: enemy.id, amount: lungeCombat.finalPower, scoreEvent: lungeCombat.scoreEvent });
+                    if (acaeEnabled) {
+                        effects.push({ type: 'ApplyAilment', target: enemy.id, ailment: 'bleed', skillMultiplier: 12, baseDeposit: 1 });
+                    }
                     messages.push(`Lunged and killed ${enemy.subtype || 'enemy'} !`);
 
                     if (hasLungeArc) {
@@ -80,6 +84,9 @@ export const SPEAR_THROW: SkillDefinition = {
                                     statusMultipliers: []
                                 });
                                 effects.push({ type: 'Damage', target: e.id, amount: arcCombat.finalPower, scoreEvent: arcCombat.scoreEvent });
+                                if (acaeEnabled) {
+                                    effects.push({ type: 'ApplyAilment', target: e.id, ailment: 'bleed', skillMultiplier: 8, baseDeposit: 1 });
+                                }
                             }
                         });
                     }
@@ -136,6 +143,9 @@ export const SPEAR_THROW: SkillDefinition = {
                 });
                 effects.push(...SKILL_JUICE_SIGNATURES.SPEAR_THROW.impact(hitPos, true));
                 effects.push({ type: 'Damage', target: hitEnemy.id, amount: throwCombat.finalPower, scoreEvent: throwCombat.scoreEvent });
+                if (acaeEnabled) {
+                    effects.push({ type: 'ApplyAilment', target: hitEnemy.id, ailment: 'bleed', skillMultiplier: 14, baseDeposit: 2 });
+                }
                 messages.push(`Spear killed ${hitEnemy.subtype || 'enemy'} !`);
                 if (hasDeepBreath) {
                     effects.push({ type: 'ModifyCooldown', skillId: 'JUMP', amount: 0, setExact: true });
@@ -179,6 +189,9 @@ export const SPEAR_THROW: SkillDefinition = {
                             statusMultipliers: []
                         });
                         effects.push({ type: 'Damage', target: enemy.id, amount: recallCombat.finalPower, scoreEvent: recallCombat.scoreEvent });
+                        if (acaeEnabled) {
+                            effects.push({ type: 'ApplyAilment', target: enemy.id, ailment: 'bleed', skillMultiplier: 8, baseDeposit: 1 });
+                        }
                         messages.push(`Spear recall hit ${enemy.subtype || 'enemy'} !`);
                     }
                 });
@@ -203,6 +216,9 @@ export const SPEAR_THROW: SkillDefinition = {
                         statusMultipliers: []
                     });
                     effects.push({ type: 'Damage', target: enemy.id, amount: cleaveCombat.finalPower, scoreEvent: cleaveCombat.scoreEvent });
+                    if (acaeEnabled) {
+                        effects.push({ type: 'ApplyAilment', target: enemy.id, ailment: 'bleed', skillMultiplier: 6, baseDeposit: 1 });
+                    }
                 }
                 messages.push('Cleave triggered on pickup.');
             }

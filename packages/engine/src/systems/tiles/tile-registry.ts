@@ -81,9 +81,19 @@ export const TILE_EFFECTS: Record<TileEffectID, TileEffectDefinition> = {
         description: 'Burning flames',
 
         onStay: (context) => ({
-            effects: [
-                { type: 'Damage', target: context.actor.id, amount: 1, reason: 'fire_damage' }
-            ],
+            effects: context.state.ruleset?.ailments?.acaeEnabled
+                ? [
+                    {
+                        type: 'DepositAilmentCounters',
+                        target: context.actor.id,
+                        ailment: 'burn',
+                        amount: 5,
+                        source: 'tile'
+                    }
+                ]
+                : [
+                    { type: 'Damage', target: context.actor.id, amount: 1, reason: 'fire_damage' }
+                ],
             messages: [`${context.actor.subtype || context.actor.type} burns!`]
         }),
 
@@ -123,6 +133,12 @@ export const TILE_EFFECTS: Record<TileEffectID, TileEffectDefinition> = {
             }
             return { effects: [], messages: [] };
         }
+    },
+
+    MIASMA: {
+        id: 'MIASMA',
+        name: 'Miasma',
+        description: 'Toxic haze lingering over the tile'
     },
 
     OIL: {

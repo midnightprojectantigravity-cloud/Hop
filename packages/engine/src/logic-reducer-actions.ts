@@ -175,12 +175,17 @@ export const resolveGameStateAction = (
                 const next = deps.generateInitialState(1, seed || dailySeed, undefined, undefined, loadout);
                 return {
                     ...next,
+                    ruleset: s.ruleset || next.ruleset,
                     dailyRunDate: dateKey,
                     runObjectives: createDailyObjectives(dailySeed),
                     hazardBreaches: 0
                 };
             }
-            return deps.generateInitialState(1, seed, undefined, undefined, loadout);
+            const next = deps.generateInitialState(1, seed, undefined, undefined, loadout);
+            return {
+                ...next,
+                ruleset: s.ruleset || next.ruleset
+            };
         }
 
         case 'ADVANCE_TURN': {

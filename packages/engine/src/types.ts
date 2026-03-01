@@ -1,5 +1,5 @@
 import type { GameComponent } from './systems/components';
-import type { SkillID, StatusID, ArchetypeID, JuiceEffectID } from './types/registry';
+import type { SkillID, StatusID, ArchetypeID, JuiceEffectID, AilmentID } from './types/registry';
 import type { JuiceSignaturePayloadV1 } from './types/juice-signature';
 import type { CombatScoreEvent } from './systems/combat/combat-calculator';
 
@@ -109,6 +109,15 @@ export type AtomicEffect =
     | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string; source?: Point; scoreEvent?: CombatScoreEvent }
     | { type: 'Heal'; target: 'targetActor' | string; amount: number }
     | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: StatusID; duration: number }
+    | {
+        type: 'ApplyAilment';
+        target: 'targetActor' | Point | string;
+        ailment: AilmentID;
+        skillMultiplier?: number;
+        baseDeposit?: number;
+    }
+    | { type: 'DepositAilmentCounters'; target: 'targetActor' | Point | string; ailment: AilmentID; amount: number; source?: 'skill' | 'tile' | 'system' }
+    | { type: 'ClearAilmentCounters'; target: 'targetActor' | Point | string; ailment?: AilmentID; amount?: number; reason?: string }
     | { type: 'SpawnItem'; itemType: 'bomb' | 'spear' | 'shield'; position: Point }
     | { type: 'PickupShield'; position?: Point }
     | { type: 'PickupSpear'; position?: Point }
@@ -159,7 +168,11 @@ export type SimulationEventType =
     | 'DamageTaken'
     | 'Healed'
     | 'StatusApplied'
-    | 'MessageLogged';
+    | 'MessageLogged'
+    | 'AilmentChanged'
+    | 'AilmentAnnihilated'
+    | 'AilmentResilienceGained'
+    | 'AilmentThresholdTriggered';
 
 export interface SimulationEvent {
     id: string;
@@ -179,6 +192,9 @@ export type TimelinePhase =
     | 'ON_ENTER'
     | 'HAZARD_CHECK'
     | 'STATUS_APPLY'
+    | 'AILMENT_APPLY'
+    | 'AILMENT_ANNIHILATE'
+    | 'AILMENT_TICK'
     | 'DAMAGE_APPLY'
     | 'DEATH_RESOLVE'
     | 'INTENT_END';
@@ -491,6 +507,14 @@ export interface GameState {
 
     // Selected loadout id from the Hub (not persisted to a run unless START_RUN is called)
     selectedLoadoutId?: string;
+
+    // Ruleset/feature flags persisted in-state for deterministic toggles.
+    ruleset?: {
+        ailments?: {
+            acaeEnabled: boolean;
+            version: 'acae-v1';
+        };
+    };
 
     // Score
     kills: number;

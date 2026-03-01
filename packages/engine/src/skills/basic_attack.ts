@@ -27,6 +27,7 @@ export const BASIC_ATTACK: SkillDefinition = {
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
+        const acaeEnabled = state.ruleset?.ailments?.acaeEnabled === true;
 
         const stunnedThisStep = (state.timelineEvents || []).some(ev =>
             ev.phase === 'STATUS_APPLY'
@@ -109,6 +110,8 @@ export const BASIC_ATTACK: SkillDefinition = {
                 : damage >= 4 ? 'high'
                     : damage >= 2 ? 'medium'
                         : 'low';
+        const isSpearFamilyAttack = !!attacker.activeSkills?.some(s => s.id === 'SPEAR_THROW')
+            && (attacker.id !== state.player.id || state.hasSpear);
 
         // Four-phase signature sequence for strike readability (migration-safe via Juice metadata).
         effects.push({
@@ -189,6 +192,15 @@ export const BASIC_ATTACK: SkillDefinition = {
         });
         // Apply damage
         effects.push({ type: 'Damage', target: 'targetActor', amount: damage, reason: 'basic_attack', scoreEvent: combat.scoreEvent });
+        if (acaeEnabled && isSpearFamilyAttack) {
+            effects.push({
+                type: 'ApplyAilment',
+                target: 'targetActor',
+                ailment: 'bleed',
+                skillMultiplier: 100,
+                baseDeposit: 1
+            });
+        }
         effects.push({
             type: 'Juice',
             effect: 'lightImpact',

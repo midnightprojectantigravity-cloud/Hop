@@ -4,6 +4,7 @@ import { TILE_EFFECTS } from './tile-registry';
 import type { TileEffectID } from '../../types/registry';
 import { getNeighbors, hexEquals } from '../../hex';
 import { UnifiedTileService } from './unified-tile-service';
+import { createTileAilmentInjectionEffects, isAcaeEnabled } from '../ailments/runtime';
 
 /**
  * TILE EFFECTS SYSTEM
@@ -20,6 +21,22 @@ export class TileResolver {
 
     private static isFireHazard(tile: Tile, traits: Set<string>): boolean {
         return tile.baseId === 'LAVA' || traits.has('LAVA') || traits.has('FIRE');
+    }
+
+    private static appendAcaeTileInjection(
+        combinedResult: TileHookResult,
+        state: GameState,
+        actor: Actor,
+        tileKind: 'lava' | 'fire' | 'wet' | 'miasma' | 'ice',
+        intensity: 'pass' | 'enter' | 'stay',
+        message?: string
+    ): void {
+        const effects = createTileAilmentInjectionEffects(state, actor, tileKind, intensity);
+        if (effects.length === 0) return;
+        this.mergeResults(combinedResult, {
+            effects,
+            messages: message ? [message] : []
+        });
     }
 
     /**
@@ -58,33 +75,61 @@ export class TileResolver {
         };
 
         const traits = UnifiedTileService.getTraitsForTile(state, tile);
+        const acaeEnabled = isAcaeEnabled(state);
+        let appliedHeatInjection = false;
 
         if (traits.has('HAZARDOUS') && !actor.isFlying) {
             const fireProtected = this.isFireHazard(tile, traits) && this.hasFireProtection(actor);
-            if (fireProtected) {
+            if (acaeEnabled && this.isFireHazard(tile, traits) && !fireProtected) {
+                this.appendAcaeTileInjection(
+                    combinedResult,
+                    state,
+                    actor,
+                    tile.baseId === 'LAVA' || traits.has('LAVA') ? 'lava' : 'fire',
+                    'enter',
+                    tile.baseId === 'LAVA' || traits.has('LAVA') ? 'Lava scorches you.' : 'Flames lick at your armor.'
+                );
+                appliedHeatInjection = true;
+            } else if (fireProtected) {
                 // Fire-immune actors should not be intercepted/killed by fire hazard entry.
                 // Damage conversion/healing is handled downstream by Damage resolution.
             } else {
-            const damage = 99;
-            if (tile.baseId === 'LAVA' || traits.has('LAVA')) {
-                this.mergeResults(combinedResult, {
-                    effects: [
-                        { type: 'Damage', target: actor.id, amount: damage, reason: 'lava_sink' },
-                        { type: 'Juice', effect: 'lavaSink', target: actor.position }
-                    ],
-                    messages: [`Lava Sink! You were engulfed by lava!`],
-                    interrupt: true
-                });
-            } else if (tile.baseId === 'VOID' || traits.has('VOID')) {
-                this.mergeResults(combinedResult, {
-                    effects: [
-                        { type: 'Damage', target: actor.id, amount: damage, reason: 'void_sink' },
-                        { type: 'Juice', effect: 'lavaSink', target: actor.position } // Visual reuse
-                    ],
-                    messages: [`Void consumes your soul!`],
-                    interrupt: true
-                });
+                const damage = 99;
+                if (tile.baseId === 'LAVA' || traits.has('LAVA')) {
+                    this.mergeResults(combinedResult, {
+                        effects: [
+                            { type: 'Damage', target: actor.id, amount: damage, reason: 'lava_sink' },
+                            { type: 'Juice', effect: 'lavaSink', target: actor.position }
+                        ],
+                        messages: [`Lava Sink! You were engulfed by lava!`],
+                        interrupt: true
+                    });
+                } else if (tile.baseId === 'VOID' || traits.has('VOID')) {
+                    this.mergeResults(combinedResult, {
+                        effects: [
+                            { type: 'Damage', target: actor.id, amount: damage, reason: 'void_sink' },
+                            { type: 'Juice', effect: 'lavaSink', target: actor.position } // Visual reuse
+                        ],
+                        messages: [`Void consumes your soul!`],
+                        interrupt: true
+                    });
+                }
             }
+        }
+
+        if (acaeEnabled && !actor.isFlying) {
+            if (tile.baseId === 'ICE') {
+                this.appendAcaeTileInjection(combinedResult, state, actor, 'ice', 'enter');
+            }
+            for (const effectState of tile.effects) {
+                if (effectState.id === 'WET') {
+                    this.appendAcaeTileInjection(combinedResult, state, actor, 'wet', 'enter');
+                } else if (effectState.id === 'MIASMA') {
+                    this.appendAcaeTileInjection(combinedResult, state, actor, 'miasma', 'enter');
+                } else if (effectState.id === 'FIRE' && !appliedHeatInjection) {
+                    this.appendAcaeTileInjection(combinedResult, state, actor, 'fire', 'enter');
+                    appliedHeatInjection = true;
+                }
             }
         }
 
@@ -119,6 +164,8 @@ export class TileResolver {
         };
 
         const traits = UnifiedTileService.getTraitsForTile(state, tile);
+        const acaeEnabled = isAcaeEnabled(state);
+        let appliedHeatInjection = false;
 
         // 1. Physical Collision (Wall/Environment)
         if (traits.has('BLOCKS_MOVEMENT')) {
@@ -154,7 +201,16 @@ export class TileResolver {
         // 1. Process Base Traits
         if (traits.has('HAZARDOUS') && !actor.isFlying && !ignoreGroundHazards) {
             const fireProtected = this.isFireHazard(tile, traits) && this.hasFireProtection(actor);
-            if (fireProtected) {
+            if (acaeEnabled && this.isFireHazard(tile, traits) && !fireProtected) {
+                this.appendAcaeTileInjection(
+                    combinedResult,
+                    state,
+                    actor,
+                    tile.baseId === 'LAVA' || traits.has('LAVA') ? 'lava' : 'fire',
+                    'pass'
+                );
+                appliedHeatInjection = true;
+            } else if (fireProtected) {
                 // Preserve absorb-fire contract: fire still applies its payload, but never interrupts movement.
                 this.mergeResults(combinedResult, {
                     effects: [
@@ -164,17 +220,17 @@ export class TileResolver {
                     interrupt: false
                 });
             } else {
-            // LETHAL HAZARD: Intercept and kill immediately
-            const damage = 99;
+                // LETHAL HAZARD: Intercept and kill immediately
+                const damage = 99;
 
-            this.mergeResults(combinedResult, {
-                effects: [
-                    { type: 'Damage', target: actor.id, amount: damage, reason: 'hazard_intercept' },
-                    { type: 'Juice', effect: 'lavaSink', target: tile.position }
-                ],
-                messages: [(tile.baseId === 'LAVA' || traits.has('LAVA')) ? 'Sunk in Lava!' : 'Consumed by Void!'],
-                interrupt: true
-            });
+                this.mergeResults(combinedResult, {
+                    effects: [
+                        { type: 'Damage', target: actor.id, amount: damage, reason: 'hazard_intercept' },
+                        { type: 'Juice', effect: 'lavaSink', target: tile.position }
+                    ],
+                    messages: [(tile.baseId === 'LAVA' || traits.has('LAVA')) ? 'Sunk in Lava!' : 'Consumed by Void!'],
+                    interrupt: true
+                });
             }
         } else if (traits.has('SLIPPERY')) {
             combinedResult.newMomentum = Math.max(1, (momentum || 0));
@@ -296,6 +352,22 @@ export class TileResolver {
             }
         }
 
+        if (acaeEnabled && !actor.isFlying && !ignoreGroundHazards) {
+            if (tile.baseId === 'ICE') {
+                this.appendAcaeTileInjection(combinedResult, state, actor, 'ice', 'pass');
+            }
+            for (const effectState of tile.effects) {
+                if (effectState.id === 'WET') {
+                    this.appendAcaeTileInjection(combinedResult, state, actor, 'wet', 'pass');
+                } else if (effectState.id === 'MIASMA') {
+                    this.appendAcaeTileInjection(combinedResult, state, actor, 'miasma', 'pass');
+                } else if (effectState.id === 'FIRE' && !appliedHeatInjection) {
+                    this.appendAcaeTileInjection(combinedResult, state, actor, 'fire', 'pass');
+                    appliedHeatInjection = true;
+                }
+            }
+        }
+
         return combinedResult;
     }
 
@@ -316,14 +388,32 @@ export class TileResolver {
         };
 
         const traits = UnifiedTileService.getTraitsForTile(state, tile);
+        const acaeEnabled = isAcaeEnabled(state);
 
         // Traits
         if ((tile.baseId === 'LAVA' || traits.has('LAVA')) && !actor.isFlying && !actor.statusEffects.some(s => s.type === 'fire_immunity')) {
-            const isPlayer = actor.id === 'player';
-            this.mergeResults(combinedResult, {
-                effects: [{ type: 'Damage', target: actor.id, amount: isPlayer ? 1 : 99, reason: 'lava_tick' }],
-                messages: [`Lava Sink! You were engulfed by lava!`] // Standard message
-            });
+            if (acaeEnabled) {
+                this.appendAcaeTileInjection(combinedResult, state, actor, 'lava', 'stay', 'Molten heat builds up.');
+            } else {
+                const isPlayer = actor.id === 'player';
+                this.mergeResults(combinedResult, {
+                    effects: [{ type: 'Damage', target: actor.id, amount: isPlayer ? 1 : 99, reason: 'lava_tick' }],
+                    messages: [`Lava Sink! You were engulfed by lava!`] // Standard message
+                });
+            }
+        }
+
+        if (acaeEnabled && !actor.isFlying) {
+            if (tile.baseId === 'ICE') {
+                this.appendAcaeTileInjection(combinedResult, state, actor, 'ice', 'stay');
+            }
+            for (const effectState of tile.effects) {
+                if (effectState.id === 'WET') {
+                    this.appendAcaeTileInjection(combinedResult, state, actor, 'wet', 'stay');
+                } else if (effectState.id === 'MIASMA') {
+                    this.appendAcaeTileInjection(combinedResult, state, actor, 'miasma', 'stay');
+                }
+            }
         }
 
         for (const effectState of tile.effects) {

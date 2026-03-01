@@ -14,6 +14,7 @@ import { ensureActorTrinity } from './systems/entities/entity-factory';
 import { ensurePlayerLoadoutIntegrity } from './systems/loadout';
 import { buildInitiativeQueue } from './systems/initiative';
 import { SpatialSystem } from './systems/spatial-system';
+import { resolveAcaeRuleset } from './systems/ailments/runtime';
 
 type PendingFrameStateBuilder = (
     state: GameState,
@@ -47,6 +48,7 @@ export const hydrateLoadedState = (loaded: GameState): GameState => {
     if (loaded.companions) {
         loaded.companions = loaded.companions.map(ensureActorTrinity);
     }
+    loaded.ruleset = resolveAcaeRuleset(loaded);
     return loaded;
 };
 
@@ -127,6 +129,10 @@ export const resolvePendingStateAction = (
             ...s.player,
             hp: Math.min(s.player.maxHp, s.player.hp + 1),
             upgrades: s.upgrades,
+        });
+        next.ruleset = resolveAcaeRuleset({
+            ...next,
+            ruleset: s.ruleset || next.ruleset
         });
         if (migratingSummons.length > 0) {
             const candidates = [next.player.position, ...getNeighbors(next.player.position)];

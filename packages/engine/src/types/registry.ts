@@ -22,6 +22,7 @@ export type TileID =
 export type TileEffectID =
     | 'FIRE'
     | 'WET'
+    | 'MIASMA'
     | 'OIL'
     | 'STEAM'
     | 'BLESSED'
@@ -86,6 +87,14 @@ export type StatusID =
     | 'protected'
     | 'marked_scout'
     | 'marked_predator';
+
+/** All known ACAE ailment counter IDs */
+export type AilmentID =
+    | 'burn'
+    | 'wet'
+    | 'poison'
+    | 'frozen'
+    | 'bleed';
 
 /** All known Archetypes */
 export type ArchetypeID =

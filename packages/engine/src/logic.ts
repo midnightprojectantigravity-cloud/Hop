@@ -25,6 +25,7 @@ import { withPendingFrame } from './systems/pending-frame';
 import { applyPlayerEndOfTurnRules, hydrateLoadedState } from './logic-rules';
 import { resolveGameStateAction } from './logic-reducer-actions';
 import { createProcessNextTurn } from './logic-turn-loop';
+import { resolveAcaeRuleset, tickActorAilments } from './systems/ailments/runtime';
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
@@ -168,6 +169,8 @@ export const generateInitialState = (
         tiles: tiles,
     };
 
+    tempState.ruleset = resolveAcaeRuleset(tempState);
+
     tempState.initiativeQueue = buildInitiativeQueue(tempState);
     tempState.occupancyMask = SpatialSystem.refreshOccupancyMask(tempState);
 
@@ -193,8 +196,11 @@ const executeStatusWindow = (
         }
     });
 
-    const newState = applyEffects(state, effects, { sourceId: actorId, stepId });
-    return { state: newState, messages };
+    let nextState = applyEffects(state, effects, { sourceId: actorId, stepId });
+    const ailmentTick = tickActorAilments(nextState, actorId, window, stepId);
+    nextState = ailmentTick.state;
+    messages.push(...ailmentTick.messages);
+    return { state: nextState, messages };
 };
 
 export const processNextTurn = createProcessNextTurn({

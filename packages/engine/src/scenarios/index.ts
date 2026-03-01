@@ -29,6 +29,7 @@ import { relicScenarios } from './relics';
 import { objectiveScenarios } from './objectives';
 import { necromancerScenarios } from './necromancer';
 import { archerShotScenarios } from './archer_shot';
+import { acaeScenarios } from './acae';
 
 /**
  * Central registry for all test scenarios
@@ -66,6 +67,7 @@ export const SCENARIO_COLLECTIONS: ScenarioCollection[] = [
     objectiveScenarios,
     necromancerScenarios,
     archerShotScenarios,
+    acaeScenarios,
 ];
 
 // Flat list of all scenarios for easy iteration

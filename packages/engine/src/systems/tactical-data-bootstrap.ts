@@ -2,6 +2,7 @@ import type { TacticalDataPack } from '../data/contracts';
 import { parseTacticalDataPack } from '../data/contract-parser';
 import { TACTICAL_CORE_MVP_PACK } from '../data/packs/mvp-pack';
 import { assertEnemyContentConsistency } from '../data/enemies';
+import { assertAilmentContentConsistency, MVP_AILMENT_CATALOG } from '../data/ailments';
 import { clearBaseUnitRegistry, registerBaseUnitDefinitions } from './entities/base-unit-registry';
 import { clearCompositeSkillRegistry, registerCompositeSkillDefinitions } from './composite-skill-bridge';
 import { validateDefaultLoadouts } from './loadout';
@@ -18,6 +19,7 @@ export const bootstrapTacticalData = (input: TacticalDataPack = TACTICAL_CORE_MV
     const pack = parseTacticalDataPack(input);
     if (input === TACTICAL_CORE_MVP_PACK) {
         assertEnemyContentConsistency(pack);
+        assertAilmentContentConsistency(MVP_AILMENT_CATALOG);
     }
     const loadoutsValidated = validateDefaultLoadouts();
     registerBaseUnitDefinitions(pack.units);

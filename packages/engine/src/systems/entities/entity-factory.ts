@@ -78,7 +78,8 @@ export const ensureActorTrinity = (actor: Actor): Actor => {
     const components = new Map(actor.components || []);
     const hasTrinity = components.has('trinity');
     const hasCombatProfile = components.has('combat_profile');
-    if (hasTrinity && hasCombatProfile) return actor;
+    const hasAilmentProfile = components.has('ailment_profile');
+    if (hasTrinity && hasCombatProfile && hasAilmentProfile) return actor;
 
     const resolved = resolveDefaultTrinity({
         id: actor.id,
@@ -110,6 +111,13 @@ export const ensureActorTrinity = (actor: Actor): Actor => {
         components.set('combat_profile', {
             type: 'combat_profile',
             ...resolvedCombatProfile,
+        });
+    }
+    if (!hasAilmentProfile) {
+        components.set('ailment_profile', {
+            type: 'ailment_profile',
+            baseResistancePct: {},
+            resistanceGrowthRate: 1
         });
     }
 
@@ -163,6 +171,13 @@ export function createEntity(config: BaseEntityConfig): Actor {
         components.set('combat_profile', {
             type: 'combat_profile',
             ...resolvedCombatProfile,
+        });
+    }
+    if (!components.has('ailment_profile')) {
+        components.set('ailment_profile', {
+            type: 'ailment_profile',
+            baseResistancePct: {},
+            resistanceGrowthRate: 1
         });
     }
 

@@ -62,9 +62,12 @@ const TIMELINE_PHASE_ORDER: Record<TimelinePhase, number> = {
     ON_ENTER: 5,
     HAZARD_CHECK: 6,
     STATUS_APPLY: 7,
-    DAMAGE_APPLY: 8,
-    DEATH_RESOLVE: 9,
-    INTENT_END: 10
+    AILMENT_APPLY: 8,
+    AILMENT_ANNIHILATE: 9,
+    AILMENT_TICK: 10,
+    DAMAGE_APPLY: 11,
+    DEATH_RESOLVE: 12,
+    INTENT_END: 13
 };
 
 const getBlockingTimelineDurationMs = (events?: TimelineEvent[]): number => {
@@ -79,7 +82,7 @@ const getBlockingTimelineDurationMs = (events?: TimelineEvent[]): number => {
 
 const appendTimelineEvent = (
     state: GameState,
-    phase: 'MOVE_START' | 'MOVE_END' | 'ON_PASS' | 'ON_ENTER' | 'HAZARD_CHECK' | 'STATUS_APPLY' | 'DAMAGE_APPLY' | 'DEATH_RESOLVE' | 'INTENT_START' | 'INTENT_END',
+    phase: TimelinePhase,
     type: string,
     payload: any,
     context: AtomicEffectContext,
