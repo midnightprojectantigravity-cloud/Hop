@@ -6,13 +6,16 @@ import { buildLegacyVfxEffects, buildSimulationDamageCueEffects } from './event-
 import {
     classifyDamageCueType,
     getEffectLifetimeMs,
-    resolveEventPoint,
-    TIMELINE_TIME_SCALE,
     waitMs,
 } from './juice-manager-utils';
-
-const MAX_BLOCKING_WAIT_MS = 650;
-const MAX_QUEUE_RUNTIME_MS = 3500;
+import {
+    buildTimelinePhaseEffects,
+    MAX_QUEUE_RUNTIME_MS,
+    resolveTimelineBaseDuration,
+    resolveTimelinePhaseDuration,
+    resolveTimelineWaitDuration,
+} from './juice-timeline-utils';
+import { resolveNextCleanupDelayMs } from './juice-cleanup-utils';
 
 interface UseJuiceManagerEffectsArgs {
     visualEvents: { type: string; payload: any }[];
@@ -85,29 +88,7 @@ export const useJuiceManagerEffects = ({
 
     const enqueueTimelineEffects = (ev: TimelineEvent) => {
         const now = Date.now();
-        const position = resolveEventPoint(ev.payload);
-        if (!position) return;
-
-        const additions: JuiceEffect[] = [];
-        const effectId = `${ev.id}:${now}`;
-
-        if (ev.phase === 'HAZARD_CHECK') {
-            additions.push({
-                id: `${effectId}:haz`,
-                type: 'combat_text',
-                position,
-                payload: { text: '!' },
-                startTime: now
-            });
-        } else if (ev.phase === 'DEATH_RESOLVE') {
-            additions.push({
-                id: `${effectId}:vapor`,
-                type: 'vaporize',
-                position,
-                startTime: now
-            });
-        }
-
+        const additions = buildTimelinePhaseEffects(ev, now);
         if (additions.length > 0) {
             setEffects(prev => [...prev, ...additions]);
         }
@@ -137,41 +118,15 @@ export const useJuiceManagerEffects = ({
                     }
                     const ev = timelineQueue.current.shift()!;
                     enqueueTimelineEffects(ev);
-                    let baseDuration = ev.blocking ? Math.round((ev.suggestedDurationMs ?? 140) * TIMELINE_TIME_SCALE) : 0;
-
-                    if (ev.phase === 'MOVE_END') {
-                        const actorId = (ev.payload as any)?.targetActorId as string | undefined;
-                        if (actorId) {
-                            const traced = movementDurationByActor.current.get(actorId);
-                            const isFresh = traced ? (Date.now() - traced.seenAt) <= 2500 : false;
-                            if (traced && isFresh && traced.durationMs > 0) {
-                                baseDuration = Math.max(
-                                    baseDuration,
-                                    Math.min(MAX_BLOCKING_WAIT_MS, Math.round(traced.durationMs * TIMELINE_TIME_SCALE))
-                                );
-                            }
-                        }
-                    }
-
-                    let phaseDuration = 0;
-                    if (ev.phase === 'MOVE_END') {
-                        phaseDuration = Math.min(460, Math.max(70, baseDuration));
-                    } else if (ev.phase === 'DEATH_RESOLVE') {
-                        phaseDuration = Math.min(120, Math.max(55, baseDuration));
-                    } else if (ev.phase === 'DAMAGE_APPLY') {
-                        phaseDuration = Math.min(80, Math.max(35, baseDuration));
-                    } else if (ev.phase === 'HAZARD_CHECK') {
-                        phaseDuration = Math.min(70, Math.max(30, baseDuration));
-                    } else if (ev.blocking) {
-                        phaseDuration = Math.min(70, Math.max(0, baseDuration));
-                    }
-
-                    const rawWaitDuration = ev.phase === 'MOVE_END'
-                        ? baseDuration
-                        : (prefersReducedMotion.current
-                            ? Math.min(70, Math.floor(phaseDuration * 0.5))
-                            : phaseDuration);
-                    const waitDuration = Math.max(0, Math.min(MAX_BLOCKING_WAIT_MS, rawWaitDuration));
+                    const now = Date.now();
+                    const baseDuration = resolveTimelineBaseDuration(ev, movementDurationByActor.current, now);
+                    const phaseDuration = resolveTimelinePhaseDuration(ev, baseDuration);
+                    const waitDuration = resolveTimelineWaitDuration(
+                        ev,
+                        baseDuration,
+                        phaseDuration,
+                        prefersReducedMotion.current
+                    );
                     if (waitDuration > 0) {
                         await waitMs(waitDuration);
                     }
@@ -256,21 +211,7 @@ export const useJuiceManagerEffects = ({
         if (effects.length === 0) return;
 
         const now = Date.now();
-        let nextExpiryMs = Infinity;
-        for (const effect of effects) {
-            if (effect.startTime > now) {
-                const untilStart = effect.startTime - now;
-                if (untilStart > 0 && untilStart < nextExpiryMs) {
-                    nextExpiryMs = untilStart;
-                }
-                continue;
-            }
-            const age = now - effect.startTime;
-            const remaining = getEffectLifetimeMs(effect) - age;
-            if (remaining > 0 && remaining < nextExpiryMs) {
-                nextExpiryMs = remaining;
-            }
-        }
+        const nextExpiryMs = resolveNextCleanupDelayMs(effects, now);
 
         if (!Number.isFinite(nextExpiryMs)) {
             setEffects([]);

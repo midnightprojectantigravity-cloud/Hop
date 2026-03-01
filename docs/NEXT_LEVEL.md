@@ -47,6 +47,7 @@ Status: complete for this tranche (`BiomeSandbox.tsx` is 74 lines, `Entity.tsx` 
 - [x] Decompose `JuiceEffectsLayer` into focused renderer modules (`juice-effect-signature-renderers`, `juice-effect-generic-renderers`).
 - [x] Decompose `useBoardBiomeVisuals` into focused modules (`biome-visuals-types`, `biome-visuals-utils`, `biome-mountain-settings`).
 - [x] Decompose `useBoardJuicePresentation` into focused modules (`board-juice-pose-builder`, `board-juice-camera-cues`, `board-juice-presentation-types`, `board-juice-presentation-utils`).
+- [x] Decompose `use-juice-manager-effects` timeline/cleanup logic into focused modules (`juice-timeline-utils`, `juice-cleanup-utils`).
 - [x] Continue decomposition of `apps/web/src/components/BiomeSandbox.tsx` into smaller feature modules.
 - [x] Continue decomposition of `apps/web/src/components/Entity.tsx` rendering branches where complexity remains high.
 - [x] Keep external props/API behavior stable for existing app integration.
