@@ -1,10 +1,9 @@
 /**
  * GAME CONSTANTS
  * Central repository for stats, types, and grid configuration.
- * NOTE: ENEMY_STATS/FLOOR_ENEMY_* are deprecated compatibility exports.
- * Runtime ownership lives in `data/enemies/*`.
+ * Runtime ownership for enemy stats/spawn tables lives in `data/enemies/*`.
+ * Deprecated compatibility constants are isolated in `legacy/enemy-constants.ts`.
  */
-import { listFloorSpawnProfiles, toLegacyEnemyStatsRecord } from './data/enemies';
 // Grid configuration for mobile portrait (9 wide × 11 tall)
 export const GRID_WIDTH = 7;   // Tiles wide
 export const GRID_HEIGHT = 9;  // Tiles tall
@@ -66,19 +65,8 @@ export const STATUS_REGISTRY: Record<string, { tickWindow: 'START_OF_TURN' | 'EN
     time_bomb: { tickWindow: 'END_OF_TURN' },
 };
 
-// Deprecated compatibility export. Runtime ownership lives in `data/enemies/enemy-catalog.ts`.
-export const ENEMY_STATS = toLegacyEnemyStatsRecord();
-
 // Hazard percentage (15-20% of map)
 export const HAZARD_PERCENTAGE = 0.17;
-
-const FLOOR_SPAWN_PROFILES = listFloorSpawnProfiles();
-const MAX_FLOOR_PROFILE = FLOOR_SPAWN_PROFILES.reduce((max, profile) => Math.max(max, profile.floor), 0);
-
-// Deprecated compatibility export. Runtime ownership lives in `data/enemies/floor-spawn-profile.ts`.
-export const FLOOR_ENEMY_BUDGET = Array.from({ length: MAX_FLOOR_PROFILE + 1 }, (_, floor) =>
-    FLOOR_SPAWN_PROFILES.find(profile => profile.floor === floor)?.budget ?? 0
-);
 
 // Color palette from design doc
 export const COLORS = {
@@ -106,7 +94,3 @@ export const FLOOR_THEMES: Record<number, string> = {
     10: 'inferno',
 };
 
-// Deprecated compatibility export. Runtime ownership lives in `data/enemies/floor-spawn-profile.ts`.
-export const FLOOR_ENEMY_TYPES: Record<number, string[]> = Object.fromEntries(
-    FLOOR_SPAWN_PROFILES.map(profile => [profile.floor, [...profile.allowedSubtypes]])
-);

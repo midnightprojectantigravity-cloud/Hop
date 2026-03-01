@@ -1,5 +1,5 @@
 import React from 'react';
-import { COMPOSITIONAL_SKILLS, SkillRegistry, generateInitialState, ENEMY_STATS, addStatus, buildInitiativeQueue, BASE_TILES, type GameState, type Point, type SkillDefinition, type ScenarioV2, pointToKey } from '@hop/engine';
+import { COMPOSITIONAL_SKILLS, SkillRegistry, generateInitialState, addStatus, buildInitiativeQueue, BASE_TILES, getEnemyCatalogEntry, type GameState, type Point, type SkillDefinition, type ScenarioV2, pointToKey } from '@hop/engine';
 import type { TileID } from '@hop/engine/types/registry';
 
 interface TutorialManagerProps {
@@ -45,20 +45,20 @@ class ScenarioBuilder {
     }
 
     spawnEnemy(type: string, pos: Point, id: string) {
-        const stats = ENEMY_STATS[type as keyof typeof ENEMY_STATS] || { hp: 1, maxHp: 1 };
+        const stats = getEnemyCatalogEntry(type)?.bestiary.stats;
         this.state.enemies.push({
             id,
             type: 'enemy',
             subtype: type,
             position: pos,
             previousPosition: pos,
-            hp: stats.hp,
-            maxHp: stats.maxHp,
-            enemyType: (stats as any).type || 'melee',
+            hp: stats?.hp ?? 1,
+            maxHp: stats?.maxHp ?? 1,
+            enemyType: stats?.type ?? 'melee',
             statusEffects: [],
             temporaryArmor: 0,
             activeSkills: [],
-            speed: (stats as any).speed || 1,
+            speed: stats?.speed ?? 1,
             factionId: 'enemy'
         });
     }

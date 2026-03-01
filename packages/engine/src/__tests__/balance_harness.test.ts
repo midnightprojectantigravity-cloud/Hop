@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { runBatch, runHeadToHeadBatch, simulateRun, summarizeBatch, summarizeMatchup } from '../systems/evaluation/balance-harness';
+import { compareRuns } from '../systems/evaluation/harness-matchup';
+import { runHarnessHeadToHeadBatch, runHarnessSimulationBatch } from '../systems/evaluation/harness-batch';
+import * as EvaluationSurface from '../systems/evaluation';
+import * as EvaluationAliasSurface from '../evaluation';
 
 describe('Balance Harness', () => {
     it('is deterministic for the same seed set', () => {
@@ -84,5 +88,66 @@ describe('Balance Harness', () => {
         expect((firemage.skillUsageTotals.ABSORB_FIRE || 0)).toBeGreaterThan(0);
         expect((hunter.skillUsageTotals.FALCON_COMMAND || 0)).toBeGreaterThan(0);
         expect((hunter.skillUsageTotals.WITHDRAWAL || 0)).toBeGreaterThan(0);
+    });
+
+    it('normalizes empty seeds through shared harness batch primitives', () => {
+        const seeds = ['', 'normalized-seed-1', '', 'normalized-seed-2', ''];
+        const results = runBatch(seeds, 'heuristic', 25, 'VANGUARD');
+        expect(results.map(r => r.seed)).toEqual(['normalized-seed-1', 'normalized-seed-2']);
+        const summary = summarizeBatch(results, 'heuristic', 'VANGUARD');
+        expect(summary.games).toBe(2);
+    });
+
+    it('keeps runBatch as a thin wrapper over shared harness batch primitives', () => {
+        const seeds = ['thin-balance-1', 'thin-balance-2'];
+        const wrapperRuns = runBatch(seeds, 'heuristic', 20, 'SKIRMISHER', 'sp-v1-default');
+        const directRuns = runHarnessSimulationBatch(
+            { seeds },
+            seed => simulateRun(seed, 'heuristic', 20, 'SKIRMISHER', 'sp-v1-default')
+        );
+        expect(wrapperRuns).toEqual(directRuns);
+    });
+
+    it('keeps runHeadToHeadBatch as a thin wrapper over shared head-to-head batch primitives', () => {
+        const seeds = ['thin-h2h-1', 'thin-h2h-2'];
+        const left = { policy: 'heuristic' as const, loadoutId: 'FIREMAGE' as const };
+        const right = { policy: 'heuristic' as const, loadoutId: 'NECROMANCER' as const };
+
+        const wrapperRuns = runHeadToHeadBatch(seeds, left, right, 20, 'sp-v1-default', 'sp-v1-default');
+        const directRuns = runHarnessHeadToHeadBatch(
+            { seeds },
+            seed => simulateRun(seed, left.policy, 20, left.loadoutId, 'sp-v1-default'),
+            seed => simulateRun(seed, right.policy, 20, right.loadoutId, 'sp-v1-default'),
+            (seed, leftRun, rightRun) => ({
+                seed,
+                left: leftRun,
+                right: rightRun,
+                winner: compareRuns(leftRun, rightRun)
+            })
+        );
+
+        expect(wrapperRuns).toEqual(directRuns);
+    });
+
+    it('preserves stable public harness exports across evaluation surfaces', () => {
+        const requiredRuntimeExports = [
+            'simulateRun',
+            'simulateRunDetailed',
+            'runBatch',
+            'runHeadToHeadBatch',
+            'summarizeBatch',
+            'summarizeMatchup',
+            'simulatePvpRun',
+            'runPvpBatch',
+            'summarizePvpBatch',
+            'runHarnessSimulationBatch',
+            'runHarnessHeadToHeadBatch'
+        ] as const;
+
+        for (const key of requiredRuntimeExports) {
+            expect(typeof EvaluationSurface[key]).toBe('function');
+            expect(typeof EvaluationAliasSurface[key]).toBe('function');
+            expect(EvaluationAliasSurface[key]).toBe(EvaluationSurface[key]);
+        }
     });
 });

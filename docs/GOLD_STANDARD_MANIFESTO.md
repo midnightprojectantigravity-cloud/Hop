@@ -35,7 +35,7 @@ Use it as the decision filter for engine, client, and balance changes.
 ## 6) Content Ownership Rules
 1. Runtime enemy ownership is catalog-based (`data/enemies/enemy-catalog.ts`), not constants-table based.
 2. Floor spawn ownership is profile-based (`data/enemies/floor-spawn-profile.ts`).
-3. `ENEMY_STATS` and `FLOOR_ENEMY_*` constants are compatibility exports only; new runtime logic must not depend on them.
+3. `ENEMY_STATS` and `FLOOR_ENEMY_*` constants are compatibility exports only under `legacy/enemy-constants.ts`; new runtime logic must not depend on them.
 4. Content consistency must be validated at bootstrap (`ensureTacticalDataBootstrapped()`).
 
 ## 7) AI and Harness Rules

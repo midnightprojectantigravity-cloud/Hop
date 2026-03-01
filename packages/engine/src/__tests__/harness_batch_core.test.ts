@@ -24,5 +24,27 @@ describe('harness batch core wrappers', () => {
 
         expect(unified).toEqual(legacy);
     });
-});
 
+    it('normalizes seed lists by dropping empty entries while preserving order', () => {
+        const seeds = ['', 'seed-1', '', 'seed-2', 'seed-3', ''];
+        const simulate = (seed: string) => seed;
+        const combined = runHarnessSimulationBatch({ seeds }, simulate);
+        expect(combined).toEqual(['seed-1', 'seed-2', 'seed-3']);
+    });
+
+    it('applies normalized seeds consistently for head-to-head batches', () => {
+        const seeds = ['', 'h2h-1', '', 'h2h-2'];
+        const left = (seed: string) => `${seed}:L`;
+        const right = (seed: string) => `${seed}:R`;
+        const combined = runHarnessHeadToHeadBatch(
+            { seeds },
+            left,
+            right,
+            (seed, l, r) => ({ seed, l, r })
+        );
+        expect(combined).toEqual([
+            { seed: 'h2h-1', l: 'h2h-1:L', r: 'h2h-1:R' },
+            { seed: 'h2h-2', l: 'h2h-2:L', r: 'h2h-2:R' },
+        ]);
+    });
+});

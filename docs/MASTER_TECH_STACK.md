@@ -86,7 +86,8 @@ Reference milestone:
 - Content consistency validation:
   - `packages/engine/src/data/enemies/content-consistency.ts`
   - bootstrap gate in `packages/engine/src/systems/tactical-data-bootstrap.ts`
-- Compatibility constants (`ENEMY_STATS`, floor enemy constants) are deprecated facades only.
+- Compatibility constants (`ENEMY_STATS`, floor enemy constants) are deprecated facades only and isolated under:
+  - `packages/engine/src/legacy/enemy-constants.ts`
 
 2. Frontend decomposition (behavior-preserving)
 - Biome sandbox state modules:

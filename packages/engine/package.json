@@ -14,6 +14,7 @@
     "./movement": "./src/movement/index.ts",
     "./tiles": "./src/tiles/index.ts",
     "./visual": "./src/visual/index.ts",
+    "./legacy/enemy-constants": "./src/legacy/enemy-constants.ts",
     "./*": "./src/*.ts"
   },
   "scripts": {
@@ -32,7 +33,8 @@
     "report-enemy-ai-dynamic-bias-decision-diff": "npx tsx ./scripts/reportEnemyAiDynamicBiasDecisionDiff.ts",
     "report-enemy-ai-intent-bias-drift": "npx tsx ./scripts/reportEnemyAiIntentBiasDrift.ts",
     "report-enemy-ai-turn-mode-diff": "npx tsx ./scripts/reportEnemyAiTurnModeDiff.ts",
-    "check-script-imports": "npx tsx ./scripts/checkScriptImports.ts",
+    "check-deprecated-constants-usage": "npx tsx ./scripts/checkDeprecatedConstantsUsage.ts",
+    "check-script-imports": "npx tsx ./scripts/checkScriptImports.ts && npm run check-deprecated-constants-usage",
     "validate-replay": "npx tsx ./scripts/validateReplay.ts",
     "validate-replay-smoke": "npx tsx ./scripts/validateReplay.ts ./scripts/fixtures/replay.smoke.json",
     "replay-parity-gate": "npx tsx ./scripts/runReplayParityGate.ts",

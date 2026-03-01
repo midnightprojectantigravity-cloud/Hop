@@ -20,36 +20,42 @@
 ### P1: Compatibility Cleanup (Engine)
 Goal: remove temporary compatibility ownership after migration stability window.
 
-- [ ] Remove new runtime dependencies on compatibility constants (`ENEMY_STATS`, `FLOOR_ENEMY_*`).
+- [x] Remove new runtime dependencies on compatibility constants (`ENEMY_STATS`, `FLOOR_ENEMY_*`).
 - [ ] Define and execute retirement plan for deprecated compatibility exports in a dedicated cleanup slice.
-- [ ] Add a CI/static guard to block new ownership callsites on deprecated constants.
+- [x] Add a CI/static guard to block new ownership callsites on deprecated constants.
 
 Acceptance:
-- [ ] Runtime/evaluation ownership stays catalog/profile-backed only.
-- [ ] Strict AI acceptance gate remains green.
+- [x] Runtime/evaluation ownership stays catalog/profile-backed only.
+- [x] Strict AI acceptance gate remains green.
 
 ### P2: Frontend Complexity Follow-up (Web)
 Goal: continue reducing high-churn file complexity without behavior drift.
+Status: complete for this tranche (`BiomeSandbox.tsx` is 74 lines, `Entity.tsx` is 110 lines).
 
-- [ ] Continue decomposition of `apps/web/src/components/BiomeSandbox.tsx` into smaller feature modules.
-- [ ] Continue decomposition of `apps/web/src/components/Entity.tsx` rendering branches where complexity remains high.
-- [ ] Keep external props/API behavior stable for existing app integration.
+- [x] Extract `BiomeSandbox` defaults + persistence/copy workflow into dedicated state modules/hooks.
+- [x] Split `BiomeSandboxControlsPanel` into section components under `components/biome-sandbox/controls/*`.
+- [x] Extract `Entity` motion and visual-state logic into dedicated hooks under `components/entity/*`.
+- [x] Extract `Entity` ring/status/spear render branches into `components/entity/*` presentational modules.
+- [x] Extract `Entity` render shell + memo comparator helpers into dedicated `components/entity/*` modules.
+- [x] Continue decomposition of `apps/web/src/components/BiomeSandbox.tsx` into smaller feature modules.
+- [x] Continue decomposition of `apps/web/src/components/Entity.tsx` rendering branches where complexity remains high.
+- [x] Keep external props/API behavior stable for existing app integration.
 
 Acceptance:
-- [ ] `npm --workspace @hop/web run test:run` passes.
-- [ ] `npm --workspace @hop/web run build` passes.
+- [x] `npm --workspace @hop/web run test:run` passes.
+- [x] `npm --workspace @hop/web run build` passes.
 
 ### P3: Harness and Evaluation Hardening (Engine)
 Goal: keep shared harness core stable and easier to extend.
 
-- [ ] Add any missing parity/regression checks when new harness metrics are introduced.
-- [ ] Keep `balance-harness` and `pvp-harness` as thin wrappers over shared batch primitives.
-- [ ] Keep public harness exports stable.
+- [x] Add missing parity/regression checks for shared batch behavior and seed normalization in harness suites.
+- [x] Keep `balance-harness` and `pvp-harness` as thin wrappers over shared batch primitives.
+- [x] Keep public harness exports stable.
 
 Acceptance:
-- [ ] `npm --workspace @hop/engine run test:ai-acceptance:strict` passes.
-- [ ] `npx vitest run packages/engine/src/__tests__/balance_harness.test.ts` passes.
-- [ ] `npx vitest run packages/engine/src/__tests__/pvp_harness.test.ts` passes.
+- [x] `npm --workspace @hop/engine run test:ai-acceptance:strict` passes.
+- [x] `npx vitest run packages/engine/src/__tests__/balance_harness.test.ts` passes.
+- [x] `npx vitest run packages/engine/src/__tests__/pvp_harness.test.ts` passes.
 
 ## Merge Gate (Default for Active Tranches)
 - `npm --workspace @hop/engine run build`
