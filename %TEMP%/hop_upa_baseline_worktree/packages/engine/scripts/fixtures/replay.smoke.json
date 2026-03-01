@@ -1,0 +1,9 @@
+{
+  "seed": "mvp-replay-gate-seed",
+  "actions": [
+    { "type": "WAIT" },
+    { "type": "ADVANCE_TURN" },
+    { "type": "WAIT" },
+    { "type": "ADVANCE_TURN" }
+  ]
+}

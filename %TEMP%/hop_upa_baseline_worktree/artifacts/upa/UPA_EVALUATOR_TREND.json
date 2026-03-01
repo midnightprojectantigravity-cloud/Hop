@@ -1,0 +1,49 @@
+{
+  "generatedAt": "2026-02-10T17:29:44.999Z",
+  "previousFile": "artifacts/upa/UPA_EVALUATOR_BASELINES_PREVIOUS.json",
+  "currentFile": "artifacts/upa/UPA_EVALUATOR_BASELINES.json",
+  "trend": {
+    "tiles": {
+      "count": 10,
+      "avgNumericDelta": 0,
+      "avgEfficiencyDelta": 0,
+      "avgDifficultyDelta": 0,
+      "changed": []
+    },
+    "loadouts": {
+      "count": 6,
+      "avgNumericDelta": 0,
+      "avgEfficiencyDelta": 0,
+      "avgDifficultyDelta": 0,
+      "changed": []
+    },
+    "enemies": {
+      "count": 9,
+      "avgNumericDelta": 0,
+      "avgEfficiencyDelta": 0,
+      "avgDifficultyDelta": 0,
+      "changed": []
+    },
+    "maps": {
+      "count": 3,
+      "avgNumericDelta": 0,
+      "avgEfficiencyDelta": 0,
+      "avgDifficultyDelta": 0,
+      "changed": []
+    },
+    "encounters": {
+      "count": 3,
+      "avgNumericDelta": 0.049,
+      "avgEfficiencyDelta": 0.6814,
+      "avgDifficultyDelta": -0.5833,
+      "changed": [
+        {
+          "id": "encounter_floor_5",
+          "numericDelta": 0.147,
+          "efficiencyDelta": 2.0441,
+          "difficultyDelta": -1.75
+        }
+      ]
+    }
+  }
+}

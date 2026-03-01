@@ -1,0 +1,917 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  /* Medieval apocalyptic palette */
+  --bg-1: #0b0b0b;
+  /* near-black */
+  --bg-2: #2b1f17;
+  /* burnt umber */
+  --accent: #8b5e34;
+  /* aged bronze */
+  --lava: #f97316;
+  /* molten */
+  --shrine: #6d28d9;
+  /* corrupted purple */
+  --muted: #6b6b6b;
+  --hp-fill: #b91c1c;
+  /* blood red */
+  --hp-enemy: #fb7185;
+  /* enemy hurt */
+
+  background: radial-gradient(circle at 20% 10%, rgba(139, 94, 52, 0.04), transparent 15%), linear-gradient(180deg, var(--bg-1), var(--bg-2));
+  color: #efe6da;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Movement animation for hex tiles */
+.hex-tile {
+  transition: transform 0.2s ease-out, fill 0.2s ease-out, stroke 0.2s ease-out;
+}
+
+/* Entity HP bars */
+.hp-bar-bg {
+  fill: #2b1f17;
+}
+
+.hp-bar-fill {
+  fill: var(--hp-fill);
+  transition: width 0.2s ease;
+}
+
+.entity-emoji {
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.7));
+}
+
+/* Enemy HP color override */
+rect[fill="#fb7185"] {
+  fill: var(--hp-enemy);
+}
+
+/* Subtle grain overlay for apocalyptic feel */
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.03"/></svg>');
+  mix-blend-mode: overlay;
+}
+
+/* ============================================
+   SMOOTH ENTITY MOVEMENT TRANSITIONS
+   ============================================ */
+.entity-container {
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ============================================
+   LAVA BUBBLE ANIMATION
+   ============================================ */
+@keyframes lavaBubble {
+
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: translateY(-4px) scale(1.3);
+    opacity: 0.9;
+  }
+}
+
+.lava-bubbles circle {
+  animation: lavaBubble 2s ease-in-out infinite;
+}
+
+/* ============================================
+   SHRINE GLOW ANIMATION
+   ============================================ */
+@keyframes shrineGlow {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    stroke-width: 2px;
+  }
+
+  50% {
+    opacity: 0.7;
+    stroke-width: 4px;
+  }
+}
+
+.shrine-icon {
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.6));
+}
+
+/* ============================================
+   STAIRS PULSE ANIMATION
+   ============================================ */
+@keyframes stairsPulse {
+
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.stairs-icon path {
+  animation: stairsPulse 1.5s ease-in-out infinite;
+}
+
+/* ============================================
+   DAMAGE FLASH ANIMATION
+   ============================================ */
+@keyframes damageFlash {
+
+  0%,
+  100% {
+    filter: none;
+    transform: scale(1);
+  }
+
+  50% {
+    filter: brightness(2) saturate(0);
+    transform: scale(1.1);
+  }
+}
+
+.entity-damaged {
+  animation: damageFlash 0.2s ease-out;
+}
+
+/* ============================================
+   SKILL READY INDICATOR
+   ============================================ */
+@keyframes skillReady {
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.9);
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@keyframes customPulse {
+
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-intent-dash {
+  animation: dash 5s linear infinite;
+}
+
+.animate-soft-pulse {
+  animation: customPulse 2s ease-in-out infinite;
+}
+
+/* ============================================
+   JUICE: SCREEN SHAKE
+   ============================================ */
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(-4px, 2px);
+  }
+
+  50% {
+    transform: translate(4px, -2px);
+  }
+
+  75% {
+    transform: translate(-2px, -4px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.15s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+/* ============================================
+   JUICE: LAVA SINK
+   ============================================ */
+@keyframes lavaSink {
+  0% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+    filter: brightness(1) drop-shadow(0 0 0 orange);
+  }
+
+  50% {
+    transform: scale(1.2) rotate(10deg);
+    opacity: 0.8;
+    filter: brightness(2) drop-shadow(0 0 10px orange);
+  }
+
+  100% {
+    transform: scale(0) rotate(45deg);
+    opacity: 0;
+    filter: brightness(3);
+  }
+}
+
+.animate-lava-sink {
+  animation: lavaSink 0.6s ease-in forwards;
+}
+
+/* ============================================
+   JUICE: TELEPORT (DISAPPEAR / REAPPEAR)
+   ============================================ */
+@keyframes teleportOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+    filter: brightness(2);
+  }
+}
+
+@keyframes teleportIn {
+  0% {
+    opacity: 0;
+    transform: scale(1.5);
+    filter: brightness(2);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.entity-teleport-out {
+  animation: teleportOut 0.12s ease-in forwards;
+}
+
+.entity-teleport-in {
+  animation: teleportIn 0.14s ease-out forwards;
+}
+
+/* ============================================
+   STUN ICON ANIMATION
+   ============================================ */
+@keyframes stunIcon {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(-10deg);
+  }
+
+  50% {
+    transform: translateY(-3px) rotate(10deg);
+  }
+}
+
+.stun-icon {
+  animation: stunIcon 1s ease-in-out infinite;
+}
+
+/* ============================================
+   JUICE: UNIT IDLE BREATHE
+   ============================================ */
+@keyframes unitIdle {
+
+  0%,
+  100% {
+    transform: scale(1.35);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.animate-idle {
+  animation: unitIdle 3s ease-in-out infinite;
+}
+
+/* ============================================
+   JUICE: IMPACT ANIMATION
+   ============================================ */
+@keyframes impact {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+    stroke-width: 10px;
+  }
+
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+    stroke-width: 0px;
+  }
+}
+
+.animate-impact {
+  animation: impact 0.3s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: ACTION-SHAPED DAMAGE CUES
+   ============================================ */
+@keyframes meleeLungeCue {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.6);
+  }
+
+  20% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scaleX(1.08);
+  }
+}
+
+.animate-melee-lunge {
+  transform-origin: center;
+  animation: meleeLungeCue 0.22s ease-out forwards;
+}
+
+@keyframes arrowShotCue {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 18;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-arrow-shot {
+  animation: arrowShotCue 0.24s ease-out forwards;
+}
+
+@keyframes arcaneBoltCue {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 22;
+    filter: drop-shadow(0 0 0 rgba(34, 211, 238, 0));
+  }
+
+  20% {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.75));
+  }
+
+  100% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+    filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0));
+  }
+}
+
+.animate-arcane-bolt {
+  animation: arcaneBoltCue 0.28s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: COMBAT TEXT FLOAT
+   ============================================ */
+@keyframes floatUp {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+}
+
+.animate-float-up {
+  animation: floatUp 0.8s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: FLASH ANIMATION
+   ============================================ */
+@keyframes flash {
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-flash {
+  animation: flash 0.2s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: SPEAR TRAIL ANIMATION
+   ============================================ */
+@keyframes spearTrail {
+  0% {
+    stroke-dashoffset: 100%;
+    opacity: 1;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+.animate-spear-trail {
+  stroke-dasharray: 100%;
+  animation: spearTrail 0.4s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: VAPORIZE ANIMATION
+   ============================================ */
+@keyframes vaporize {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    fill: #f97316;
+  }
+
+  100% {
+    transform: scale(2);
+    opacity: 0;
+    fill: #ef4444;
+  }
+}
+
+.animate-vaporize {
+  animation: vaporize 0.6s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: PING ANIMATION
+   ============================================ */
+@keyframes ping {
+
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-ping {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ============================================
+   JUICE: EXPLOSION RING ANIMATION
+   ============================================ */
+@keyframes explosionRing {
+  0% {
+    transform: scale(0.2);
+    opacity: 1;
+    stroke-width: 10px;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+    stroke-width: 0px;
+  }
+}
+
+.animate-explosion-ring {
+  animation: explosionRing 0.8s ease-out forwards;
+}
+
+/* ============================================
+   JUICE: BASIC ATTACK STRIKE (STATIC SPRITES)
+   ============================================ */
+.juice-basic-strike-anticipation,
+.juice-basic-strike-travel,
+.juice-basic-strike-impact-source,
+.juice-basic-strike-impact-target,
+.juice-basic-strike-aftermath-source,
+.juice-basic-strike-aftermath-target {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes juiceBasicStrikeAnticipationRing {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+.juice-basic-strike-anticipation-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeAnticipationRing 0.18s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikePhaseLabel {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translateY(0px) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(1.02);
+  }
+}
+
+.juice-basic-strike-phase-label {
+  animation: juiceBasicStrikePhaseLabel 0.34s ease-out forwards;
+  letter-spacing: 0.08em;
+}
+
+@keyframes juiceBasicStrikePhaseLine {
+  0% {
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.juice-basic-strike-phase-line {
+  animation: juiceBasicStrikePhaseLine 0.22s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeTargetLock {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+.juice-basic-strike-target-lock,
+.juice-basic-strike-target-lock-inner {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeTargetLock 0.28s ease-out forwards;
+}
+
+.juice-basic-strike-target-lock-inner {
+  animation-duration: 0.32s;
+}
+
+@keyframes juiceBasicStrikeSourceFocus {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+.juice-basic-strike-source-focus {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeSourceFocus 0.2s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeTravelWedge {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.5);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.juice-basic-strike-travel-wedge {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: juiceBasicStrikeTravelWedge 0.14s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeTravelGhost {
+  0% {
+    opacity: 0;
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.juice-basic-strike-travel-ghost {
+  animation: juiceBasicStrikeTravelGhost 0.18s linear forwards;
+}
+
+@keyframes juiceBasicStrikeImpactBurst {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+.juice-basic-strike-impact-burst {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeImpactBurst 0.22s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeDust {
+  0% {
+    opacity: 0;
+    transform: translateY(2px) scale(0.8);
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-4px) scale(1.25);
+  }
+}
+
+.juice-basic-strike-dust {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeDust 0.26s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeAnticipation {
+  0% {
+    opacity: 0;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+
+  25% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0.85;
+    transform: translate(var(--juice-ant-x, 0px), var(--juice-ant-y, 0px)) scale(0.94, 1.07);
+  }
+}
+
+.juice-basic-strike-anticipation {
+  animation: juiceBasicStrikeAnticipation 0.18s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeTravel {
+  0% {
+    opacity: 0.25;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+
+  65% {
+    opacity: 0.85;
+    transform: translate(var(--juice-travel-x, 0px), var(--juice-travel-y, 0px)) scale(1.12, 0.92);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--juice-travel-x, 0px) * 1.1), calc(var(--juice-travel-y, 0px) * 1.1)) scale(1.06, 0.94);
+  }
+}
+
+.juice-basic-strike-travel {
+  animation: juiceBasicStrikeTravel 0.12s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeTravelSmear {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 22;
+  }
+
+  30% {
+    opacity: 0.8;
+  }
+
+  100% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+  }
+}
+
+.juice-basic-strike-travel-smear,
+.juice-basic-strike-travel-smear-core {
+  stroke-dasharray: 18 14;
+  animation: juiceBasicStrikeTravelSmear 0.12s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeImpactSource {
+  0% {
+    opacity: 0.75;
+    transform: translate(var(--juice-impact-x, 0px), var(--juice-impact-y, 0px)) scale(1.08, 0.94);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--juice-impact-x, 0px) * 1.35), calc(var(--juice-impact-y, 0px) * 1.35)) scale(1.02, 0.98);
+  }
+}
+
+.juice-basic-strike-impact-source {
+  animation: juiceBasicStrikeImpactSource 0.14s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeImpactTarget {
+  0% {
+    opacity: 0.92;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+
+  35% {
+    transform: translate(var(--juice-flinch-x, 0px), var(--juice-flinch-y, 0px)) scale(1.05, 0.93);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--juice-flinch-x, 0px) * 0.35), calc(var(--juice-flinch-y, 0px) * 0.35)) scale(1.01, 0.99);
+  }
+}
+
+.juice-basic-strike-impact-target {
+  animation: juiceBasicStrikeImpactTarget 0.16s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeSpark {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+.juice-basic-strike-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeSpark 0.18s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeAfterSource {
+  0% {
+    opacity: 0.55;
+    transform: translate(var(--juice-aftermath-x, 0px), var(--juice-aftermath-y, 0px)) scale(0.98, 1.02);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+}
+
+.juice-basic-strike-aftermath-source {
+  animation: juiceBasicStrikeAfterSource 0.24s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeAfterTarget {
+  0% {
+    opacity: 0.65;
+    transform: translate(calc(var(--juice-flinch-x, 0px) * 0.35), calc(var(--juice-flinch-y, 0px) * 0.35)) scale(1.02, 0.98);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+}
+
+.juice-basic-strike-aftermath-target {
+  animation: juiceBasicStrikeAfterTarget 0.24s ease-out forwards;
+}
+
+@keyframes juiceBasicStrikeAfterRing {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+.juice-basic-strike-aftermath-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: juiceBasicStrikeAfterRing 0.26s ease-out forwards;
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

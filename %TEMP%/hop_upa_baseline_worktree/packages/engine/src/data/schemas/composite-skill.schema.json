@@ -1,0 +1,733 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hop.local/engine/composite-skill.schema.json",
+  "title": "Hop Composite Skill Definition",
+  "type": "object",
+  "required": [
+    "version",
+    "id",
+    "name",
+    "slot",
+    "keywords",
+    "targeting",
+    "stackPolicy",
+    "baseAction",
+    "upgrades"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^1\\."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "slot": {
+      "type": "string",
+      "enum": [
+        "offensive",
+        "defensive",
+        "utility",
+        "passive"
+      ]
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "intentTags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "damage",
+          "move",
+          "heal",
+          "protect",
+          "control",
+          "summon",
+          "hazard",
+          "objective",
+          "economy",
+          "utility"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "targeting": {
+      "type": "object",
+      "required": [
+        "mode",
+        "range",
+        "requiresLos",
+        "allowOccupied",
+        "deterministicSort"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "self",
+            "single",
+            "line",
+            "radius",
+            "global"
+          ]
+        },
+        "range": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "aoeRadius": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "requiresLos": {
+          "type": "boolean"
+        },
+        "allowOccupied": {
+          "type": "boolean"
+        },
+        "deterministicSort": {
+          "type": "string",
+          "enum": [
+            "distance_then_q_then_r",
+            "q_then_r",
+            "r_then_q"
+          ]
+        },
+        "forbiddenTargetTags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "stackPolicy": {
+      "type": "object",
+      "required": [
+        "resolveOrder",
+        "reactionWindow",
+        "playerPriority",
+        "emitTickEvents"
+      ],
+      "properties": {
+        "resolveOrder": {
+          "type": "string",
+          "enum": [
+            "LIFO"
+          ]
+        },
+        "reactionWindow": {
+          "type": "string",
+          "enum": [
+            "automated",
+            "manual"
+          ]
+        },
+        "playerPriority": {
+          "type": "boolean"
+        },
+        "emitTickEvents": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "baseAction": {
+      "type": "object",
+      "required": [
+        "costs",
+        "effects"
+      ],
+      "properties": {
+        "costs": {
+          "type": "object",
+          "required": [
+            "energy",
+            "cooldown",
+            "consumesTurn"
+          ],
+          "properties": {
+            "energy": {
+              "type": "number",
+              "minimum": 0
+            },
+            "cooldown": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "consumesTurn": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "effects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/atomicEffect"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "reactivePassives": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reaction"
+      }
+    },
+    "upgrades": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/upgrade"
+      },
+      "uniqueItems": false
+    },
+    "inhibit": {
+      "type": "object",
+      "properties": {
+        "filterMode": {
+          "type": "string",
+          "enum": [
+            "exclude_matching_tags"
+          ]
+        },
+        "removableTags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "preview": {
+      "type": "object",
+      "properties": {
+        "dryRunEnabled": {
+          "type": "boolean"
+        },
+        "eventMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "tagArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "roundMode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "floor",
+        "round",
+        "ceil"
+      ]
+    },
+    "scaleTerm": {
+      "type": "object",
+      "required": [
+        "stat",
+        "coefficient"
+      ],
+      "properties": {
+        "stat": {
+          "type": "string",
+          "enum": [
+            "body",
+            "mind",
+            "instinct",
+            "mass",
+            "speed",
+            "momentum"
+          ]
+        },
+        "coefficient": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "scalarExpression": {
+      "type": "object",
+      "required": [
+        "base"
+      ],
+      "properties": {
+        "base": {
+          "type": "number"
+        },
+        "scaling": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scaleTerm"
+          }
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "round": {
+          "$ref": "#/$defs/roundMode"
+        }
+      },
+      "additionalProperties": false
+    },
+    "targetSelector": {
+      "type": "object",
+      "required": [
+        "selector"
+      ],
+      "properties": {
+        "selector": {
+          "type": "string",
+          "enum": [
+            "self",
+            "targetActor",
+            "targetHex",
+            "line",
+            "area"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "damageEffect": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "tags",
+        "target",
+        "amount"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "DEAL_DAMAGE"
+        },
+        "tags": {
+          "$ref": "#/$defs/tagArray"
+        },
+        "target": {
+          "$ref": "#/$defs/targetSelector"
+        },
+        "amount": {
+          "$ref": "#/$defs/scalarExpression"
+        },
+        "damageClass": {
+          "type": "string",
+          "enum": [
+            "physical",
+            "magical",
+            "true"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "statusEffect": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "tags",
+        "target",
+        "statusId",
+        "duration"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "APPLY_STATUS"
+        },
+        "tags": {
+          "$ref": "#/$defs/tagArray"
+        },
+        "target": {
+          "$ref": "#/$defs/targetSelector"
+        },
+        "statusId": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "forceEffect": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "tags",
+        "target",
+        "force"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "APPLY_FORCE"
+        },
+        "tags": {
+          "$ref": "#/$defs/tagArray"
+        },
+        "target": {
+          "$ref": "#/$defs/targetSelector"
+        },
+        "force": {
+          "type": "object",
+          "required": [
+            "mode",
+            "direction",
+            "magnitude",
+            "maxDistance",
+            "collision"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "push",
+                "pull"
+              ]
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "source_to_target",
+                "target_to_source"
+              ]
+            },
+            "magnitude": {
+              "$ref": "#/$defs/scalarExpression"
+            },
+            "maxDistance": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "collision": {
+              "type": "object",
+              "required": [
+                "onBlocked"
+              ],
+              "properties": {
+                "onBlocked": {
+                  "type": "string",
+                  "enum": [
+                    "stop",
+                    "crush_damage"
+                  ]
+                },
+                "crushDamage": {
+                  "$ref": "#/$defs/scalarExpression"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "messageEffect": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "tags",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "MESSAGE"
+        },
+        "tags": {
+          "$ref": "#/$defs/tagArray"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "atomicEffect": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/damageEffect"
+        },
+        {
+          "$ref": "#/$defs/statusEffect"
+        },
+        {
+          "$ref": "#/$defs/forceEffect"
+        },
+        {
+          "$ref": "#/$defs/messageEffect"
+        }
+      ]
+    },
+    "reaction": {
+      "type": "object",
+      "required": [
+        "id",
+        "trigger",
+        "enqueuePosition",
+        "effects"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string",
+          "enum": [
+            "ON_DECLARE",
+            "BEFORE_RESOLVE",
+            "ON_COLLISION",
+            "AFTER_RESOLVE"
+          ]
+        },
+        "enqueuePosition": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom"
+          ]
+        },
+        "effects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/atomicEffect"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "modifierAddEffect": {
+      "type": "object",
+      "required": [
+        "op",
+        "phase",
+        "effect"
+      ],
+      "properties": {
+        "op": {
+          "const": "add_effect"
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "base",
+            "on_collision",
+            "after_resolve"
+          ]
+        },
+        "effect": {
+          "$ref": "#/$defs/atomicEffect"
+        }
+      },
+      "additionalProperties": false
+    },
+    "modifierRemoveEffectByTag": {
+      "type": "object",
+      "required": [
+        "op",
+        "tag"
+      ],
+      "properties": {
+        "op": {
+          "const": "remove_effect_by_tag"
+        },
+        "tag": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "modifierModifyNumber": {
+      "type": "object",
+      "required": [
+        "op",
+        "effectId",
+        "field",
+        "mode",
+        "value"
+      ],
+      "properties": {
+        "op": {
+          "const": "modify_number"
+        },
+        "effectId": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "set",
+            "add",
+            "multiply"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "modifierAddKeyword": {
+      "type": "object",
+      "required": [
+        "op",
+        "keyword"
+      ],
+      "properties": {
+        "op": {
+          "const": "add_keyword"
+        },
+        "keyword": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "modifierRemoveKeyword": {
+      "type": "object",
+      "required": [
+        "op",
+        "keyword"
+      ],
+      "properties": {
+        "op": {
+          "const": "remove_keyword"
+        },
+        "keyword": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "modifierAddReaction": {
+      "type": "object",
+      "required": [
+        "op",
+        "reaction"
+      ],
+      "properties": {
+        "op": {
+          "const": "add_reaction"
+        },
+        "reaction": {
+          "$ref": "#/$defs/reaction"
+        }
+      },
+      "additionalProperties": false
+    },
+    "upgradeModifier": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/modifierAddEffect"
+        },
+        {
+          "$ref": "#/$defs/modifierRemoveEffectByTag"
+        },
+        {
+          "$ref": "#/$defs/modifierModifyNumber"
+        },
+        {
+          "$ref": "#/$defs/modifierAddKeyword"
+        },
+        {
+          "$ref": "#/$defs/modifierRemoveKeyword"
+        },
+        {
+          "$ref": "#/$defs/modifierAddReaction"
+        }
+      ]
+    },
+    "upgrade": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "modifiers"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z0-9_]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "tags": {
+          "$ref": "#/$defs/tagArray"
+        },
+        "modifiers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/upgradeModifier"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

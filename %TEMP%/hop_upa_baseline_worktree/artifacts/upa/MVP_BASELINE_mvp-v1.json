@@ -1,0 +1,169 @@
+{
+  "generatedAt": "2026-02-10T03:29:17.453Z",
+  "mvpVersion": "mvp-v1",
+  "policy": "heuristic",
+  "maxTurns": 80,
+  "seedsVersion": "mvp-v1",
+  "seedCount": 20,
+  "trinityProfileSetVersion": "mvp-v1",
+  "combatProfileSetVersion": "mvp-v1",
+  "activeTrinityProfile": "live",
+  "archetypes": [
+    {
+      "loadoutId": "VANGUARD",
+      "summary": {
+        "winRate": 0.1,
+        "timeoutRate": 0.25,
+        "avgFloor": 4.85,
+        "avgTurnsToWin": 5.5,
+        "avgHazardBreaches": 0.7,
+        "avgFinalPlayerHpRatio": 0.3257352941176471,
+        "reachedFloor3Rate": 0.75,
+        "reachedFloor5Rate": 0.45,
+        "upa": 0.4468,
+        "trinityContribution": {
+          "samples": 345,
+          "bodyContribution": 0.8478050928659752,
+          "mindContribution": 0,
+          "instinctContribution": 0.15219490713402478
+        },
+        "combatProfileSignal": {
+          "samples": 345,
+          "avgOutgoingMultiplier": 1,
+          "avgIncomingMultiplier": 1,
+          "avgTotalMultiplier": 1
+        }
+      }
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 0.75,
+        "avgFloor": 1.7,
+        "avgTurnsToWin": 0,
+        "avgHazardBreaches": 0.05,
+        "avgFinalPlayerHpRatio": 0.4791666666666668,
+        "reachedFloor3Rate": 0.15,
+        "reachedFloor5Rate": 0,
+        "upa": 0.0455,
+        "trinityContribution": {
+          "samples": 0,
+          "bodyContribution": 0,
+          "mindContribution": 0,
+          "instinctContribution": 0
+        },
+        "combatProfileSignal": {
+          "samples": 0,
+          "avgOutgoingMultiplier": 0,
+          "avgIncomingMultiplier": 0,
+          "avgTotalMultiplier": 0
+        }
+      }
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "summary": {
+        "winRate": 0.65,
+        "timeoutRate": 0.05,
+        "avgFloor": 9.4,
+        "avgTurnsToWin": 9.23076923076923,
+        "avgHazardBreaches": 0,
+        "avgFinalPlayerHpRatio": 0.7,
+        "reachedFloor3Rate": 1,
+        "reachedFloor5Rate": 1,
+        "upa": 0.8124,
+        "trinityContribution": {
+          "samples": 119,
+          "bodyContribution": 0.009644444444444445,
+          "mindContribution": 0.8850170833333335,
+          "instinctContribution": 0.10533847222222226
+        },
+        "combatProfileSignal": {
+          "samples": 119,
+          "avgOutgoingMultiplier": 1,
+          "avgIncomingMultiplier": 1,
+          "avgTotalMultiplier": 1
+        }
+      }
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "summary": {
+        "winRate": 0.05,
+        "timeoutRate": 0.05,
+        "avgFloor": 3.05,
+        "avgTurnsToWin": 4,
+        "avgHazardBreaches": 0.8,
+        "avgFinalPlayerHpRatio": 0.1,
+        "reachedFloor3Rate": 0.6,
+        "reachedFloor5Rate": 0.15,
+        "upa": 0.4425,
+        "trinityContribution": {
+          "samples": 20,
+          "bodyContribution": 0.3248666666666667,
+          "mindContribution": 0.1172,
+          "instinctContribution": 0.05793333333333334
+        },
+        "combatProfileSignal": {
+          "samples": 20,
+          "avgOutgoingMultiplier": 0.5,
+          "avgIncomingMultiplier": 0.5,
+          "avgTotalMultiplier": 0.5
+        }
+      }
+    },
+    {
+      "loadoutId": "HUNTER",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 0.2,
+        "avgFloor": 2.8,
+        "avgTurnsToWin": 0,
+        "avgHazardBreaches": 2.2,
+        "avgFinalPlayerHpRatio": 0.13617021276595748,
+        "reachedFloor3Rate": 0.35,
+        "reachedFloor5Rate": 0.25,
+        "upa": 0.162,
+        "trinityContribution": {
+          "samples": 64,
+          "bodyContribution": 0.7142388888888886,
+          "mindContribution": 0,
+          "instinctContribution": 0.23576111111111114
+        },
+        "combatProfileSignal": {
+          "samples": 64,
+          "avgOutgoingMultiplier": 0.95,
+          "avgIncomingMultiplier": 0.95,
+          "avgTotalMultiplier": 0.95
+        }
+      }
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "summary": {
+        "winRate": 0.05,
+        "timeoutRate": 0.05,
+        "avgFloor": 4.95,
+        "avgTurnsToWin": 12,
+        "avgHazardBreaches": 0.7,
+        "avgFinalPlayerHpRatio": 0.01979166666666667,
+        "reachedFloor3Rate": 0.65,
+        "reachedFloor5Rate": 0.5,
+        "upa": 0.4625,
+        "trinityContribution": {
+          "samples": 102,
+          "bodyContribution": 0.5897857142857144,
+          "mindContribution": 0,
+          "instinctContribution": 0.36021428571428576
+        },
+        "combatProfileSignal": {
+          "samples": 102,
+          "avgOutgoingMultiplier": 0.95,
+          "avgIncomingMultiplier": 0.95,
+          "avgTotalMultiplier": 0.95
+        }
+      }
+    }
+  ]
+}

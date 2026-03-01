@@ -1,0 +1,330 @@
+{
+  "generatedAt": "2026-02-09T04:03:07.085Z",
+  "gradeModelVersion": "p6-static-v1",
+  "skills": {
+    "GRAPPLE_HOOK": {
+      "skillId": "GRAPPLE_HOOK",
+      "numericGrade": 42,
+      "power": 3.4,
+      "reach": 5.75,
+      "safety": 2.1,
+      "tempo": 1.17,
+      "complexity": 1
+    },
+    "SPEAR_THROW": {
+      "skillId": "SPEAR_THROW",
+      "numericGrade": 70.85,
+      "power": 11,
+      "reach": 4.6,
+      "safety": 0,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "SHIELD_BASH": {
+      "skillId": "SHIELD_BASH",
+      "numericGrade": 41.5833,
+      "power": 10,
+      "reach": 2,
+      "safety": 1.6,
+      "tempo": 1.3333,
+      "complexity": 1
+    },
+    "SHIELD_THROW": {
+      "skillId": "SHIELD_THROW",
+      "numericGrade": 80.325,
+      "power": 10.5,
+      "reach": 5.75,
+      "safety": 1.6,
+      "tempo": 1.17,
+      "complexity": 1
+    },
+    "VAULT": {
+      "skillId": "VAULT",
+      "numericGrade": 26.25,
+      "power": 0,
+      "reach": 3,
+      "safety": 1.2,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "JUMP": {
+      "skillId": "JUMP",
+      "numericGrade": 19.5833,
+      "power": 0,
+      "reach": 3,
+      "safety": 1.2,
+      "tempo": 1.3333,
+      "complexity": 1
+    },
+    "BULWARK_CHARGE": {
+      "skillId": "BULWARK_CHARGE",
+      "numericGrade": 57.99,
+      "power": 8.8,
+      "reach": 2.3,
+      "safety": 5,
+      "tempo": 1.25,
+      "complexity": 1
+    },
+    "BASIC_ATTACK": {
+      "skillId": "BASIC_ATTACK",
+      "numericGrade": 37.85,
+      "power": 8.8,
+      "reach": 2,
+      "safety": 0,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "AUTO_ATTACK": {
+      "skillId": "AUTO_ATTACK",
+      "numericGrade": 29.05,
+      "power": 4.4,
+      "reach": 2,
+      "safety": 0,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "SENTINEL_TELEGRAPH": {
+      "skillId": "SENTINEL_TELEGRAPH",
+      "numericGrade": 72.576,
+      "power": 5.1,
+      "reach": 10.26,
+      "safety": 0,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "SENTINEL_BLAST": {
+      "skillId": "SENTINEL_BLAST",
+      "numericGrade": 178.254,
+      "power": 15.4,
+      "reach": 10.26,
+      "safety": 0,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "THEME_HAZARDS": {
+      "skillId": "THEME_HAZARDS",
+      "numericGrade": 31.19,
+      "power": 3.4,
+      "reach": 1.6,
+      "safety": 1.1,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "BASIC_MOVE": {
+      "skillId": "BASIC_MOVE",
+      "numericGrade": 21.75,
+      "power": 0,
+      "reach": 2,
+      "safety": 0.3,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "DASH": {
+      "skillId": "DASH",
+      "numericGrade": 51.55,
+      "power": 4.4,
+      "reach": 5.75,
+      "safety": 1.2,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "FIREBALL": {
+      "skillId": "FIREBALL",
+      "numericGrade": 117.7243,
+      "power": 12.7,
+      "reach": 7.83,
+      "safety": 1.1,
+      "tempo": 1.2533,
+      "complexity": 1
+    },
+    "FIREWALL": {
+      "skillId": "FIREWALL",
+      "numericGrade": 145.2,
+      "power": 10,
+      "reach": 12.825,
+      "safety": 1.1,
+      "tempo": 1.12,
+      "complexity": 1
+    },
+    "FIREWALK": {
+      "skillId": "FIREWALK",
+      "numericGrade": 27.95,
+      "power": 0,
+      "reach": 5,
+      "safety": 3.2,
+      "tempo": 1.17,
+      "complexity": 1
+    },
+    "BOMB_TOSS": {
+      "skillId": "BOMB_TOSS",
+      "numericGrade": 150.228,
+      "power": 16.6,
+      "reach": 7.83,
+      "safety": 0,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "CORPSE_EXPLOSION": {
+      "skillId": "CORPSE_EXPLOSION",
+      "numericGrade": 158.6171,
+      "power": 14.9,
+      "reach": 9.7875,
+      "safety": 0,
+      "tempo": 1.2533,
+      "complexity": 1
+    },
+    "RAISE_DEAD": {
+      "skillId": "RAISE_DEAD",
+      "numericGrade": 76.95,
+      "power": 13,
+      "reach": 5,
+      "safety": 0,
+      "tempo": 1.17,
+      "complexity": 1
+    },
+    "SOUL_SWAP": {
+      "skillId": "SOUL_SWAP",
+      "numericGrade": 45.55,
+      "power": 3.4,
+      "reach": 7,
+      "safety": 1.8,
+      "tempo": 1.25,
+      "complexity": 1
+    },
+    "MULTI_SHOOT": {
+      "skillId": "MULTI_SHOOT",
+      "numericGrade": 77.7,
+      "power": 11,
+      "reach": 5.75,
+      "safety": 0,
+      "tempo": 1.42,
+      "complexity": 1
+    },
+    "SET_TRAP": {
+      "skillId": "SET_TRAP",
+      "numericGrade": 28.4833,
+      "power": 5.1,
+      "reach": 2,
+      "safety": 1.1,
+      "tempo": 1.2533,
+      "complexity": 1
+    },
+    "SWIFT_ROLL": {
+      "skillId": "SWIFT_ROLL",
+      "numericGrade": 19.5833,
+      "power": 0,
+      "reach": 3,
+      "safety": 1.2,
+      "tempo": 1.3333,
+      "complexity": 1
+    },
+    "SNEAK_ATTACK": {
+      "skillId": "SNEAK_ATTACK",
+      "numericGrade": 51.15,
+      "power": 13.2,
+      "reach": 2,
+      "safety": 0.9,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "SMOKE_SCREEN": {
+      "skillId": "SMOKE_SCREEN",
+      "numericGrade": 39.5666,
+      "power": 5.1,
+      "reach": 1.9575,
+      "safety": 3.2,
+      "tempo": 1.3333,
+      "complexity": 1
+    },
+    "SHADOW_STEP": {
+      "skillId": "SHADOW_STEP",
+      "numericGrade": 43.8833,
+      "power": 6.6,
+      "reach": 3,
+      "safety": 2.1,
+      "tempo": 1.3333,
+      "complexity": 1
+    },
+    "FALCON_COMMAND": {
+      "skillId": "FALCON_COMMAND",
+      "numericGrade": 116.85,
+      "power": 13.8,
+      "reach": 7,
+      "safety": 0,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "FALCON_PECK": {
+      "skillId": "FALCON_PECK",
+      "numericGrade": 38.65,
+      "power": 9.2,
+      "reach": 2,
+      "safety": 0,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "FALCON_APEX_STRIKE": {
+      "skillId": "FALCON_APEX_STRIKE",
+      "numericGrade": 90.0833,
+      "power": 15.3,
+      "reach": 5,
+      "safety": 0,
+      "tempo": 1.3333,
+      "complexity": 1
+    },
+    "FALCON_HEAL": {
+      "skillId": "FALCON_HEAL",
+      "numericGrade": 56.45,
+      "power": 2.6,
+      "reach": 2,
+      "safety": 7.2,
+      "tempo": 1.5,
+      "complexity": 1
+    },
+    "FALCON_SCOUT": {
+      "skillId": "FALCON_SCOUT",
+      "numericGrade": 32.57,
+      "power": 7.7,
+      "reach": 1.6,
+      "safety": 0,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "FALCON_AUTO_ROOST": {
+      "skillId": "FALCON_AUTO_ROOST",
+      "numericGrade": 24.41,
+      "power": 5.2,
+      "reach": 0.8,
+      "safety": 0,
+      "tempo": 2,
+      "complexity": 1
+    },
+    "KINETIC_TRI_TRAP": {
+      "skillId": "KINETIC_TRI_TRAP",
+      "numericGrade": 82.0388,
+      "power": 9.5,
+      "reach": 5.8725,
+      "safety": 2.7,
+      "tempo": 1.25,
+      "complexity": 1
+    },
+    "WITHDRAWAL": {
+      "skillId": "WITHDRAWAL",
+      "numericGrade": 27.3833,
+      "power": 3.9,
+      "reach": 2,
+      "safety": 1.2,
+      "tempo": 1.3333,
+      "complexity": 1
+    },
+    "ABSORB_FIRE": {
+      "skillId": "ABSORB_FIRE",
+      "numericGrade": 61.75,
+      "power": 0,
+      "reach": 0.8,
+      "safety": 8.3,
+      "tempo": 2,
+      "complexity": 1
+    }
+  }
+}

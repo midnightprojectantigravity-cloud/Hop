@@ -1,0 +1,18 @@
+{
+  "id": "necromancer_floor6_timeout",
+  "version": 1,
+  "seed": "necromancer-4",
+  "loadoutId": "NECROMANCER",
+  "floorsTarget": 4,
+  "maxTurnsPerFloor": 20,
+  "policy": "heuristic",
+  "policyProfileId": "sp-v1-default",
+  "expected": {
+    "outcome": "timeout",
+    "finalFloor": [5, 7],
+    "totalKills": [0, 2],
+    "totalTurns": [80, 80],
+    "playerHp": [1, 40],
+    "fingerprint": "6c652745085e2a21"
+  }
+}

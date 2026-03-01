@@ -1,0 +1,399 @@
+{
+  "fixture": {
+    "id": "necromancer_floor6_timeout",
+    "version": 1,
+    "seed": "necromancer-4",
+    "loadoutId": "NECROMANCER",
+    "floorsTarget": 4,
+    "maxTurnsPerFloor": 20,
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "expected": {
+      "outcome": "timeout",
+      "finalFloor": [
+        5,
+        7
+      ],
+      "totalKills": [
+        0,
+        2
+      ],
+      "totalTurns": [
+        80,
+        80
+      ],
+      "playerHp": [
+        1,
+        40
+      ],
+      "fingerprint": "6c652745085e2a21"
+    }
+  },
+  "maxTurns": 80,
+  "strictMode": true,
+  "run": {
+    "seed": "necromancer-4",
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "loadoutId": "NECROMANCER",
+    "result": "lost",
+    "turnsSpent": 5,
+    "floor": 3,
+    "kills": 0,
+    "hazardBreaches": 0,
+    "score": 2060,
+    "finalPlayerHp": 0,
+    "finalPlayerMaxHp": 58,
+    "finalPlayerHpRatio": 0,
+    "playerActionCounts": {
+      "MOVE": 13,
+      "USE_SKILL": 11
+    },
+    "playerSkillUsage": {
+      "BASIC_ATTACK": 6,
+      "RAISE_DEAD": 2,
+      "SOUL_SWAP": 2,
+      "CORPSE_EXPLOSION": 1
+    },
+    "strategicIntentCounts": {
+      "offense": 8,
+      "defense": 16,
+      "positioning": 0,
+      "control": 0
+    },
+    "totalPlayerSkillCasts": 11,
+    "playerSkillTelemetry": {
+      "BASIC_ATTACK": {
+        "casts": 6,
+        "enemyDamage": 45,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 40,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "RAISE_DEAD": {
+        "casts": 2,
+        "enemyDamage": 20,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 18,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "SOUL_SWAP": {
+        "casts": 2,
+        "enemyDamage": 17,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 0,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "CORPSE_EXPLOSION": {
+        "casts": 1,
+        "enemyDamage": 6,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 2,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      }
+    },
+    "autoAttackTriggersByActionType": {},
+    "triangleSignal": {
+      "samples": 3,
+      "avgHitPressure": 0,
+      "avgMitigationPressure": 0,
+      "avgCritPressure": 0,
+      "avgResistancePressure": 0
+    },
+    "trinityContribution": {
+      "samples": 3,
+      "bodyContribution": 0.27466666666666667,
+      "mindContribution": 0.5726666666666667,
+      "instinctContribution": 0.15266666666666664
+    },
+    "combatProfileSignal": {
+      "samples": 3,
+      "avgOutgoingMultiplier": 1,
+      "avgIncomingMultiplier": 1,
+      "avgTotalMultiplier": 1
+    }
+  },
+  "diagnostics": {
+    "actionCount": 35,
+    "stateFingerprint": "{\"player\":{\"hp\":0,\"maxHp\":58,\"position\":{\"q\":3,\"r\":8,\"s\":-11},\"upgrades\":[\"POWER_STRIKE\",\"EXTENDED_REACH\"]},\"enemies\":[{\"id\":\"enemy_0_568ofz\",\"subtype\":\"archer\",\"hp\":1,\"position\":{\"q\":3,\"r\":6,\"s\":-9}},{\"id\":\"enemy_2_x3vvdi\",\"subtype\":\"footman\",\"hp\":11,\"position\":{\"q\":4,\"r\":7,\"s\":-11}},{\"id\":\"enemy_3_2du53p\",\"subtype\":\"archer\",\"hp\":1,\"position\":{\"q\":4,\"r\":4,\"s\":-8}},{\"id\":\"enemy_4_bupvyp\",\"subtype\":\"footman\",\"hp\":6,\"position\":{\"q\":2,\"r\":8,\"s\":-10}}],\"floor\":3,\"turnNumber\":6,\"kills\":0,\"rngCounter\":7}"
+  },
+  "strictFingerprint": "645c5fed156f1182",
+  "actions": [
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 6,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 5,
+        "s": -9
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 4,
+        "s": -9
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "POWER_STRIKE"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 3,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 3,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 6,
+        "r": 4,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 4,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "RAISE_DEAD",
+        "target": {
+          "q": 5,
+          "r": 4,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 7,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SOUL_SWAP",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 6,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 6,
+        "s": -11
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "RAISE_DEAD",
+        "target": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 3,
+        "s": -4
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "EXTENDED_REACH"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 0,
+        "s": -3
+      }
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 8,
+        "s": -10
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SOUL_SWAP",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 8,
+        "s": -11
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "CORPSE_EXPLOSION",
+        "target": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    }
+  ]
+}

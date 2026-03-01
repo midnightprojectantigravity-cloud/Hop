@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hop.local/assets/manifest.schema.json",
+  "title": "Hop Visual Asset Manifest",
+  "type": "object",
+  "required": [
+    "version",
+    "gridTopology",
+    "tileUnitPx",
+    "tileAspectRatio",
+    "layers",
+    "assets"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "gridTopology": {
+      "type": "string",
+      "enum": [
+        "flat-top-hex"
+      ]
+    },
+    "tileUnitPx": {
+      "type": "integer",
+      "minimum": 64
+    },
+    "tileAspectRatio": {
+      "type": "number",
+      "minimum": 1.0
+    },
+    "biomeUnderlay": {
+      "type": "object",
+      "required": ["default"],
+      "properties": {
+        "default": { "type": "string", "minLength": 1 },
+        "themes": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["off", "cover", "repeat"]
+        },
+        "scalePx": { "type": "number", "minimum": 1 },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "seedShiftPx": { "type": "number", "minimum": 0 },
+        "scroll": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "durationMs": { "type": "number", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "biomeLayers": {
+      "type": "object",
+      "properties": {
+        "undercurrent": {
+          "type": "object",
+          "required": ["default"],
+          "properties": {
+            "default": { "type": "string", "minLength": 1 },
+            "themes": {
+              "type": "object",
+              "additionalProperties": { "type": "string", "minLength": 1 }
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["off", "cover", "repeat"]
+            },
+            "scalePx": { "type": "number", "minimum": 1 },
+            "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+            "seedShiftPx": { "type": "number", "minimum": 0 },
+            "scroll": {
+              "type": "object",
+              "properties": {
+                "x": { "type": "number" },
+                "y": { "type": "number" },
+                "durationMs": { "type": "number", "minimum": 1 }
+              }
+            }
+          }
+        },
+        "crust": {
+          "type": "object",
+          "required": ["default"],
+          "properties": {
+            "default": { "type": "string", "minLength": 1 },
+            "themes": {
+              "type": "object",
+              "additionalProperties": { "type": "string", "minLength": 1 }
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["off", "cover", "repeat"]
+            },
+            "scalePx": { "type": "number", "minimum": 1 },
+            "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+            "seedShiftPx": { "type": "number", "minimum": 0 },
+            "scroll": {
+              "type": "object",
+              "properties": {
+                "x": { "type": "number" },
+                "y": { "type": "number" },
+                "durationMs": { "type": "number", "minimum": 1 }
+              }
+            }
+          }
+        },
+        "clutter": {
+          "type": "object",
+          "properties": {
+            "density": { "type": "number", "minimum": 0, "maximum": 1 },
+            "maxPerHex": { "type": "number", "minimum": 0 },
+            "bleedScaleMax": { "type": "number", "minimum": 1, "maximum": 2 },
+            "tags": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "ground",
+          "decal",
+          "prop",
+          "unit",
+          "fx",
+          "ui"
+        ]
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "layer",
+          "recommendedFormat",
+          "path",
+          "width",
+          "height"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "type": {
+            "type": "string",
+            "enum": ["tile", "decal", "prop", "unit", "fx", "ui"]
+          },
+          "layer": {
+            "type": "string",
+            "enum": ["ground", "decal", "prop", "unit", "fx", "ui"]
+          },
+          "recommendedFormat": {
+            "type": "string",
+            "enum": ["svg", "webp", "avif", "png", "jpg", "jpeg"]
+          },
+          "theme": { "type": "string" },
+          "path": { "type": "string", "minLength": 1 },
+          "width": { "type": "integer", "minimum": 1 },
+          "height": { "type": "integer", "minimum": 1 },
+          "anchor": {
+            "type": "object",
+            "required": ["x", "y"],
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "variants": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "type": { "enum": ["unit"] } }
+            },
+            "then": {
+              "properties": {
+                "recommendedFormat": { "enum": ["svg", "webp", "avif", "png"] }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": { "type": { "enum": ["ui"] } }
+            },
+            "then": {
+              "properties": {
+                "recommendedFormat": { "enum": ["svg"] }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": { "type": { "enum": ["fx"] } }
+            },
+            "then": {
+              "properties": {
+                "recommendedFormat": { "enum": ["svg", "webp", "avif", "png"] }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

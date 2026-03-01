@@ -1,0 +1,90 @@
+{
+  "generatedAt": "2026-03-01T13:55:23.761Z",
+  "inputs": {
+    "baselineFile": "artifacts/upa/UPA_TUNING_BASELINE_FAST_CURRENT.json",
+    "candidateFile": "artifacts/upa/UPA_TUNING_CANDIDATE_FAST.json",
+    "weakestDeltaMin": 0.3,
+    "focusArchetype": "ASSASSIN",
+    "focusDeltaMin": 0.3,
+    "strict": false
+  },
+  "baseline": {
+    "generatedAt": "2026-03-01T13:55:13.928Z",
+    "params": {
+      "count": 60,
+      "maxTurns": 80,
+      "policy": "heuristic",
+      "policyProfileId": "sp-v1-default",
+      "seedPrefix": "calibration",
+      "trinityProfile": "live"
+    },
+    "weakestAvgFloor": 1.3833333333333333,
+    "weakestLoadoutId": "SKIRMISHER"
+  },
+  "candidate": {
+    "generatedAt": "2026-03-01T13:52:06.025Z",
+    "params": {
+      "count": 60,
+      "maxTurns": 80,
+      "policy": "heuristic",
+      "policyProfileId": "sp-v1-balance",
+      "seedPrefix": "calibration",
+      "trinityProfile": "live"
+    },
+    "weakestAvgFloor": 1.3833333333333333,
+    "weakestLoadoutId": "SKIRMISHER"
+  },
+  "weakestDelta": 0,
+  "focusArchetypeDelta": 0,
+  "deltas": [
+    {
+      "loadoutId": "VANGUARD",
+      "avgFloorDelta": 0,
+      "winRateDelta": 0,
+      "timeoutRateDelta": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "avgFloorDelta": 0,
+      "winRateDelta": 0,
+      "timeoutRateDelta": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "avgFloorDelta": 0,
+      "winRateDelta": 0,
+      "timeoutRateDelta": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "avgFloorDelta": 0,
+      "winRateDelta": 0,
+      "timeoutRateDelta": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "avgFloorDelta": -0.0333,
+      "winRateDelta": 0,
+      "timeoutRateDelta": -0.0167
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "avgFloorDelta": 0,
+      "winRateDelta": 0,
+      "timeoutRateDelta": 0
+    }
+  ],
+  "regressions": [
+    {
+      "loadoutId": "HUNTER",
+      "metric": "avgFloor",
+      "before": 1.7833333333333334,
+      "after": 1.75
+    }
+  ],
+  "unmetChecks": [
+    "weakest_avgFloor_delta < 0.3 (actual=0)",
+    "ASSASSIN_avgFloor_delta < 0.3 (actual=0)"
+  ],
+  "passed": false
+}

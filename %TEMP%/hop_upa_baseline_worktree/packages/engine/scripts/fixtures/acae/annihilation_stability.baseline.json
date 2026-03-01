@@ -1,0 +1,10 @@
+{
+  "metric": "acae_annihilation_stability",
+  "runs": 24,
+  "fingerprintCount": 1,
+  "stable": true,
+  "fingerprints": [
+    "burn:10|wet:0|frozen:3|poison:0|bleed:0"
+  ]
+}
+

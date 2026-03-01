@@ -1,0 +1,414 @@
+{
+  "generatedAt": "2026-02-10T15:56:30.263Z",
+  "params": {
+    "runsPerArchetype": 8,
+    "maxTurns": 60,
+    "maxReducerSteps": 2500,
+    "archetypes": [
+      "VANGUARD",
+      "SKIRMISHER",
+      "FIREMAGE",
+      "NECROMANCER",
+      "HUNTER",
+      "ASSASSIN"
+    ]
+  },
+  "expectations": [
+    {
+      "id": "message_tagged",
+      "description": "Every emitted message must be engine-tagged ([LEVEL|CHANNEL])."
+    },
+    {
+      "id": "jump_before_stun",
+      "description": "When Jump occurs, jump action message should appear before stun result messages."
+    },
+    {
+      "id": "stunned_actor_does_not_attack_same_step",
+      "description": "A stunned actor should not also attack in the same reducer step."
+    },
+    {
+      "id": "no_consecutive_duplicate_messages",
+      "description": "Avoid adjacent duplicate log lines and runaway spam bursts in one step."
+    },
+    {
+      "id": "no_target_preview_mismatch_message",
+      "description": "No target preview mismatch errors should surface for legal intents."
+    }
+  ],
+  "summary": {
+    "totalRuns": 48,
+    "totalViolations": 0,
+    "byExpectation": {},
+    "byLoadout": {
+      "VANGUARD": {
+        "runs": 8,
+        "violations": 0,
+        "avgTurns": 60
+      },
+      "SKIRMISHER": {
+        "runs": 8,
+        "violations": 0,
+        "avgTurns": 43.25
+      },
+      "FIREMAGE": {
+        "runs": 8,
+        "violations": 0,
+        "avgTurns": 60
+      },
+      "NECROMANCER": {
+        "runs": 8,
+        "violations": 0,
+        "avgTurns": 55
+      },
+      "HUNTER": {
+        "runs": 8,
+        "violations": 0,
+        "avgTurns": 54.63
+      },
+      "ASSASSIN": {
+        "runs": 8,
+        "violations": 0,
+        "avgTurns": 60
+      }
+    }
+  },
+  "runSummaries": [
+    {
+      "loadoutId": "VANGUARD",
+      "seed": "message-audit-vanguard-1",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "VANGUARD",
+      "seed": "message-audit-vanguard-2",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "VANGUARD",
+      "seed": "message-audit-vanguard-3",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "VANGUARD",
+      "seed": "message-audit-vanguard-4",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "VANGUARD",
+      "seed": "message-audit-vanguard-5",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "VANGUARD",
+      "seed": "message-audit-vanguard-6",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "VANGUARD",
+      "seed": "message-audit-vanguard-7",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "VANGUARD",
+      "seed": "message-audit-vanguard-8",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "seed": "message-audit-skirmisher-1",
+      "turnsSpent": 52,
+      "gameStatus": "lost",
+      "violations": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "seed": "message-audit-skirmisher-2",
+      "turnsSpent": 48,
+      "gameStatus": "lost",
+      "violations": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "seed": "message-audit-skirmisher-3",
+      "turnsSpent": 33,
+      "gameStatus": "lost",
+      "violations": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "seed": "message-audit-skirmisher-4",
+      "turnsSpent": 22,
+      "gameStatus": "lost",
+      "violations": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "seed": "message-audit-skirmisher-5",
+      "turnsSpent": 13,
+      "gameStatus": "lost",
+      "violations": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "seed": "message-audit-skirmisher-6",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "seed": "message-audit-skirmisher-7",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "seed": "message-audit-skirmisher-8",
+      "turnsSpent": 58,
+      "gameStatus": "lost",
+      "violations": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "seed": "message-audit-firemage-1",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "seed": "message-audit-firemage-2",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "seed": "message-audit-firemage-3",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "seed": "message-audit-firemage-4",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "seed": "message-audit-firemage-5",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "seed": "message-audit-firemage-6",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "seed": "message-audit-firemage-7",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "seed": "message-audit-firemage-8",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "seed": "message-audit-necromancer-1",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "seed": "message-audit-necromancer-2",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "seed": "message-audit-necromancer-3",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "seed": "message-audit-necromancer-4",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "seed": "message-audit-necromancer-5",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "seed": "message-audit-necromancer-6",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "seed": "message-audit-necromancer-7",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "seed": "message-audit-necromancer-8",
+      "turnsSpent": 20,
+      "gameStatus": "lost",
+      "violations": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "seed": "message-audit-hunter-1",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "seed": "message-audit-hunter-2",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "seed": "message-audit-hunter-3",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "seed": "message-audit-hunter-4",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "seed": "message-audit-hunter-5",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "seed": "message-audit-hunter-6",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "seed": "message-audit-hunter-7",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "seed": "message-audit-hunter-8",
+      "turnsSpent": 17,
+      "gameStatus": "lost",
+      "violations": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "seed": "message-audit-assassin-1",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "seed": "message-audit-assassin-2",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "seed": "message-audit-assassin-3",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "seed": "message-audit-assassin-4",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "seed": "message-audit-assassin-5",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "seed": "message-audit-assassin-6",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "seed": "message-audit-assassin-7",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "seed": "message-audit-assassin-8",
+      "turnsSpent": 60,
+      "gameStatus": "playing",
+      "violations": 0
+    }
+  ],
+  "violations": []
+}

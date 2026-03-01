@@ -1,0 +1,532 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hop.local/engine/base-unit.schema.json",
+  "title": "Hop Base Unit Definition",
+  "type": "object",
+  "required": [
+    "version",
+    "id",
+    "name",
+    "actorType",
+    "factionId",
+    "weightClass",
+    "coordSpace",
+    "instantiate",
+    "propensities",
+    "skillLoadout"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^1\\."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "actorType": {
+      "type": "string",
+      "enum": [
+        "player",
+        "enemy"
+      ]
+    },
+    "subtype": {
+      "type": "string"
+    },
+    "factionId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "weightClass": {
+      "type": "string",
+      "enum": [
+        "Light",
+        "Standard",
+        "Heavy",
+        "Anchored",
+        "OuterWall"
+      ]
+    },
+    "coordSpace": {
+      "type": "object",
+      "required": [
+        "system",
+        "pointFormat"
+      ],
+      "properties": {
+        "system": {
+          "type": "string",
+          "enum": [
+            "cube-axial"
+          ]
+        },
+        "pointFormat": {
+          "type": "string",
+          "enum": [
+            "qrs"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "instantiate": {
+      "type": "object",
+      "required": [
+        "rngStream",
+        "counterMode",
+        "drawOrder"
+      ],
+      "properties": {
+        "rngStream": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seedSalt": {
+          "type": "string"
+        },
+        "counterMode": {
+          "type": "string",
+          "enum": [
+            "consume_global",
+            "stateless"
+          ]
+        },
+        "drawOrder": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.-]+$"
+          },
+          "uniqueItems": true
+        },
+        "includeRollTrace": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "propensities": {
+      "type": "object",
+      "required": [
+        "body",
+        "mind",
+        "instinct",
+        "speed",
+        "mass"
+      ],
+      "properties": {
+        "body": {
+          "$ref": "#/$defs/propensity"
+        },
+        "mind": {
+          "$ref": "#/$defs/propensity"
+        },
+        "instinct": {
+          "$ref": "#/$defs/propensity"
+        },
+        "speed": {
+          "$ref": "#/$defs/propensity"
+        },
+        "mass": {
+          "$ref": "#/$defs/propensity"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/propensity"
+      }
+    },
+    "derivedStats": {
+      "type": "object",
+      "properties": {
+        "maxHp": {
+          "$ref": "#/$defs/derivedStat"
+        },
+        "initiative": {
+          "$ref": "#/$defs/derivedStat"
+        },
+        "movementSpeed": {
+          "$ref": "#/$defs/derivedStat"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/derivedStat"
+      }
+    },
+    "physics": {
+      "type": "object",
+      "properties": {
+        "collisionPolicy": {
+          "type": "string",
+          "enum": [
+            "stop",
+            "crush_damage"
+          ]
+        },
+        "crushModel": {
+          "type": "object",
+          "required": [
+            "baseDamage",
+            "impulseMultiplier",
+            "massDivider",
+            "minDamage"
+          ],
+          "properties": {
+            "baseDamage": {
+              "type": "number"
+            },
+            "impulseMultiplier": {
+              "type": "number",
+              "minimum": 0
+            },
+            "massDivider": {
+              "type": "number",
+              "minimum": 0.0001
+            },
+            "minDamage": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "skillLoadout": {
+      "type": "object",
+      "required": [
+        "baseSkillIds"
+      ],
+      "properties": {
+        "baseSkillIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "uniqueItems": true
+        },
+        "passiveSkillIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "uniqueItems": true
+        },
+        "forbiddenKeywordTags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "startCooldowns": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtimeDefaults": {
+      "type": "object",
+      "properties": {
+        "startingHp": {
+          "type": "string",
+          "enum": [
+            "maxHp",
+            "explicit"
+          ]
+        },
+        "explicitHp": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "temporaryArmor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "isVisible": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "spawnProfile": {
+      "type": "object",
+      "properties": {
+        "preferredHex": {
+          "$ref": "#/$defs/point"
+        },
+        "allowHazardous": {
+          "type": "boolean"
+        },
+        "allowOccupied": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "point": {
+      "type": "object",
+      "required": [
+        "q",
+        "r",
+        "s"
+      ],
+      "properties": {
+        "q": {
+          "type": "integer"
+        },
+        "r": {
+          "type": "integer"
+        },
+        "s": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "roundMode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "floor",
+        "round",
+        "ceil"
+      ]
+    },
+    "clamp": {
+      "type": "object",
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "propensityFixed": {
+      "type": "object",
+      "required": [
+        "method",
+        "value"
+      ],
+      "properties": {
+        "method": {
+          "const": "fixed"
+        },
+        "value": {
+          "type": "number"
+        },
+        "rngSalt": {
+          "type": "string"
+        },
+        "round": {
+          "$ref": "#/$defs/roundMode"
+        },
+        "clamp": {
+          "$ref": "#/$defs/clamp"
+        }
+      },
+      "additionalProperties": false
+    },
+    "propensityUniformInt": {
+      "type": "object",
+      "required": [
+        "method",
+        "min",
+        "max"
+      ],
+      "properties": {
+        "method": {
+          "const": "uniform_int"
+        },
+        "min": {
+          "type": "integer"
+        },
+        "max": {
+          "type": "integer"
+        },
+        "rngSalt": {
+          "type": "string"
+        },
+        "round": {
+          "$ref": "#/$defs/roundMode"
+        },
+        "clamp": {
+          "$ref": "#/$defs/clamp"
+        }
+      },
+      "additionalProperties": false
+    },
+    "propensityTriangularInt": {
+      "type": "object",
+      "required": [
+        "method",
+        "min",
+        "mode",
+        "max"
+      ],
+      "properties": {
+        "method": {
+          "const": "triangular_int"
+        },
+        "min": {
+          "type": "integer"
+        },
+        "mode": {
+          "type": "integer"
+        },
+        "max": {
+          "type": "integer"
+        },
+        "rngSalt": {
+          "type": "string"
+        },
+        "round": {
+          "$ref": "#/$defs/roundMode"
+        },
+        "clamp": {
+          "$ref": "#/$defs/clamp"
+        }
+      },
+      "additionalProperties": false
+    },
+    "weightedEntry": {
+      "type": "object",
+      "required": [
+        "value",
+        "weight"
+      ],
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "weight": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "propensityWeightedTable": {
+      "type": "object",
+      "required": [
+        "method",
+        "table"
+      ],
+      "properties": {
+        "method": {
+          "const": "weighted_table"
+        },
+        "table": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/weightedEntry"
+          }
+        },
+        "rngSalt": {
+          "type": "string"
+        },
+        "round": {
+          "$ref": "#/$defs/roundMode"
+        },
+        "clamp": {
+          "$ref": "#/$defs/clamp"
+        }
+      },
+      "additionalProperties": false
+    },
+    "propensity": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/propensityFixed"
+        },
+        {
+          "$ref": "#/$defs/propensityUniformInt"
+        },
+        {
+          "$ref": "#/$defs/propensityTriangularInt"
+        },
+        {
+          "$ref": "#/$defs/propensityWeightedTable"
+        }
+      ]
+    },
+    "linearTerm": {
+      "type": "object",
+      "required": [
+        "stat",
+        "coefficient"
+      ],
+      "properties": {
+        "stat": {
+          "type": "string"
+        },
+        "coefficient": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "derivedStat": {
+      "type": "object",
+      "required": [
+        "formula"
+      ],
+      "properties": {
+        "formula": {
+          "type": "string",
+          "enum": [
+            "trinity_hp_v1",
+            "linear"
+          ]
+        },
+        "base": {
+          "type": "number"
+        },
+        "terms": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/linearTerm"
+          }
+        },
+        "round": {
+          "$ref": "#/$defs/roundMode"
+        },
+        "clamp": {
+          "$ref": "#/$defs/clamp"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

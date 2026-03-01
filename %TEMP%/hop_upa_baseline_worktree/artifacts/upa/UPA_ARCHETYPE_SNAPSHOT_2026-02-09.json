@@ -1,0 +1,728 @@
+﻿[
+    {
+        "loadoutId":  "VANGUARD",
+        "randomSummary":  {
+                              "policy":  "random",
+                              "loadoutId":  "VANGUARD",
+                              "games":  80,
+                              "winRate":  0,
+                              "timeoutRate":  0.025,
+                              "avgTurnsToWin":  0,
+                              "avgTurnsToLoss":  10.064102564102564,
+                              "avgFloor":  1.0375,
+                              "avgHazardBreaches":  0.925,
+                              "hazardDeaths":  73,
+                              "actionTypeTotals":  {
+                                                       "MOVE":  805,
+                                                       "WAIT":  195
+                                                   },
+                              "skillUsageTotals":  {
+
+                                                   },
+                              "avgSkillUsagePerRun":  {
+
+                                                      },
+                              "avgPlayerSkillCastsPerRun":  0,
+                              "skillTelemetryTotals":  {
+
+                                                       },
+                              "dynamicSkillGrades":  {
+
+                                                     }
+                          },
+        "heuristicSummary":  {
+                                 "policy":  "heuristic",
+                                 "loadoutId":  "VANGUARD",
+                                 "games":  80,
+                                 "winRate":  0,
+                                 "timeoutRate":  0.2,
+                                 "avgTurnsToWin":  0,
+                                 "avgTurnsToLoss":  7.09375,
+                                 "avgFloor":  3.7375,
+                                 "avgHazardBreaches":  0.3625,
+                                 "hazardDeaths":  28,
+                                 "actionTypeTotals":  {
+                                                          "MOVE":  802,
+                                                          "USE_SKILL":  13969
+                                                      },
+                                 "skillUsageTotals":  {
+                                                          "JUMP":  1070,
+                                                          "SPEAR_THROW":  310,
+                                                          "SHIELD_BASH":  12384,
+                                                          "BASIC_ATTACK":  205
+                                                      },
+                                 "avgSkillUsagePerRun":  {
+                                                             "JUMP":  13.375,
+                                                             "SPEAR_THROW":  3.875,
+                                                             "SHIELD_BASH":  154.8,
+                                                             "BASIC_ATTACK":  2.5625
+                                                         },
+                                 "avgPlayerSkillCastsPerRun":  174.6125,
+                                 "skillTelemetryTotals":  {
+                                                              "JUMP":  {
+                                                                           "casts":  1070,
+                                                                           "enemyDamage":  426,
+                                                                           "killShots":  423,
+                                                                           "healingReceived":  7,
+                                                                           "hazardDamage":  87,
+                                                                           "stairsProgress":  1045,
+                                                                           "shrineProgress":  920,
+                                                                           "floorProgress":  35
+                                                                       },
+                                                              "SPEAR_THROW":  {
+                                                                                  "casts":  310,
+                                                                                  "enemyDamage":  431,
+                                                                                  "killShots":  78,
+                                                                                  "healingReceived":  0,
+                                                                                  "hazardDamage":  9,
+                                                                                  "stairsProgress":  0,
+                                                                                  "shrineProgress":  0,
+                                                                                  "floorProgress":  0
+                                                                              },
+                                                              "SHIELD_BASH":  {
+                                                                                  "casts":  12384,
+                                                                                  "enemyDamage":  182,
+                                                                                  "killShots":  496,
+                                                                                  "healingReceived":  0,
+                                                                                  "hazardDamage":  44,
+                                                                                  "stairsProgress":  2,
+                                                                                  "shrineProgress":  3,
+                                                                                  "floorProgress":  0
+                                                                              },
+                                                              "BASIC_ATTACK":  {
+                                                                                   "casts":  205,
+                                                                                   "enemyDamage":  381,
+                                                                                   "killShots":  212,
+                                                                                   "healingReceived":  0,
+                                                                                   "hazardDamage":  34,
+                                                                                   "stairsProgress":  4,
+                                                                                   "shrineProgress":  3,
+                                                                                   "floorProgress":  0
+                                                                               }
+                                                          },
+                                 "dynamicSkillGrades":  {
+                                                            "JUMP":  {
+                                                                         "casts":  1070,
+                                                                         "castRate":  13.375,
+                                                                         "damagePerCast":  0.3981,
+                                                                         "killContribution":  5.2875,
+                                                                         "survivalDelta":  -1,
+                                                                         "objectiveDelta":  26.3125,
+                                                                         "winImpact":  0,
+                                                                         "numericGrade":  303.5303
+                                                                     },
+                                                            "SPEAR_THROW":  {
+                                                                                "casts":  310,
+                                                                                "castRate":  3.875,
+                                                                                "damagePerCast":  1.3903,
+                                                                                "killContribution":  0.975,
+                                                                                "survivalDelta":  -0.1125,
+                                                                                "objectiveDelta":  0,
+                                                                                "winImpact":  0,
+                                                                                "numericGrade":  35.6115
+                                                                            },
+                                                            "SHIELD_BASH":  {
+                                                                                "casts":  12384,
+                                                                                "castRate":  154.8,
+                                                                                "damagePerCast":  0.0147,
+                                                                                "killContribution":  6.2,
+                                                                                "survivalDelta":  -0.55,
+                                                                                "objectiveDelta":  0.0625,
+                                                                                "winImpact":  0,
+                                                                                "numericGrade":  393.7908
+                                                                            },
+                                                            "BASIC_ATTACK":  {
+                                                                                 "casts":  205,
+                                                                                 "castRate":  2.5625,
+                                                                                 "damagePerCast":  1.8585,
+                                                                                 "killContribution":  2.65,
+                                                                                 "survivalDelta":  -0.425,
+                                                                                 "objectiveDelta":  0.0875,
+                                                                                 "winImpact":  0,
+                                                                                 "numericGrade":  79.1723
+                                                                             }
+                                                        }
+                             },
+        "randomUpa":  0.196,
+        "heuristicUpa":  0.2175,
+        "generatedAt":  "2026-02-09T04:09:26.676Z"
+    },
+    {
+        "loadoutId":  "SKIRMISHER",
+        "randomSummary":  {
+                              "policy":  "random",
+                              "loadoutId":  "SKIRMISHER",
+                              "games":  80,
+                              "winRate":  0,
+                              "timeoutRate":  0,
+                              "avgTurnsToWin":  0,
+                              "avgTurnsToLoss":  5.725,
+                              "avgFloor":  1,
+                              "avgHazardBreaches":  0,
+                              "hazardDeaths":  0,
+                              "actionTypeTotals":  {
+                                                       "MOVE":  339,
+                                                       "WAIT":  119
+                                                   },
+                              "skillUsageTotals":  {
+
+                                                   },
+                              "avgSkillUsagePerRun":  {
+
+                                                      },
+                              "avgPlayerSkillCastsPerRun":  0,
+                              "skillTelemetryTotals":  {
+
+                                                       },
+                              "dynamicSkillGrades":  {
+
+                                                     }
+                          },
+        "heuristicSummary":  {
+                                 "policy":  "heuristic",
+                                 "loadoutId":  "SKIRMISHER",
+                                 "games":  80,
+                                 "winRate":  0,
+                                 "timeoutRate":  0.3,
+                                 "avgTurnsToWin":  0,
+                                 "avgTurnsToLoss":  4.946428571428571,
+                                 "avgFloor":  1.1125,
+                                 "avgHazardBreaches":  0.0125,
+                                 "hazardDeaths":  1,
+                                 "actionTypeTotals":  {
+                                                          "USE_SKILL":  13826,
+                                                          "MOVE":  4494
+                                                      },
+                                 "skillUsageTotals":  {
+                                                          "SHIELD_THROW":  12755,
+                                                          "DASH":  180,
+                                                          "GRAPPLE_HOOK":  891
+                                                      },
+                                 "avgSkillUsagePerRun":  {
+                                                             "SHIELD_THROW":  159.4375,
+                                                             "DASH":  2.25,
+                                                             "GRAPPLE_HOOK":  11.1375
+                                                         },
+                                 "avgPlayerSkillCastsPerRun":  172.825,
+                                 "skillTelemetryTotals":  {
+                                                              "SHIELD_THROW":  {
+                                                                                   "casts":  12755,
+                                                                                   "enemyDamage":  10,
+                                                                                   "killShots":  0,
+                                                                                   "healingReceived":  0,
+                                                                                   "hazardDamage":  44,
+                                                                                   "stairsProgress":  0,
+                                                                                   "shrineProgress":  0,
+                                                                                   "floorProgress":  0
+                                                                               },
+                                                              "DASH":  {
+                                                                           "casts":  180,
+                                                                           "enemyDamage":  16,
+                                                                           "killShots":  0,
+                                                                           "healingReceived":  2,
+                                                                           "hazardDamage":  101,
+                                                                           "stairsProgress":  252,
+                                                                           "shrineProgress":  220,
+                                                                           "floorProgress":  7
+                                                                       },
+                                                              "GRAPPLE_HOOK":  {
+                                                                                   "casts":  891,
+                                                                                   "enemyDamage":  60,
+                                                                                   "killShots":  0,
+                                                                                   "healingReceived":  0,
+                                                                                   "hazardDamage":  37,
+                                                                                   "stairsProgress":  294,
+                                                                                   "shrineProgress":  195,
+                                                                                   "floorProgress":  0
+                                                                               }
+                                                          },
+                                 "dynamicSkillGrades":  {
+                                                            "SHIELD_THROW":  {
+                                                                                 "casts":  12755,
+                                                                                 "castRate":  159.4375,
+                                                                                 "damagePerCast":  0.0008,
+                                                                                 "killContribution":  0,
+                                                                                 "survivalDelta":  -0.55,
+                                                                                 "objectiveDelta":  0,
+                                                                                 "winImpact":  0,
+                                                                                 "numericGrade":  239.1588
+                                                                             },
+                                                            "DASH":  {
+                                                                         "casts":  180,
+                                                                         "castRate":  2.25,
+                                                                         "damagePerCast":  0.0889,
+                                                                         "killContribution":  0,
+                                                                         "survivalDelta":  -1.2375,
+                                                                         "objectiveDelta":  6.25,
+                                                                         "winImpact":  0,
+                                                                         "numericGrade":  38.0344
+                                                                     },
+                                                            "GRAPPLE_HOOK":  {
+                                                                                 "casts":  891,
+                                                                                 "castRate":  11.1375,
+                                                                                 "damagePerCast":  0.0673,
+                                                                                 "killContribution":  0,
+                                                                                 "survivalDelta":  -0.4625,
+                                                                                 "objectiveDelta":  6.1125,
+                                                                                 "winImpact":  0,
+                                                                                 "numericGrade":  50.5405
+                                                                             }
+                                                        }
+                             },
+        "randomUpa":  0.22,
+        "heuristicUpa":  0.147,
+        "generatedAt":  "2026-02-09T04:09:40.819Z"
+    },
+    {
+        "loadoutId":  "FIREMAGE",
+        "randomSummary":  {
+                              "policy":  "random",
+                              "loadoutId":  "FIREMAGE",
+                              "games":  80,
+                              "winRate":  0,
+                              "timeoutRate":  0,
+                              "avgTurnsToWin":  0,
+                              "avgTurnsToLoss":  5.8375,
+                              "avgFloor":  1,
+                              "avgHazardBreaches":  0,
+                              "hazardDeaths":  0,
+                              "actionTypeTotals":  {
+                                                       "MOVE":  368,
+                                                       "WAIT":  99
+                                                   },
+                              "skillUsageTotals":  {
+
+                                                   },
+                              "avgSkillUsagePerRun":  {
+
+                                                      },
+                              "avgPlayerSkillCastsPerRun":  0,
+                              "skillTelemetryTotals":  {
+
+                                                       },
+                              "dynamicSkillGrades":  {
+
+                                                     }
+                          },
+        "heuristicSummary":  {
+                                 "policy":  "heuristic",
+                                 "loadoutId":  "FIREMAGE",
+                                 "games":  80,
+                                 "winRate":  0,
+                                 "timeoutRate":  0.975,
+                                 "avgTurnsToWin":  0,
+                                 "avgTurnsToLoss":  2.5,
+                                 "avgFloor":  2.35,
+                                 "avgHazardBreaches":  0,
+                                 "hazardDeaths":  0,
+                                 "actionTypeTotals":  {
+                                                          "USE_SKILL":  5046,
+                                                          "MOVE":  542
+                                                      },
+                                 "skillUsageTotals":  {
+                                                          "FIREBALL":  4880,
+                                                          "FIREWALL":  147,
+                                                          "BASIC_ATTACK":  13,
+                                                          "FIREWALK":  6
+                                                      },
+                                 "avgSkillUsagePerRun":  {
+                                                             "FIREBALL":  61,
+                                                             "FIREWALL":  1.8375,
+                                                             "BASIC_ATTACK":  0.1625,
+                                                             "FIREWALK":  0.075
+                                                         },
+                                 "avgPlayerSkillCastsPerRun":  63.075,
+                                 "skillTelemetryTotals":  {
+                                                              "FIREBALL":  {
+                                                                               "casts":  4880,
+                                                                               "enemyDamage":  568,
+                                                                               "killShots":  0,
+                                                                               "healingReceived":  0,
+                                                                               "hazardDamage":  1,
+                                                                               "stairsProgress":  0,
+                                                                               "shrineProgress":  0,
+                                                                               "floorProgress":  0
+                                                                           },
+                                                              "FIREWALL":  {
+                                                                               "casts":  147,
+                                                                               "enemyDamage":  281,
+                                                                               "killShots":  0,
+                                                                               "healingReceived":  0,
+                                                                               "hazardDamage":  7,
+                                                                               "stairsProgress":  0,
+                                                                               "shrineProgress":  0,
+                                                                               "floorProgress":  0
+                                                                           },
+                                                              "BASIC_ATTACK":  {
+                                                                                   "casts":  13,
+                                                                                   "enemyDamage":  13,
+                                                                                   "killShots":  0,
+                                                                                   "healingReceived":  0,
+                                                                                   "hazardDamage":  0,
+                                                                                   "stairsProgress":  0,
+                                                                                   "shrineProgress":  0,
+                                                                                   "floorProgress":  0
+                                                                               },
+                                                              "FIREWALK":  {
+                                                                               "casts":  6,
+                                                                               "enemyDamage":  0,
+                                                                               "killShots":  0,
+                                                                               "healingReceived":  1,
+                                                                               "hazardDamage":  0,
+                                                                               "stairsProgress":  23,
+                                                                               "shrineProgress":  19,
+                                                                               "floorProgress":  0
+                                                                           }
+                                                          },
+                                 "dynamicSkillGrades":  {
+                                                            "FIREBALL":  {
+                                                                             "casts":  4880,
+                                                                             "castRate":  61,
+                                                                             "damagePerCast":  0.1164,
+                                                                             "killContribution":  0,
+                                                                             "survivalDelta":  -0.0125,
+                                                                             "objectiveDelta":  0,
+                                                                             "winImpact":  0,
+                                                                             "numericGrade":  91.8725
+                                                                         },
+                                                            "FIREWALL":  {
+                                                                             "casts":  147,
+                                                                             "castRate":  1.8375,
+                                                                             "damagePerCast":  1.9116,
+                                                                             "killContribution":  0,
+                                                                             "survivalDelta":  -0.0875,
+                                                                             "objectiveDelta":  0,
+                                                                             "winImpact":  0,
+                                                                             "numericGrade":  8.8733
+                                                                         },
+                                                            "BASIC_ATTACK":  {
+                                                                                 "casts":  13,
+                                                                                 "castRate":  0.1625,
+                                                                                 "damagePerCast":  1,
+                                                                                 "killContribution":  0,
+                                                                                 "survivalDelta":  0,
+                                                                                 "objectiveDelta":  0,
+                                                                                 "winImpact":  0,
+                                                                                 "numericGrade":  3.4438
+                                                                             },
+                                                            "FIREWALK":  {
+                                                                             "casts":  6,
+                                                                             "castRate":  0.075,
+                                                                             "damagePerCast":  0,
+                                                                             "killContribution":  0,
+                                                                             "survivalDelta":  0.0125,
+                                                                             "objectiveDelta":  0.525,
+                                                                             "winImpact":  0,
+                                                                             "numericGrade":  3.03
+                                                                         }
+                                                        }
+                             },
+        "randomUpa":  0.22,
+        "heuristicUpa":  0.0033,
+        "generatedAt":  "2026-02-09T04:09:51.028Z"
+    },
+    {
+        "loadoutId":  "NECROMANCER",
+        "randomSummary":  {
+                              "policy":  "random",
+                              "loadoutId":  "NECROMANCER",
+                              "games":  80,
+                              "winRate":  0,
+                              "timeoutRate":  0,
+                              "avgTurnsToWin":  0,
+                              "avgTurnsToLoss":  5.725,
+                              "avgFloor":  1,
+                              "avgHazardBreaches":  0,
+                              "hazardDeaths":  0,
+                              "actionTypeTotals":  {
+                                                       "MOVE":  339,
+                                                       "WAIT":  119
+                                                   },
+                              "skillUsageTotals":  {
+
+                                                   },
+                              "avgSkillUsagePerRun":  {
+
+                                                      },
+                              "avgPlayerSkillCastsPerRun":  0,
+                              "skillTelemetryTotals":  {
+
+                                                       },
+                              "dynamicSkillGrades":  {
+
+                                                     }
+                          },
+        "heuristicSummary":  {
+                                 "policy":  "heuristic",
+                                 "loadoutId":  "NECROMANCER",
+                                 "games":  80,
+                                 "winRate":  0,
+                                 "timeoutRate":  0.1125,
+                                 "avgTurnsToWin":  0,
+                                 "avgTurnsToLoss":  6.352112676056338,
+                                 "avgFloor":  2.425,
+                                 "avgHazardBreaches":  0.8625,
+                                 "hazardDeaths":  68,
+                                 "actionTypeTotals":  {
+                                                          "MOVE":  869,
+                                                          "USE_SKILL":  5380
+                                                      },
+                                 "skillUsageTotals":  {
+                                                          "BASIC_ATTACK":  174,
+                                                          "RAISE_DEAD":  207,
+                                                          "SOUL_SWAP":  369,
+                                                          "CORPSE_EXPLOSION":  4630
+                                                      },
+                                 "avgSkillUsagePerRun":  {
+                                                             "BASIC_ATTACK":  2.175,
+                                                             "RAISE_DEAD":  2.5875,
+                                                             "SOUL_SWAP":  4.6125,
+                                                             "CORPSE_EXPLOSION":  57.875
+                                                         },
+                                 "avgPlayerSkillCastsPerRun":  67.25,
+                                 "skillTelemetryTotals":  {
+                                                              "BASIC_ATTACK":  {
+                                                                                   "casts":  174,
+                                                                                   "enemyDamage":  182,
+                                                                                   "killShots":  0,
+                                                                                   "healingReceived":  0,
+                                                                                   "hazardDamage":  2,
+                                                                                   "stairsProgress":  7,
+                                                                                   "shrineProgress":  4,
+                                                                                   "floorProgress":  0
+                                                                               },
+                                                              "RAISE_DEAD":  {
+                                                                                 "casts":  207,
+                                                                                 "enemyDamage":  215,
+                                                                                 "killShots":  0,
+                                                                                 "healingReceived":  0,
+                                                                                 "hazardDamage":  5,
+                                                                                 "stairsProgress":  0,
+                                                                                 "shrineProgress":  0,
+                                                                                 "floorProgress":  0
+                                                                             },
+                                                              "SOUL_SWAP":  {
+                                                                                "casts":  369,
+                                                                                "enemyDamage":  102,
+                                                                                "killShots":  0,
+                                                                                "healingReceived":  0,
+                                                                                "hazardDamage":  7,
+                                                                                "stairsProgress":  196,
+                                                                                "shrineProgress":  206,
+                                                                                "floorProgress":  0
+                                                                            },
+                                                              "CORPSE_EXPLOSION":  {
+                                                                                       "casts":  4630,
+                                                                                       "enemyDamage":  157,
+                                                                                       "killShots":  0,
+                                                                                       "healingReceived":  0,
+                                                                                       "hazardDamage":  31,
+                                                                                       "stairsProgress":  4,
+                                                                                       "shrineProgress":  3,
+                                                                                       "floorProgress":  0
+                                                                                   }
+                                                          },
+                                 "dynamicSkillGrades":  {
+                                                            "BASIC_ATTACK":  {
+                                                                                 "casts":  174,
+                                                                                 "castRate":  2.175,
+                                                                                 "damagePerCast":  1.046,
+                                                                                 "killContribution":  0,
+                                                                                 "survivalDelta":  -0.025,
+                                                                                 "objectiveDelta":  0.1375,
+                                                                                 "winImpact":  0,
+                                                                                 "numericGrade":  7.3659
+                                                                             },
+                                                            "RAISE_DEAD":  {
+                                                                               "casts":  207,
+                                                                               "castRate":  2.5875,
+                                                                               "damagePerCast":  1.0386,
+                                                                               "killContribution":  0,
+                                                                               "survivalDelta":  -0.0625,
+                                                                               "objectiveDelta":  0,
+                                                                               "winImpact":  0,
+                                                                               "numericGrade":  7.2049
+                                                                           },
+                                                            "SOUL_SWAP":  {
+                                                                              "casts":  369,
+                                                                              "castRate":  4.6125,
+                                                                              "damagePerCast":  0.2764,
+                                                                              "killContribution":  0,
+                                                                              "survivalDelta":  -0.0875,
+                                                                              "objectiveDelta":  5.025,
+                                                                              "winImpact":  0,
+                                                                              "numericGrade":  35.4408
+                                                                          },
+                                                            "CORPSE_EXPLOSION":  {
+                                                                                     "casts":  4630,
+                                                                                     "castRate":  57.875,
+                                                                                     "damagePerCast":  0.0339,
+                                                                                     "killContribution":  0,
+                                                                                     "survivalDelta":  -0.3875,
+                                                                                     "objectiveDelta":  0.0875,
+                                                                                     "winImpact":  0,
+                                                                                     "numericGrade":  87.4023
+                                                                                 }
+                                                        }
+                             },
+        "randomUpa":  0.22,
+        "heuristicUpa":  0.2031,
+        "generatedAt":  "2026-02-09T04:10:04.605Z"
+    },
+    {
+        "loadoutId":  "HUNTER",
+        "randomSummary":  null,
+        "heuristicSummary":  null,
+        "randomUpa":  null,
+        "heuristicUpa":  null,
+        "generatedAt":  null
+    },
+    {
+        "loadoutId":  "ASSASSIN",
+        "randomSummary":  {
+                              "policy":  "random",
+                              "loadoutId":  "ASSASSIN",
+                              "games":  80,
+                              "winRate":  0,
+                              "timeoutRate":  0,
+                              "avgTurnsToWin":  0,
+                              "avgTurnsToLoss":  5.725,
+                              "avgFloor":  1,
+                              "avgHazardBreaches":  0,
+                              "hazardDeaths":  0,
+                              "actionTypeTotals":  {
+                                                       "MOVE":  339,
+                                                       "WAIT":  119
+                                                   },
+                              "skillUsageTotals":  {
+
+                                                   },
+                              "avgSkillUsagePerRun":  {
+
+                                                      },
+                              "avgPlayerSkillCastsPerRun":  0,
+                              "skillTelemetryTotals":  {
+
+                                                       },
+                              "dynamicSkillGrades":  {
+
+                                                     }
+                          },
+        "heuristicSummary":  {
+                                 "policy":  "heuristic",
+                                 "loadoutId":  "ASSASSIN",
+                                 "games":  80,
+                                 "winRate":  0,
+                                 "timeoutRate":  0.275,
+                                 "avgTurnsToWin":  0,
+                                 "avgTurnsToLoss":  5.603448275862069,
+                                 "avgFloor":  3.0625,
+                                 "avgHazardBreaches":  0.4125,
+                                 "hazardDeaths":  31,
+                                 "actionTypeTotals":  {
+                                                          "MOVE":  1460,
+                                                          "USE_SKILL":  1442
+                                                      },
+                                 "skillUsageTotals":  {
+                                                          "SNEAK_ATTACK":  754,
+                                                          "SMOKE_SCREEN":  51,
+                                                          "SHADOW_STEP":  629,
+                                                          "BASIC_ATTACK":  8
+                                                      },
+                                 "avgSkillUsagePerRun":  {
+                                                             "SNEAK_ATTACK":  9.425,
+                                                             "SMOKE_SCREEN":  0.6375,
+                                                             "SHADOW_STEP":  7.8625,
+                                                             "BASIC_ATTACK":  0.1
+                                                         },
+                                 "avgPlayerSkillCastsPerRun":  18.025,
+                                 "skillTelemetryTotals":  {
+                                                              "SNEAK_ATTACK":  {
+                                                                                   "casts":  754,
+                                                                                   "enemyDamage":  751,
+                                                                                   "killShots":  0,
+                                                                                   "healingReceived":  1,
+                                                                                   "hazardDamage":  46,
+                                                                                   "stairsProgress":  0,
+                                                                                   "shrineProgress":  0,
+                                                                                   "floorProgress":  1
+                                                                               },
+                                                              "SMOKE_SCREEN":  {
+                                                                                   "casts":  51,
+                                                                                   "enemyDamage":  11,
+                                                                                   "killShots":  0,
+                                                                                   "healingReceived":  0,
+                                                                                   "hazardDamage":  6,
+                                                                                   "stairsProgress":  0,
+                                                                                   "shrineProgress":  0,
+                                                                                   "floorProgress":  0
+                                                                               },
+                                                              "SHADOW_STEP":  {
+                                                                                  "casts":  629,
+                                                                                  "enemyDamage":  0,
+                                                                                  "killShots":  0,
+                                                                                  "healingReceived":  2,
+                                                                                  "hazardDamage":  37,
+                                                                                  "stairsProgress":  512,
+                                                                                  "shrineProgress":  357,
+                                                                                  "floorProgress":  3
+                                                                              },
+                                                              "BASIC_ATTACK":  {
+                                                                                   "casts":  8,
+                                                                                   "enemyDamage":  15,
+                                                                                   "killShots":  0,
+                                                                                   "healingReceived":  0,
+                                                                                   "hazardDamage":  7,
+                                                                                   "stairsProgress":  8,
+                                                                                   "shrineProgress":  6,
+                                                                                   "floorProgress":  0
+                                                                               }
+                                                          },
+                                 "dynamicSkillGrades":  {
+                                                            "SNEAK_ATTACK":  {
+                                                                                 "casts":  754,
+                                                                                 "castRate":  9.425,
+                                                                                 "damagePerCast":  0.996,
+                                                                                 "killContribution":  0,
+                                                                                 "survivalDelta":  -0.5625,
+                                                                                 "objectiveDelta":  0.05,
+                                                                                 "winImpact":  0,
+                                                                                 "numericGrade":  17.5998
+                                                                             },
+                                                            "SMOKE_SCREEN":  {
+                                                                                 "casts":  51,
+                                                                                 "castRate":  0.6375,
+                                                                                 "damagePerCast":  0.2157,
+                                                                                 "killContribution":  0,
+                                                                                 "survivalDelta":  -0.075,
+                                                                                 "objectiveDelta":  0,
+                                                                                 "winImpact":  0,
+                                                                                 "numericGrade":  1.6464
+                                                                             },
+                                                            "SHADOW_STEP":  {
+                                                                                "casts":  629,
+                                                                                "castRate":  7.8625,
+                                                                                "damagePerCast":  0,
+                                                                                "killContribution":  0,
+                                                                                "survivalDelta":  -0.4375,
+                                                                                "objectiveDelta":  11.0125,
+                                                                                "winImpact":  0,
+                                                                                "numericGrade":  72.3625
+                                                                            },
+                                                            "BASIC_ATTACK":  {
+                                                                                 "casts":  8,
+                                                                                 "castRate":  0.1,
+                                                                                 "damagePerCast":  1.875,
+                                                                                 "killContribution":  0,
+                                                                                 "survivalDelta":  -0.0875,
+                                                                                 "objectiveDelta":  0.175,
+                                                                                 "winImpact":  0,
+                                                                                 "numericGrade":  7.1125
+                                                                             }
+                                                        }
+                             },
+        "randomUpa":  0.22,
+        "heuristicUpa":  0.1842,
+        "generatedAt":  "2026-02-09T04:10:37.582Z"
+    }
+]

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="222" viewBox="0 0 256 222">
+  <defs>
+    <radialGradient id="lava" cx="45%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#ffb347"/>
+      <stop offset="40%" stop-color="#ff6f2e"/>
+      <stop offset="100%" stop-color="#9b1c1c"/>
+    </radialGradient>
+  </defs>
+  
+  <polygon points="63,10 193,10 252,111 193,212 63,212 4,111" fill="url(#lava)" stroke="#6e1313" stroke-width="3"/>
+  
+  <g opacity="0.35">
+    <circle cx="84" cy="72" r="9" fill="#ffd27f"/>
+    <circle cx="106" cy="174" r="11" fill="#ffd27f"/>
+    <circle cx="154" cy="130" r="8" fill="#ffe2a8"/>
+    <circle cx="132" cy="96" r="5" fill="#ffd27f"/>
+    <circle cx="146" cy="192" r="4" fill="#ffe2a8"/>
+  </g>
+</svg>

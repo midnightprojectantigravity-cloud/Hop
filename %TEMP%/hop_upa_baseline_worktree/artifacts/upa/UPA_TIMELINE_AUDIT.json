@@ -1,0 +1,219 @@
+{
+  "summary": {
+    "generatedAt": "2026-02-10T15:56:27.532Z",
+    "runs": 20,
+    "maxTurns": 80,
+    "blockingBudgetMs": 2400,
+    "totals": {
+      "totalTimelineEvents": 200,
+      "totalGroups": 20,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    "violationBreakdown": {}
+  },
+  "runs": [
+    {
+      "seed": "timeline-audit-1",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-2",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-3",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-4",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-5",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-6",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-7",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-8",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-9",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-10",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-11",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-12",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-13",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-14",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-15",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-16",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-17",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-18",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-19",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    },
+    {
+      "seed": "timeline-audit-20",
+      "turnsSpent": 0,
+      "timelineEvents": 10,
+      "groups": 1,
+      "playerGroups": 1,
+      "avgPlayerBlockingMs": 2240,
+      "maxPlayerBlockingMs": 2240,
+      "violations": 0
+    }
+  ],
+  "violations": []
+}

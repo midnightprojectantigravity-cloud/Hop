@@ -1,0 +1,135 @@
+{
+  "generatedAt": "2026-02-10T18:40:55.055Z",
+  "policy": "heuristic",
+  "count": 5,
+  "maxTurns": 20,
+  "guardrails": {
+    "timeoutRateMax": 0.95,
+    "avgFloorMin": 1.2,
+    "avgHazardBreachesMax": 1
+  },
+  "waiverLoadouts": [],
+  "archetypes": [
+    {
+      "loadoutId": "VANGUARD",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 1,
+        "avgFloor": 5,
+        "avgHazardBreaches": 0,
+        "avgKills": 27.2,
+        "upa": 0.05
+      },
+      "guardrails": {
+        "timeoutRateMax": 0.95,
+        "avgFloorMin": 1.2,
+        "avgHazardBreachesMax": 1
+      },
+      "breaches": [
+        "timeoutRate"
+      ],
+      "waived": false,
+      "waiverNote": null
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 0.6,
+        "avgFloor": 2.6,
+        "avgHazardBreaches": 0,
+        "avgKills": 0,
+        "upa": 0.102
+      },
+      "guardrails": {
+        "timeoutRateMax": 0.95,
+        "avgFloorMin": 1.2,
+        "avgHazardBreachesMax": 1
+      },
+      "breaches": [],
+      "waived": false,
+      "waiverNote": null
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "summary": {
+        "winRate": 0.6,
+        "timeoutRate": 0,
+        "avgFloor": 9,
+        "avgHazardBreaches": 0,
+        "avgKills": 0,
+        "upa": 0.8
+      },
+      "guardrails": {
+        "timeoutRateMax": 0.95,
+        "avgFloorMin": 1.2,
+        "avgHazardBreachesMax": 1
+      },
+      "breaches": [],
+      "waived": false,
+      "waiverNote": null
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "summary": {
+        "winRate": 0.6,
+        "timeoutRate": 0.4,
+        "avgFloor": 8,
+        "avgHazardBreaches": 0,
+        "avgKills": 0,
+        "upa": 0.6825
+      },
+      "guardrails": {
+        "timeoutRateMax": 0.95,
+        "avgFloorMin": 1.2,
+        "avgHazardBreachesMax": 1
+      },
+      "breaches": [],
+      "waived": false,
+      "waiverNote": null
+    },
+    {
+      "loadoutId": "HUNTER",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 1,
+        "avgFloor": 4.6,
+        "avgHazardBreaches": 0.2,
+        "avgKills": 0,
+        "upa": 0.038
+      },
+      "guardrails": {
+        "timeoutRateMax": 0.95,
+        "avgFloorMin": 1.2,
+        "avgHazardBreachesMax": 1
+      },
+      "breaches": [
+        "timeoutRate"
+      ],
+      "waived": false,
+      "waiverNote": null
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 1,
+        "avgFloor": 4.6,
+        "avgHazardBreaches": 0,
+        "avgKills": 0,
+        "upa": 0.042
+      },
+      "guardrails": {
+        "timeoutRateMax": 0.95,
+        "avgFloorMin": 1.2,
+        "avgHazardBreachesMax": 1
+      },
+      "breaches": [
+        "timeoutRate"
+      ],
+      "waived": false,
+      "waiverNote": null
+    }
+  ],
+  "unwaivedBreachCount": 3
+}

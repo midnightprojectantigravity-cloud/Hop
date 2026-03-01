@@ -1,0 +1,182 @@
+{
+  "version": "1.0.0",
+  "id": "SHIELD_BASH_V1",
+  "name": "Shield Bash",
+  "description": "Bash a target, apply force, and convert blocked movement into crush damage.",
+  "slot": "offensive",
+  "keywords": [
+    "Momentum",
+    "Pierce"
+  ],
+  "intentTags": [
+    "damage",
+    "control",
+    "move"
+  ],
+  "targeting": {
+    "mode": "single",
+    "range": 1,
+    "requiresLos": true,
+    "allowOccupied": true,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "stackPolicy": {
+    "resolveOrder": "LIFO",
+    "reactionWindow": "automated",
+    "playerPriority": false,
+    "emitTickEvents": true
+  },
+  "baseAction": {
+    "costs": {
+      "energy": 0,
+      "cooldown": 2,
+      "consumesTurn": true
+    },
+    "effects": [
+      {
+        "id": "bash_force",
+        "kind": "APPLY_FORCE",
+        "tags": [
+          "movement",
+          "momentum"
+        ],
+        "target": {
+          "selector": "targetActor"
+        },
+        "force": {
+          "mode": "push",
+          "direction": "source_to_target",
+          "magnitude": {
+            "base": 2,
+            "scaling": [
+              { "stat": "body", "coefficient": 0.2 },
+              { "stat": "momentum", "coefficient": 0.4 }
+            ],
+            "min": 1,
+            "round": "floor"
+          },
+          "maxDistance": 3,
+          "collision": {
+            "onBlocked": "crush_damage",
+            "crushDamage": {
+              "base": 0,
+              "scaling": [
+                { "stat": "momentum", "coefficient": 1.0 }
+              ],
+              "min": 1,
+              "round": "floor"
+            }
+          }
+        }
+      },
+      {
+        "id": "bash_damage",
+        "kind": "DEAL_DAMAGE",
+        "tags": [
+          "damage",
+          "physical"
+        ],
+        "target": {
+          "selector": "targetActor"
+        },
+        "amount": {
+          "base": 2,
+          "scaling": [
+            { "stat": "body", "coefficient": 0.4 }
+          ],
+          "min": 1,
+          "round": "floor"
+        },
+        "damageClass": "physical",
+        "reason": "shield_bash"
+      }
+    ]
+  },
+  "reactivePassives": [],
+  "upgrades": [
+    {
+      "id": "WALL_SLAM",
+      "name": "Wall Slam",
+      "description": "If bash is blocked, stun the target and increase shove force.",
+      "tags": [
+        "collision",
+        "control"
+      ],
+      "modifiers": [
+        {
+          "op": "modify_number",
+          "effectId": "bash_force",
+          "field": "force.magnitude.base",
+          "mode": "add",
+          "value": 1
+        },
+        {
+          "op": "add_reaction",
+          "reaction": {
+            "id": "wall_slam_reaction",
+            "trigger": "ON_COLLISION",
+            "enqueuePosition": "top",
+            "effects": [
+              {
+                "id": "wall_slam_stun",
+                "kind": "APPLY_STATUS",
+                "tags": [
+                  "control",
+                  "status"
+                ],
+                "target": {
+                  "selector": "targetActor"
+                },
+                "statusId": "stunned",
+                "duration": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ANCHOR_BREAKER",
+      "name": "Anchor Breaker",
+      "description": "Adds Anchor keyword and extra collision message for telemetry/debug.",
+      "tags": [
+        "utility"
+      ],
+      "modifiers": [
+        {
+          "op": "add_keyword",
+          "keyword": "Anchor"
+        },
+        {
+          "op": "add_effect",
+          "phase": "after_resolve",
+          "effect": {
+            "id": "anchor_breaker_msg",
+            "kind": "MESSAGE",
+            "tags": [
+              "utility",
+              "telemetry"
+            ],
+            "text": "Anchor Breaker resolved."
+          }
+        }
+      ]
+    }
+  ],
+  "inhibit": {
+    "filterMode": "exclude_matching_tags",
+    "removableTags": [
+      "movement",
+      "momentum"
+    ]
+  },
+  "preview": {
+    "dryRunEnabled": true,
+    "eventMap": {
+      "APPLY_FORCE": "UnitMoved",
+      "DEAL_DAMAGE": "DamageTaken",
+      "APPLY_STATUS": "StatusApplied",
+      "MESSAGE": "CombatLog"
+    }
+  }
+}

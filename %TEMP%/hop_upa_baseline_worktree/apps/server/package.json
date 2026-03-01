@@ -1,0 +1,15 @@
+{
+    "name": "@hop/server",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "start": "tsx index.js",
+        "dev": "tsx --watch index.js"
+    },
+    "dependencies": {
+        "@hop/engine": "*"
+    },
+    "devDependencies": {
+        "tsx": "^4.21.0"
+    }
+}

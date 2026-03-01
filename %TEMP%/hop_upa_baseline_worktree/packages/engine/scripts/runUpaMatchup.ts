@@ -1,0 +1,99 @@
+import {
+    runBatch,
+    runHeadToHeadBatch,
+    summarizeBatch,
+    summarizeMatchup,
+    type ArchetypeLoadoutId,
+    type BotPolicy,
+    type RunResult,
+} from '../src/systems/evaluation/balance-harness';
+import { computeUPAFromSummary } from '../src/systems/upa';
+import { buildUpaEntitySnapshot } from './lib/upaEntitySnapshot';
+import { getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
+
+if (!process.env.HOP_TRINITY_PROFILE) {
+    process.env.HOP_TRINITY_PROFILE = 'live';
+}
+
+const originalLog = console.log.bind(console);
+if (process.env.VERBOSE_ANALYSIS !== '1') {
+    console.log = () => undefined;
+    console.warn = () => undefined;
+}
+
+const count = Number(process.argv[2] || 200);
+const maxTurns = Number(process.argv[3] || 80);
+const leftLoadout = (process.argv[4] || 'VANGUARD') as ArchetypeLoadoutId;
+const rightLoadout = (process.argv[5] || 'FIREMAGE') as ArchetypeLoadoutId;
+const leftPolicy = (process.argv[6] || 'heuristic') as BotPolicy;
+const rightPolicy = (process.argv[7] || 'heuristic') as BotPolicy;
+const leftPolicyProfileId = process.argv[8] || 'sp-v1-default';
+const rightPolicyProfileId = process.argv[9] || 'sp-v1-default';
+
+const seeds = Array.from({ length: count }, (_, i) => `upa-matchup-${i + 1}`);
+const leftEntitySnapshot = buildUpaEntitySnapshot(leftLoadout);
+const rightEntitySnapshot = buildUpaEntitySnapshot(rightLoadout);
+const trinityProfile = getActiveTrinityProfileId();
+
+const leftRuns = runBatch(seeds, leftPolicy, maxTurns, leftLoadout, leftPolicyProfileId);
+const rightRuns = runBatch(seeds, rightPolicy, maxTurns, rightLoadout, rightPolicyProfileId);
+const matchupRuns = runHeadToHeadBatch(
+    seeds,
+    { policy: leftPolicy, loadoutId: leftLoadout },
+    { policy: rightPolicy, loadoutId: rightLoadout },
+    maxTurns,
+    leftPolicyProfileId,
+    rightPolicyProfileId
+);
+
+const leftSummary = summarizeBatch(leftRuns, leftPolicy, leftLoadout);
+const rightSummary = summarizeBatch(rightRuns, rightPolicy, rightLoadout);
+const matchupSummary = summarizeMatchup(matchupRuns);
+
+const topByMargin = (runs: RunResult[], n: number) =>
+    [...runs]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, n)
+        .map(r => ({ seed: r.seed, score: r.score, result: r.result, floor: r.floor, turnsSpent: r.turnsSpent }));
+
+originalLog(
+    JSON.stringify(
+        {
+            generatedAt: new Date().toISOString(),
+            count,
+            maxTurns,
+            trinityProfile,
+            left: {
+                loadoutId: leftLoadout,
+                entitySnapshot: leftEntitySnapshot,
+                policy: leftPolicy,
+                policyProfileId: leftPolicyProfileId,
+                summary: leftSummary,
+                upa: computeUPAFromSummary(leftSummary),
+                strongest: topByMargin(leftRuns, 5)
+            },
+            right: {
+                loadoutId: rightLoadout,
+                entitySnapshot: rightEntitySnapshot,
+                policy: rightPolicy,
+                policyProfileId: rightPolicyProfileId,
+                summary: rightSummary,
+                upa: computeUPAFromSummary(rightSummary),
+                strongest: topByMargin(rightRuns, 5)
+            },
+            matchup: {
+                summary: matchupSummary,
+                sample: matchupRuns.slice(0, 10).map(r => ({
+                    seed: r.seed,
+                    winner: r.winner,
+                    leftScore: r.left.score,
+                    rightScore: r.right.score,
+                    leftResult: r.left.result,
+                    rightResult: r.right.result
+                }))
+            }
+        },
+        null,
+        2
+    )
+);

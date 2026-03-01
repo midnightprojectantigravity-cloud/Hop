@@ -1,0 +1,8 @@
+{
+  "metric": "acae_lethality",
+  "sampleSize": 5,
+  "avgHitsToKill": 10,
+  "maxHitsToKill": 10,
+  "minHitsToKill": 10
+}
+
