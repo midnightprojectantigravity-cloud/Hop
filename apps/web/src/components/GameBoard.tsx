@@ -6,12 +6,7 @@ import {
 } from '@hop/engine';
 import { CameraZoomControls } from './game-board/CameraZoomControls';
 import { JuiceTraceOverlay } from './game-board/JuiceTraceOverlay';
-import { ObjectiveMarkersLayer } from './game-board/ObjectiveMarkersLayer';
-import { EntityLayer } from './game-board/EntityLayer';
-import { InteractionTilesLayer } from './game-board/InteractionTilesLayer';
-import { UiGridLayer } from './game-board/UiGridLayer';
-import { ClutterObstaclesLayer } from './game-board/ClutterObstaclesLayer';
-import { BiomeBackdropLayer } from './game-board/BiomeBackdropLayer';
+import { GameBoardSceneSvg } from './game-board/GameBoardSceneSvg';
 import { useBoardInteractions } from './game-board/useBoardInteractions';
 import { useBoardCamera } from './game-board/useBoardCamera';
 import { useBoardDepthSprites } from './game-board/useBoardDepthSprites';
@@ -331,33 +326,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                         }}
                     />
                 )}
-                <svg
-                    ref={svgRef}
-                    width="100%"
-                    height="100%"
-                    viewBox={`${renderedViewBox.x} ${renderedViewBox.y} ${renderedViewBox.width} ${renderedViewBox.height}`}
-                    preserveAspectRatio="xMidYMid meet"
-                    shapeRendering="geometricPrecision"
-                    className="max-h-full max-w-full"
-                    onMouseLeave={() => setHoveredTile(null)}
-                    onWheel={handleBoardWheel}
-                    onPointerDown={handleBoardPointerDown}
-                    onPointerMove={handleBoardPointerMove}
-                    onPointerUp={handleBoardPointerUp}
-                    onPointerCancel={handleBoardPointerCancel}
-                    style={{ touchAction: 'none' }}
-                >
-                <BiomeBackdropLayer
+                <GameBoardSceneSvg
+                    svgRef={svgRef}
+                    renderedViewBox={renderedViewBox}
                     cells={cells}
-                    {...backdropLayerProps}
-                />
-                <InteractionTilesLayer
                     gameState={gameState}
                     selectedSkillId={selectedSkillId}
                     showMovementRange={showMovementRange}
                     hoveredTile={hoveredTile}
-                    enginePreviewGhost={resolvedEnginePreviewGhost}
-                    cells={cells}
+                    resolvedEnginePreviewGhost={resolvedEnginePreviewGhost}
                     tileVisualFlags={tileVisualFlags}
                     movementTargetSet={movementTargetSet}
                     hasPrimaryMovementSkills={hasPrimaryMovementSkills}
@@ -368,30 +345,29 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     mountainCoveredWallKeys={mountainCoveredWallKeys}
                     hybridInteractionLayerEnabled={hybridInteractionLayerEnabled}
                     assetById={assetById}
-                    onTileClick={handleTileClick}
-                    onTileHover={handleHoverTile}
                     decals={decals}
-                />
-                <ClutterObstaclesLayer
-                    sprites={depthSortedSprites}
-                    floor={gameState.floor}
+                    depthSortedSprites={depthSortedSprites}
+                    boardProps={boardProps}
                     manifestUnitToBoardScale={manifestUnitToBoardScale}
                     mountainSettingsByAssetId={mountainSettingsByAssetId}
                     resolveMountainSettings={resolveMountainSettings}
-                />
-                <EntityLayer
-                    gameState={gameState}
                     latestTraceByActor={latestTraceByActor}
                     entityVisualPoseById={entityVisualPoseById}
-                    assetById={assetById}
                     biomeThemeKey={biomeThemeKey}
                     juiceActorSnapshots={juiceActorSnapshots}
                     assetManifest={assetManifest}
+                    backdropLayerProps={backdropLayerProps}
+                    gridPoints={gridPoints}
+                    onTileClick={handleTileClick}
+                    onTileHover={handleHoverTile}
+                    onMouseLeave={() => setHoveredTile(null)}
+                    onWheel={handleBoardWheel}
+                    onPointerDown={handleBoardPointerDown}
+                    onPointerMove={handleBoardPointerMove}
+                    onPointerUp={handleBoardPointerUp}
+                    onPointerCancel={handleBoardPointerCancel}
                     onJuiceBusyStateChange={setJuiceBusy}
                 />
-                <UiGridLayer cells={cells} gridPoints={gridPoints} />
-                <ObjectiveMarkersLayer boardProps={boardProps} />
-                </svg>
             </div>
             {import.meta.env.DEV && juiceDebugOverlayEnabled && (
                 <JuiceTraceOverlay entries={juiceDebugEntries} />

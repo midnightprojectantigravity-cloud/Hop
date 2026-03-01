@@ -51,6 +51,7 @@ Status: complete for this tranche (`BiomeSandbox.tsx` is 74 lines, `Entity.tsx` 
 - [x] Decompose `ClutterObstaclesLayer` sprite branches into focused modules (`clutter-obstacles-renderers`, `clutter-obstacles-types`).
 - [x] Decompose `BiomeBackdropLayer` into focused modules (`biome-backdrop-defs`, `biome-backdrop-surfaces`, `biome-backdrop-types`).
 - [x] Decompose `useBoardCamera` sync logic into focused modules (`board-camera-sync`, `board-camera-types`).
+- [x] Extract `GameBoard` SVG/layer render stack into `components/game-board/GameBoardSceneSvg.tsx` and keep `GameBoard.tsx` focused on orchestration/hooks.
 - [x] Continue decomposition of `apps/web/src/components/BiomeSandbox.tsx` into smaller feature modules.
 - [x] Continue decomposition of `apps/web/src/components/Entity.tsx` rendering branches where complexity remains high.
 - [x] Keep external props/API behavior stable for existing app integration.
