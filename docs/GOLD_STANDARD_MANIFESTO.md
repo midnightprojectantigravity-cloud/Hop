@@ -57,22 +57,34 @@ Use it as the decision filter for engine, client, and balance changes.
    - `npm --workspace @hop/engine run check-script-imports`
 3. Strict AI acceptance must pass:
    - `npm --workspace @hop/engine run test:ai-acceptance:strict`
-4. Web regression gates must pass:
+4. Strict ACAE acceptance must pass when ACAE tranche code is touched:
+   - `npm --workspace @hop/engine run test:acae:strict`
+5. Web regression gates must pass:
    - `npm --workspace @hop/web run test:run`
    - `npm --workspace @hop/web run build`
-5. Behavior change slices should keep scenario coverage green:
+6. Behavior change slices should keep scenario coverage green:
    - `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent`
-6. Balance slices should keep UPA health gate green:
+7. Balance slices should keep UPA health gate green:
    - `npm run upa:health:check`
 
-## 10) Documentation Topology
+## 10) ACAE Runtime Rules (Pilot)
+1. ACAE is state-ruleset gated (`GameState.ruleset.ailments.acaeEnabled`) and deterministic.
+2. No runtime string eval is allowed for ailment formulas; only deterministic DSL evaluators are permitted.
+3. Ailment trigger/deposit/annihilation/tick/hardening must never use `Math.random`; use engine RNG (`consumeRandom`) when a roll is required.
+4. Pilot ailment paths must preserve legacy behavior when ACAE is disabled.
+5. Tile injectors (`LAVA`, `FIRE`, `WET`, `MIASMA`, `ICE`) must not double-apply legacy + ACAE payloads on the same path.
+6. Hardening persistence is per-run only in this tranche.
+7. Ailment interaction graph must validate as acyclic at bootstrap.
+
+## 11) Documentation Topology
 1. Current status board: `docs/STATUS.md`
 2. Active tracker: `docs/NEXT_LEVEL.md`
 3. AI convergence milestone: `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 4. Post-AI phases milestone: `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
-5. Active balance backlog: `docs/BALANCE_BACKLOG.md`
-6. UPA operations: `docs/UPA_GUIDE.md`
-7. Historical archive: `docs/ROADMAP_HISTORY.md`
-8. Archived completed plans: `docs/archive/`
-9. Biome + bestiary + trinity contract: `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`
-10. Generated audit/test artifacts: `artifacts/upa/` (not `docs/` root)
+5. ACAE milestone: `docs/ACAE_MILESTONE_2026-03-01.md`
+6. Active balance backlog: `docs/BALANCE_BACKLOG.md`
+7. UPA operations: `docs/UPA_GUIDE.md`
+8. Historical archive: `docs/ROADMAP_HISTORY.md`
+9. Archived completed plans: `docs/archive/`
+10. Biome + bestiary + trinity contract: `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`
+11. Generated audit/test artifacts: `artifacts/upa/` (not `docs/` root)

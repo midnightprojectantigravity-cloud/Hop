@@ -5,6 +5,8 @@
   - `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 - Post-AI roadmap tranches are complete and gated:
   - `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
+- ACAE pilot tranche is complete and gated (feature-flagged hybrid rollout):
+  - `docs/ACAE_MILESTONE_2026-03-01.md`
 - Documentation sync for post-tranche architecture is complete:
   - `docs/MASTER_TECH_STACK.md`
   - `docs/GOLD_STANDARD_MANIFESTO.md`
@@ -16,7 +18,7 @@
 ## Current Operating Mode
 - Behavior-preserving changes only by default.
 - Determinism and replay parity are non-negotiable.
-- No new gameplay systems unless explicitly approved as a new tranche.
+- New gameplay systems are introduced only as explicit, gated tranches.
 - Active balance/tuning intake is tracked in:
   - `docs/BALANCE_BACKLOG.md`
 
@@ -74,10 +76,24 @@ Acceptance:
 - [x] `npx vitest run packages/engine/src/__tests__/balance_harness.test.ts` passes.
 - [x] `npx vitest run packages/engine/src/__tests__/pvp_harness.test.ts` passes.
 
+### P4: ACAE Pilot (Engine + Web)
+Goal: introduce a deterministic, data-driven ailment counter runtime behind a persisted ruleset flag.
+Status: complete for pilot tranche.
+
+- [x] Added pilot ailment content/contracts/parser (`burn`, `wet`, `poison`, `frozen`, `bleed`) and bootstrap consistency validation.
+- [x] Added ACAE runtime modules for formula evaluation, trigger/deposit, annihilation, hardening, and tick orchestration.
+- [x] Added new atomic effect handlers (`ApplyAilment`, `DepositAilmentCounters`, `ClearAilmentCounters`).
+- [x] Added feature-flagged tile injections for `LAVA`, `FIRE`, `WET`, `MIASMA`, and `ICE`.
+- [x] Added spear-family bleed pilot path.
+- [x] Added web counter badges, preview ailment delta math overlay text, and hardening toast feedback.
+- [x] Added ACAE strict suite and audits:
+  - `npm --workspace @hop/engine run test:acae:strict`
+
 ## Merge Gate (Default for Active Tranches)
 - `npm --workspace @hop/engine run build`
 - `npm --workspace @hop/engine run check-script-imports`
 - `npm --workspace @hop/engine run test:ai-acceptance:strict`
+- `npm --workspace @hop/engine run test:acae:strict`
 - `npm --workspace @hop/web run test:run`
 - `npm --workspace @hop/web run build`
 

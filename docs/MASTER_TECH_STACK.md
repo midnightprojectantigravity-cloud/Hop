@@ -52,6 +52,23 @@ This document is the high-level source of truth for current engine/runtime archi
   - source: `packages/engine/scripts/generateSkillRegistry.ts`
   - generated: `packages/engine/src/generated/skill-registry.generated.ts`
 
+5. ACAE runtime (feature-flagged pilot)
+- Data contracts and catalog:
+  - `packages/engine/src/data/ailments/contracts.ts`
+  - `packages/engine/src/data/ailments/mvp-ailments.ts`
+  - `packages/engine/src/data/ailments/parser.ts`
+  - `packages/engine/src/data/ailments/consistency.ts`
+- Runtime modules:
+  - `packages/engine/src/systems/ailments/application.ts`
+  - `packages/engine/src/systems/ailments/annihilation.ts`
+  - `packages/engine/src/systems/ailments/hardening.ts`
+  - `packages/engine/src/systems/ailments/tick.ts`
+  - `packages/engine/src/systems/ailments/runtime.ts`
+- Effect integration:
+  - `packages/engine/src/systems/effects/ailment-handlers.ts`
+- Flag persistence:
+  - `GameState.ruleset.ailments` (`acaeEnabled`, `version`)
+
 ## AI Stack (Post-Convergence)
 
 1. Shared AI core
@@ -108,6 +125,30 @@ Reference milestone:
 Reference milestone:
 - `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
 
+## ACAE Pilot Baseline (March 1, 2026)
+
+1. Rollout posture
+- Hybrid pilot mode, feature-flagged in state ruleset.
+- Legacy status path remains for non-pilot effects.
+- Default gameplay remains ACAE-off unless ruleset enables it.
+
+2. Pilot coverage
+- Ailments: `burn`, `wet`, `poison`, `frozen`, `bleed`
+- Tile injections: `LAVA`, `FIRE`, `WET`, `MIASMA`, `ICE`
+- Skill pilot: spear-family bleed (`SPEAR_THROW`, spear-family `BASIC_ATTACK` path)
+- UI pilot: counter badges, preview delta lines, hardening feedback toast
+
+3. ACAE strict gate and audits
+- `npm --workspace @hop/engine run test:acae:strict`
+- Audit scripts:
+  - `packages/engine/scripts/runAcaeLethalitySimulation.ts`
+  - `packages/engine/scripts/runAcaeHardeningAudit.ts`
+  - `packages/engine/scripts/runAcaeCleansePathAudit.ts`
+  - `packages/engine/scripts/runAcaeAnnihilationStability.ts`
+
+Reference milestone:
+- `docs/ACAE_MILESTONE_2026-03-01.md`
+
 ## Quality Gates
 
 1. Engine build
@@ -120,10 +161,13 @@ Reference milestone:
 3. Strict AI acceptance
 - `npm --workspace @hop/engine run test:ai-acceptance:strict`
 
-4. Web tests (non-watch)
+4. Strict ACAE acceptance
+- `npm --workspace @hop/engine run test:acae:strict`
+
+5. Web tests (non-watch)
 - `npm --workspace @hop/web run test:run`
 
-5. Web build
+6. Web build
 - `npm --workspace @hop/web run build`
 
 ## Related Docs
@@ -133,7 +177,8 @@ Reference milestone:
 3. Active tracker: `docs/NEXT_LEVEL.md`
 4. AI milestone: `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 5. Post-AI phases milestone: `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
-6. Historical archive: `docs/ROADMAP_HISTORY.md`
-7. Archived completed plans: `docs/archive/`
-8. UPA operations: `docs/UPA_GUIDE.md`
-9. Rules/guardrails: `docs/GOLD_STANDARD_MANIFESTO.md`
+6. ACAE milestone: `docs/ACAE_MILESTONE_2026-03-01.md`
+7. Historical archive: `docs/ROADMAP_HISTORY.md`
+8. Archived completed plans: `docs/archive/`
+9. UPA operations: `docs/UPA_GUIDE.md`
+10. Rules/guardrails: `docs/GOLD_STANDARD_MANIFESTO.md`
