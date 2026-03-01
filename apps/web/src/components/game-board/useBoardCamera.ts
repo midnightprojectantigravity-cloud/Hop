@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
-import { TILE_SIZE, pointToKey, type Point } from '@hop/engine';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { TILE_SIZE, pointToKey } from '@hop/engine';
 import {
-    type CameraInsetsPx,
     type CameraRect,
     type CameraVec2,
     type CameraZoomPreset,
@@ -13,59 +12,15 @@ import {
     computeVisibleWorldSize,
     expandRect,
 } from '../../visual/camera';
-
-type CameraViewState = {
-    center: CameraVec2;
-    scale: number;
-    viewBox: CameraRect;
-};
-
-type PointerPoint = { x: number; y: number };
-
-type DragPointerState = {
-    activePointerId: number | null;
-    startClient: PointerPoint | null;
-    lastWorld: CameraVec2 | null;
-    didPan: boolean;
-};
-
-type PinchPointerState = {
-    startDistance: number;
-    startPreset: CameraZoomPreset;
-    appliedPreset: CameraZoomPreset;
-};
-
-interface UseBoardCameraArgs {
-    baseViewBox: CameraRect;
-    playerWorld: { x: number; y: number };
-    playerPosition: Point;
-    floor: number | undefined;
-    cameraSafeInsetsPx?: Partial<CameraInsetsPx>;
-}
-
-interface UseBoardCameraResult {
-    svgRef: MutableRefObject<SVGSVGElement | null>;
-    boardViewportRef: MutableRefObject<HTMLDivElement | null>;
-    zoomPreset: CameraZoomPreset;
-    isCameraPanning: boolean;
-    setIsCameraPanning: React.Dispatch<React.SetStateAction<boolean>>;
-    cameraPanOffsetRef: MutableRefObject<CameraVec2>;
-    isCameraPanningRef: MutableRefObject<boolean>;
-    isPinchingRef: MutableRefObject<boolean>;
-    suppressTileClickUntilRef: MutableRefObject<number>;
-    activePointersRef: MutableRefObject<Map<number, PointerPoint>>;
-    dragStateRef: MutableRefObject<DragPointerState>;
-    pinchStateRef: MutableRefObject<PinchPointerState | null>;
-    cancelCameraAnimation: () => void;
-    animateCameraToTarget: (options?: {
-        panOffset?: CameraVec2;
-        zoomPreset?: CameraZoomPreset;
-        durationMs?: number;
-    }) => void;
-    updatePanFromWorldDelta: (deltaWorld: CameraVec2) => void;
-    setZoomPresetAnimated: (nextPreset: CameraZoomPreset) => void;
-    renderedViewBox: CameraRect;
-}
+import type {
+    CameraViewState,
+    DragPointerState,
+    PinchPointerState,
+    PointerPoint,
+    UseBoardCameraArgs,
+    UseBoardCameraResult,
+} from './board-camera-types';
+import { resolveCameraSyncAction } from './board-camera-sync';
 
 export const useBoardCamera = ({
     baseViewBox,
@@ -252,58 +207,57 @@ export const useBoardCamera = ({
         const boundsSignature = `${baseViewBox.x}:${baseViewBox.y}:${baseViewBox.width}:${baseViewBox.height}`;
         const viewportSignature = `${viewportSizePx.width}:${viewportSizePx.height}:${cameraSafeInsetsPx?.top ?? 0}:${cameraSafeInsetsPx?.right ?? 0}:${cameraSafeInsetsPx?.bottom ?? 0}:${cameraSafeInsetsPx?.left ?? 0}`;
         const playerKey = pointToKey(playerPosition);
+        const syncDecision = resolveCameraSyncAction(
+            {
+                didInit: didInitCameraRef.current,
+                lastPlayerKey: lastPlayerKeyRef.current,
+                lastCameraFloor: lastCameraFloorRef.current,
+                lastViewportSignature: lastViewportSignatureRef.current,
+                lastBoundsSignature: lastBoundsSignatureRef.current,
+                lastZoomPreset: lastZoomPresetRef.current,
+            },
+            {
+                floor,
+                playerKey,
+                boundsSignature,
+                viewportSignature,
+                zoomPreset,
+            }
+        );
 
-        if (!didInitCameraRef.current) {
-            didInitCameraRef.current = true;
-            lastPlayerKeyRef.current = playerKey;
-            lastCameraFloorRef.current = floor ?? null;
-            lastViewportSignatureRef.current = viewportSignature;
-            lastBoundsSignatureRef.current = boundsSignature;
-            lastZoomPresetRef.current = zoomPreset;
+        didInitCameraRef.current = syncDecision.nextRefs.didInit;
+        lastPlayerKeyRef.current = syncDecision.nextRefs.lastPlayerKey;
+        lastCameraFloorRef.current = syncDecision.nextRefs.lastCameraFloor;
+        lastViewportSignatureRef.current = syncDecision.nextRefs.lastViewportSignature;
+        lastBoundsSignatureRef.current = syncDecision.nextRefs.lastBoundsSignature;
+        lastZoomPresetRef.current = syncDecision.nextRefs.lastZoomPreset;
+
+        if (syncDecision.action === 'init') {
             snapCameraToTarget({ panOffset: { x: 0, y: 0 } });
             return;
         }
 
-        if ((floor ?? null) !== lastCameraFloorRef.current) {
-            lastCameraFloorRef.current = floor ?? null;
-            lastBoundsSignatureRef.current = boundsSignature;
-            lastViewportSignatureRef.current = viewportSignature;
-            lastPlayerKeyRef.current = playerKey;
-            lastZoomPresetRef.current = zoomPreset;
-            cameraPanOffsetRef.current = { x: 0, y: 0 };
-            snapCameraToTarget({ panOffset: { x: 0, y: 0 } });
+        if (syncDecision.action === 'reset-floor' || syncDecision.action === 'reset-bounds') {
+            const zeroPan = { x: 0, y: 0 };
+            cameraPanOffsetRef.current = zeroPan;
+            snapCameraToTarget({ panOffset: zeroPan });
             return;
         }
 
-        if (floor !== undefined && boundsSignature !== lastBoundsSignatureRef.current) {
-            lastBoundsSignatureRef.current = boundsSignature;
-            lastViewportSignatureRef.current = viewportSignature;
-            lastPlayerKeyRef.current = playerKey;
-            lastZoomPresetRef.current = zoomPreset;
-            cameraPanOffsetRef.current = { x: 0, y: 0 };
-            snapCameraToTarget({ panOffset: { x: 0, y: 0 } });
-            return;
-        }
-
-        if (viewportSignature !== lastViewportSignatureRef.current) {
-            lastViewportSignatureRef.current = viewportSignature;
-            lastBoundsSignatureRef.current = boundsSignature;
+        if (syncDecision.action === 'snap-viewport') {
             snapCameraToTarget();
             return;
         }
 
-        if (zoomPreset !== lastZoomPresetRef.current) {
-            lastZoomPresetRef.current = zoomPreset;
+        if (syncDecision.action === 'animate-zoom') {
             animateCameraToTarget();
             return;
         }
 
-        if (playerKey !== lastPlayerKeyRef.current) {
-            lastPlayerKeyRef.current = playerKey;
+        if (syncDecision.action === 'animate-player') {
             const zeroPan = { x: 0, y: 0 };
             cameraPanOffsetRef.current = zeroPan;
             animateCameraToTarget({ panOffset: zeroPan, durationMs: 210 });
-            return;
         }
     }, [
         viewportSizePx.width,
