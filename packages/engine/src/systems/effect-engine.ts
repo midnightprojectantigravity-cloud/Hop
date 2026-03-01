@@ -221,6 +221,12 @@ export const applyEffects = (state: GameState, effects: AtomicEffect[], context:
     const baseTraceOffset = state.stackTrace?.length || 0;
     const baseResolution = resolveLifoStack(state, effects, {
         apply: (s, effect) => applyAtomicEffect(s, effect, context),
+        getBeforeReactions: context.stackReactions?.beforeResolve
+            ? (s, effect) => context.stackReactions?.beforeResolve?.(s, effect)
+            : undefined,
+        getAfterReactions: context.stackReactions?.afterResolve
+            ? (s, effect) => context.stackReactions?.afterResolve?.(s, effect)
+            : undefined,
         describe: (effect) => effect.type,
         preserveInputOrder: true,
         startTick: baseTraceOffset + 1

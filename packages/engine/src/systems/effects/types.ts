@@ -1,9 +1,16 @@
 import type { Actor, AtomicEffect, GameState, Point, SimulationEvent, TimelinePhase } from '../../types';
+import type { StackReactionSet } from '../resolution-stack';
+
+export interface AtomicEffectStackReactionHooks {
+    beforeResolve?: (state: GameState, effect: AtomicEffect) => StackReactionSet<AtomicEffect>;
+    afterResolve?: (state: GameState, effect: AtomicEffect) => StackReactionSet<AtomicEffect>;
+}
 
 export interface AtomicEffectContext {
     targetId?: string;
     sourceId?: string;
     stepId?: string;
+    stackReactions?: AtomicEffectStackReactionHooks;
 }
 
 export type SimulationEventDraft = Omit<SimulationEvent, 'id' | 'turn'>;
