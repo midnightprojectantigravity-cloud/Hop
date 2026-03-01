@@ -20,6 +20,7 @@ import { getActorAt } from '../helpers';
 import { validateLineOfSight } from './validation';
 import { extractTrinityStats } from './combat/combat-calculator';
 import { resolveForce } from './combat/force';
+import { resolveActorForceScalars } from './combat/force-scalars';
 
 interface RuntimeScalarContext {
     body: number;
@@ -106,14 +107,16 @@ const materializeEffects = (
 
 const buildScalarContext = (attacker: Actor, context?: Record<string, unknown>): RuntimeScalarContext => {
     const trinity = extractTrinityStats(attacker);
-    const momentum = Number(context?.momentum ?? 0);
-    const mass = Number(context?.mass ?? 1);
+    const derivedForce = resolveActorForceScalars(attacker);
+    const momentum = Number(context?.momentum ?? derivedForce.momentum);
+    const mass = Number(context?.mass ?? derivedForce.mass);
+    const speed = Number(context?.speed ?? derivedForce.velocity);
     return {
         body: trinity.body,
         mind: trinity.mind,
         instinct: trinity.instinct,
-        mass: Number.isFinite(mass) ? mass : 1,
-        speed: attacker.speed || 1,
+        mass: Number.isFinite(mass) ? mass : derivedForce.mass,
+        speed: Number.isFinite(speed) ? speed : derivedForce.velocity,
         momentum: Number.isFinite(momentum) ? momentum : 0
     };
 };
