@@ -5,6 +5,7 @@ import { ailmentEffectHandlers } from './ailment-handlers';
 import { corpseEffectHandlers } from './corpse-handlers';
 import { damageEffectHandlers } from './damage-handlers';
 import { displacementEffectHandlers } from './displacement-handlers';
+import { forceEffectHandlers } from './force-handlers';
 import { impactEffectHandlers } from './impact-handlers';
 import { itemHazardEffectHandlers } from './item-hazard-handlers';
 import { juiceEffectHandlers } from './juice-handlers';
@@ -18,6 +19,7 @@ export const atomicEffectHandlers: AtomicEffectHandlerMap = {
     ...corpseEffectHandlers,
     ...damageEffectHandlers,
     ...displacementEffectHandlers,
+    ...forceEffectHandlers,
     ...itemHazardEffectHandlers,
     ...trapEffectHandlers,
     ...actorStateEffectHandlers,

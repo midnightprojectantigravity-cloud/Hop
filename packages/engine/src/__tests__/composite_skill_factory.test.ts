@@ -35,7 +35,7 @@ describe('composite skill factory', () => {
 
         const execution = skill.execute(mutatedState, mutatedState.player, enemyPos);
         expect(execution.effects.some(e => e.type === 'Damage')).toBe(true);
-        expect(execution.effects.some(e => e.type === 'Displacement')).toBe(true);
+        expect(execution.effects.some(e => e.type === 'ApplyForce')).toBe(true);
     });
 
     it('applies inhibit tags by filtering matching effect tags', () => {
@@ -72,7 +72,7 @@ describe('composite skill factory', () => {
         const execution = skill.execute(mutatedState, mutatedState.player, enemyPos, ['WALL_SLAM']);
         expect(execution.stackReactions?.afterResolve).toBeDefined();
 
-        const collisionEffect = execution.effects.find(e => e.type === 'Damage' && e.reason === 'crush');
+        const collisionEffect = execution.effects.find(e => e.type === 'ApplyForce' && e.expectedCollision === true);
         expect(collisionEffect).toBeDefined();
 
         const reactions = execution.stackReactions?.afterResolve?.(mutatedState, collisionEffect!);

@@ -155,7 +155,7 @@ const convertEffect = (
     const crushDamage = effect.force.collision.crushDamage
         ? evalScalar(effect.force.collision.crushDamage, scalarCtx)
         : 0;
-    return resolveForce(state, {
+    const forcePreview = resolveForce(state, {
         source: attacker.position,
         targetActorId,
         mode: effect.force.mode,
@@ -165,10 +165,24 @@ const convertEffect = (
             onBlocked: effect.force.collision.onBlocked,
             crushDamage
         }
-    }).effects;
+    });
+    return [{
+        type: 'ApplyForce',
+        target: targetActorId,
+        source: attacker.position,
+        mode: effect.force.mode,
+        magnitude: forceMagnitude,
+        maxDistance: effect.force.maxDistance,
+        collision: {
+            onBlocked: effect.force.collision.onBlocked,
+            crushDamage
+        },
+        expectedCollision: forcePreview.collided
+    }];
 };
 
 const isCollisionSignalEffect = (effect: AtomicEffect): boolean => {
+    if (effect.type === 'ApplyForce') return effect.expectedCollision === true;
     if (effect.type !== 'Damage') return false;
     const reason = String(effect.reason || '').toLowerCase();
     if (!reason) return false;

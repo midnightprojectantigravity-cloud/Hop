@@ -110,6 +110,20 @@ export type AtomicEffect =
     | { type: 'Heal'; target: 'targetActor' | string; amount: number }
     | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: StatusID; duration: number }
     | {
+        type: 'ApplyForce';
+        target: 'self' | 'targetActor' | string;
+        source: Point;
+        mode: 'push' | 'pull';
+        magnitude: number;
+        maxDistance: number;
+        collision: {
+            onBlocked: 'stop' | 'crush_damage';
+            crushDamage?: number;
+        };
+        damageReason?: string;
+        expectedCollision?: boolean;
+    }
+    | {
         type: 'ApplyAilment';
         target: 'targetActor' | Point | string;
         ailment: AilmentID;
