@@ -248,7 +248,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
 
             intent = processIntent(intent, curState, actorForIntent);
 
-            const { effects, messages: tacticalMessages, consumesTurn, targetId, kills } = TacticalEngine.execute(intent, actorForIntent, curState);
+            const { effects, messages: tacticalMessages, consumesTurn, targetId, kills, stackReactions } = TacticalEngine.execute(intent, actorForIntent, curState);
             if (deps.engineDebug) {
                 console.log(`[ENGINE] ${actorId} intends ${intent.type} (${intent.skillId}) onto ${targetId || (intent.targetHex ? JSON.stringify(intent.targetHex) : 'self')}`);
             }
@@ -259,7 +259,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
             }
 
             const stateBeforeEffects = curState;
-            const nextState = applyEffects(curState, effects, { sourceId: actorId, targetId, stepId: actorStepId });
+            const nextState = applyEffects(curState, effects, { sourceId: actorId, targetId, stepId: actorStepId, stackReactions });
 
             if (actorId === 'player') {
                 nextState.kills = (nextState.kills || 0) + (kills || 0);

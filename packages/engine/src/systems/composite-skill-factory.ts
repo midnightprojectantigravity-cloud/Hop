@@ -4,7 +4,17 @@ import type {
     CompositeSkillUpgradeDefinition,
     ScalarExpression
 } from '../data/contracts';
-import type { Actor, AtomicEffect, GameState, Point, SkillDefinition, SkillModifier } from '../types';
+import type {
+    Actor,
+    AtomicEffect,
+    AtomicStackReactionHooks,
+    AtomicStackReactionItem,
+    GameState,
+    Point,
+    SkillDefinition,
+    SkillExecutionResult,
+    SkillModifier
+} from '../types';
 import { createHex, hexDistance, isHexInRectangularGrid } from '../hex';
 import { getActorAt } from '../helpers';
 import { validateLineOfSight } from './validation';
@@ -158,6 +168,13 @@ const convertEffect = (
     }).effects;
 };
 
+const isCollisionSignalEffect = (effect: AtomicEffect): boolean => {
+    if (effect.type !== 'Damage') return false;
+    const reason = String(effect.reason || '').toLowerCase();
+    if (!reason) return false;
+    return reason.includes('crush') || reason.includes('collision') || reason.includes('wall_slam');
+};
+
 const getSortedTargets = (state: GameState, origin: Point, range: number, sortMode: CompositeSkillDefinition['targeting']['deterministicSort']): Point[] => {
     const points: Point[] = [];
     for (let q = 0; q < state.gridWidth; q++) {
@@ -215,11 +232,55 @@ export const materializeCompositeSkill = (def: CompositeSkillDefinition): SkillD
             for (const effect of effectStream) {
                 effects.push(...convertEffect(state, attacker, target, effect, scalarCtx));
             }
-            return {
+            const baseEffectRefs = new Set<AtomicEffect>(effects);
+
+            const toReactionItems = (
+                trigger: 'BEFORE_RESOLVE' | 'ON_COLLISION' | 'AFTER_RESOLVE',
+                hookState: GameState,
+                resolvedEffect?: AtomicEffect
+            ): AtomicStackReactionItem[] => {
+                if (trigger === 'ON_COLLISION' && resolvedEffect && !isCollisionSignalEffect(resolvedEffect)) {
+                    return [];
+                }
+                return (materialized.reactions || [])
+                    .filter(reaction => reaction.trigger === trigger)
+                    .flatMap(reaction =>
+                        reaction.effects.flatMap(rEffect =>
+                            convertEffect(hookState, attacker, target, rEffect, scalarCtx).map(item => ({
+                                item,
+                                enqueuePosition: reaction.enqueuePosition
+                            }))
+                        )
+                    );
+            };
+
+            const hasRuntimeReactions = (materialized.reactions || []).some(
+                reaction => reaction.trigger === 'BEFORE_RESOLVE' || reaction.trigger === 'AFTER_RESOLVE' || reaction.trigger === 'ON_COLLISION'
+            );
+
+            const stackReactions: AtomicStackReactionHooks | undefined = hasRuntimeReactions
+                ? {
+                    beforeResolve: (hookState, pendingEffect) => {
+                        if (!baseEffectRefs.has(pendingEffect)) return [];
+                        return toReactionItems('BEFORE_RESOLVE', hookState, pendingEffect);
+                    },
+                    afterResolve: (hookState, resolvedEffect) => {
+                        if (!baseEffectRefs.has(resolvedEffect)) return [];
+                        return [
+                            ...toReactionItems('AFTER_RESOLVE', hookState, resolvedEffect),
+                            ...toReactionItems('ON_COLLISION', hookState, resolvedEffect)
+                        ];
+                    }
+                }
+                : undefined;
+
+            const execution: SkillExecutionResult = {
                 effects,
                 messages: [],
-                consumesTurn: def.baseAction.costs.consumesTurn
+                consumesTurn: def.baseAction.costs.consumesTurn,
+                stackReactions
             };
+            return execution;
         },
         getValidTargets: (state: GameState, origin: Point) => {
             if (def.targeting.mode === 'self') return [origin];

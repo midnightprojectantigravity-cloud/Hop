@@ -1,5 +1,5 @@
 import type { Intent } from '../types/intent';
-import type { GameState, Actor, AtomicEffect, Point } from '../types';
+import type { GameState, Actor, AtomicEffect, Point, AtomicStackReactionHooks } from '../types';
 import { SkillRegistry } from '../skillRegistry';
 import { getActorAt } from '../helpers';
 import { isFreeMoveMode } from './free-move';
@@ -9,7 +9,7 @@ import { isFreeMoveMode } from './free-move';
  * Pure & Deterministic execution of an Intent.
  */
 export class TacticalEngine {
-    static execute(intent: Intent, actor: Actor, gameState: GameState): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean; targetId?: string; kills?: number } {
+    static execute(intent: Intent, actor: Actor, gameState: GameState): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean; targetId?: string; kills?: number; stackReactions?: AtomicStackReactionHooks } {
         const result = this.resolveExecution(intent, actor, gameState);
         return result;
     }
@@ -18,12 +18,12 @@ export class TacticalEngine {
      * Layer 3b: The Simulator (The "Ghost").
      * Validates what WOULD happen without mutating the state.
      */
-    static simulate(intent: Intent, actor: Actor, gameState: GameState): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean; targetId?: string; kills?: number } {
+    static simulate(intent: Intent, actor: Actor, gameState: GameState): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean; targetId?: string; kills?: number; stackReactions?: AtomicStackReactionHooks } {
         // Since getValidTargets and execute are pure, we just call the same logic.
         return this.resolveExecution(intent, actor, gameState);
     }
 
-    private static resolveExecution(intent: Intent, actor: Actor, gameState: GameState): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean; targetId?: string; kills?: number } {
+    private static resolveExecution(intent: Intent, actor: Actor, gameState: GameState): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean; targetId?: string; kills?: number; stackReactions?: AtomicStackReactionHooks } {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
 
@@ -114,7 +114,8 @@ export class TacticalEngine {
             messages: [...messages, ...execution.messages],
             consumesTurn: execution.consumesTurn ?? true,
             targetId: finalTargetId,
-            kills: execution.kills || 0
+            kills: execution.kills || 0,
+            stackReactions: execution.stackReactions
         };
     }
 

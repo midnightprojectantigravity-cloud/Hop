@@ -76,7 +76,12 @@ export const resolveTelegraphedAttacks = (
 
         // Execute skill AT THE REASSESSED POSITION
         const result = skillDef.execute(curState, liveEnemy, targetPos, activeSkill.activeUpgrades);
-        curState = applyEffects(curState, result.effects, { sourceId: liveEnemy.id, targetId: curState.player.id, stepId });
+        curState = applyEffects(curState, result.effects, {
+          sourceId: liveEnemy.id,
+          targetId: curState.player.id,
+          stepId,
+          stackReactions: result.stackReactions
+        });
         messages.push(...result.messages);
         enemyHandled = true;
       } else if (liveEnemy.subtype === 'bomber') {

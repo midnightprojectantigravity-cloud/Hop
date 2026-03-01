@@ -225,6 +225,28 @@ export interface StackResolutionTick {
     bottomQueued?: number;
 }
 
+export type AtomicStackReactionEnqueuePosition = 'top' | 'bottom';
+
+export interface AtomicStackReactionItem {
+    item: AtomicEffect;
+    enqueuePosition?: AtomicStackReactionEnqueuePosition;
+}
+
+export type AtomicStackReactionSet = Array<AtomicEffect | AtomicStackReactionItem>;
+
+export interface AtomicStackReactionHooks {
+    beforeResolve?: (state: GameState, effect: AtomicEffect) => AtomicStackReactionSet | undefined;
+    afterResolve?: (state: GameState, effect: AtomicEffect) => AtomicStackReactionSet | undefined;
+}
+
+export interface SkillExecutionResult {
+    effects: AtomicEffect[];
+    messages: string[];
+    consumesTurn?: boolean;
+    kills?: number;
+    stackReactions?: AtomicStackReactionHooks;
+}
+
 export interface TelegraphProjectionEntry {
     actorId: string;
     skillId: string;
@@ -345,12 +367,7 @@ export interface SkillDefinition {
         momentum?: number;
     };
     /** Core Logic: Functional execution returning a list of effects */
-    execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades?: string[], context?: Record<string, any>) => {
-        effects: AtomicEffect[];
-        messages: string[];
-        consumesTurn?: boolean;
-        kills?: number;
-    };
+    execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades?: string[], context?: Record<string, any>) => SkillExecutionResult;
     /** Optional helper for UI/tests: return valid target hexes for previews (Level 1/2) */
     getValidTargets?: (state: GameState, origin: Point) => Point[];
     intentProfile?: SkillIntentProfile;

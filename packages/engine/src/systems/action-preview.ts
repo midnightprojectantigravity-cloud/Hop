@@ -137,7 +137,8 @@ export const previewActionOutcome = (
     const targetId = resolveTargetId(previewState, request.target);
     const resolvedState = applyEffects(previewState, execution.effects, {
         sourceId: previewActor.id,
-        targetId
+        targetId,
+        stackReactions: execution.stackReactions
     });
 
     return {

@@ -173,7 +173,11 @@ const applyDuelAction = (state: GameState, actorId: string, action: DuelAction):
                 if (isValid) {
                     const execution = def.execute(cur, actor, target);
                     const targetId = resolveTargetId(cur, actor.id, target);
-                    cur = applyEffects(cur, execution.effects, { sourceId: actor.id, targetId });
+                    cur = applyEffects(cur, execution.effects, {
+                        sourceId: actor.id,
+                        targetId,
+                        stackReactions: execution.stackReactions
+                    });
                     const post = getActorById(cur, actor.id);
                     if (post && post.hp > 0 && action.kind === 'USE_SKILL' && action.skillId) {
                         cur = setActorById(cur, setSkillCooldown(post, action.skillId));
