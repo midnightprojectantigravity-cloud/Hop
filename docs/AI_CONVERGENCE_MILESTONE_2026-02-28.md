@@ -50,11 +50,10 @@ Commands validated in this milestone:
 - `npm --workspace @hop/engine run build`
 - `npm --workspace @hop/engine run check-script-imports`
 - `npm --workspace @hop/engine run test:ai-acceptance:strict`
-- `npm --workspace @hop/web exec vitest run`
+- `npm --workspace @hop/web run test:run`
 
 Latest strict AI acceptance result:
-- `13` test files passed
-- `93` tests passed
+- strict suite passes in the merge gate baseline
 
 ## Compatibility Notes
 
@@ -65,4 +64,3 @@ Latest strict AI acceptance result:
 
 2. Diagnostics remain available
 - Oracle/shadow diff utilities stay internal to selector tests/scripts and are not part of stable runtime API.
-

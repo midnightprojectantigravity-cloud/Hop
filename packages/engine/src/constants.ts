@@ -2,7 +2,6 @@
  * GAME CONSTANTS
  * Central repository for stats, types, and grid configuration.
  * Runtime ownership for enemy stats/spawn tables lives in `data/enemies/*`.
- * Deprecated compatibility constants are isolated in `legacy/enemy-constants.ts`.
  */
 // Grid configuration for mobile portrait (9 wide × 11 tall)
 export const GRID_WIDTH = 7;   // Tiles wide

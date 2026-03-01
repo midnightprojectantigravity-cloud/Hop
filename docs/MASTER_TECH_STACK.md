@@ -77,7 +77,7 @@ This document is the high-level source of truth for current engine/runtime archi
 Reference milestone:
 - `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 
-## Post-AI + Post-Tranche Baseline (February 28, 2026)
+## Post-AI + Post-Tranche Baseline (March 1, 2026)
 
 1. Content pipeline closure
 - Canonical enemy runtime accessors:
@@ -86,8 +86,9 @@ Reference milestone:
 - Content consistency validation:
   - `packages/engine/src/data/enemies/content-consistency.ts`
   - bootstrap gate in `packages/engine/src/systems/tactical-data-bootstrap.ts`
-- Compatibility constants (`ENEMY_STATS`, floor enemy constants) are deprecated facades only and isolated under:
-  - `packages/engine/src/legacy/enemy-constants.ts`
+- Deprecated constants (`ENEMY_STATS`, floor enemy constants) are retired from source/export ownership.
+- Guardrail:
+  - `packages/engine/scripts/checkDeprecatedConstantsUsage.ts` (wired in `check-script-imports`)
 
 2. Frontend decomposition (behavior-preserving)
 - Biome sandbox state modules:
@@ -114,6 +115,7 @@ Reference milestone:
 
 2. Script import integrity
 - `npm --workspace @hop/engine run check-script-imports`
+  - includes deprecated-constants ownership guard
 
 3. Strict AI acceptance
 - `npm --workspace @hop/engine run test:ai-acceptance:strict`

@@ -37,12 +37,13 @@ This document covers the current repo layout, local workflows, and the engine ru
   - `npm --workspace @hop/engine run test:ai-acceptance`
   - strict mode (recommended before merging AI changes): `npm --workspace @hop/engine run test:ai-acceptance:strict`
 - Web tests (non-watch):
-  - `npm --workspace @hop/web exec vitest run`
+  - `npm --workspace @hop/web run test:run`
 - Replay validation:
   - `npx vitest run packages/engine/src/__tests__/replay_validation.test.ts`
   - `packages/engine/scripts/validateReplay.ts`
 - Script import integrity:
   - `npm --workspace @hop/engine run check-script-imports`
+  - includes deprecated constants ownership check (`checkDeprecatedConstantsUsage`)
 
 ## Skill registry codegen (important)
 
@@ -60,9 +61,12 @@ When adding/removing skill files in `packages/engine/src/skills/`, run the gener
 
 ## Content pipeline notes
 
-- Enemy content is defined in shared MVP pack-backed data and consumed by:
-  - `packages/engine/src/data/bestiary.ts` (compatibility facade)
-  - `packages/engine/src/data/packs/mvp-pack.ts` (base-unit pack hydration)
+- Enemy content/runtime ownership:
+  - `packages/engine/src/data/enemies/enemy-catalog.ts` (canonical runtime accessor)
+  - `packages/engine/src/data/enemies/floor-spawn-profile.ts` (spawn profile ownership)
+  - `packages/engine/src/data/packs/mvp-pack.ts` (pack hydration source)
+- Deprecated constants note:
+  - `ENEMY_STATS` / `FLOOR_ENEMY_*` are retired from source ownership and blocked by `checkDeprecatedConstantsUsage`.
 - Default player loadouts are data definitions in:
   - `packages/engine/src/data/loadouts/default-loadouts.ts`
 - Runtime loadout hydration/validation remains in:

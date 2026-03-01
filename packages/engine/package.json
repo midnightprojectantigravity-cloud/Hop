@@ -14,7 +14,6 @@
     "./movement": "./src/movement/index.ts",
     "./tiles": "./src/tiles/index.ts",
     "./visual": "./src/visual/index.ts",
-    "./legacy/enemy-constants": "./src/legacy/enemy-constants.ts",
     "./*": "./src/*.ts"
   },
   "scripts": {

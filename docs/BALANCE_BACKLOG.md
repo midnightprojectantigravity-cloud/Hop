@@ -15,7 +15,7 @@
 
 ## Arcade v1 Content Lock (MVP)
 - [x] Locked scope archetypes: `VANGUARD`, `SKIRMISHER`, `FIREMAGE`, `NECROMANCER`, `HUNTER`, `ASSASSIN`.
-- [x] Locked scope enemy set: current `ENEMY_STATS` roster (`footman` through `sentinel`).
+- [x] Locked scope enemy set: current enemy catalog roster (`footman` through `sentinel`).
 - [x] Locked scope terrain: current shipped tile set (`floor/wall/lava/fire/oil/void/stairs/shrine`).
 - [x] Locked scope objectives: `TURN_LIMIT`, `HAZARD_CONSTRAINT`.
 - [x] Locked scope relics: currently shipped passive relic set.

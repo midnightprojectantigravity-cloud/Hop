@@ -20,7 +20,7 @@ Use it to compare policies, loadout IDs, and head-to-head archetype performance 
   - `npx tsx ...`
 - For stable CI-style runs, use non-watch test commands:
   - `npm --workspace @hop/engine run test:ai-acceptance:strict`
-  - `npm --workspace @hop/web exec vitest run`
+  - `npm --workspace @hop/web run test:run`
 
 ## AI Convergence Gate (Recommended Before AI Changes)
 
@@ -32,7 +32,7 @@ Use it to compare policies, loadout IDs, and head-to-head archetype performance 
 - `npm --workspace @hop/engine run test:ai-acceptance:strict`
 
 3. Web non-watch tests
-- `npm --workspace @hop/web exec vitest run`
+- `npm --workspace @hop/web run test:run`
 
 ## Core Scripts
 

@@ -1,10 +1,15 @@
 # NEXT_LEVEL Active Tracker
 
-## Status (February 28, 2026)
+## Status (March 1, 2026)
 - AI convergence is complete and gated:
   - `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 - Post-AI roadmap tranches are complete and gated:
   - `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
+- Documentation sync for post-tranche architecture is complete:
+  - `docs/MASTER_TECH_STACK.md`
+  - `docs/GOLD_STANDARD_MANIFESTO.md`
+  - `docs/CONTRIBUTING.md`
+  - `docs/STATUS.md`
 - Current project status and validation snapshot:
   - `docs/STATUS.md`
 
@@ -17,15 +22,17 @@
 
 ## Active Priorities
 
-### P1: Compatibility Cleanup (Engine)
-Goal: remove temporary compatibility ownership after migration stability window.
+### P1: Compatibility Retirement Plan (Engine)
+Goal: retire temporary compatibility exports after migration stability window.
 
 - [x] Remove new runtime dependencies on compatibility constants (`ENEMY_STATS`, `FLOOR_ENEMY_*`).
-- [ ] Define and execute retirement plan for deprecated compatibility exports in a dedicated cleanup slice.
+- [x] Isolate compatibility constants to a dedicated legacy surface.
 - [x] Add a CI/static guard to block new ownership callsites on deprecated constants.
+- [x] Remove deprecated compatibility exports from engine source + package exports.
 
 Acceptance:
 - [x] Runtime/evaluation ownership stays catalog/profile-backed only.
+- [x] `check-script-imports` enforces deprecated-constant usage checks.
 - [x] Strict AI acceptance gate remains green.
 
 ### P2: Frontend Complexity Follow-up (Web)

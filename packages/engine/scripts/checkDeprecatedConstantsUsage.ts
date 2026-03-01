@@ -30,10 +30,6 @@ const targetRoots = [
     resolve(repoRoot, 'apps', 'web', 'src'),
 ].filter(rootPath => existsSync(rootPath));
 
-const allowedFiles = new Set<string>([
-    resolve(engineRoot, 'src', 'legacy', 'enemy-constants.ts'),
-]);
-
 const collectSourceFiles = (dirPath: string): string[] => {
     const entries = readdirSync(dirPath, { withFileTypes: true });
     const files: string[] = [];
@@ -53,7 +49,6 @@ const collectSourceFiles = (dirPath: string): string[] => {
 };
 
 const findDeprecatedTokenIssues = (filePath: string): DeprecatedTokenIssue[] => {
-    if (allowedFiles.has(filePath)) return [];
     const content = readFileSync(filePath, 'utf8');
     const lines = content.split(/\r?\n/u);
     const issues: DeprecatedTokenIssue[] = [];

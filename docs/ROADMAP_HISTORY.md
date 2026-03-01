@@ -2,6 +2,10 @@
 
 This file is the archived snapshot of the previous `docs/NEXT_LEVEL.md` (captured February 9, 2026) before the tracker was reset to a clean forward-only board.
 
+Note:
+- Historical command strings are preserved as written at the time of each milestone.
+- Current web non-watch test gate is `npm --workspace @hop/web run test:run`.
+
 ## AI Convergence Milestone (February 28, 2026)
 
 - [x] Shared AI core contracts landed:

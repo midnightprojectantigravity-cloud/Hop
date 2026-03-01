@@ -19,7 +19,16 @@ The three post-AI tranches are complete and behavior-preserving gates are green:
   - legacy scenario helper path in `packages/engine/src/skillTests.ts`
 - Added bootstrap-time consistency assertion:
   - `packages/engine/src/systems/tactical-data-bootstrap.ts`
-- Kept compatibility exports in `packages/engine/src/constants.ts` as temporary facades only.
+- Initially kept compatibility exports as temporary facades during rollout.
+
+### Post-Milestone Hardening (March 1, 2026)
+- Retired deprecated enemy constants surface:
+  - removed `packages/engine/src/legacy/enemy-constants.ts`
+  - removed `@hop/engine/legacy/enemy-constants` export path
+- Added deprecated-constants static guard:
+  - `packages/engine/scripts/checkDeprecatedConstantsUsage.ts`
+- Wired guard into:
+  - `npm --workspace @hop/engine run check-script-imports`
 
 ### 2) Frontend Decomposition (Web)
 - Extracted biome sandbox state and preview helpers:
@@ -57,12 +66,12 @@ The three post-AI tranches are complete and behavior-preserving gates are green:
 ## Validation Snapshot
 - `npm --workspace @hop/engine run build` -> pass
 - `npm --workspace @hop/engine run check-script-imports` -> pass
-- `npm --workspace @hop/engine run test:ai-acceptance:strict` -> pass (`13` files / `93` tests)
-- `npm --workspace @hop/web run test:run` -> pass (`11` files / `21` tests)
+- `npm --workspace @hop/engine run test:ai-acceptance:strict` -> pass
+- `npm --workspace @hop/web run test:run` -> pass
 - `npm --workspace @hop/web run build` -> pass
 
 ## Compatibility Notes
-1. `ENEMY_STATS`, `FLOOR_ENEMY_BUDGET`, and `FLOOR_ENEMY_TYPES` are compatibility exports only and should not own runtime behavior for new work.
-2. Harness public API remains stable (`simulateRun`, `runBatch`, `runHeadToHeadBatch`, `summarizeBatch`, `summarizeMatchup`, `runPvpBatch`, `summarizePvpBatch`).
-3. UI external props remained stable for `UI`, `Entity`, and `BiomeSandbox` callsites.
-
+1. `ENEMY_STATS`, `FLOOR_ENEMY_BUDGET`, and `FLOOR_ENEMY_TYPES` are retired and must not be used in runtime source.
+2. Deprecated-constant usage is fail-gated via `check-script-imports`.
+3. Harness public API remains stable (`simulateRun`, `runBatch`, `runHeadToHeadBatch`, `summarizeBatch`, `summarizeMatchup`, `runPvpBatch`, `summarizePvpBatch`).
+4. UI external props remained stable for `UI`, `Entity`, and `BiomeSandbox` callsites.
