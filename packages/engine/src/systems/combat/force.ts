@@ -1,6 +1,7 @@
 import type { AtomicEffect, GameState, Point } from '../../types';
 import { DIRECTIONS, hexAdd, hexEquals } from '../../hex';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
+import { resolveBlockedCollisionEffects } from './collision-policy';
 
 export interface ForceResolutionInput {
     source: Point;
@@ -11,6 +12,8 @@ export interface ForceResolutionInput {
     collision: {
         onBlocked: 'stop' | 'crush_damage';
         crushDamage?: number;
+        applyStunOnStop?: boolean;
+        stunDuration?: number;
     };
     damageReason?: string;
 }
@@ -84,13 +87,19 @@ export const resolveForce = (state: GameState, input: ForceResolutionInput): For
         });
     }
 
-    if (collided && input.collision.onBlocked === 'crush_damage') {
-        effects.push({
-            type: 'Damage',
-            target: target.id,
-            amount: Math.max(0, Math.floor(input.collision.crushDamage ?? 0)),
-            reason: input.damageReason || 'crush'
-        });
+    if (collided) {
+        effects.push(
+            ...resolveBlockedCollisionEffects(
+                target.id,
+                {
+                    onBlocked: input.collision.onBlocked,
+                    crushDamage: input.collision.crushDamage,
+                    damageReason: input.damageReason,
+                    applyStunOnStop: input.collision.applyStunOnStop,
+                    stunDuration: input.collision.stunDuration
+                }
+            )
+        );
     }
 
     return {
@@ -99,4 +108,3 @@ export const resolveForce = (state: GameState, input: ForceResolutionInput): For
         collided
     };
 };
-

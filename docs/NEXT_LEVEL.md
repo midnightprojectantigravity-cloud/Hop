@@ -118,7 +118,7 @@ Goal: converge push/pull/kinetic displacement onto one canonical force model.
 
 - [ ] Introduce canonical force contract (target equation and coefficients) to replace fragmented per-system formulas.
 - [x] Add first-class `ApplyForce` atomic effect path so impulses resolve through the same LIFO stack as other effects.
-- [ ] Unify collision conversion rules (`stop` vs `crush_damage`) across `combat/force` and kinetic movement modules.
+- [x] Unify collision conversion rules (`stop` vs `crush_damage`) across `combat/force` and kinetic movement modules.
 - [ ] Add deterministic mass/velocity/momentum source mapping from actor components/derived stats.
 
 Acceptance:

@@ -5,6 +5,7 @@ import type { AtomicEffect, GameState, Point } from "../../types";
 import { JuiceHelpers, ENVIRONMENTAL_JUICE } from "../visual/juice-manifest";
 
 import { UnifiedTileService } from "../tiles/unified-tile-service";
+import { resolveBlockedCollisionEffects, type CollisionResolutionPolicy } from "../combat/collision-policy";
 
 /**
  * 1. Input Architecture
@@ -13,6 +14,7 @@ export interface KineticPulseRequest {
     origin: Point;
     direction: Point; // One of the 6 axial directions
     momentum: number; // A total energy pool (integer)
+    collision?: CollisionResolutionPolicy;
 }
 
 interface UnitOnLine {
@@ -31,6 +33,14 @@ interface UnitOnLine {
 export function processKineticPulse(state: GameState, request: KineticPulseRequest): AtomicEffect[] {
     const { origin, direction, momentum } = request;
     const effects: AtomicEffect[] = [];
+    const collisionPolicy: CollisionResolutionPolicy = {
+        onBlocked: request.collision?.onBlocked || 'stop',
+        crushDamage: request.collision?.crushDamage,
+        damageReason: request.collision?.damageReason || 'crush',
+        // Preserve historical kinetic behavior for stop by default.
+        applyStunOnStop: request.collision?.applyStunOnStop ?? true,
+        stunDuration: request.collision?.stunDuration ?? 1
+    };
 
     // JUICE: Kinetic wave emanating from origin
     effects.push(JuiceHelpers.kineticWave(origin, direction, momentum > 6 ? 'high' : 'medium'));
@@ -75,12 +85,16 @@ export function processKineticPulse(state: GameState, request: KineticPulseReque
                 const nextHex = lineHexes[nextIdx];
 
                 if (!nextHex || !isHexInRectangularGrid(nextHex, state.gridWidth, state.gridHeight) || isWall(state, nextHex)) {
-                    effects.push({
-                        type: 'Impact',
-                        target: leadUnit.id,
-                        damage: remaining - i,
-                        direction
-                    });
+                    const blockedDamage = Math.max(0, remaining - i);
+                    effects.push(...resolveBlockedCollisionEffects(leadUnit.id, collisionPolicy, blockedDamage));
+                    if (collisionPolicy.onBlocked === 'crush_damage') {
+                        effects.push({
+                            type: 'Impact',
+                            target: leadUnit.id,
+                            damage: blockedDamage,
+                            direction
+                        });
+                    }
                     break;
                 }
 
@@ -118,12 +132,7 @@ export function processKineticPulse(state: GameState, request: KineticPulseReque
 
         // Wall or Map Edge check (Fatal obstructions)
         if (!nextTileHex || !isHexInRectangularGrid(nextTileHex, state.gridWidth, state.gridHeight) || isWall(state, nextTileHex)) {
-            effects.push({
-                type: 'ApplyStatus',
-                target: leadUnit.id,
-                status: 'stunned',
-                duration: 1
-            });
+            effects.push(...resolveBlockedCollisionEffects(leadUnit.id, collisionPolicy, Math.max(1, energyPool)));
 
             // JUICE: Wall impact effects
             if (nextTileHex) {
