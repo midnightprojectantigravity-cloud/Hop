@@ -18,7 +18,7 @@ export const VAULT: SkillDefinition = {
     slot: 'utility',
     icon: '🏃',
     baseVariables: {
-        range: 2,
+        range: 3,
         cost: 0,
         cooldown: 0,
     },
@@ -28,7 +28,7 @@ export const VAULT: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
-        if (!validateRange(attacker.position, target, 2)) {
+        if (!validateRange(attacker.position, target, 3)) {
             messages.push('Out of range!');
             return { effects, messages, consumesTurn: false };
         }
@@ -85,7 +85,7 @@ export const VAULT: SkillDefinition = {
         return { effects, messages };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        const range = 2;
+        const range = 3;
         const actor = getActorAt(state, origin) as Actor | undefined;
         if (!actor) return [];
         return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {

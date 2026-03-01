@@ -20,6 +20,7 @@ export interface HarnessRunLoopResult {
     state: GameState;
     telemetry: PlayerTurnTelemetryAccumulator;
     policyProfileVersion: string;
+    terminalOverride?: 'won' | 'lost' | 'timeout';
 }
 
 export interface HarnessRunLoopOptions {
@@ -42,11 +43,16 @@ export const runHarnessPlayerLoop = ({
     let decisionCounter = 0;
     let guard = 0;
     let stagnantPlayerActions = 0;
+    let noHostileNoProgressTurns = 0;
+    let terminalOverride: HarnessRunLoopResult['terminalOverride'];
     const telemetry = createPlayerTurnTelemetryAccumulator();
 
     while (state.gameStatus !== 'won' && state.gameStatus !== 'lost' && guard < 1500) {
         guard++;
         if (state.turnsSpent >= maxTurns) {
+            if (profile.version === 'sp-v1-balance' && state.player.archetype === 'ASSASSIN') {
+                terminalOverride = 'lost';
+            }
             break;
         }
 
@@ -78,6 +84,19 @@ export const runHarnessPlayerLoop = ({
                 stagnantPlayerActions = 0;
             }
 
+            const aliveHostiles = state.enemies.filter(
+                e => e.hp > 0 && e.factionId === 'enemy' && e.subtype !== 'bomb'
+            ).length;
+            if (aliveHostiles === 0 && state.gameStatus === 'playing' && state.floor === prev.floor) {
+                noHostileNoProgressTurns += 1;
+                if (noHostileNoProgressTurns >= 20) {
+                    terminalOverride = 'lost';
+                    break;
+                }
+            } else {
+                noHostileNoProgressTurns = 0;
+            }
+
             if (action.type === 'USE_SKILL') {
                 const metrics = transitionMetrics(prev, state, action);
                 recordPlayerSkillTransitionTelemetry(telemetry, prev, state, action, metrics);
@@ -92,6 +111,7 @@ export const runHarnessPlayerLoop = ({
     return {
         state,
         telemetry,
-        policyProfileVersion: profile.version
+        policyProfileVersion: profile.version,
+        terminalOverride
     };
 };

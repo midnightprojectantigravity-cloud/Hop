@@ -33,7 +33,7 @@ export const SNEAK_ATTACK: SkillDefinition = {
 
         // Damage Calculation
         const isStealthed = (attacker.stealthCounter || 0) > 0;
-        const baseDamage = isStealthed ? 3 : 1;
+        const baseDamage = isStealthed ? 5 : 3;
         const combat = calculateCombat({
             attackerId: attacker.id,
             targetId: enemy.id,

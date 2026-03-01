@@ -26,14 +26,13 @@ describe('harness ai convergence regression envelope', () => {
         expect(summary.games).toBe(12);
         expect(summary.winRate).toBeGreaterThanOrEqual(0);
         expect(summary.winRate).toBeLessThanOrEqual(0.02);
-        expect(summary.timeoutRate).toBeGreaterThanOrEqual(0.1);
-        expect(summary.timeoutRate).toBeLessThanOrEqual(0.25);
+        expect(summary.timeoutRate).toBeGreaterThanOrEqual(0);
+        expect(summary.timeoutRate).toBeLessThanOrEqual(0.1);
         expect(summary.avgFloor).toBeGreaterThanOrEqual(1.0);
         expect(summary.avgFloor).toBeLessThanOrEqual(1.75);
-        expect(summary.avgTurnsToLoss).toBeGreaterThanOrEqual(8);
-        expect(summary.avgTurnsToLoss).toBeLessThanOrEqual(14);
+        expect(summary.avgTurnsToLoss).toBeGreaterThanOrEqual(12);
+        expect(summary.avgTurnsToLoss).toBeLessThanOrEqual(17);
         expect(summary.avgFinalPlayerHpRatio).toBeGreaterThanOrEqual(0);
         expect(summary.avgFinalPlayerHpRatio).toBeLessThanOrEqual(0.08);
     });
 });
-

@@ -7,6 +7,8 @@
   - `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
 - ACAE pilot tranche is complete and gated (feature-flagged hybrid rollout):
   - `docs/ACAE_MILESTONE_2026-03-01.md`
+- UPA multi-archetype success tuning tranche is complete and gated:
+  - `docs/UPA_SUCCESS_TUNING.md`
 - Documentation sync for post-tranche architecture is complete:
   - `docs/MASTER_TECH_STACK.md`
   - `docs/GOLD_STANDARD_MANIFESTO.md`
@@ -96,6 +98,43 @@ Status: complete for pilot tranche.
 - `npm --workspace @hop/engine run test:acae:strict`
 - `npm --workspace @hop/web run test:run`
 - `npm --workspace @hop/web run build`
+
+## Deferred Backlog (Not Priority)
+
+### D1: Full Resolution Stack Reaction Windows (Engine)
+Goal: complete MTG-style reactive resolution wiring on top of current deterministic LIFO stack.
+
+- [ ] Wire runtime reaction injection (`BEFORE_RESOLVE`, `ON_COLLISION`, `AFTER_RESOLVE`) into effect resolution, not only declaration-time expansion.
+- [ ] Add top-of-stack/bottom enqueue handling at runtime (`enqueuePosition`) and keep deterministic trace logs.
+- [ ] Extend stack trace assertions to verify reaction ordering in mixed effect/reaction chains.
+
+Acceptance:
+- [ ] New reaction-window parity tests pass with deterministic `stackTrace` ordering.
+- [ ] Existing strict AI/ACAE suites remain green.
+
+### D2: Vectorized Force Unification (Engine)
+Goal: converge push/pull/kinetic displacement onto one canonical force model.
+
+- [ ] Introduce canonical force contract (target equation and coefficients) to replace fragmented per-system formulas.
+- [ ] Add first-class `ApplyForce` atomic effect path so impulses resolve through the same LIFO stack as other effects.
+- [ ] Unify collision conversion rules (`stop` vs `crush_damage`) across `combat/force` and kinetic movement modules.
+- [ ] Add deterministic mass/velocity/momentum source mapping from actor components/derived stats.
+
+Acceptance:
+- [ ] Force/collision behavior is deterministic and replay-stable across identical seeds.
+- [ ] Existing displacement/kinetic scenario coverage remains green after migration.
+
+### D3: Catch/Release Attachment States (V2)
+Goal: add explicit attachment mechanics for shared-vector movement while preserving determinism.
+
+- [ ] Define attachment state model (attach, maintain, release) and ownership rules.
+- [ ] Model shared-vector updates and collision propagation for attached pairs/chains.
+- [ ] Add release conditions (manual release, obstacle break, damage break, status break).
+- [ ] Add focused scenarios for attach/release edge cases and collision correctness.
+
+Acceptance:
+- [ ] Attach/release scenarios pass under strict deterministic replay.
+- [ ] No regression in non-attachment movement flows.
 
 ## History and Archives
 - Historical roadmap log: `docs/ROADMAP_HISTORY.md`

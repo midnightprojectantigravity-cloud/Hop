@@ -1,3417 +1,3251 @@
 {
+  "version": 1,
   "cases": {
     "floor1_seed_a:enemy_0_kji4ql:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 1,
           "r": 7,
           "s": -8
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (1, 7)",
       "nextState": {
-        "enemyCount": 2,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 2
+      },
+      "message": "footman moves to (1, 7)"
     },
     "floor1_seed_a:enemy_1_8xwbhr:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 1,
           "r": 8,
           "s": -9
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (1, 8)",
       "nextState": {
-        "enemyCount": 2,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 2
+      },
+      "message": "footman moves to (1, 8)"
     },
     "floor2_seed_a:enemy_0_e99wo5:sprinter": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "sprinter",
         "position": {
           "q": 3,
           "r": 6,
           "s": -9
         },
-        "subtype": "sprinter"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "sprinter moves to (3, 6)",
       "nextState": {
-        "enemyCount": 3,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 3
+      },
+      "message": "sprinter moves to (3, 6)"
     },
     "floor2_seed_a:enemy_1_gbv07z:sprinter": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "sprinter",
         "position": {
           "q": 3,
           "r": 3,
           "s": -6
         },
-        "subtype": "sprinter"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "sprinter moves to (3, 3)",
       "nextState": {
-        "enemyCount": 3,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 3
+      },
+      "message": "sprinter moves to (3, 3)"
     },
     "floor2_seed_a:enemy_2_e5ri29:sprinter": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "sprinter",
         "position": {
           "q": 4,
           "r": 3,
           "s": -7
         },
-        "subtype": "sprinter"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "sprinter moves to (4, 3)",
       "nextState": {
-        "enemyCount": 3,
-        "rngCounter": 2
-      }
+        "rngCounter": 2,
+        "enemyCount": 3
+      },
+      "message": "sprinter moves to (4, 3)"
     },
     "floor3_seed_a:enemy_0_01uwwl:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 6,
           "r": 2,
           "s": -8
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (6, 2)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 5
+      },
+      "message": "footman moves to (6, 2)"
     },
     "floor3_seed_a:enemy_1_gvsuxf:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 4,
           "r": 2,
           "s": -6
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (4, 2)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 5
+      },
+      "message": "archer moves to (4, 2)"
     },
     "floor3_seed_a:enemy_2_p9q2zk:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 1,
           "r": 7,
           "s": -8
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (1, 7)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 5
+      },
+      "message": "footman moves to (1, 7)"
     },
     "floor3_seed_a:enemy_3_9ymaev:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 1,
           "r": 3,
           "s": -4
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (1, 3)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 5
+      },
+      "message": "footman moves to (1, 3)"
     },
     "floor3_seed_a:enemy_4_clxhqv:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 4,
           "r": 5,
           "s": -9
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (4, 5)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 5
+      },
+      "message": "archer moves to (4, 5)"
     },
     "floor4_seed_a:enemy_0_ravuah:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 5,
           "r": 1,
           "s": -6
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (5, 1)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 6
+      },
+      "message": "footman moves to (5, 1)"
     },
     "floor4_seed_a:enemy_1_mbca2i:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 5,
           "r": 2,
           "s": -7
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (5, 2)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 6
+      },
+      "message": "footman moves to (5, 2)"
     },
     "floor4_seed_a:enemy_2_7f8053:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 4,
           "r": 5,
           "s": -9
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (4, 5)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 6
+      },
+      "message": "footman moves to (4, 5)"
     },
     "floor4_seed_a:enemy_3_svy1em:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 5,
           "r": 5,
           "s": -10
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (5, 5)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 6
+      },
+      "message": "footman moves to (5, 5)"
     },
     "floor4_seed_a:enemy_4_2fegvr:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 3,
           "r": 2,
           "s": -5
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (3, 2)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 6
+      },
+      "message": "archer moves to (3, 2)"
     },
     "floor4_seed_a:enemy_5_603rn7:raider": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "raider",
         "position": {
           "q": 3,
           "r": 2,
           "s": -5
         },
-        "subtype": "raider"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "raider moves to (3, 2)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 6
+      },
+      "message": "raider moves to (3, 2)"
     },
     "floor5_seed_a:enemy_0_s12v7q:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 2,
           "r": 2,
           "s": -4
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (2, 2)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 7
+      },
+      "message": "archer moves to (2, 2)"
     },
     "floor5_seed_a:enemy_1_s8l42t:raider": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "raider",
         "position": {
           "q": 1,
           "r": 4,
           "s": -5
         },
-        "subtype": "raider"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "raider moves to (1, 4)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "raider moves to (1, 4)"
     },
     "floor5_seed_a:enemy_2_3vmo1x:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 0,
-        "intent": "Advancing",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 1,
           "r": 8,
           "s": -9
         },
-        "subtype": "shieldBearer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 0,
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (1, 8)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "shieldBearer advances to (1, 8)"
     },
     "floor5_seed_a:enemy_3_5gjsh6:raider": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "raider",
         "position": {
           "q": 3,
           "r": 3,
           "s": -6
         },
-        "subtype": "raider"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "raider moves to (3, 3)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "raider moves to (3, 3)"
     },
     "floor5_seed_a:enemy_4_yz3zm9:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 3,
           "r": 5,
           "s": -8
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (3, 5)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "archer moves to (3, 5)"
     },
     "floor5_seed_a:enemy_5_o28sj8:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 3,
           "r": 5,
           "s": -8
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (3, 5)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "footman moves to (3, 5)"
     },
     "floor5_seed_a:enemy_6_cgmhml:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 2,
           "r": 7,
           "s": -9
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (2, 7)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 7
+      },
+      "message": "archer moves to (2, 7)"
     },
     "floor6_seed_a:enemy_0_w4esuz:pouncer": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "pouncer",
         "position": {
           "q": 1,
           "r": 4,
           "s": -5
         },
-        "subtype": "pouncer"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "pouncer moves to (1, 4)",
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 8
+      },
+      "message": "pouncer moves to (1, 4)"
     },
     "floor6_seed_a:enemy_1_8ih98z:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 2,
           "r": 6,
           "s": -8
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (2, 6)",
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 8
+      },
+      "message": "archer moves to (2, 6)"
     },
     "floor6_seed_a:enemy_2_q3qpe3:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 5,
-        "intent": "Advancing",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 3,
           "r": 3,
           "s": -6
         },
-        "subtype": "shieldBearer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 5,
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (3, 3)",
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 8
+      },
+      "message": "shieldBearer advances to (3, 3)"
     },
     "floor6_seed_a:enemy_3_7pbmw7:pouncer": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "pouncer",
         "position": {
           "q": 4,
           "r": 3,
           "s": -7
         },
-        "subtype": "pouncer"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "pouncer moves to (4, 3)",
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 8
+      },
+      "message": "pouncer moves to (4, 3)"
     },
     "floor6_seed_a:enemy_4_veo214:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 0,
-        "intent": "Advancing",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 1,
           "r": 7,
           "s": -8
         },
-        "subtype": "shieldBearer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 0,
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (1, 7)",
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 8
+      },
+      "message": "shieldBearer advances to (1, 7)"
     },
     "floor6_seed_a:enemy_5_8cl5zj:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 6,
           "r": 3,
           "s": -9
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (6, 3)",
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 8
+      },
+      "message": "bomber repositioning to (6, 3)"
     },
     "floor6_seed_a:enemy_6_zh3p40:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 2,
           "r": 4,
           "s": -6
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (2, 4)",
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 8
+      },
+      "message": "bomber repositioning to (2, 4)"
     },
     "floor6_seed_a:enemy_7_tkq7re:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 6,
           "r": 1,
           "s": -7
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (6, 1)",
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 8
+      },
+      "message": "archer moves to (6, 1)"
     },
     "floor7_seed_a:enemy_0_1m4tv3:warlock": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Preparing",
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 4,
           "r": 3,
           "s": -7
         },
-        "subtype": "warlock"
-      },
-      "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 1
-      }
-    },
-    "floor7_seed_a:enemy_10_e2fjqj:footman": {
-      "entity": {
+        "intent": "Preparing",
         "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 2,
-          "r": 3,
-          "s": -5
-        },
-        "subtype": "footman"
+        "isVisible": true
       },
-      "message": "footman moves to (2, 3)",
       "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 0
+        "rngCounter": 1,
+        "enemyCount": 11
       }
     },
     "floor7_seed_a:enemy_1_c5vuda:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 3,
           "r": 4,
           "s": -7
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (3, 4)",
       "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 11
+      },
+      "message": "footman moves to (3, 4)"
     },
     "floor7_seed_a:enemy_2_ioa1or:sprinter": {
       "entity": {
-        "actionCooldown": 1,
+        "subtype": "sprinter",
+        "position": {
+          "q": 5,
+          "r": 1,
+          "s": -6
+        },
         "intent": "BASIC_ATTACK",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 5,
-          "r": 1,
-          "s": -6
-        },
-        "subtype": "sprinter"
+        "actionCooldown": 1,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 0
+        "rngCounter": 0,
+        "enemyCount": 11
       }
     },
     "floor7_seed_a:enemy_3_es2jdm:pouncer": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "pouncer",
         "position": {
           "q": 2,
           "r": 2,
           "s": -4
         },
-        "subtype": "pouncer"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "pouncer moves to (2, 2)",
       "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 11
+      },
+      "message": "pouncer moves to (2, 2)"
     },
     "floor7_seed_a:enemy_4_u2d1i9:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 4,
+        "subtype": "shieldBearer",
+        "position": {
+          "q": 4,
+          "r": 1,
+          "s": -5
+        },
         "intent": "BASIC_ATTACK",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 4,
-          "r": 1,
-          "s": -5
-        },
-        "subtype": "shieldBearer"
+        "actionCooldown": 2,
+        "facing": 4,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 0
+        "rngCounter": 0,
+        "enemyCount": 11
       }
     },
     "floor7_seed_a:enemy_5_c8s9yi:sprinter": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "sprinter",
         "position": {
           "q": 5,
           "r": 6,
           "s": -11
         },
-        "subtype": "sprinter"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "sprinter moves to (5, 6)",
       "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 11
+      },
+      "message": "sprinter moves to (5, 6)"
     },
     "floor7_seed_a:enemy_6_2eitin:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 6,
           "r": 2,
           "s": -8
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (6, 2)",
       "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 11
+      },
+      "message": "footman moves to (6, 2)"
     },
     "floor7_seed_a:enemy_7_8b4fu5:warlock": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Preparing",
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 3,
           "r": 1,
           "s": -4
         },
-        "subtype": "warlock"
+        "intent": "Preparing",
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 1
+        "rngCounter": 1,
+        "enemyCount": 11
       }
     },
     "floor7_seed_a:enemy_8_cbm9nc:sprinter": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "sprinter",
         "position": {
           "q": 5,
           "r": 4,
           "s": -9
         },
-        "subtype": "sprinter"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "sprinter moves to (5, 4)",
       "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 11
+      },
+      "message": "sprinter moves to (5, 4)"
     },
     "floor7_seed_a:enemy_9_gg6d1b:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 1,
           "r": 7,
           "s": -8
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (1, 7)",
       "nextState": {
-        "enemyCount": 11,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 11
+      },
+      "message": "footman moves to (1, 7)"
+    },
+    "floor7_seed_a:enemy_10_e2fjqj:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 2,
+          "r": 3,
+          "s": -5
+        },
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 11
+      },
+      "message": "footman moves to (2, 3)"
     },
     "floor8_seed_a:enemy_0_objhi6:pouncer": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "pouncer",
         "position": {
           "q": 0,
           "r": 6,
           "s": -6
         },
-        "subtype": "pouncer"
-      },
-      "message": "pouncer moves to (0, 6)",
-      "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 1
-      }
-    },
-    "floor8_seed_a:enemy_10_ds6gaz:shieldBearer": {
-      "entity": {
-        "actionCooldown": 2,
-        "facing": 1,
-        "intent": "Advancing",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 2,
-          "s": -5
-        },
-        "subtype": "shieldBearer"
-      },
-      "message": "shieldBearer advances to (3, 2)",
-      "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 0
-      }
-    },
-    "floor8_seed_a:enemy_11_tlcrey:footman": {
-      "entity": {
-        "actionCooldown": 2,
         "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 6,
-          "s": -9
-        },
-        "subtype": "footman"
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "footman moves to (3, 6)",
       "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 0
-      }
+        "rngCounter": 1,
+        "enemyCount": 12
+      },
+      "message": "pouncer moves to (0, 6)"
     },
     "floor8_seed_a:enemy_1_t9a6zx:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 2,
           "r": 7,
           "s": -9
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (2, 7)",
       "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 12
+      },
+      "message": "archer moves to (2, 7)"
     },
     "floor8_seed_a:enemy_2_7kuu1f:sprinter": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "sprinter",
         "position": {
           "q": 1,
           "r": 6,
           "s": -7
         },
-        "subtype": "sprinter"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "sprinter moves to (1, 6)",
       "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 12
+      },
+      "message": "sprinter moves to (1, 6)"
     },
     "floor8_seed_a:enemy_3_7q6v8w:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 6,
           "r": 2,
           "s": -8
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (6, 2)",
       "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 12
+      },
+      "message": "bomber repositioning to (6, 2)"
     },
     "floor8_seed_a:enemy_4_a8sh2u:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 5,
-        "intent": "Advancing",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 5,
           "r": 5,
           "s": -10
         },
-        "subtype": "shieldBearer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 5,
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (5, 5)",
       "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 12
+      },
+      "message": "shieldBearer advances to (5, 5)"
     },
     "floor8_seed_a:enemy_5_0nsjs1:sprinter": {
       "entity": {
-        "actionCooldown": 1,
+        "subtype": "sprinter",
+        "position": {
+          "q": 1,
+          "r": 3,
+          "s": -4
+        },
         "intent": "BASIC_ATTACK",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 1,
-          "r": 3,
-          "s": -4
-        },
-        "subtype": "sprinter"
+        "actionCooldown": 1,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 1
+        "rngCounter": 1,
+        "enemyCount": 12
       }
     },
     "floor8_seed_a:enemy_6_xbm93e:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 5,
-        "intent": "Advancing",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 4,
           "r": 5,
           "s": -9
         },
-        "subtype": "shieldBearer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 5,
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (4, 5)",
       "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 12
+      },
+      "message": "shieldBearer advances to (4, 5)"
     },
     "floor8_seed_a:enemy_7_5ro78m:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 3,
           "r": 4,
           "s": -7
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (3, 4)",
       "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 12
+      },
+      "message": "bomber repositioning to (3, 4)"
     },
     "floor8_seed_a:enemy_8_cp08fy:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 5,
-        "intent": "Advancing",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 5,
           "r": 1,
           "s": -6
         },
-        "subtype": "shieldBearer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 5,
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (5, 1)",
       "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 12
+      },
+      "message": "shieldBearer advances to (5, 1)"
     },
     "floor8_seed_a:enemy_9_0jt61v:warlock": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Preparing",
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 2,
           "r": 4,
           "s": -6
         },
-        "subtype": "warlock"
-      },
-      "nextState": {
-        "enemyCount": 12,
-        "rngCounter": 1
-      }
-    },
-    "floor9_seed_a:enemy_0_ihvv9u:warlock": {
-      "entity": {
-        "actionCooldown": 2,
         "intent": "Preparing",
-        "isVisible": true,
-        "position": {
-          "q": 0,
-          "r": 3,
-          "s": -3
-        },
-        "subtype": "warlock"
-      },
-      "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 3
-      }
-    },
-    "floor9_seed_a:enemy_10_b3e7yd:pouncer": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 0,
-          "r": 7,
-          "s": -7
-        },
-        "subtype": "pouncer"
-      },
-      "message": "pouncer moves to (0, 7)",
-      "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 0
-      }
-    },
-    "floor9_seed_a:enemy_11_lx71si:footman": {
-      "entity": {
         "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 4,
-          "s": -7
-        },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (3, 4)",
-      "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 0
-      }
-    },
-    "floor9_seed_a:enemy_12_mjeapa:warlock": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "Preparing",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 1,
-          "s": -4
-        },
-        "subtype": "warlock"
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 3
+        "rngCounter": 1,
+        "enemyCount": 12
       }
     },
-    "floor9_seed_a:enemy_13_3v2dhh:footman": {
+    "floor8_seed_a:enemy_10_ds6gaz:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 4,
-          "s": -7
-        },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (3, 4)",
-      "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 0
-      }
-    },
-    "floor9_seed_a:enemy_14_yvxdcg:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 3,
           "r": 2,
           "s": -5
         },
-        "subtype": "archer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 1,
+        "isVisible": true
       },
-      "message": "archer moves to (3, 2)",
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 0
+        "rngCounter": 0,
+        "enemyCount": 12
+      },
+      "message": "shieldBearer advances to (3, 2)"
+    },
+    "floor8_seed_a:enemy_11_tlcrey:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        },
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 12
+      },
+      "message": "footman moves to (3, 6)"
+    },
+    "floor9_seed_a:enemy_0_ihvv9u:warlock": {
+      "entity": {
+        "subtype": "warlock",
+        "position": {
+          "q": 0,
+          "r": 3,
+          "s": -3
+        },
+        "intent": "Preparing",
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 3,
+        "enemyCount": 15
       }
     },
     "floor9_seed_a:enemy_1_bekv53:archer": {
       "entity": {
-        "actionCooldown": 3,
+        "subtype": "archer",
+        "position": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        },
         "intent": "ARCHER_SHOT",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 5,
-          "s": -8
-        },
-        "subtype": "archer"
+        "actionCooldown": 3,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 0
+        "rngCounter": 0,
+        "enemyCount": 15
       }
     },
     "floor9_seed_a:enemy_2_verqwe:warlock": {
       "entity": {
-        "actionCooldown": 2,
+        "subtype": "warlock",
+        "position": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        },
         "intent": "Casting",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 2,
-          "r": 6,
-          "s": -8
-        },
-        "subtype": "warlock"
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 3
+        "rngCounter": 3,
+        "enemyCount": 15
       }
     },
     "floor9_seed_a:enemy_3_zp8dcf:pouncer": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "pouncer",
         "position": {
           "q": 4,
           "r": 3,
           "s": -7
         },
-        "subtype": "pouncer"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "pouncer moves to (4, 3)",
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 15
+      },
+      "message": "pouncer moves to (4, 3)"
     },
     "floor9_seed_a:enemy_4_i0dxh8:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 2,
           "r": 7,
           "s": -9
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (2, 7)",
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 15
+      },
+      "message": "bomber repositioning to (2, 7)"
     },
     "floor9_seed_a:enemy_5_u79rmy:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 4,
           "r": 3,
           "s": -7
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (4, 3)",
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 15
+      },
+      "message": "archer moves to (4, 3)"
     },
     "floor9_seed_a:enemy_6_ijo1x1:warlock": {
       "entity": {
-        "actionCooldown": 2,
+        "subtype": "warlock",
+        "position": {
+          "q": 0,
+          "r": 8,
+          "s": -8
+        },
         "intent": "Casting",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 0,
-          "r": 8,
-          "s": -8
-        },
-        "subtype": "warlock"
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 3
+        "rngCounter": 3,
+        "enemyCount": 15
       }
     },
     "floor9_seed_a:enemy_7_d8tth9:sprinter": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "sprinter",
         "position": {
           "q": 3,
           "r": 7,
           "s": -10
         },
-        "subtype": "sprinter"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "sprinter moves to (3, 7)",
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 15
+      },
+      "message": "sprinter moves to (3, 7)"
     },
     "floor9_seed_a:enemy_8_iuzq3v:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 4,
-        "intent": "Advancing",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 5,
           "r": 3,
           "s": -8
         },
-        "subtype": "shieldBearer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 4,
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (5, 3)",
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 15
+      },
+      "message": "shieldBearer advances to (5, 3)"
     },
     "floor9_seed_a:enemy_9_7z317v:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Waiting",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 1,
           "r": 5,
           "s": -6
         },
-        "subtype": "footman"
+        "intent": "Waiting",
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 15,
-        "rngCounter": 0
+        "rngCounter": 0,
+        "enemyCount": 15
       }
     },
-    "golden:firemage_floor8_loss:late:a149:enemy_10_bjggo1:footman": {
+    "floor9_seed_a:enemy_10_b3e7yd:pouncer": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "BASIC_ATTACK",
-        "intentPosition": {
-          "q": 3,
-          "r": 8,
-          "s": -11
-        },
-        "isVisible": true,
+        "subtype": "pouncer",
         "position": {
-          "q": 4,
+          "q": 0,
           "r": 7,
-          "s": -11
+          "s": -7
         },
-        "subtype": "footman"
-      },
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 37
-      }
-    },
-    "golden:firemage_floor8_loss:late:a149:enemy_11_lajwne:footman": {
-      "entity": {
-        "actionCooldown": 2,
         "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 2,
-          "r": 7,
-          "s": -9
-        },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (2, 7)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 37
-      }
-    },
-    "golden:firemage_floor8_loss:late:a149:enemy_12_8c7ma4:footman": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "BASIC_ATTACK",
-        "intentPosition": {
-          "q": 3,
-          "r": 8,
-          "s": -11
-        },
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 7,
-          "s": -10
-        },
-        "subtype": "footman"
-      },
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 37
-      }
-    },
-    "golden:firemage_floor8_loss:late:a149:enemy_2_uacob1:pouncer": {
-      "entity": {
         "actionCooldown": 1,
-        "intent": "GRAPPLE_HOOK",
-        "intentPosition": {
-          "q": 3,
-          "r": 8,
-          "s": -11
-        },
-        "isVisible": true,
-        "position": {
-          "q": 1,
-          "r": 8,
-          "s": -9
-        },
-        "subtype": "pouncer"
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 37
-      }
+        "rngCounter": 0,
+        "enemyCount": 15
+      },
+      "message": "pouncer moves to (0, 7)"
     },
-    "golden:firemage_floor8_loss:late:a149:enemy_4_k7jiqv:shieldBearer": {
+    "floor9_seed_a:enemy_11_lx71si:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 0,
-        "intent": "BASIC_ATTACK",
-        "intentPosition": {
-          "q": 3,
-          "r": 8,
-          "s": -11
-        },
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
-          "q": 2,
-          "r": 8,
-          "s": -10
+          "q": 3,
+          "r": 4,
+          "s": -7
         },
-        "subtype": "shieldBearer"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 37
-      }
+        "rngCounter": 0,
+        "enemyCount": 15
+      },
+      "message": "footman moves to (3, 4)"
     },
-    "golden:firemage_floor8_loss:late:a149:enemy_5_1g85fd:warlock": {
+    "floor9_seed_a:enemy_12_mjeapa:warlock": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Preparing",
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 3,
           "r": 1,
           "s": -4
         },
-        "subtype": "warlock"
+        "intent": "Preparing",
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 40
+        "rngCounter": 3,
+        "enemyCount": 15
       }
     },
-    "golden:firemage_floor8_loss:late:a149:enemy_8_pn8zu2:footman": {
+    "floor9_seed_a:enemy_13_3v2dhh:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
-          "q": 5,
-          "r": 5,
-          "s": -10
+          "q": 3,
+          "r": 4,
+          "s": -7
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (5, 5)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 38
+        "rngCounter": 0,
+        "enemyCount": 15
+      },
+      "message": "footman moves to (3, 4)"
+    },
+    "floor9_seed_a:enemy_14_yvxdcg:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 3,
+          "r": 2,
+          "s": -5
+        },
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 15
+      },
+      "message": "archer moves to (3, 2)"
+    },
+    "synthetic:ai_test_assassin:assassin:enemy": {
+      "entity": {
+        "subtype": "assassin",
+        "position": {
+          "q": 3,
+          "r": 2,
+          "s": -5
+        },
+        "intent": "Moving",
+        "isVisible": false
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 1
+      },
+      "message": "You hear footsteps nearby..."
+    },
+    "synthetic:ai_test_golem:golem:enemy": {
+      "entity": {
+        "subtype": "golem",
+        "position": {
+          "q": 3,
+          "r": 2,
+          "s": -5
+        },
+        "intent": "Lumbering",
+        "actionCooldown": 0,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 1
+      },
+      "message": "golem lumbers to (3, 2)"
+    },
+    "synthetic:ai_test_alias_shieldbearer:shieldbearer:enemy": {
+      "entity": {
+        "subtype": "shieldbearer",
+        "position": {
+          "q": 3,
+          "r": 2,
+          "s": -5
+        },
+        "intent": "Moving",
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 1
+      },
+      "message": "shieldbearer moves to (3, 2)"
+    },
+    "synthetic:ai_test_sentinel:sentinel:enemy": {
+      "entity": {
+        "subtype": "sentinel",
+        "position": {
+          "q": 3,
+          "r": 2,
+          "s": -5
+        },
+        "intent": "Moving",
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 1
       }
+    },
+    "synthetic:ai_test_minion_skeleton:skeleton:player": {
+      "entity": {
+        "subtype": "skeleton",
+        "position": {
+          "q": 3,
+          "r": 2,
+          "s": -5
+        },
+        "intent": "Following",
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 1
+      },
+      "message": "skeleton follows you."
     },
     "golden:firemage_floor8_loss:subtype:archer:a34:enemy_0_dz1mty:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 2,
           "r": 3,
           "s": -5
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (2, 3)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 5
+      },
+      "message": "archer moves to (2, 3)"
     },
     "golden:firemage_floor8_loss:subtype:archer:a34:enemy_1_bimxhm:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 6,
           "r": 2,
           "s": -8
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (6, 2)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 5
+      },
+      "message": "footman moves to (6, 2)"
     },
     "golden:firemage_floor8_loss:subtype:archer:a34:enemy_2_rcl9pf:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 4,
           "r": 2,
           "s": -6
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (4, 2)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 5
+      },
+      "message": "footman moves to (4, 2)"
     },
     "golden:firemage_floor8_loss:subtype:archer:a34:enemy_3_tv05g7:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 3,
           "r": 6,
           "s": -9
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (3, 6)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 5
+      },
+      "message": "archer moves to (3, 6)"
     },
     "golden:firemage_floor8_loss:subtype:archer:a34:enemy_4_12xu7w:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 1,
           "r": 7,
           "s": -8
         },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (1, 7)",
-      "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 1
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_0_oxr15n:raider": {
-      "entity": {
-        "actionCooldown": 1,
         "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 4,
-          "r": 3,
-          "s": -7
-        },
-        "subtype": "raider"
-      },
-      "message": "raider moves to (4, 3)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_1_a0a498:footman": {
-      "entity": {
         "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 4,
-          "r": 6,
-          "s": -10
-        },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (4, 6)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_2_za7nnd:footman": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 5,
-          "r": 2,
-          "s": -7
-        },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (5, 2)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_3_1l0dxo:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 5,
-          "r": 2,
-          "s": -7
-        },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (5, 2)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 0
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_4_xx7fd0:bomber": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 2,
-          "r": 6,
-          "s": -8
-        },
-        "subtype": "bomber"
-      },
-      "message": "bomber repositioning to (2, 6)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 0
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_5_lw34jl:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 6,
-          "s": -9
-        },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (3, 6)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_0_4c5eau:warlock": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "Preparing",
-        "isVisible": true,
-        "position": {
-          "q": 0,
-          "r": 4,
-          "s": -4
-        },
-        "subtype": "warlock"
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_1_msmw5t:shieldBearer": {
-      "entity": {
-        "actionCooldown": 2,
-        "facing": 0,
-        "intent": "Advancing",
-        "isVisible": true,
-        "position": {
-          "q": 2,
-          "r": 7,
-          "s": -9
-        },
-        "subtype": "shieldBearer"
+        "rngCounter": 1,
+        "enemyCount": 5
       },
-      "message": "shieldBearer advances to (2, 7)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_2_1ny7q2:footman": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 2,
-          "r": 2,
-          "s": -4
-        },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (2, 2)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_3_appdus:bomber": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 6,
-          "r": 4,
-          "s": -10
-        },
-        "subtype": "bomber"
-      },
-      "message": "bomber repositioning to (6, 4)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_4_f81w0c:pouncer": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 4,
-          "r": 1,
-          "s": -5
-        },
-        "subtype": "pouncer"
-      },
-      "message": "pouncer moves to (4, 1)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_5_r4erj9:shieldBearer": {
-      "entity": {
-        "actionCooldown": 2,
-        "facing": 0,
-        "intent": "Advancing",
-        "isVisible": true,
-        "position": {
-          "q": 1,
-          "r": 3,
-          "s": -4
-        },
-        "subtype": "shieldBearer"
-      },
-      "message": "shieldBearer advances to (1, 3)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
-    },
-    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_6_4dkyq2:warlock": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "Casting",
-        "intentPosition": {
-          "q": 3,
-          "r": 8,
-          "s": -11
-        },
-        "isVisible": true,
-        "position": {
-          "q": 4,
-          "r": 4,
-          "s": -8
-        },
-        "subtype": "warlock"
-      },
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
+      "message": "footman moves to (1, 7)"
     },
     "golden:firemage_floor8_loss:subtype:raider:a54:enemy_0_oxr15n:raider": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "raider",
         "position": {
           "q": 4,
           "r": 3,
           "s": -7
         },
-        "subtype": "raider"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "raider moves to (4, 3)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 6
+      },
+      "message": "raider moves to (4, 3)"
     },
     "golden:firemage_floor8_loss:subtype:raider:a54:enemy_1_a0a498:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 4,
           "r": 6,
           "s": -10
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (4, 6)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 6
+      },
+      "message": "footman moves to (4, 6)"
     },
     "golden:firemage_floor8_loss:subtype:raider:a54:enemy_2_za7nnd:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 5,
           "r": 2,
           "s": -7
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (5, 2)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 6
+      },
+      "message": "footman moves to (5, 2)"
     },
     "golden:firemage_floor8_loss:subtype:raider:a54:enemy_3_1l0dxo:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 5,
           "r": 2,
           "s": -7
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (5, 2)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 6
+      },
+      "message": "archer moves to (5, 2)"
     },
     "golden:firemage_floor8_loss:subtype:raider:a54:enemy_4_xx7fd0:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 2,
           "r": 6,
           "s": -8
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (2, 6)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 6
+      },
+      "message": "bomber repositioning to (2, 6)"
     },
     "golden:firemage_floor8_loss:subtype:raider:a54:enemy_5_lw34jl:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 3,
           "r": 6,
           "s": -9
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (3, 6)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 6
+      },
+      "message": "archer moves to (3, 6)"
+    },
+    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_0_oxr15n:raider": {
+      "entity": {
+        "subtype": "raider",
+        "position": {
+          "q": 4,
+          "r": 3,
+          "s": -7
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 6
+      },
+      "message": "raider moves to (4, 3)"
+    },
+    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_1_a0a498:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 4,
+          "r": 6,
+          "s": -10
+        },
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 6
+      },
+      "message": "footman moves to (4, 6)"
+    },
+    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_2_za7nnd:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 5,
+          "r": 2,
+          "s": -7
+        },
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 6
+      },
+      "message": "footman moves to (5, 2)"
+    },
+    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_3_1l0dxo:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 5,
+          "r": 2,
+          "s": -7
+        },
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 6
+      },
+      "message": "archer moves to (5, 2)"
+    },
+    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_4_xx7fd0:bomber": {
+      "entity": {
+        "subtype": "bomber",
+        "position": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 6
+      },
+      "message": "bomber repositioning to (2, 6)"
+    },
+    "golden:firemage_floor8_loss:subtype:bomber:a54:enemy_5_lw34jl:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        },
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 6
+      },
+      "message": "archer moves to (3, 6)"
     },
     "golden:firemage_floor8_loss:subtype:warlock:a91:enemy_0_4c5eau:warlock": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Preparing",
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 0,
           "r": 4,
           "s": -4
         },
-        "subtype": "warlock"
+        "intent": "Preparing",
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
+        "rngCounter": 1,
+        "enemyCount": 7
       }
     },
     "golden:firemage_floor8_loss:subtype:warlock:a91:enemy_1_msmw5t:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 0,
-        "intent": "Advancing",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 2,
           "r": 7,
           "s": -9
         },
-        "subtype": "shieldBearer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 0,
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (2, 7)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "shieldBearer advances to (2, 7)"
     },
     "golden:firemage_floor8_loss:subtype:warlock:a91:enemy_2_1ny7q2:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 2,
           "r": 2,
           "s": -4
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (2, 2)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 7
+      },
+      "message": "footman moves to (2, 2)"
     },
     "golden:firemage_floor8_loss:subtype:warlock:a91:enemy_3_appdus:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 6,
           "r": 4,
           "s": -10
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (6, 4)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 7
+      },
+      "message": "bomber repositioning to (6, 4)"
     },
     "golden:firemage_floor8_loss:subtype:warlock:a91:enemy_4_f81w0c:pouncer": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "pouncer",
         "position": {
           "q": 4,
           "r": 1,
           "s": -5
         },
-        "subtype": "pouncer"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "pouncer moves to (4, 1)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 7
+      },
+      "message": "pouncer moves to (4, 1)"
     },
     "golden:firemage_floor8_loss:subtype:warlock:a91:enemy_5_r4erj9:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 0,
-        "intent": "Advancing",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 1,
           "r": 3,
           "s": -4
         },
-        "subtype": "shieldBearer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 0,
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (1, 3)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "shieldBearer advances to (1, 3)"
     },
     "golden:firemage_floor8_loss:subtype:warlock:a91:enemy_6_4dkyq2:warlock": {
       "entity": {
-        "actionCooldown": 2,
+        "subtype": "warlock",
+        "position": {
+          "q": 4,
+          "r": 4,
+          "s": -8
+        },
         "intent": "Casting",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 4,
-          "r": 4,
-          "s": -8
-        },
-        "subtype": "warlock"
-      },
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
-    },
-    "golden:hunter_floor3_loss:late:a51:enemy_0_5pu5ku:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 1,
-          "r": 5,
-          "s": -6
-        },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (1, 5)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 3
-      }
-    },
-    "golden:hunter_floor3_loss:late:a51:enemy_1_9loypw:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "ARCHER_SHOT",
-        "intentPosition": {
-          "q": 3,
-          "r": 8,
-          "s": -11
-        },
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 5,
-          "s": -8
-        },
-        "subtype": "archer"
-      },
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 3
-      }
-    },
-    "golden:hunter_floor3_loss:late:a51:enemy_2_lnuu1n:footman": {
-      "entity": {
         "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 2,
-          "s": -5
-        },
-        "subtype": "footman"
+        "isVisible": true
       },
-      "message": "footman moves to (3, 2)",
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 3
+        "rngCounter": 1,
+        "enemyCount": 7
       }
     },
-    "golden:hunter_floor3_loss:late:a51:enemy_3_0aw3mg:footman": {
+    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_0_4c5eau:warlock": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 7,
-          "s": -10
-        },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (3, 7)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 3
-      }
-    },
-    "golden:hunter_floor3_loss:late:a51:enemy_4_dk0i7s:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 0,
-          "r": 7,
-          "s": -7
-        },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (0, 7)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 4
-      }
-    },
-    "golden:hunter_floor3_loss:subtype:archer:a49:enemy_0_5pu5ku:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 1,
           "r": 4,
-          "s": -5
+          "s": -4
         },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (1, 4)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
-    },
-    "golden:hunter_floor3_loss:subtype:archer:a49:enemy_1_9loypw:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "ARCHER_SHOT",
-        "intentPosition": {
-          "q": 3,
-          "r": 8,
-          "s": -11
-        },
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 5,
-          "s": -8
-        },
-        "subtype": "archer"
-      },
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 0
-      }
-    },
-    "golden:hunter_floor3_loss:subtype:archer:a49:enemy_2_lnuu1n:footman": {
-      "entity": {
+        "intent": "Preparing",
         "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 7
+      }
+    },
+    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_1_msmw5t:shieldBearer": {
+      "entity": {
+        "subtype": "shieldBearer",
+        "position": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        },
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 0,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "shieldBearer advances to (2, 7)"
+    },
+    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_2_1ny7q2:footman": {
+      "entity": {
+        "subtype": "footman",
         "position": {
           "q": 2,
           "r": 2,
           "s": -4
         },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (2, 2)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
-    },
-    "golden:hunter_floor3_loss:subtype:archer:a49:enemy_3_0aw3mg:footman": {
-      "entity": {
+        "intent": "Moving",
         "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 4,
-          "r": 6,
-          "s": -10
-        },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (4, 6)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 0
-      }
-    },
-    "golden:hunter_floor3_loss:subtype:archer:a49:enemy_4_dk0i7s:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 0,
-          "r": 6,
-          "s": -6
-        },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (0, 6)",
-      "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 1
-      }
-    },
-    "golden:necromancer_floor6_timeout:late:a140:enemy_2_1a6og2:footman": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "Waiting",
-        "isVisible": true,
-        "position": {
-          "q": 0,
-          "r": 8,
-          "s": -8
-        },
-        "subtype": "footman"
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 6,
-        "rngCounter": 34
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:archer:a24:enemy_0_568ofz:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 3,
-          "s": -6
-        },
-        "subtype": "archer"
+        "rngCounter": 1,
+        "enemyCount": 7
       },
-      "message": "archer moves to (3, 3)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
+      "message": "footman moves to (2, 2)"
     },
-    "golden:necromancer_floor6_timeout:subtype:archer:a24:enemy_1_aldyy9:archer": {
+    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_3_appdus:bomber": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 5,
-          "r": 5,
-          "s": -10
-        },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (5, 5)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:archer:a24:enemy_2_x3vvdi:footman": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 6,
           "r": 4,
           "s": -10
         },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (6, 4)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:archer:a24:enemy_3_2du53p:archer": {
-      "entity": {
-        "actionCooldown": 3,
         "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 3,
-          "s": -6
-        },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (3, 3)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:archer:a24:enemy_4_bupvyp:footman": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 2,
-          "r": 5,
-          "s": -7
-        },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (2, 5)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 0
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:bomber:a32:enemy_0_juupg1:bomber": {
-      "entity": {
         "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 5,
-          "s": -8
-        },
-        "subtype": "bomber"
+        "isVisible": true
       },
-      "message": "bomber repositioning to (3, 5)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 2
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:bomber:a32:enemy_1_g377ff:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 6,
-          "r": 3,
-          "s": -9
-        },
-        "subtype": "archer"
+        "rngCounter": 1,
+        "enemyCount": 7
       },
-      "message": "archer moves to (6, 3)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 2
-      }
+      "message": "bomber repositioning to (6, 4)"
     },
-    "golden:necromancer_floor6_timeout:subtype:bomber:a32:enemy_2_i9wngm:bomber": {
+    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_4_f81w0c:pouncer": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 4,
-          "r": 5,
-          "s": -9
-        },
-        "subtype": "bomber"
-      },
-      "message": "bomber repositioning to (4, 5)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 2
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:bomber:a32:enemy_3_c4wj5l:raider": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 5,
-          "s": -8
-        },
-        "subtype": "raider"
-      },
-      "message": "raider moves to (3, 5)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:bomber:a32:enemy_4_nb7yub:raider": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "pouncer",
         "position": {
           "q": 4,
           "r": 1,
           "s": -5
         },
-        "subtype": "raider"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "raider moves to (4, 1)",
       "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 2
-      }
+        "rngCounter": 1,
+        "enemyCount": 7
+      },
+      "message": "pouncer moves to (4, 1)"
     },
-    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_0_3z2p0v:shieldBearer": {
+    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_5_r4erj9:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 5,
+        "subtype": "shieldBearer",
+        "position": {
+          "q": 1,
+          "r": 3,
+          "s": -4
+        },
         "intent": "Advancing",
-        "isVisible": true,
-        "position": {
-          "q": 6,
-          "r": 1,
-          "s": -7
-        },
-        "subtype": "shieldBearer"
-      },
-      "message": "shieldBearer advances to (6, 1)",
-      "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 0
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_1_lapgzk:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 1,
-          "r": 6,
-          "s": -7
-        },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (1, 6)",
-      "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 0
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_2_1a6og2:footman": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "Waiting",
-        "isVisible": true,
-        "position": {
-          "q": 0,
-          "r": 8,
-          "s": -8
-        },
-        "subtype": "footman"
-      },
-      "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 0
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_3_rmnd4s:pouncer": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 1,
-          "r": 4,
-          "s": -5
-        },
-        "subtype": "pouncer"
-      },
-      "message": "pouncer moves to (1, 4)",
-      "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 1
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_4_p8hqb0:pouncer": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 5,
-          "s": -8
-        },
-        "subtype": "pouncer"
-      },
-      "message": "pouncer moves to (3, 5)",
-      "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 1
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_5_orbalj:shieldBearer": {
-      "entity": {
         "actionCooldown": 2,
         "facing": 0,
-        "intent": "Advancing",
-        "isVisible": true,
-        "position": {
-          "q": 5,
-          "r": 5,
-          "s": -10
-        },
-        "subtype": "shieldBearer"
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (5, 5)",
       "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 1
-      }
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "shieldBearer advances to (1, 3)"
     },
-    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_6_y7535w:pouncer": {
+    "golden:firemage_floor8_loss:subtype:pouncer:a91:enemy_6_4dkyq2:warlock": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 4,
-          "r": 2,
-          "s": -6
-        },
-        "subtype": "pouncer"
-      },
-      "message": "pouncer moves to (4, 2)",
-      "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 1
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:raider:a32:enemy_0_juupg1:bomber": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 5,
+          "r": 4,
           "s": -8
         },
-        "subtype": "bomber"
-      },
-      "message": "bomber repositioning to (3, 5)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 2
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:raider:a32:enemy_1_g377ff:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 6,
-          "r": 3,
-          "s": -9
-        },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (6, 3)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 2
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:raider:a32:enemy_2_i9wngm:bomber": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 4,
-          "r": 5,
-          "s": -9
-        },
-        "subtype": "bomber"
-      },
-      "message": "bomber repositioning to (4, 5)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 2
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:raider:a32:enemy_3_c4wj5l:raider": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 5,
-          "s": -8
-        },
-        "subtype": "raider"
-      },
-      "message": "raider moves to (3, 5)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 1
-      }
-    },
-    "golden:necromancer_floor6_timeout:subtype:raider:a32:enemy_4_nb7yub:raider": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 4,
-          "r": 1,
-          "s": -5
-        },
-        "subtype": "raider"
-      },
-      "message": "raider moves to (4, 1)",
-      "nextState": {
-        "enemyCount": 7,
-        "rngCounter": 2
-      }
-    },
-    "golden:vanguard_floor9_loss:late:a171:bomb-enemy_13_s8oryw-9-171-3_7_-10:bomb": {
-      "entity": {
-        "intent": "BASIC_ATTACK",
+        "intent": "Casting",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 7,
-          "s": -10
-        },
-        "subtype": "bomb"
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 38
+        "rngCounter": 1,
+        "enemyCount": 7
       }
     },
-    "golden:vanguard_floor9_loss:late:a171:enemy_0_8vh1ti:pouncer": {
+    "golden:firemage_floor8_loss:late:a149:enemy_2_uacob1:pouncer": {
       "entity": {
-        "actionCooldown": 1,
+        "subtype": "pouncer",
+        "position": {
+          "q": 1,
+          "r": 8,
+          "s": -9
+        },
         "intent": "GRAPPLE_HOOK",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 4,
-          "s": -7
-        },
-        "subtype": "pouncer"
-      },
-      "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 38
-      }
-    },
-    "golden:vanguard_floor9_loss:late:a171:enemy_13_s8oryw:bomber": {
-      "entity": {
         "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 6,
-          "r": 5,
-          "s": -11
-        },
-        "subtype": "bomber"
+        "isVisible": true
       },
-      "message": "bomber repositioning to (6, 5)",
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 39
+        "rngCounter": 37,
+        "enemyCount": 7
       }
     },
-    "golden:vanguard_floor9_loss:late:a171:enemy_1_aqqzdj:archer": {
+    "golden:firemage_floor8_loss:late:a149:enemy_4_k7jiqv:shieldBearer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 6,
-          "s": -9
-        },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (3, 6)",
-      "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 38
-      }
-    },
-    "golden:vanguard_floor9_loss:late:a171:enemy_2_nifmc6:footman": {
-      "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 2,
-          "r": 5,
-          "s": -7
+          "r": 8,
+          "s": -10
         },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (2, 5)",
-      "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 39
-      }
-    },
-    "golden:vanguard_floor9_loss:late:a171:enemy_3_ch92pr:archer": {
-      "entity": {
-        "actionCooldown": 3,
-        "intent": "ARCHER_SHOT",
+        "intent": "BASIC_ATTACK",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 1,
-          "r": 8,
-          "s": -9
-        },
-        "subtype": "archer"
+        "actionCooldown": 2,
+        "facing": 0,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 38
+        "rngCounter": 37,
+        "enemyCount": 7
       }
     },
-    "golden:vanguard_floor9_loss:late:a171:enemy_4_udjs6b:warlock": {
+    "golden:firemage_floor8_loss:late:a149:enemy_5_1g85fd:warlock": {
       "entity": {
+        "subtype": "warlock",
+        "position": {
+          "q": 3,
+          "r": 1,
+          "s": -4
+        },
+        "intent": "Preparing",
         "actionCooldown": 2,
-        "intent": "Casting",
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 40,
+        "enemyCount": 7
+      }
+    },
+    "golden:firemage_floor8_loss:late:a149:enemy_8_pn8zu2:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        },
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 38,
+        "enemyCount": 7
+      },
+      "message": "footman moves to (5, 5)"
+    },
+    "golden:firemage_floor8_loss:late:a149:enemy_10_bjggo1:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        },
+        "intent": "BASIC_ATTACK",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
-        "position": {
-          "q": 2,
-          "r": 6,
-          "s": -8
-        },
-        "subtype": "warlock"
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 41
+        "rngCounter": 37,
+        "enemyCount": 7
       }
     },
-    "golden:vanguard_floor9_loss:late:a171:enemy_9_lg7bua:archer": {
+    "golden:firemage_floor8_loss:late:a149:enemy_11_lajwne:footman": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 2,
           "r": 7,
           "s": -9
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "archer moves to (2, 7)",
       "nextState": {
-        "enemyCount": 8,
-        "rngCounter": 38
+        "rngCounter": 37,
+        "enemyCount": 7
+      },
+      "message": "footman moves to (2, 7)"
+    },
+    "golden:firemage_floor8_loss:late:a149:enemy_12_8c7ma4:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        },
+        "intent": "BASIC_ATTACK",
+        "intentPosition": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        },
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 37,
+        "enemyCount": 7
+      }
+    },
+    "golden:hunter_floor3_loss:late:a10:enemy_1_71dg8n:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        },
+        "intent": "BASIC_ATTACK",
+        "intentPosition": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        },
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 4,
+        "enemyCount": 1
+      }
+    },
+    "golden:necromancer_floor6_timeout:subtype:archer:a24:enemy_0_568ofz:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 3,
+          "r": 3,
+          "s": -6
+        },
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "archer moves to (3, 3)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:archer:a24:enemy_1_aldyy9:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        },
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "archer moves to (5, 5)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:archer:a24:enemy_2_x3vvdi:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 6,
+          "r": 4,
+          "s": -10
+        },
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 7
+      },
+      "message": "footman moves to (6, 4)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:archer:a24:enemy_3_2du53p:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 3,
+          "r": 3,
+          "s": -6
+        },
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "archer moves to (3, 3)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:archer:a24:enemy_4_bupvyp:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 2,
+          "r": 5,
+          "s": -7
+        },
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 7
+      },
+      "message": "footman moves to (2, 5)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:bomber:a32:enemy_0_juupg1:bomber": {
+      "entity": {
+        "subtype": "bomber",
+        "position": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 2,
+        "enemyCount": 7
+      },
+      "message": "bomber repositioning to (3, 5)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:bomber:a32:enemy_1_g377ff:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 6,
+          "r": 3,
+          "s": -9
+        },
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 2,
+        "enemyCount": 7
+      },
+      "message": "archer moves to (6, 3)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:bomber:a32:enemy_2_i9wngm:bomber": {
+      "entity": {
+        "subtype": "bomber",
+        "position": {
+          "q": 4,
+          "r": 5,
+          "s": -9
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 2,
+        "enemyCount": 7
+      },
+      "message": "bomber repositioning to (4, 5)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:bomber:a32:enemy_3_c4wj5l:raider": {
+      "entity": {
+        "subtype": "raider",
+        "position": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 7
+      },
+      "message": "raider moves to (3, 5)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:bomber:a32:enemy_4_nb7yub:raider": {
+      "entity": {
+        "subtype": "raider",
+        "position": {
+          "q": 4,
+          "r": 1,
+          "s": -5
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 2,
+        "enemyCount": 7
+      },
+      "message": "raider moves to (4, 1)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:raider:a32:enemy_0_juupg1:bomber": {
+      "entity": {
+        "subtype": "bomber",
+        "position": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 2,
+        "enemyCount": 7
+      },
+      "message": "bomber repositioning to (3, 5)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:raider:a32:enemy_1_g377ff:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 6,
+          "r": 3,
+          "s": -9
+        },
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 2,
+        "enemyCount": 7
+      },
+      "message": "archer moves to (6, 3)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:raider:a32:enemy_2_i9wngm:bomber": {
+      "entity": {
+        "subtype": "bomber",
+        "position": {
+          "q": 4,
+          "r": 5,
+          "s": -9
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 2,
+        "enemyCount": 7
+      },
+      "message": "bomber repositioning to (4, 5)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:raider:a32:enemy_3_c4wj5l:raider": {
+      "entity": {
+        "subtype": "raider",
+        "position": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 7
+      },
+      "message": "raider moves to (3, 5)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:raider:a32:enemy_4_nb7yub:raider": {
+      "entity": {
+        "subtype": "raider",
+        "position": {
+          "q": 4,
+          "r": 1,
+          "s": -5
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 2,
+        "enemyCount": 7
+      },
+      "message": "raider moves to (4, 1)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_0_3z2p0v:shieldBearer": {
+      "entity": {
+        "subtype": "shieldBearer",
+        "position": {
+          "q": 6,
+          "r": 1,
+          "s": -7
+        },
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 5,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 10
+      },
+      "message": "shieldBearer advances to (6, 1)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_1_lapgzk:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 1,
+          "r": 6,
+          "s": -7
+        },
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 10
+      },
+      "message": "archer moves to (1, 6)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_2_1a6og2:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 0,
+          "r": 8,
+          "s": -8
+        },
+        "intent": "Waiting",
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 10
+      }
+    },
+    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_3_rmnd4s:pouncer": {
+      "entity": {
+        "subtype": "pouncer",
+        "position": {
+          "q": 1,
+          "r": 4,
+          "s": -5
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 10
+      },
+      "message": "pouncer moves to (1, 4)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_4_p8hqb0:pouncer": {
+      "entity": {
+        "subtype": "pouncer",
+        "position": {
+          "q": 3,
+          "r": 5,
+          "s": -8
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 10
+      },
+      "message": "pouncer moves to (3, 5)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_5_orbalj:shieldBearer": {
+      "entity": {
+        "subtype": "shieldBearer",
+        "position": {
+          "q": 5,
+          "r": 5,
+          "s": -10
+        },
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 0,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 10
+      },
+      "message": "shieldBearer advances to (5, 5)"
+    },
+    "golden:necromancer_floor6_timeout:subtype:pouncer:a57:enemy_6_y7535w:pouncer": {
+      "entity": {
+        "subtype": "pouncer",
+        "position": {
+          "q": 4,
+          "r": 2,
+          "s": -6
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 10
+      },
+      "message": "pouncer moves to (4, 2)"
+    },
+    "golden:necromancer_floor6_timeout:late:a140:enemy_2_1a6og2:footman": {
+      "entity": {
+        "subtype": "footman",
+        "position": {
+          "q": 0,
+          "r": 8,
+          "s": -8
+        },
+        "intent": "Waiting",
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 34,
+        "enemyCount": 6
       }
     },
     "golden:vanguard_floor9_loss:subtype:archer:a20:enemy_0_vveapm:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Idle",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 4,
           "r": 3,
           "s": -7
         },
-        "subtype": "archer"
+        "intent": "Idle",
+        "actionCooldown": 3,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 0
+        "rngCounter": 0,
+        "enemyCount": 5
       }
     },
     "golden:vanguard_floor9_loss:subtype:archer:a20:enemy_1_xz1btq:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Idle",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 3,
           "r": 3,
           "s": -6
         },
-        "subtype": "archer"
+        "intent": "Idle",
+        "actionCooldown": 3,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 0
+        "rngCounter": 0,
+        "enemyCount": 5
       }
     },
     "golden:vanguard_floor9_loss:subtype:archer:a20:enemy_2_fjcey5:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 4,
           "r": 5,
           "s": -9
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (4, 5)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 5
+      },
+      "message": "footman moves to (4, 5)"
     },
     "golden:vanguard_floor9_loss:subtype:archer:a20:enemy_3_0aotzo:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 3,
           "r": 5,
           "s": -8
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (3, 5)",
       "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 5
+      },
+      "message": "footman moves to (3, 5)"
     },
     "golden:vanguard_floor9_loss:subtype:archer:a20:enemy_4_zveh76:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 2,
           "r": 3,
           "s": -5
         },
-        "subtype": "archer"
-      },
-      "message": "archer moves to (2, 3)",
-      "nextState": {
-        "enemyCount": 5,
-        "rngCounter": 1
-      }
-    },
-    "golden:vanguard_floor9_loss:subtype:bomber:a35:enemy_0_8gp9fi:raider": {
-      "entity": {
-        "actionCooldown": 1,
         "intent": "Moving",
-        "isVisible": true,
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 5
+      },
+      "message": "archer moves to (2, 3)"
+    },
+    "golden:vanguard_floor9_loss:subtype:raider:a35:enemy_0_8gp9fi:raider": {
+      "entity": {
+        "subtype": "raider",
         "position": {
           "q": 3,
           "r": 3,
           "s": -6
         },
-        "subtype": "raider"
-      },
-      "message": "raider moves to (3, 3)",
-      "nextState": {
-        "enemyCount": 4,
-        "rngCounter": 0
-      }
-    },
-    "golden:vanguard_floor9_loss:subtype:bomber:a35:enemy_1_h4kbxh:raider": {
-      "entity": {
-        "actionCooldown": 1,
         "intent": "Moving",
-        "isVisible": true,
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 4
+      },
+      "message": "raider moves to (3, 3)"
+    },
+    "golden:vanguard_floor9_loss:subtype:raider:a35:enemy_1_h4kbxh:raider": {
+      "entity": {
+        "subtype": "raider",
         "position": {
           "q": 1,
           "r": 4,
           "s": -5
         },
-        "subtype": "raider"
-      },
-      "message": "raider moves to (1, 4)",
-      "nextState": {
-        "enemyCount": 4,
-        "rngCounter": 0
-      }
-    },
-    "golden:vanguard_floor9_loss:subtype:bomber:a35:enemy_2_t3xvr3:bomber": {
-      "entity": {
-        "actionCooldown": 1,
         "intent": "Moving",
-        "isVisible": true,
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 4
+      },
+      "message": "raider moves to (1, 4)"
+    },
+    "golden:vanguard_floor9_loss:subtype:raider:a35:enemy_2_t3xvr3:bomber": {
+      "entity": {
+        "subtype": "bomber",
         "position": {
           "q": 1,
           "r": 7,
           "s": -8
         },
-        "subtype": "bomber"
-      },
-      "message": "bomber repositioning to (1, 7)",
-      "nextState": {
-        "enemyCount": 4,
-        "rngCounter": 1
-      }
-    },
-    "golden:vanguard_floor9_loss:subtype:bomber:a35:enemy_3_bu2c8w:raider": {
-      "entity": {
+        "intent": "Moving",
         "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 4
+      },
+      "message": "bomber repositioning to (1, 7)"
+    },
+    "golden:vanguard_floor9_loss:subtype:raider:a35:enemy_3_bu2c8w:raider": {
+      "entity": {
+        "subtype": "raider",
+        "position": {
+          "q": 0,
+          "r": 8,
+          "s": -8
+        },
         "intent": "DASH",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 4
+      }
+    },
+    "golden:vanguard_floor9_loss:subtype:bomber:a35:enemy_0_8gp9fi:raider": {
+      "entity": {
+        "subtype": "raider",
+        "position": {
+          "q": 3,
+          "r": 3,
+          "s": -6
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 4
+      },
+      "message": "raider moves to (3, 3)"
+    },
+    "golden:vanguard_floor9_loss:subtype:bomber:a35:enemy_1_h4kbxh:raider": {
+      "entity": {
+        "subtype": "raider",
+        "position": {
+          "q": 1,
+          "r": 4,
+          "s": -5
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 4
+      },
+      "message": "raider moves to (1, 4)"
+    },
+    "golden:vanguard_floor9_loss:subtype:bomber:a35:enemy_2_t3xvr3:bomber": {
+      "entity": {
+        "subtype": "bomber",
+        "position": {
+          "q": 1,
+          "r": 7,
+          "s": -8
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 4
+      },
+      "message": "bomber repositioning to (1, 7)"
+    },
+    "golden:vanguard_floor9_loss:subtype:bomber:a35:enemy_3_bu2c8w:raider": {
+      "entity": {
+        "subtype": "raider",
         "position": {
           "q": 0,
           "r": 8,
           "s": -8
         },
-        "subtype": "raider"
+        "intent": "DASH",
+        "intentPosition": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        },
+        "actionCooldown": 1,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 4,
-        "rngCounter": 0
+        "rngCounter": 0,
+        "enemyCount": 4
       }
     },
     "golden:vanguard_floor9_loss:subtype:pouncer:a107:enemy_0_1rdb9z:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 3,
           "r": 1,
           "s": -4
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (3, 1)",
       "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 10
+      },
+      "message": "archer moves to (3, 1)"
     },
     "golden:vanguard_floor9_loss:subtype:pouncer:a107:enemy_1_srtn6f:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 6,
           "r": 2,
           "s": -8
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (6, 2)",
       "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 10
+      },
+      "message": "bomber repositioning to (6, 2)"
     },
     "golden:vanguard_floor9_loss:subtype:pouncer:a107:enemy_2_4759zf:archer": {
       "entity": {
-        "actionCooldown": 3,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "archer",
         "position": {
           "q": 2,
           "r": 3,
           "s": -5
         },
-        "subtype": "archer"
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "archer moves to (2, 3)",
       "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 10
+      },
+      "message": "archer moves to (2, 3)"
     },
     "golden:vanguard_floor9_loss:subtype:pouncer:a107:enemy_3_cjx83o:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 0,
           "r": 4,
           "s": -4
         },
-        "subtype": "footman"
+        "intent": "Moving",
+        "actionCooldown": 2,
+        "isVisible": true
       },
-      "message": "footman moves to (0, 4)",
       "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 10
+      },
+      "message": "footman moves to (0, 4)"
     },
     "golden:vanguard_floor9_loss:subtype:pouncer:a107:enemy_4_f62c9h:pouncer": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "pouncer",
         "position": {
           "q": 1,
           "r": 5,
           "s": -6
         },
-        "subtype": "pouncer"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "pouncer moves to (1, 5)",
       "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 10
+      },
+      "message": "pouncer moves to (1, 5)"
     },
     "golden:vanguard_floor9_loss:subtype:pouncer:a107:enemy_5_hz7b1h:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 1,
           "r": 8,
           "s": -9
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (1, 8)",
       "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 10
+      },
+      "message": "bomber repositioning to (1, 8)"
     },
     "golden:vanguard_floor9_loss:subtype:pouncer:a107:enemy_6_vojsox:pouncer": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "pouncer",
         "position": {
           "q": 6,
           "r": 4,
           "s": -10
         },
-        "subtype": "pouncer"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "pouncer moves to (6, 4)",
       "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 10
+      },
+      "message": "pouncer moves to (6, 4)"
     },
     "golden:vanguard_floor9_loss:subtype:pouncer:a107:enemy_7_aq5ide:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Waiting",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 1,
           "r": 2,
           "s": -3
         },
-        "subtype": "footman"
+        "intent": "Waiting",
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 0
+        "rngCounter": 0,
+        "enemyCount": 10
       }
     },
     "golden:vanguard_floor9_loss:subtype:pouncer:a107:enemy_8_oa6963:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 2,
           "r": 3,
           "s": -5
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (2, 3)",
       "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 10
+      },
+      "message": "bomber repositioning to (2, 3)"
     },
     "golden:vanguard_floor9_loss:subtype:pouncer:a107:enemy_9_3r7wgq:footman": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
           "q": 5,
           "r": 6,
           "s": -11
         },
-        "subtype": "footman"
-      },
-      "message": "footman moves to (5, 6)",
-      "nextState": {
-        "enemyCount": 10,
-        "rngCounter": 0
-      }
-    },
-    "golden:vanguard_floor9_loss:subtype:raider:a35:enemy_0_8gp9fi:raider": {
-      "entity": {
-        "actionCooldown": 1,
         "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 3,
-          "s": -6
-        },
-        "subtype": "raider"
-      },
-      "message": "raider moves to (3, 3)",
-      "nextState": {
-        "enemyCount": 4,
-        "rngCounter": 0
-      }
-    },
-    "golden:vanguard_floor9_loss:subtype:raider:a35:enemy_1_h4kbxh:raider": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 1,
-          "r": 4,
-          "s": -5
-        },
-        "subtype": "raider"
-      },
-      "message": "raider moves to (1, 4)",
-      "nextState": {
-        "enemyCount": 4,
-        "rngCounter": 0
-      }
-    },
-    "golden:vanguard_floor9_loss:subtype:raider:a35:enemy_2_t3xvr3:bomber": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 1,
-          "r": 7,
-          "s": -8
-        },
-        "subtype": "bomber"
-      },
-      "message": "bomber repositioning to (1, 7)",
-      "nextState": {
-        "enemyCount": 4,
-        "rngCounter": 1
-      }
-    },
-    "golden:vanguard_floor9_loss:subtype:raider:a35:enemy_3_bu2c8w:raider": {
-      "entity": {
-        "actionCooldown": 1,
-        "intent": "DASH",
-        "intentPosition": {
-          "q": 3,
-          "r": 8,
-          "s": -11
-        },
-        "isVisible": true,
-        "position": {
-          "q": 0,
-          "r": 8,
-          "s": -8
-        },
-        "subtype": "raider"
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 4,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 10
+      },
+      "message": "footman moves to (5, 6)"
     },
     "golden:vanguard_floor9_loss:subtype:warlock:a123:enemy_0_wykkmj:warlock": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Preparing",
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 1,
           "r": 4,
           "s": -5
         },
-        "subtype": "warlock"
+        "intent": "Preparing",
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 9,
-        "rngCounter": 1
+        "rngCounter": 1,
+        "enemyCount": 9
       }
     },
     "golden:vanguard_floor9_loss:subtype:warlock:a123:enemy_1_j07fyj:sprinter": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "sprinter",
         "position": {
           "q": 1,
           "r": 7,
           "s": -8
         },
-        "subtype": "sprinter"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "sprinter moves to (1, 7)",
       "nextState": {
-        "enemyCount": 9,
-        "rngCounter": 1
-      }
+        "rngCounter": 1,
+        "enemyCount": 9
+      },
+      "message": "sprinter moves to (1, 7)"
     },
     "golden:vanguard_floor9_loss:subtype:warlock:a123:enemy_2_nx0ut0:warlock": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Preparing",
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 3,
           "r": 3,
           "s": -6
         },
-        "subtype": "warlock"
+        "intent": "Preparing",
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 9,
-        "rngCounter": 1
+        "rngCounter": 1,
+        "enemyCount": 9
       }
     },
     "golden:vanguard_floor9_loss:subtype:warlock:a123:enemy_3_uie2yy:bomber": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "bomber",
         "position": {
           "q": 5,
           "r": 2,
           "s": -7
         },
-        "subtype": "bomber"
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "bomber repositioning to (5, 2)",
       "nextState": {
-        "enemyCount": 9,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 9
+      },
+      "message": "bomber repositioning to (5, 2)"
     },
     "golden:vanguard_floor9_loss:subtype:warlock:a123:enemy_4_h2qtys:warlock": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Casting",
-        "intentPosition": {
-          "q": 3,
-          "r": 8,
-          "s": -11
-        },
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 2,
           "r": 6,
           "s": -8
         },
-        "subtype": "warlock"
-      },
-      "nextState": {
-        "enemyCount": 9,
-        "rngCounter": 1
-      }
-    },
-    "golden:vanguard_floor9_loss:subtype:warlock:a123:enemy_5_dizyve:warlock": {
-      "entity": {
-        "actionCooldown": 2,
         "intent": "Casting",
         "intentPosition": {
           "q": 3,
           "r": 8,
           "s": -11
         },
-        "isVisible": true,
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 1,
+        "enemyCount": 9
+      }
+    },
+    "golden:vanguard_floor9_loss:subtype:warlock:a123:enemy_5_dizyve:warlock": {
+      "entity": {
+        "subtype": "warlock",
         "position": {
           "q": 6,
           "r": 5,
           "s": -11
         },
-        "subtype": "warlock"
+        "intent": "Casting",
+        "intentPosition": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        },
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 9,
-        "rngCounter": 1
+        "rngCounter": 1,
+        "enemyCount": 9
       }
     },
     "golden:vanguard_floor9_loss:subtype:warlock:a123:enemy_6_61yd11:warlock": {
       "entity": {
-        "actionCooldown": 2,
-        "intent": "Preparing",
-        "isVisible": true,
+        "subtype": "warlock",
         "position": {
           "q": 6,
           "r": 1,
           "s": -7
         },
-        "subtype": "warlock"
+        "intent": "Preparing",
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 9,
-        "rngCounter": 1
+        "rngCounter": 1,
+        "enemyCount": 9
       }
     },
     "golden:vanguard_floor9_loss:subtype:warlock:a123:enemy_7_bsabrx:shieldBearer": {
       "entity": {
-        "actionCooldown": 2,
-        "facing": 5,
-        "intent": "Advancing",
-        "isVisible": true,
+        "subtype": "shieldBearer",
         "position": {
           "q": 4,
           "r": 3,
           "s": -7
         },
-        "subtype": "shieldBearer"
+        "intent": "Advancing",
+        "actionCooldown": 2,
+        "facing": 5,
+        "isVisible": true
       },
-      "message": "shieldBearer advances to (4, 3)",
       "nextState": {
-        "enemyCount": 9,
-        "rngCounter": 0
-      }
+        "rngCounter": 0,
+        "enemyCount": 9
+      },
+      "message": "shieldBearer advances to (4, 3)"
     },
     "golden:vanguard_floor9_loss:subtype:warlock:a123:enemy_8_pvjpu0:sprinter": {
       "entity": {
-        "actionCooldown": 1,
-        "intent": "Moving",
-        "isVisible": true,
+        "subtype": "sprinter",
         "position": {
           "q": 2,
           "r": 3,
           "s": -5
         },
-        "subtype": "sprinter"
-      },
-      "message": "sprinter moves to (2, 3)",
-      "nextState": {
-        "enemyCount": 9,
-        "rngCounter": 0
-      }
-    },
-    "synthetic:ai_test_alias_shieldbearer:shieldbearer:enemy": {
-      "entity": {
         "intent": "Moving",
-        "isVisible": true,
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 0,
+        "enemyCount": 9
+      },
+      "message": "sprinter moves to (2, 3)"
+    },
+    "golden:vanguard_floor9_loss:late:a171:enemy_0_8vh1ti:pouncer": {
+      "entity": {
+        "subtype": "pouncer",
         "position": {
           "q": 3,
-          "r": 2,
-          "s": -5
+          "r": 4,
+          "s": -7
         },
-        "subtype": "shieldbearer"
+        "intent": "GRAPPLE_HOOK",
+        "intentPosition": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        },
+        "actionCooldown": 1,
+        "isVisible": true
       },
-      "message": "shieldbearer moves to (3, 2)",
       "nextState": {
-        "enemyCount": 1,
-        "rngCounter": 0
+        "rngCounter": 38,
+        "enemyCount": 8
       }
     },
-    "synthetic:ai_test_assassin:assassin:enemy": {
+    "golden:vanguard_floor9_loss:late:a171:enemy_1_aqqzdj:archer": {
       "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 3,
+          "r": 6,
+          "s": -9
+        },
         "intent": "Moving",
-        "isVisible": false,
-        "position": {
-          "q": 3,
-          "r": 2,
-          "s": -5
-        },
-        "subtype": "assassin"
+        "actionCooldown": 3,
+        "isVisible": true
       },
-      "message": "You hear footsteps nearby...",
       "nextState": {
-        "enemyCount": 1,
-        "rngCounter": 0
-      }
-    },
-    "synthetic:ai_test_golem:golem:enemy": {
-      "entity": {
-        "actionCooldown": 0,
-        "intent": "Lumbering",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 2,
-          "s": -5
-        },
-        "subtype": "golem"
+        "rngCounter": 38,
+        "enemyCount": 8
       },
-      "message": "golem lumbers to (3, 2)",
-      "nextState": {
-        "enemyCount": 1,
-        "rngCounter": 0
-      }
+      "message": "archer moves to (3, 6)"
     },
-    "synthetic:ai_test_minion_skeleton:skeleton:player": {
+    "golden:vanguard_floor9_loss:late:a171:enemy_2_nifmc6:footman": {
       "entity": {
-        "intent": "Following",
-        "isVisible": true,
+        "subtype": "footman",
         "position": {
-          "q": 3,
-          "r": 2,
-          "s": -5
+          "q": 2,
+          "r": 5,
+          "s": -7
         },
-        "subtype": "skeleton"
-      },
-      "message": "skeleton follows you.",
-      "nextState": {
-        "enemyCount": 1,
-        "rngCounter": 0
-      }
-    },
-    "synthetic:ai_test_sentinel:sentinel:enemy": {
-      "entity": {
         "intent": "Moving",
-        "isVisible": true,
-        "position": {
-          "q": 3,
-          "r": 2,
-          "s": -5
-        },
-        "subtype": "sentinel"
+        "actionCooldown": 2,
+        "isVisible": true
       },
       "nextState": {
-        "enemyCount": 1,
-        "rngCounter": 0
+        "rngCounter": 39,
+        "enemyCount": 8
+      },
+      "message": "footman moves to (2, 5)"
+    },
+    "golden:vanguard_floor9_loss:late:a171:enemy_3_ch92pr:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 1,
+          "r": 8,
+          "s": -9
+        },
+        "intent": "ARCHER_SHOT",
+        "intentPosition": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        },
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 38,
+        "enemyCount": 8
+      }
+    },
+    "golden:vanguard_floor9_loss:late:a171:enemy_4_udjs6b:warlock": {
+      "entity": {
+        "subtype": "warlock",
+        "position": {
+          "q": 2,
+          "r": 6,
+          "s": -8
+        },
+        "intent": "Casting",
+        "intentPosition": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        },
+        "actionCooldown": 2,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 41,
+        "enemyCount": 8
+      }
+    },
+    "golden:vanguard_floor9_loss:late:a171:enemy_9_lg7bua:archer": {
+      "entity": {
+        "subtype": "archer",
+        "position": {
+          "q": 2,
+          "r": 7,
+          "s": -9
+        },
+        "intent": "Moving",
+        "actionCooldown": 3,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 38,
+        "enemyCount": 8
+      },
+      "message": "archer moves to (2, 7)"
+    },
+    "golden:vanguard_floor9_loss:late:a171:enemy_13_s8oryw:bomber": {
+      "entity": {
+        "subtype": "bomber",
+        "position": {
+          "q": 6,
+          "r": 5,
+          "s": -11
+        },
+        "intent": "Moving",
+        "actionCooldown": 1,
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 39,
+        "enemyCount": 8
+      },
+      "message": "bomber repositioning to (6, 5)"
+    },
+    "golden:vanguard_floor9_loss:late:a171:bomb-enemy_13_s8oryw-9-171-3_7_-10:bomb": {
+      "entity": {
+        "subtype": "bomb",
+        "position": {
+          "q": 3,
+          "r": 7,
+          "s": -10
+        },
+        "intent": "BASIC_ATTACK",
+        "intentPosition": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        },
+        "isVisible": true
+      },
+      "nextState": {
+        "rngCounter": 38,
+        "enemyCount": 8
       }
     }
-  },
-  "version": 1
+  }
 }

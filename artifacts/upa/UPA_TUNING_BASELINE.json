@@ -1,0 +1,106 @@
+{
+    "generatedAt":  "2026-03-01T04:57:31.6123505-08:00",
+    "params":  {
+                   "count":  300,
+                   "maxTurns":  80,
+                   "policy":  "heuristic",
+                   "policyProfileId":  "sp-v1-default",
+                   "seedPrefix":  "calibration-prechange",
+                   "trinityProfile":  "live"
+               },
+    "aggregates":  {
+                       "avgFloorMean":  2.4099999999999997,
+                       "avgWinRateMean":  0.0072222222222222228,
+                       "avgTimeoutRateMean":  0.099999999999999992,
+                       "weakestAvgFloor":  1.0166666666666666,
+                       "weakestLoadoutId":  "ASSASSIN",
+                       "strongestAvgFloor":  5.9766666666666666,
+                       "strongestLoadoutId":  "VANGUARD"
+                   },
+    "archetypes":  [
+                       {
+                           "loadoutId":  "VANGUARD",
+                           "upa":  0.4857,
+                           "summary":  {
+                                           "winRate":  0.036666666666666667,
+                                           "timeoutRate":  0.14333333333333334,
+                                           "avgFloor":  5.9766666666666666,
+                                           "avgHazardBreaches":  0.28333333333333333,
+                                           "avgTurnsToWin":  0,
+                                           "avgTurnsToLoss":  0,
+                                           "avgFinalPlayerHpRatio":  0,
+                                           "avgPlayerSkillCastsPerRun":  0
+                                       }
+                       },
+                       {
+                           "loadoutId":  "SKIRMISHER",
+                           "upa":  0.2064,
+                           "summary":  {
+                                           "winRate":  0,
+                                           "timeoutRate":  0.08666666666666667,
+                                           "avgFloor":  1.4233333333333331,
+                                           "avgHazardBreaches":  0.02,
+                                           "avgTurnsToWin":  0,
+                                           "avgTurnsToLoss":  0,
+                                           "avgFinalPlayerHpRatio":  0,
+                                           "avgPlayerSkillCastsPerRun":  0
+                                       }
+                       },
+                       {
+                           "loadoutId":  "FIREMAGE",
+                           "upa":  0.2429,
+                           "summary":  {
+                                           "winRate":  0,
+                                           "timeoutRate":  0.0066666666666666671,
+                                           "avgFloor":  2.23,
+                                           "avgHazardBreaches":  0,
+                                           "avgTurnsToWin":  0,
+                                           "avgTurnsToLoss":  0,
+                                           "avgFinalPlayerHpRatio":  0,
+                                           "avgPlayerSkillCastsPerRun":  0
+                                       }
+                       },
+                       {
+                           "loadoutId":  "NECROMANCER",
+                           "upa":  0.3539,
+                           "summary":  {
+                                           "winRate":  0.0066666666666666671,
+                                           "timeoutRate":  0.32666666666666666,
+                                           "avgFloor":  2.2266666666666666,
+                                           "avgHazardBreaches":  0.016666666666666666,
+                                           "avgTurnsToWin":  0,
+                                           "avgTurnsToLoss":  0,
+                                           "avgFinalPlayerHpRatio":  0,
+                                           "avgPlayerSkillCastsPerRun":  0
+                                       }
+                       },
+                       {
+                           "loadoutId":  "HUNTER",
+                           "upa":  0.2249,
+                           "summary":  {
+                                           "winRate":  0,
+                                           "timeoutRate":  0.026666666666666668,
+                                           "avgFloor":  1.5866666666666669,
+                                           "avgHazardBreaches":  0.01,
+                                           "avgTurnsToWin":  0,
+                                           "avgTurnsToLoss":  0,
+                                           "avgFinalPlayerHpRatio":  0,
+                                           "avgPlayerSkillCastsPerRun":  0
+                                       }
+                       },
+                       {
+                           "loadoutId":  "ASSASSIN",
+                           "upa":  0.2178,
+                           "summary":  {
+                                           "winRate":  0,
+                                           "timeoutRate":  0.01,
+                                           "avgFloor":  1.0166666666666666,
+                                           "avgHazardBreaches":  0,
+                                           "avgTurnsToWin":  0,
+                                           "avgTurnsToLoss":  0,
+                                           "avgFinalPlayerHpRatio":  0,
+                                           "avgPlayerSkillCastsPerRun":  0
+                                       }
+                       }
+                   ]
+}

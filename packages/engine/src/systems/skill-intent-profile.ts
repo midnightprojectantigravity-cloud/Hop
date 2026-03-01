@@ -69,9 +69,24 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         risk: { requireEnemyContact: true, noContactPenalty: 5, noProgressCastPenalty: 7 }
     },
     BULWARK_CHARGE: { intentTags: ['move', 'protect', 'damage'], target: { pattern: 'line' }, estimates: { movement: 2, damage: 4, shielding: 2 } },
-    VAULT: { intentTags: ['move', 'utility', 'control'], target: { pattern: 'single' }, estimates: { movement: 3, control: 2 } },
-    GRAPPLE_HOOK: { intentTags: ['move', 'control'], target: { pattern: 'line' }, estimates: { movement: 3, control: 2 } },
-    SHIELD_THROW: { intentTags: ['damage', 'control'], target: { pattern: 'line' }, estimates: { damage: 6, control: 2 } },
+    VAULT: {
+        intentTags: ['move', 'damage', 'utility'],
+        target: { pattern: 'single' },
+        estimates: { movement: 2, control: 1, damage: 3 },
+        risk: { noProgressCastPenalty: 10 }
+    },
+    GRAPPLE_HOOK: {
+        intentTags: ['move', 'control', 'damage', 'utility'],
+        target: { pattern: 'line' },
+        estimates: { movement: 2, control: 1, damage: 4 },
+        risk: { noProgressCastPenalty: 10 }
+    },
+    SHIELD_THROW: {
+        intentTags: ['damage', 'control', 'utility'],
+        target: { pattern: 'line' },
+        estimates: { damage: 10, control: 2 },
+        risk: { requireEnemyContact: true, noContactPenalty: 6, noProgressCastPenalty: 10 }
+    },
     SPEAR_THROW: {
         intentTags: ['damage'],
         target: { pattern: 'line' },
@@ -107,21 +122,46 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
     SET_TRAP: { intentTags: ['control', 'hazard'], target: { pattern: 'single' }, estimates: { control: 3 } },
     SWIFT_ROLL: { intentTags: ['move', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2 } },
     SNEAK_ATTACK: {
-        intentTags: ['damage', 'move'],
+        intentTags: ['damage', 'move', 'utility'],
         target: { pattern: 'single' },
-        estimates: { damage: 8, movement: 2 },
-        risk: { requireEnemyContact: true, noContactPenalty: 3, noProgressCastPenalty: 4 }
+        estimates: { damage: 14, movement: 1 },
+        risk: { requireEnemyContact: true, noContactPenalty: 2, noProgressCastPenalty: 3 }
     },
-    SMOKE_SCREEN: { intentTags: ['control', 'protect', 'utility'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { control: 4, shielding: 4 } },
-    SHADOW_STEP: { intentTags: ['move', 'damage', 'utility'], target: { pattern: 'single' }, estimates: { movement: 3, damage: 3 } },
-    FALCON_COMMAND: { intentTags: ['summon', 'control', 'utility'], target: { pattern: 'single' }, estimates: { summon: 4, control: 2 } },
+    SMOKE_SCREEN: {
+        intentTags: ['control', 'protect', 'utility'],
+        target: { pattern: 'radius', aoeRadius: 1 },
+        estimates: { control: 0, shielding: 1 },
+        risk: { noProgressCastPenalty: 100 }
+    },
+    SHADOW_STEP: {
+        intentTags: ['move', 'utility'],
+        target: { pattern: 'single' },
+        estimates: { movement: 0, control: 0 },
+        risk: { noProgressCastPenalty: 100 }
+    },
+    FALCON_COMMAND: {
+        intentTags: ['summon', 'control', 'damage', 'utility'],
+        target: { pattern: 'single' },
+        estimates: { summon: 1, control: 0, damage: 2 },
+        risk: { noProgressCastPenalty: 30 }
+    },
     FALCON_PECK: { intentTags: ['damage'], target: { pattern: 'single' }, estimates: { damage: 3 } },
     FALCON_APEX_STRIKE: { intentTags: ['damage', 'control'], target: { pattern: 'single' }, estimates: { damage: 5, control: 1 } },
     FALCON_HEAL: { intentTags: ['heal', 'utility'], target: { pattern: 'single' }, estimates: { healing: 4 } },
     FALCON_SCOUT: { intentTags: ['control', 'utility'], target: { pattern: 'self' }, estimates: { control: 3 } },
     FALCON_AUTO_ROOST: { intentTags: ['summon', 'utility'], target: { pattern: 'self' }, estimates: { summon: 2 } },
-    KINETIC_TRI_TRAP: { intentTags: ['control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { control: 5, damage: 4 } },
-    WITHDRAWAL: { intentTags: ['move', 'control', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2, control: 1 } },
+    KINETIC_TRI_TRAP: {
+        intentTags: ['control', 'hazard', 'damage'],
+        target: { pattern: 'radius', aoeRadius: 1 },
+        estimates: { control: 2, damage: 2 },
+        risk: { noProgressCastPenalty: 40 }
+    },
+    WITHDRAWAL: {
+        intentTags: ['move', 'damage', 'utility'],
+        target: { pattern: 'single' },
+        estimates: { movement: 0, control: 0, damage: 2 },
+        risk: { noProgressCastPenalty: 40 }
+    },
     SENTINEL_TELEGRAPH: { intentTags: ['control', 'objective'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { control: 3 } },
     SENTINEL_BLAST: { intentTags: ['damage', 'hazard'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { damage: 7 } },
     THEME_HAZARDS: { intentTags: ['hazard', 'control'], target: { pattern: 'global' }, estimates: { control: 2 } }

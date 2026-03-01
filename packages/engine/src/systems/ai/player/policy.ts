@@ -21,6 +21,11 @@ const hasReadyTagSkill = (state: GameState, tag: string): boolean => {
 export const chooseStrategicIntent = (state: GameState, profile: StrategicPolicyProfile): StrategicIntent => {
     const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
     const hostiles = aliveHostiles(state);
+    const archetype = String(state.player.archetype || '');
+
+    if (profile.version === 'sp-v1-balance' && hostiles > 0 && archetype === 'HUNTER' && hpRatio > 0.25) {
+        return 'offense';
+    }
 
     if (hpRatio < profile.thresholds.defenseHpRatio) return 'defense';
     if (hostiles <= 0) return 'positioning';

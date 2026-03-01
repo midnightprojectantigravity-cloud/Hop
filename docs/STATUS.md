@@ -27,6 +27,18 @@ References:
 - `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 - `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
 
+## Latest Balance Milestone
+UPA multi-archetype success tuning is complete and strict-gated.
+
+Delivered outcomes:
+1. Deterministic policy/intent/selector tuning for weak archetypes.
+2. Targeted trinity and skill-constant adjustments with no-regress gate checks.
+3. Automated baseline/candidate/gate scripts and artifact workflow.
+4. Strict-suite-aligned baseline fixture updates (golden + regression envelopes).
+
+Reference:
+- `docs/UPA_SUCCESS_TUNING.md`
+
 ## Validation Snapshot (Current)
 
 Engine:

@@ -8,6 +8,8 @@ import {
     adjacentHostileCount,
     aliveHostiles,
     buildSkillActions,
+    distanceToShrine,
+    distanceToStairs,
     hasImmediateAutoAttackKill,
     hasImmediateBasicAttackKill,
     hasReadySkill,
@@ -89,6 +91,7 @@ const evaluateAction = (
     );
     const autoAttackDamage = autoAttackEvents.reduce((sum, e) => sum + Number(e.finalPower || 0), 0);
     const autoAttackHits = autoAttackEvents.length;
+    const archetype = String(state.player.archetype || '');
     const w = utilityWeights(state, strategicIntent, profile);
     const immediateBasicKill = hasImmediateBasicAttackKill(state);
     const immediateAutoKill = hasImmediateAutoAttackKill(state);
@@ -133,6 +136,20 @@ const evaluateAction = (
     value += (-metrics.waitPenalty - (metrics.noProgressPenalty * 2.5)) * w.tempo;
     if (endsOnHazard) {
         value -= 18 * Math.max(1, w.survival);
+    }
+
+    const hostilesRemaining = aliveHostiles(state);
+    if (hostilesRemaining === 0) {
+        if (candidate.action.type === 'WAIT') {
+            value -= 20;
+        }
+        if (candidate.action.type === 'MOVE') {
+            if (metrics.floorProgress > 0 || metrics.stairsProgress > 0 || metrics.shrineProgress > 0) {
+                value += 12;
+            } else {
+                value -= 12;
+            }
+        }
     }
 
     const p = candidate.profile;
@@ -197,6 +214,38 @@ const evaluateAction = (
         if (deadCast) {
             value -= p?.risk?.noProgressCastPenalty ?? 40;
         }
+
+        const skillId = candidate.action.payload.skillId;
+        if (skillId === 'FALCON_COMMAND' && metrics.enemyDamage === 0 && metrics.killShot === 0) {
+            value -= 20;
+        }
+        if (skillId === 'KINETIC_TRI_TRAP' && metrics.enemyDamage === 0 && metrics.killShot === 0) {
+            value -= 14;
+        }
+        if (skillId === 'WITHDRAWAL' && metrics.enemyDamage === 0 && metrics.killShot === 0) {
+            value -= 10;
+        }
+
+        if (profile.version === 'sp-v1-balance' && archetype === 'SKIRMISHER') {
+            if (skillId === 'SHIELD_THROW' || skillId === 'GRAPPLE_HOOK') {
+                value += (metrics.enemyDamage * 1.1) + (metrics.killShot * 8);
+                if (metrics.noProgressPenalty > 0 && metrics.enemyDamage === 0) {
+                    value -= 6;
+                }
+            }
+        }
+    }
+
+    if (
+        profile.version === 'sp-v1-balance'
+        && archetype === 'ASSASSIN'
+        && candidate.action.type === 'MOVE'
+        && aliveHostiles(state) > 0
+        && metrics.enemyApproachProgress <= 0
+        && metrics.enemyDamage === 0
+        && metrics.killShot === 0
+    ) {
+        value -= 6;
     }
 
     const evaluated = { value, metrics, next };
@@ -212,6 +261,32 @@ export const selectByOnePlySimulation = (
     decisionCounter: number,
     topK = 6
 ): Action => {
+    const hostiles = aliveHostiles(state);
+    const archetype = String(state.player.archetype || '');
+    if (hostiles === 0 && profile.version === 'sp-v1-balance' && archetype === 'ASSASSIN') {
+        const moves = legalMoves(state);
+        if (moves.length > 0) {
+            const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
+            const preferShrine = !!state.shrinePosition && hpRatio < 0.6;
+            const rankedMoves = moves.map(move => {
+                const primary = preferShrine
+                    ? distanceToShrine(state, move)
+                    : distanceToStairs(state, move);
+                const secondary = preferShrine
+                    ? distanceToStairs(state, move)
+                    : distanceToShrine(state, move);
+                const hazardPenalty = isHazardTile(state, move) ? 6 : 0;
+                const score = (primary * 100) + (secondary * 2) + hazardPenalty;
+                return { move, score };
+            });
+            rankedMoves.sort((a, b) => a.score - b.score);
+            const best = rankedMoves[0].score;
+            const ties = rankedMoves.filter(x => x.score === best).map(x => x.move);
+            const tie = seededChoiceSource.chooseIndex(ties.length, { seed: `${simSeed}:assassin_obj`, counter: decisionCounter });
+            return { type: 'MOVE', payload: ties[tie.index] || ties[0] };
+        }
+    }
+
     const moveCandidates: ActionCandidate[] = legalMoves(state).map(move => {
         const action: Action = { type: 'MOVE', payload: move };
         return { action, preScore: preRankAction(state, action) };
@@ -222,7 +297,7 @@ export const selectByOnePlySimulation = (
     const allCandidates = [waitCandidate, ...moveCandidates, ...skillCandidates];
     if (allCandidates.length === 0) return { type: 'WAIT' };
 
-    const inCombat = aliveHostiles(state) > 0;
+    const inCombat = hostiles > 0;
     const waitCanBeTactical = hasReadySkill(state, 'AUTO_ATTACK') && hasImmediateAutoAttackKill(state);
     const filteredRaw = inCombat
         ? allCandidates.filter(c => c.action.type !== 'WAIT' || waitCanBeTactical)

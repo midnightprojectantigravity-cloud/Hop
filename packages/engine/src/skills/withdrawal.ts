@@ -17,9 +17,9 @@ import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-c
  */
 
 const SHOT_RANGE = 1;
-const SHOT_DAMAGE = 1;
+const SHOT_DAMAGE = 4;
 const BACKROLL_MIN = 1;
-const BACKROLL_MAX = 2;
+const BACKROLL_MAX = 1;
 const SKILL_COOLDOWN = 2;
 
 /**

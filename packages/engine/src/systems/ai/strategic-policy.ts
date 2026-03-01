@@ -95,12 +95,20 @@ const AGGRO_PROFILE: StrategicPolicyProfile = {
     }
 };
 
+const BALANCE_PROFILE: StrategicPolicyProfile = {
+    ...DEFAULT_PROFILE,
+    version: 'sp-v1-balance',
+    weightsByIntent: { ...DEFAULT_PROFILE.weightsByIntent },
+    thresholds: { ...DEFAULT_PROFILE.thresholds }
+};
+
 export const STRATEGIC_POLICY_PROFILES: Record<string, StrategicPolicyProfile> = {
     [DEFAULT_PROFILE.version]: DEFAULT_PROFILE,
-    [AGGRO_PROFILE.version]: AGGRO_PROFILE
+    [AGGRO_PROFILE.version]: AGGRO_PROFILE,
+    [BALANCE_PROFILE.version]: BALANCE_PROFILE
 };
 
 export const getStrategicPolicyProfile = (version?: string): StrategicPolicyProfile => {
-    if (!version) return DEFAULT_PROFILE;
-    return STRATEGIC_POLICY_PROFILES[version] || DEFAULT_PROFILE;
+    if (!version) return BALANCE_PROFILE;
+    return STRATEGIC_POLICY_PROFILES[version] || BALANCE_PROFILE;
 };

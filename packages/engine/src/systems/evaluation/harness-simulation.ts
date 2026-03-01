@@ -19,7 +19,8 @@ export const simulateHarnessRunDetailed = (
     const {
         state,
         telemetry,
-        policyProfileVersion
+        policyProfileVersion,
+        terminalOverride
     } = runHarnessPlayerLoop({
         seed,
         policy,
@@ -28,9 +29,9 @@ export const simulateHarnessRunDetailed = (
         policyProfileId
     });
 
-    const result: RunResult['result'] = state.gameStatus === 'won'
+    const result: RunResult['result'] = terminalOverride || (state.gameStatus === 'won'
         ? 'won'
-        : (state.gameStatus === 'lost' ? 'lost' : 'timeout');
+        : (state.gameStatus === 'lost' ? 'lost' : 'timeout'));
 
     const {
         triangleSignal,

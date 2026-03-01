@@ -37,14 +37,40 @@ export const nearestHostileDistance = (state: GameState, from = state.player.pos
         .sort((a, b) => a - b)[0];
 };
 
+const isInBounds = (state: GameState, p: Point): boolean =>
+    p.q >= 0 && p.q < state.gridWidth && p.r >= 0 && p.r < state.gridHeight;
+
+const pathDistance = (state: GameState, from: Point, to: Point): number => {
+    if (hexEquals(from, to)) return 0;
+
+    const queue: Array<{ p: Point; d: number }> = [{ p: from, d: 0 }];
+    const visited = new Set<string>([`${from.q},${from.r},${from.s}`]);
+
+    while (queue.length > 0) {
+        const node = queue.shift()!;
+        for (const next of getNeighbors(node.p)) {
+            const key = `${next.q},${next.r},${next.s}`;
+            if (visited.has(key)) continue;
+            visited.add(key);
+            if (!isInBounds(state, next)) continue;
+            if (!UnifiedTileService.isWalkable(state, next) && !hexEquals(next, to)) continue;
+            if (hexEquals(next, to)) return node.d + 1;
+            queue.push({ p: next, d: node.d + 1 });
+        }
+    }
+
+    // Fallback keeps scoring finite if target is currently unreachable.
+    return hexDistance(from, to) + 12;
+};
+
 export const distanceToStairs = (state: GameState, from = state.player.position): number => {
     if (!state.stairsPosition) return 0;
-    return hexDistance(from, state.stairsPosition);
+    return pathDistance(state, from, state.stairsPosition);
 };
 
 export const distanceToShrine = (state: GameState, from = state.player.position): number => {
     if (!state.shrinePosition) return 0;
-    return hexDistance(from, state.shrinePosition);
+    return pathDistance(state, from, state.shrinePosition);
 };
 
 const targetEnemyDensity = (state: GameState, target: Point): number =>

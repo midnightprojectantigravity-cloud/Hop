@@ -21,7 +21,7 @@ export const GRAPPLE_HOOK: SkillDefinition = {
     description: 'Pull/Zip mechanism with multi-phase kinetic resolution.',
     slot: 'offensive',
     icon: '🪝',
-    baseVariables: { range: 4, cost: 1, cooldown: 3, momentum: 4 },
+    baseVariables: { range: 4, cost: 0, cooldown: 2, momentum: 4 },
 
     execute: (state: GameState, shooter: Actor, target?: Point, _activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         let effects: AtomicEffect[] = [];

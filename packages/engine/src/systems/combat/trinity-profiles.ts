@@ -54,11 +54,11 @@ export const TRINITY_PROFILES: Record<TrinityProfileId, TrinityProfile> = {
         default: ZERO,
         archetype: withDefault({
             VANGUARD: { body: 9, mind: 4, instinct: 5 },
-            SKIRMISHER: { body: 7, mind: 6, instinct: 10 },
+            SKIRMISHER: { body: 12, mind: 8, instinct: 14 },
             FIREMAGE: { body: 2, mind: 9, instinct: 4 },
             NECROMANCER: { body: 5, mind: 9, instinct: 5 },
-            HUNTER: { body: 3, mind: 4, instinct: 8 },
-            ASSASSIN: { body: 3, mind: 3, instinct: 9 },
+            HUNTER: { body: 4, mind: 4, instinct: 9 },
+            ASSASSIN: { body: 3, mind: 4, instinct: 10 },
         }),
         enemySubtype: withDefault({
             footman: { body: 0, mind: 0, instinct: 0 },

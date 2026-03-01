@@ -20,7 +20,7 @@ export const SHIELD_THROW: SkillDefinition = {
     description: 'Throw your shield to strike and push enemies. Triggers a kinetic pulse on impact.',
     slot: 'defensive',
     icon: '🛡️',
-    baseVariables: { range: 4, cost: 1, cooldown: 3 },
+    baseVariables: { range: 5, cost: 0, cooldown: 2 },
 
     execute: (state: GameState, attacker: Actor, target?: Point, _activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];

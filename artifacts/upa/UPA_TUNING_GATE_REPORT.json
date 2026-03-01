@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-03-01T20:20:03.476Z",
+  "inputs": {
+    "baselineFile": "artifacts/upa/UPA_TUNING_BASELINE.json",
+    "candidateFile": "artifacts/upa/UPA_TUNING_CANDIDATE.json",
+    "weakestDeltaMin": 0.3,
+    "focusArchetype": "ASSASSIN",
+    "focusDeltaMin": 0.3,
+    "strict": true
+  },
+  "baseline": {
+    "generatedAt": "2026-03-01T04:57:31.6123505-08:00",
+    "params": {
+      "count": 300,
+      "maxTurns": 80,
+      "policy": "heuristic",
+      "policyProfileId": "sp-v1-default",
+      "seedPrefix": "calibration-prechange",
+      "trinityProfile": "live"
+    },
+    "weakestAvgFloor": 1.0166666666666666,
+    "weakestLoadoutId": "ASSASSIN"
+  },
+  "candidate": {
+    "generatedAt": "2026-03-01T19:57:18.429Z",
+    "params": {
+      "count": 300,
+      "maxTurns": 80,
+      "policy": "heuristic",
+      "policyProfileId": "sp-v1-balance",
+      "seedPrefix": "calibration",
+      "trinityProfile": "live"
+    },
+    "weakestAvgFloor": 1.72,
+    "weakestLoadoutId": "SKIRMISHER"
+  },
+  "weakestDelta": 0.7033,
+  "focusArchetypeDelta": 0.7567,
+  "deltas": [
+    {
+      "loadoutId": "VANGUARD",
+      "avgFloorDelta": 0.02,
+      "winRateDelta": 0.0033,
+      "timeoutRateDelta": -0.0967
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "avgFloorDelta": 0.2967,
+      "winRateDelta": 0,
+      "timeoutRateDelta": -0.0533
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "avgFloorDelta": 0,
+      "winRateDelta": 0,
+      "timeoutRateDelta": -0.0067
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "avgFloorDelta": 0.6533,
+      "winRateDelta": 0.0133,
+      "timeoutRateDelta": -0.31
+    },
+    {
+      "loadoutId": "HUNTER",
+      "avgFloorDelta": 0.19,
+      "winRateDelta": 0,
+      "timeoutRateDelta": -0.0067
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "avgFloorDelta": 0.7567,
+      "winRateDelta": 0,
+      "timeoutRateDelta": -0.01
+    }
+  ],
+  "regressions": [],
+  "unmetChecks": [],
+  "passed": true
+}
