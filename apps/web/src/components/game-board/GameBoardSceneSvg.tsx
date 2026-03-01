@@ -22,6 +22,7 @@ interface GameBoardSceneSvgProps {
         aoe: Point[];
         hasEnemy: boolean;
         target: Point;
+        ailmentDeltaLines?: string[];
     } | null;
     tileVisualFlags: Map<string, { isWall: boolean; isLava: boolean; isFire: boolean }>;
     movementTargetSet: Set<string>;

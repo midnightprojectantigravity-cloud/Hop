@@ -19,6 +19,7 @@ interface InteractionTilesLayerProps {
         aoe: Point[];
         hasEnemy: boolean;
         target: Point;
+        ailmentDeltaLines?: string[];
     } | null;
     cells: Point[];
     tileVisualFlags: Map<string, TileFlags>;

@@ -53,6 +53,7 @@ interface GameBoardProps {
         aoe: Point[];
         hasEnemy: boolean;
         target: Point;
+        ailmentDeltaLines?: string[];
     } | null;
     cameraSafeInsetsPx?: Partial<CameraInsetsPx>;
 }

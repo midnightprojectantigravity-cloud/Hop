@@ -3,6 +3,7 @@ import type { Actor as EntityType } from '@hop/engine';
 import { renderEntityIcon } from './entity-icon';
 import { EntityStatusOverlays } from './entity-status-overlays';
 import { EntityTeamPad } from './entity-team-pad';
+import { EntityAilmentBadges } from './entity-ailment-badges';
 
 interface EntityRenderShellProps {
   entity: EntityType;
@@ -85,6 +86,8 @@ export const EntityRenderShell: React.FC<EntityRenderShellProps> = ({
             facing={entity.facing}
             borderColor={borderColor}
           />
+
+          <EntityAilmentBadges entity={entity} />
 
           <title>{`${entity.subtype || entity.type} - HP ${entity.hp}/${entity.maxHp}${entity.intent ? ` - ${entity.intent}` : ''}`}</title>
         </g>

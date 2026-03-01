@@ -16,6 +16,7 @@ interface PreviewOverlayProps {
         aoe: Point[];
         hasEnemy: boolean;
         target: Point;
+        ailmentDeltaLines?: string[];
     } | null;
 }
 
@@ -145,7 +146,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
             const isMoveTile = movementTileSet.has(pointToKey(hoveredTile));
             if (isMoveTile) {
                 const path = getHexLine(playerPos, hoveredTile);
-                return { path, aoe: [], hasEnemy: false, target: hoveredTile };
+                return { path, aoe: [], hasEnemy: false, target: hoveredTile, ailmentDeltaLines: [] };
             }
         }
 
@@ -220,6 +221,30 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                                 stroke="rgba(255,255,255,0.65)"
                                 strokeWidth={1.5}
                             />
+                        );
+                    })()}
+
+                    {!!intentPreview.ailmentDeltaLines?.length && (() => {
+                        const { x, y } = hexToPixel(intentPreview.target, TILE_SIZE);
+                        return (
+                            <g transform={`translate(${x},${y - TILE_SIZE * 0.95})`}>
+                                {intentPreview.ailmentDeltaLines!.slice(0, 2).map((line, idx) => (
+                                    <text
+                                        key={`ailment-delta-${idx}`}
+                                        x={0}
+                                        y={idx * 10}
+                                        textAnchor="middle"
+                                        fontSize={9}
+                                        fill="#f8fafc"
+                                        stroke="rgba(0,0,0,0.6)"
+                                        strokeWidth={1.6}
+                                        paintOrder="stroke"
+                                        style={{ fontWeight: 700 }}
+                                    >
+                                        {line}
+                                    </text>
+                                ))}
+                            </g>
                         );
                     })()}
 

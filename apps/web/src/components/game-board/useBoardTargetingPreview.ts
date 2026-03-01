@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import {
+    buildAilmentDeltaSummary,
     getHexLine,
     isTileInDiamond,
     pointToKey,
@@ -14,7 +15,13 @@ interface EnginePreviewGhost {
     aoe: Point[];
     hasEnemy: boolean;
     target: Point;
+    ailmentDeltaLines?: string[];
 }
+
+export const extractAilmentDeltaLines = (events: GameState['simulationEvents'] | undefined): string[] => {
+    if (!events) return [];
+    return buildAilmentDeltaSummary(events);
+};
 
 interface UseBoardTargetingPreviewArgs {
     gameState: GameState;
@@ -125,7 +132,8 @@ export const useBoardTargetingPreview = ({
                 path: getHexLine(playerPos, hoveredTile),
                 aoe: [],
                 hasEnemy: false,
-                target: hoveredTile
+                target: hoveredTile,
+                ailmentDeltaLines: []
             };
         }
 
@@ -153,12 +161,14 @@ export const useBoardTargetingPreview = ({
             && Boolean(event.targetId)
             && event.targetId !== gameState.player.id
         );
+        const ailmentDeltaLines = extractAilmentDeltaLines(preview.simulationEvents);
 
         return {
             path: getHexLine(playerPos, hoveredTile),
             aoe: [...aoeByKey.values()],
             hasEnemy,
-            target: hoveredTile
+            target: hoveredTile,
+            ailmentDeltaLines
         };
     }, [
         enginePreviewGhost,

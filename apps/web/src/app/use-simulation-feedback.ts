@@ -9,6 +9,87 @@ type MobileToast = {
   createdAt: number;
 };
 
+export type MobileToastDraft = Omit<MobileToast, 'createdAt'>;
+
+export const deriveMobileToastsFromSimulationEvents = (
+  events: SimulationEvent[],
+  playerId: string
+): MobileToastDraft[] => {
+  const out: MobileToastDraft[] = [];
+  for (const ev of events) {
+    if (ev.type === 'DamageTaken' && ev.targetId === playerId) {
+      const amount = Math.max(0, Number(ev.payload?.amount || 0));
+      if (amount > 0) {
+        out.push({
+          id: `sim-toast-${ev.id}`,
+          text: `-${amount} HP`,
+          tone: 'damage'
+        });
+      }
+    } else if (ev.type === 'Healed' && ev.targetId === playerId) {
+      const amount = Math.max(0, Number(ev.payload?.amount || 0));
+      if (amount > 0) {
+        out.push({
+          id: `sim-toast-${ev.id}`,
+          text: `+${amount} HP`,
+          tone: 'heal'
+        });
+      }
+    } else if (ev.type === 'StatusApplied' && ev.targetId === playerId) {
+      const raw = String(ev.payload?.status || 'Status');
+      const label = raw
+        .split('_')
+        .filter(Boolean)
+        .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+        .join(' ');
+      out.push({
+        id: `sim-toast-${ev.id}`,
+        text: label,
+        tone: 'status'
+      });
+    } else if (ev.type === 'AilmentResilienceGained' && ev.targetId === playerId) {
+      const ailment = String(ev.payload?.ailment || 'ailment');
+      const pct = Number(ev.payload?.nextPct || 0);
+      out.push({
+        id: `sim-toast-${ev.id}`,
+        text: `Hardened: ${ailment} ${pct.toFixed(1)}%`,
+        tone: 'status'
+      });
+    } else if (ev.type === 'AilmentThresholdTriggered' && ev.targetId === playerId) {
+      const effectId = String(ev.payload?.effectId || 'Threshold');
+      out.push({
+        id: `sim-toast-${ev.id}`,
+        text: effectId,
+        tone: 'status'
+      });
+    } else if (ev.type === 'MessageLogged') {
+      const text = String(ev.payload?.text || '').trim();
+      if (!text) continue;
+      const lower = text.toLowerCase();
+      const isImportant =
+        lower.includes('stun')
+        || lower.includes('snare')
+        || lower.includes('lava')
+        || lower.includes('fire')
+        || lower.includes('burn')
+        || lower.includes('heal')
+        || lower.includes('shrine')
+        || lower.includes('stairs')
+        || lower.includes('roll away')
+        || lower.includes('ward')
+        || lower.includes('orb');
+      if (!isImportant) continue;
+      const compact = text.length > 52 ? `${text.slice(0, 49)}...` : text;
+      out.push({
+        id: `sim-toast-${ev.id}`,
+        text: compact,
+        tone: 'system'
+      });
+    }
+  }
+  return out;
+};
+
 interface UseSimulationFeedbackArgs {
   gameState: GameState;
   appendTurnTrace: (event: string, details?: Record<string, unknown>) => void;
@@ -43,61 +124,8 @@ export const useSimulationFeedback = ({ gameState, appendTurnTrace }: UseSimulat
       lastType: events[events.length - 1]?.type ?? 'unknown'
     });
 
-    for (const ev of events) {
-      if (ev.type === 'DamageTaken' && ev.targetId === gameState.player.id) {
-        const amount = Math.max(0, Number(ev.payload?.amount || 0));
-        if (amount > 0) {
-          pushMobileToast({
-            id: `sim-toast-${ev.id}`,
-            text: `-${amount} HP`,
-            tone: 'damage'
-          });
-        }
-      } else if (ev.type === 'Healed' && ev.targetId === gameState.player.id) {
-        const amount = Math.max(0, Number(ev.payload?.amount || 0));
-        if (amount > 0) {
-          pushMobileToast({
-            id: `sim-toast-${ev.id}`,
-            text: `+${amount} HP`,
-            tone: 'heal'
-          });
-        }
-      } else if (ev.type === 'StatusApplied' && ev.targetId === gameState.player.id) {
-        const raw = String(ev.payload?.status || 'Status');
-        const label = raw
-          .split('_')
-          .filter(Boolean)
-          .map(s => s.charAt(0).toUpperCase() + s.slice(1))
-          .join(' ');
-        pushMobileToast({
-          id: `sim-toast-${ev.id}`,
-          text: label,
-          tone: 'status'
-        });
-      } else if (ev.type === 'MessageLogged') {
-        const text = String(ev.payload?.text || '').trim();
-        if (!text) continue;
-        const lower = text.toLowerCase();
-        const isImportant =
-          lower.includes('stun')
-          || lower.includes('snare')
-          || lower.includes('lava')
-          || lower.includes('fire')
-          || lower.includes('burn')
-          || lower.includes('heal')
-          || lower.includes('shrine')
-          || lower.includes('stairs')
-          || lower.includes('roll away')
-          || lower.includes('ward')
-          || lower.includes('orb');
-        if (!isImportant) continue;
-        const compact = text.length > 52 ? `${text.slice(0, 49)}...` : text;
-        pushMobileToast({
-          id: `sim-toast-${ev.id}`,
-          text: compact,
-          tone: 'system'
-        });
-      }
+    for (const toast of deriveMobileToastsFromSimulationEvents(events, gameState.player.id)) {
+      pushMobileToast(toast);
     }
   }, [appendTurnTrace, gameState.turnNumber, gameState.player.id, pushMobileToast]);
 

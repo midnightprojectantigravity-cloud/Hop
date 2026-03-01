@@ -8,6 +8,14 @@ const movementTraceKey = (movementTrace?: MovementTrace): string => {
 };
 
 const statusSig = (arr: any[] = []) => arr.map(s => `${s.id}:${s.duration ?? ''}:${s.stacks ?? ''}`).join('|');
+const ailmentSig = (entity: { components?: Map<string, any> }): string => {
+  const ailments = entity.components?.get('ailments') as { counters?: Record<string, number> } | undefined;
+  const counters = ailments?.counters || {};
+  return Object.keys(counters)
+    .sort((a, b) => a.localeCompare(b))
+    .map(id => `${id}:${Math.max(0, Math.floor(Number(counters[id] || 0)))}`)
+    .join('|');
+};
 
 export const areEntityPropsEqual = (prev: EntityProps, next: EntityProps): boolean => {
   const a = prev.entity;
@@ -38,5 +46,6 @@ export const areEntityPropsEqual = (prev: EntityProps, next: EntityProps): boole
     && (a.intentPosition?.q ?? 0) === (b.intentPosition?.q ?? 0)
     && (a.intentPosition?.r ?? 0) === (b.intentPosition?.r ?? 0)
     && (a.intentPosition?.s ?? 0) === (b.intentPosition?.s ?? 0)
-    && statusSig(a.statusEffects) === statusSig(b.statusEffects);
+    && statusSig(a.statusEffects) === statusSig(b.statusEffects)
+    && ailmentSig(a) === ailmentSig(b);
 };
