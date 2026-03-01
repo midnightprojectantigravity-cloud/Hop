@@ -45,6 +45,7 @@ Status: complete for this tranche (`BiomeSandbox.tsx` is 74 lines, `Entity.tsx` 
 - [x] Extract `Entity` ring/status/spear render branches into `components/entity/*` presentational modules.
 - [x] Extract `Entity` render shell + memo comparator helpers into dedicated `components/entity/*` modules.
 - [x] Decompose `JuiceEffectsLayer` into focused renderer modules (`juice-effect-signature-renderers`, `juice-effect-generic-renderers`).
+- [x] Decompose `useBoardBiomeVisuals` into focused modules (`biome-visuals-types`, `biome-visuals-utils`, `biome-mountain-settings`).
 - [x] Continue decomposition of `apps/web/src/components/BiomeSandbox.tsx` into smaller feature modules.
 - [x] Continue decomposition of `apps/web/src/components/Entity.tsx` rendering branches where complexity remains high.
 - [x] Keep external props/API behavior stable for existing app integration.

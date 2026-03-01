@@ -1,8 +1,7 @@
 import { useCallback, useMemo } from 'react';
-import { hexToPixel, pointToKey, TILE_SIZE, UnifiedTileService, type GameState, type Point } from '@hop/engine';
+import { hexToPixel, pointToKey, TILE_SIZE, UnifiedTileService } from '@hop/engine';
 import type {
     VisualAssetEntry,
-    VisualAssetManifest,
     VisualBiomeClutterLayer,
     VisualBiomeMaterialProfile,
     VisualBiomeTextureLayer,
@@ -10,172 +9,30 @@ import type {
     VisualBiomeTintProfile,
     VisualBiomeWallsProfile,
     VisualBiomeWallsThemeOverride,
-    VisualBlendMode,
-    VisualMountainRenderSettings,
 } from '../../visual/asset-manifest';
 import { getBiomeThemePreset } from '../../visual/asset-manifest';
 import { resolveDeathDecalAssetId, resolvePropAssetId } from '../../visual/asset-selectors';
-
-type TileVisualFlags = { isWall: boolean; isLava: boolean; isFire: boolean };
-type Vec2 = { x: number; y: number };
-type LayerScroll = Vec2 & { durationMs: number };
-type FrameRect = { x: number; y: number; width: number; height: number };
-type MaskHole = { key: string; x: number; y: number };
-
-type BoardProp = {
-    id: string;
-    kind: 'stairs' | 'shrine';
-    position: Point;
-    asset?: VisualAssetEntry;
-};
-
-type ResolvedMountainRenderSettings = {
-    scale: number;
-    offsetX: number;
-    offsetY: number;
-    anchorX: number;
-    anchorY: number;
-    crustBlendMode: React.CSSProperties['mixBlendMode'] | 'off';
-    crustBlendOpacity: number;
-    tintColor: string;
-    tintBlendMode: React.CSSProperties['mixBlendMode'] | 'off';
-    tintOpacity: number;
-    tintMatrixValues: string;
-};
-
-type LayerMode = 'off' | 'cover' | 'repeat';
-
-interface BoardBounds {
-    minX: number;
-    minY: number;
-    width: number;
-    height: number;
-}
-
-interface BoardBiomeDebug {
-    undercurrentOffset?: { x: number; y: number };
-    crustOffset?: { x: number; y: number };
-    mountainAssetPath?: string;
-    mountainScale?: number;
-    mountainOffset?: { x: number; y: number };
-    mountainAnchor?: { x: number; y: number };
-    mountainCrustBlendMode?: 'off' | VisualBlendMode;
-    mountainCrustBlendOpacity?: number;
-    mountainTintColor?: string;
-    mountainTintBlendMode?: 'off' | VisualBlendMode;
-    mountainTintOpacity?: number;
-}
-
-interface UseBoardBiomeVisualsArgs {
-    cells: Point[];
-    gameState: GameState;
-    bounds: BoardBounds;
-    assetManifest?: VisualAssetManifest | null;
-    biomeDebug?: BoardBiomeDebug;
-}
-
-const hashString = (input: string): number => {
-    let hash = 2166136261 >>> 0;
-    for (let i = 0; i < input.length; i++) {
-        hash ^= input.charCodeAt(i);
-        hash = Math.imul(hash, 16777619);
-    }
-    return hash >>> 0;
-};
-
-const resolveBiomeLayerPath = (layer: VisualBiomeTextureLayer | undefined, theme: string): string | undefined => {
-    if (!layer) return undefined;
-    if (theme && layer.themes?.[theme]) return layer.themes[theme];
-    return layer.default;
-};
-
-const readLayerMode = (layer?: VisualBiomeTextureLayer): LayerMode => {
-    if (!layer) return 'off';
-    if (layer.mode === 'cover' || layer.mode === 'repeat' || layer.mode === 'off') return layer.mode;
-    return 'cover';
-};
-
-const readLayerOpacity = (layer?: VisualBiomeTextureLayer): number =>
-    Math.min(1, Math.max(0, Number(layer?.opacity ?? 1)));
-
-const readLayerScalePx = (
-    layer: VisualBiomeTextureLayer | undefined,
-    fallbackPx: number,
-    floorPx = 64,
-    ceilPx = Number.POSITIVE_INFINITY
-): number => {
-    const raw = Number(layer?.scalePx || fallbackPx);
-    return Math.min(ceilPx, Math.max(floorPx, raw));
-};
-
-const readLayerScroll = (layer?: VisualBiomeTextureLayer): LayerScroll => ({
-    x: Number(layer?.scroll?.x ?? 0),
-    y: Number(layer?.scroll?.y ?? 0),
-    durationMs: Math.max(1000, Number(layer?.scroll?.durationMs ?? 18000))
-});
-
-const resolveTintColor = (tint: VisualBiomeTintProfile | undefined, theme: string): string | undefined => {
-    if (!tint) return undefined;
-    if (theme && tint.themes?.[theme]) return tint.themes[theme];
-    return tint.default;
-};
-
-const readTintOpacity = (tint?: VisualBiomeTintProfile): number =>
-    Math.min(1, Math.max(0, Number(tint?.opacity ?? 0)));
-
-const readBlendMode = (blend?: VisualBlendMode): React.CSSProperties['mixBlendMode'] => {
-    if (
-        blend === 'normal'
-        || blend === 'multiply'
-        || blend === 'overlay'
-        || blend === 'soft-light'
-        || blend === 'screen'
-        || blend === 'color-dodge'
-    ) {
-        return blend;
-    }
-    return 'multiply';
-};
-
-const normalizeHexColor = (value: string, fallback = '#8b6f4a'): string => {
-    const raw = String(value || '').trim();
-    const fullHex = /^#([0-9a-f]{6})$/i;
-    if (fullHex.test(raw)) return raw.toLowerCase();
-    const shortHex = /^#([0-9a-f]{3})$/i;
-    if (shortHex.test(raw)) {
-        const [r, g, b] = raw.slice(1).split('');
-        return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
-    }
-    return fallback;
-};
-
-const hexToRgb01 = (hex: string): { r: number; g: number; b: number } => {
-    const normalized = normalizeHexColor(hex);
-    const value = normalized.slice(1);
-    return {
-        r: parseInt(value.slice(0, 2), 16) / 255,
-        g: parseInt(value.slice(2, 4), 16) / 255,
-        b: parseInt(value.slice(4, 6), 16) / 255
-    };
-};
-
-const resolveMountainBlendMode = (
-    value: 'off' | VisualBlendMode | undefined,
-    fallback: React.CSSProperties['mixBlendMode'] | 'off'
-): React.CSSProperties['mixBlendMode'] | 'off' => {
-    if (value === 'off') return 'off';
-    if (value) return readBlendMode(value);
-    return fallback;
-};
-
-const getHexPoints = (size: number): string => {
-    const points: string[] = [];
-    for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 180) * (60 * i);
-        points.push(`${size * Math.cos(angle)},${size * Math.sin(angle)}`);
-    }
-    return points.join(' ');
-};
+import type {
+    BoardProp,
+    FrameRect,
+    MaskHole,
+    ResolvedMountainRenderSettings,
+    TileVisualFlags,
+    UseBoardBiomeVisualsArgs,
+} from './biome-visuals-types';
+import {
+    getHexPoints,
+    hashString,
+    readBlendMode,
+    readLayerMode,
+    readLayerOpacity,
+    readLayerScalePx,
+    readLayerScroll,
+    readTintOpacity,
+    resolveBiomeLayerPath,
+    resolveTintColor,
+} from './biome-visuals-utils';
+import { buildMountainRenderSettings } from './biome-mountain-settings';
 
 export const useBoardBiomeVisuals = ({
     cells,
@@ -413,127 +270,20 @@ export const useBoardBiomeVisuals = ({
     );
 
     const resolveMountainSettings = useCallback((asset?: VisualAssetEntry): ResolvedMountainRenderSettings => {
-        const assetDefaults = asset?.mountainSettings as VisualMountainRenderSettings | undefined;
-        const assetTheme = asset?.mountainSettingsByTheme?.[biomeThemeKey] as VisualMountainRenderSettings | undefined;
-        const presetAssetOverride = asset ? biomeThemePreset?.assetOverrides?.[asset.id] : undefined;
-        const presetAssetMountain = presetAssetOverride?.mountainSettings as VisualMountainRenderSettings | undefined;
-        const scale = Math.min(3, Math.max(0.2, Number(
-            biomeDebug?.mountainScale
-            ?? presetAssetMountain?.scale
-            ?? assetTheme?.scale
-            ?? wallsThemeOverride?.scale
-            ?? wallsProfile?.scale
-            ?? assetDefaults?.scale
-            ?? 0.95
-        )));
-        const offsetX = Number(
-            biomeDebug?.mountainOffset?.x
-            ?? presetAssetMountain?.offsetX
-            ?? assetTheme?.offsetX
-            ?? wallsThemeOverride?.offsetX
-            ?? wallsProfile?.offsetX
-            ?? assetDefaults?.offsetX
-            ?? 0
-        );
-        const offsetY = Number(
-            biomeDebug?.mountainOffset?.y
-            ?? presetAssetMountain?.offsetY
-            ?? assetTheme?.offsetY
-            ?? wallsThemeOverride?.offsetY
-            ?? wallsProfile?.offsetY
-            ?? assetDefaults?.offsetY
-            ?? 0
-        );
-        const anchorX = Math.min(1, Math.max(0, Number(
-            biomeDebug?.mountainAnchor?.x
-            ?? presetAssetMountain?.anchorX
-            ?? assetTheme?.anchorX
-            ?? wallsThemeOverride?.anchorX
-            ?? wallsProfile?.anchorX
-            ?? assetDefaults?.anchorX
-            ?? 0.5
-        )));
-        const anchorY = Math.min(1, Math.max(0, Number(
-            biomeDebug?.mountainAnchor?.y
-            ?? presetAssetMountain?.anchorY
-            ?? assetTheme?.anchorY
-            ?? wallsThemeOverride?.anchorY
-            ?? wallsProfile?.anchorY
-            ?? assetDefaults?.anchorY
-            ?? 0.78
-        )));
-        const crustBlendMode = resolveMountainBlendMode(
-            biomeDebug?.mountainCrustBlendMode
-            ?? presetAssetMountain?.crustBlendMode
-            ?? assetTheme?.crustBlendMode
-            ?? wallsThemeOverride?.crustBlendMode
-            ?? wallsProfile?.crustBlendMode
-            ?? assetDefaults?.crustBlendMode,
-            crustTintBlendMode
-        );
-        const crustBlendOpacity = Math.min(1, Math.max(0, Number(
-            biomeDebug?.mountainCrustBlendOpacity
-            ?? presetAssetMountain?.crustBlendOpacity
-            ?? assetTheme?.crustBlendOpacity
-            ?? wallsThemeOverride?.crustBlendOpacity
-            ?? wallsProfile?.crustBlendOpacity
-            ?? assetDefaults?.crustBlendOpacity
-            ?? defaultMountainCrustBlendOpacity
-        )));
-        const tintColor = normalizeHexColor(String(
-            biomeDebug?.mountainTintColor
-            ?? presetAssetMountain?.tintColor
-            ?? assetTheme?.tintColor
-            ?? wallsThemeOverride?.tintColor
-            ?? wallsProfile?.tintColor
-            ?? assetDefaults?.tintColor
-            ?? crustTintColor
-            ?? '#8b6f4a'
-        ));
-        const tintBlendMode = resolveMountainBlendMode(
-            biomeDebug?.mountainTintBlendMode
-            ?? presetAssetMountain?.tintBlendMode
-            ?? assetTheme?.tintBlendMode
-            ?? wallsThemeOverride?.tintBlendMode
-            ?? wallsProfile?.tintBlendMode
-            ?? assetDefaults?.tintBlendMode,
-            'soft-light'
-        );
-        const tintOpacity = Math.min(1, Math.max(0, Number(
-            biomeDebug?.mountainTintOpacity
-            ?? presetAssetMountain?.tintOpacity
-            ?? assetTheme?.tintOpacity
-            ?? wallsThemeOverride?.tintOpacity
-            ?? wallsProfile?.tintOpacity
-            ?? assetDefaults?.tintOpacity
-            ?? 0
-        )));
-        const rgb = hexToRgb01(tintColor);
-        return {
-            scale,
-            offsetX,
-            offsetY,
-            anchorX,
-            anchorY,
-            crustBlendMode,
-            crustBlendOpacity,
-            tintColor,
-            tintBlendMode,
-            tintOpacity,
-            tintMatrixValues: `0 0 0 0 ${rgb.r.toFixed(4)} 0 0 0 0 ${rgb.g.toFixed(4)} 0 0 0 0 ${rgb.b.toFixed(4)} 0 0 0 1 0`
-        };
+        return buildMountainRenderSettings({
+            asset,
+            biomeThemeKey,
+            biomeDebug,
+            biomeThemePreset,
+            wallsProfile,
+            wallsThemeOverride,
+            crustTintBlendMode,
+            crustTintColor,
+            defaultMountainCrustBlendOpacity,
+        });
     }, [
         biomeThemeKey,
-        biomeDebug?.mountainScale,
-        biomeDebug?.mountainOffset?.x,
-        biomeDebug?.mountainOffset?.y,
-        biomeDebug?.mountainAnchor?.x,
-        biomeDebug?.mountainAnchor?.y,
-        biomeDebug?.mountainCrustBlendMode,
-        biomeDebug?.mountainCrustBlendOpacity,
-        biomeDebug?.mountainTintColor,
-        biomeDebug?.mountainTintBlendMode,
-        biomeDebug?.mountainTintOpacity,
+        biomeDebug,
         biomeThemePreset?.assetOverrides,
         wallsProfile,
         wallsThemeOverride,
