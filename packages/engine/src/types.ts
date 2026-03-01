@@ -219,6 +219,10 @@ export interface StackResolutionTick {
     depthBefore: number;
     depthAfter: number;
     reactionsQueued: number;
+    beforeReactionsQueued?: number;
+    afterReactionsQueued?: number;
+    topQueued?: number;
+    bottomQueued?: number;
 }
 
 export interface TelegraphProjectionEntry {

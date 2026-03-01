@@ -104,6 +104,7 @@ Status: complete for pilot tranche.
 ### D1: Full Resolution Stack Reaction Windows (Engine)
 Goal: complete MTG-style reactive resolution wiring on top of current deterministic LIFO stack.
 
+- [x] Phase 0 scaffold: `resolveLifoStack` now supports explicit before/after reaction hooks and `enqueuePosition` (`top`/`bottom`) with deterministic trace accounting.
 - [ ] Wire runtime reaction injection (`BEFORE_RESOLVE`, `ON_COLLISION`, `AFTER_RESOLVE`) into effect resolution, not only declaration-time expansion.
 - [ ] Add top-of-stack/bottom enqueue handling at runtime (`enqueuePosition`) and keep deterministic trace logs.
 - [ ] Extend stack trace assertions to verify reaction ordering in mixed effect/reaction chains.

@@ -4,11 +4,26 @@ export interface ResolutionStackTick {
     depthBefore: number;
     depthAfter: number;
     reactionsQueued: number;
+    beforeReactionsQueued?: number;
+    afterReactionsQueued?: number;
+    topQueued?: number;
+    bottomQueued?: number;
 }
+
+export type StackReactionEnqueuePosition = 'top' | 'bottom';
+
+export interface StackReactionItem<T> {
+    item: T;
+    enqueuePosition?: StackReactionEnqueuePosition;
+}
+
+export type StackReactionSet<T> = Array<T | StackReactionItem<T>> | undefined;
 
 export interface ResolveLifoStackOptions<S, T> {
     apply: (state: S, item: T) => S;
     getReactions?: (state: S, resolvedItem: T) => T[] | undefined;
+    getBeforeReactions?: (state: S, pendingItem: T) => StackReactionSet<T>;
+    getAfterReactions?: (state: S, resolvedItem: T) => StackReactionSet<T>;
     describe?: (item: T) => string;
     preserveInputOrder?: boolean;
     startTick?: number;
@@ -20,6 +35,74 @@ export interface ResolveLifoStackResult<S> {
     resolvedCount: number;
 }
 
+interface StackEntry<T> {
+    item: T;
+    beforeInjected: boolean;
+    beforeQueued: number;
+    beforeTopQueued: number;
+    beforeBottomQueued: number;
+}
+
+interface NormalizedReaction<T> {
+    item: T;
+    enqueuePosition: StackReactionEnqueuePosition;
+}
+
+const isStackReactionItem = <T>(value: T | StackReactionItem<T>): value is StackReactionItem<T> =>
+    typeof value === 'object' && value !== null && Object.prototype.hasOwnProperty.call(value, 'item');
+
+const normalizeReactions = <T>(input: StackReactionSet<T>, defaultPosition: StackReactionEnqueuePosition = 'top'): NormalizedReaction<T>[] => {
+    if (!input || input.length === 0) return [];
+    const normalized: NormalizedReaction<T>[] = [];
+    for (const reaction of input) {
+        if (isStackReactionItem(reaction)) {
+            normalized.push({
+                item: reaction.item,
+                enqueuePosition: reaction.enqueuePosition === 'bottom' ? 'bottom' : defaultPosition
+            });
+            continue;
+        }
+        normalized.push({
+            item: reaction,
+            enqueuePosition: defaultPosition
+        });
+    }
+    return normalized;
+};
+
+const enqueueReactionEntries = <T>(stack: StackEntry<T>[], reactions: NormalizedReaction<T>[]): { topQueued: number; bottomQueued: number } => {
+    let topQueued = 0;
+    let bottomQueued = 0;
+    const top = reactions.filter(r => r.enqueuePosition === 'top');
+    const bottom = reactions.filter(r => r.enqueuePosition === 'bottom');
+
+    // Push top-of-stack reactions so they resolve before older stack entries.
+    for (let i = top.length - 1; i >= 0; i--) {
+        stack.push({
+            item: top[i].item,
+            beforeInjected: false,
+            beforeQueued: 0,
+            beforeTopQueued: 0,
+            beforeBottomQueued: 0
+        });
+        topQueued += 1;
+    }
+
+    // Unshift bottom-of-stack reactions so they resolve after older stack entries.
+    for (let i = 0; i < bottom.length; i++) {
+        stack.unshift({
+            item: bottom[i].item,
+            beforeInjected: false,
+            beforeQueued: 0,
+            beforeTopQueued: 0,
+            beforeBottomQueued: 0
+        });
+        bottomQueued += 1;
+    }
+
+    return { topQueued, bottomQueued };
+};
+
 /**
  * Deterministic LIFO resolver with optional reaction injection.
  * - Initial items can preserve input order by reversing pre-push.
@@ -30,7 +113,14 @@ export const resolveLifoStack = <S, T>(
     items: T[],
     options: ResolveLifoStackOptions<S, T>
 ): ResolveLifoStackResult<S> => {
-    const stack = options.preserveInputOrder === false ? [...items] : [...items].reverse();
+    const ordered = options.preserveInputOrder === false ? [...items] : [...items].reverse();
+    const stack: StackEntry<T>[] = ordered.map(item => ({
+        item,
+        beforeInjected: false,
+        beforeQueued: 0,
+        beforeTopQueued: 0,
+        beforeBottomQueued: 0
+    }));
     const describe = options.describe || (() => 'UNKNOWN');
 
     let state = initialState;
@@ -39,22 +129,46 @@ export const resolveLifoStack = <S, T>(
 
     while (stack.length > 0) {
         const depthBefore = stack.length;
-        const item = stack.pop() as T;
-        state = options.apply(state, item);
+        const entry = stack.pop() as StackEntry<T>;
 
-        const reactions = options.getReactions?.(state, item) || [];
-        if (reactions.length > 0) {
-            for (let i = reactions.length - 1; i >= 0; i--) {
-                stack.push(reactions[i] as T);
+        if (!entry.beforeInjected) {
+            const beforeReactions = normalizeReactions(options.getBeforeReactions?.(state, entry.item));
+            if (beforeReactions.length > 0) {
+                const beforeTopQueued = beforeReactions.filter(r => r.enqueuePosition === 'top').length;
+                const beforeBottomQueued = beforeReactions.length - beforeTopQueued;
+                stack.push({
+                    ...entry,
+                    beforeInjected: true,
+                    beforeQueued: beforeReactions.length,
+                    beforeTopQueued,
+                    beforeBottomQueued
+                });
+                enqueueReactionEntries(stack, beforeReactions);
+                continue;
             }
         }
 
+        state = options.apply(state, entry.item);
+
+        const afterReactions = normalizeReactions(options.getAfterReactions?.(state, entry.item));
+        const legacyAfter = normalizeReactions(options.getReactions?.(state, entry.item));
+        const allAfter = [...afterReactions, ...legacyAfter];
+        const afterCounts = enqueueReactionEntries(stack, allAfter);
+
+        const topQueued = entry.beforeTopQueued + afterCounts.topQueued;
+        const bottomQueued = entry.beforeBottomQueued + afterCounts.bottomQueued;
+        const afterQueued = allAfter.length;
+
         trace.push({
             tick: tick++,
-            effectType: describe(item),
+            effectType: describe(entry.item),
             depthBefore,
             depthAfter: stack.length,
-            reactionsQueued: reactions.length
+            reactionsQueued: entry.beforeQueued + afterQueued,
+            beforeReactionsQueued: entry.beforeQueued,
+            afterReactionsQueued: afterQueued,
+            topQueued,
+            bottomQueued
         });
     }
 
@@ -64,4 +178,3 @@ export const resolveLifoStack = <S, T>(
         resolvedCount: trace.length
     };
 };
-
