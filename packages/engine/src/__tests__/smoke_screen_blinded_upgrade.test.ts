@@ -118,5 +118,6 @@ describe('SMOKE_SCREEN blinding upgrade', () => {
             targetId: blindedEnemy?.id
         });
         expect(getSignatureIds(expiredState)).toContain('STATE.EXPIRE.SHADOW.BLINDED');
+        expect(expiredState.message.some(line => line.includes('no longer blinded'))).toBe(true);
     });
 });

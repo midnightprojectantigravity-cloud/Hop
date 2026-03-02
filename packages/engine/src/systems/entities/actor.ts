@@ -11,6 +11,9 @@ const buildStatusOnTick = (type: StatusID): StatusEffect['onTick'] | undefined =
   return (actor) => {
     const blinded = actor.statusEffects.find(status => status.type === 'blinded');
     if (!blinded || blinded.duration > 1) return [];
+    const message = actor.type === 'player'
+      ? 'You are no longer blinded.'
+      : `${actor.subtype || actor.id} is no longer blinded.`;
     return [{
       type: 'Juice',
       effect: 'hiddenFade',
@@ -26,6 +29,9 @@ const buildStatusOnTick = (type: StatusID): StatusEffect['onTick'] | undefined =
         targetRef: { kind: 'target_actor' },
         statusId: 'blinded'
       }
+    }, {
+      type: 'Message',
+      text: message
     }];
   };
 };
