@@ -2,8 +2,12 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexEquals, getNeighbors, getHexLine } from '../hex';
 import { getActorAt, getEnemyAt } from '../helpers';
 import { SKILL_JUICE_SIGNATURES } from '../systems/visual/juice-manifest';
-import { isBlockedByWall, isBlockedByActor, validateRange, canLandOnHazard } from '../systems/validation';
+import { validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
+import {
+    resolveSkillMovementPolicy,
+    validateMovementDestination
+} from '../systems/capabilities/movement-policy';
 
 /**
  * Implementation of the Vault skill
@@ -28,16 +32,20 @@ export const VAULT: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
-        if (!validateRange(attacker.position, target, 3)) {
+        const movementPolicy = resolveSkillMovementPolicy(state, attacker, {
+            skillId: 'VAULT',
+            target,
+            baseRange: 3,
+            basePathing: 'flight',
+            baseIgnoreGroundHazards: true
+        });
+        if (!validateRange(attacker.position, target, movementPolicy.range)) {
             messages.push('Out of range!');
             return { effects, messages, consumesTurn: false };
         }
 
-        if (isBlockedByWall(state, target) || isBlockedByActor(state, target)) {
-            messages.push('Blocked!');
-            return { effects, messages, consumesTurn: false };
-        }
-        if (!canLandOnHazard(state, attacker, target)) {
+        const destination = validateMovementDestination(state, attacker, target, movementPolicy);
+        if (!destination.isValid) {
             messages.push('Blocked!');
             return { effects, messages, consumesTurn: false };
         }
@@ -57,7 +65,8 @@ export const VAULT: SkillDefinition = {
             target: 'self',
             destination: target,
             path: vaultPath,
-            ignoreGroundHazards: true,
+            simulatePath: movementPolicy.simulatePath,
+            ignoreGroundHazards: movementPolicy.ignoreGroundHazards,
             animationDuration: 250  // Slower, acrobatic leap
         });
 
@@ -85,12 +94,18 @@ export const VAULT: SkillDefinition = {
         return { effects, messages };
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        const range = 3;
         const actor = getActorAt(state, origin) as Actor | undefined;
         if (!actor) return [];
+        const movementPolicy = resolveSkillMovementPolicy(state, actor, {
+            skillId: 'VAULT',
+            baseRange: 3,
+            basePathing: 'flight',
+            baseIgnoreGroundHazards: true
+        });
+        const range = movementPolicy.range;
         return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
-            return !isBlockedByWall(state, p) && !isBlockedByActor(state, p) && canLandOnHazard(state, actor as Actor, p);
+            return validateMovementDestination(state, actor, p, movementPolicy).isValid;
         });
     },
     upgrades: {},

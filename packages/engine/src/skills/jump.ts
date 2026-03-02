@@ -2,9 +2,13 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getNeighbors, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
-import { isBlockedByWall, validateRange, canLandOnHazard } from '../systems/validation';
+import { validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
 import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import {
+    resolveSkillMovementPolicy,
+    validateMovementDestination
+} from '../systems/capabilities/movement-policy';
 
 /**
  * Implementation of the Jump skill using the Compositional Skill Framework.
@@ -33,7 +37,14 @@ export const JUMP: SkillDefinition = {
         const hasMeteor = activeUpgrades.includes('METEOR_IMPACT');
         const isFree = activeUpgrades.includes('FREE_JUMP');
 
-        const range = 2 + (hasRange ? 1 : 0);
+        const movementPolicy = resolveSkillMovementPolicy(state, attacker, {
+            skillId: 'JUMP',
+            target,
+            baseRange: 2 + (hasRange ? 1 : 0),
+            basePathing: 'flight',
+            baseIgnoreGroundHazards: true
+        });
+        const range = movementPolicy.range;
 
         // 2. Precise Range Validation
         if (!validateRange(attacker.position, target, range)) {
@@ -42,23 +53,20 @@ export const JUMP: SkillDefinition = {
         }
 
         // 3. Occupancy & Environmental Check
-        const obstacle = getActorAt(state, target);
-        const wall = isBlockedByWall(state, target);
-        const canLand = canLandOnHazard(state, attacker, target);
-
-        if (wall) {
-            messages.push('Cannot jump into a wall!');
+        const destination = validateMovementDestination(state, attacker, target, movementPolicy, {
+            occupancy: hasMeteor ? 'enemy' : 'none'
+        });
+        if (!destination.isValid) {
+            messages.push(
+                destination.blockedBy === 'wall'
+                    ? 'Cannot jump into a wall!'
+                    : destination.blockedBy === 'hazard'
+                        ? 'Cannot land on hazard!'
+                        : 'Target hex is blocked!'
+            );
             return { effects, messages, consumesTurn: false };
         }
-        if (!canLand) {
-            messages.push('Cannot land on hazard!');
-            return { effects, messages, consumesTurn: false };
-        }
-
-        if (obstacle && !hasMeteor) {
-            messages.push('Target hex is blocked!');
-            return { effects, messages, consumesTurn: false };
-        }
+        const obstacle = hasMeteor ? getActorAt(state, target) : null;
 
         // 4. Execution: Displacement & Impact
         if (obstacle && hasMeteor) {
@@ -87,8 +95,8 @@ export const JUMP: SkillDefinition = {
             target: 'self',
             destination: target,
             ignoreCollision: true,
-            ignoreGroundHazards: true,
-            simulatePath: true
+            ignoreGroundHazards: movementPolicy.ignoreGroundHazards,
+            simulatePath: movementPolicy.simulatePath
         });
 
         // 5. AoE Landing Effect: Stun adjacent enemies
@@ -135,16 +143,20 @@ export const JUMP: SkillDefinition = {
         if (!actor) return [];
         const actorJumpSkill = actor.activeSkills?.find(s => s.id === 'JUMP');
         const upgrades = new Set(actorJumpSkill?.activeUpgrades || []);
-        const range = 2 + (upgrades.has('JUMP_RANGE') ? 1 : 0);
+        const movementPolicy = resolveSkillMovementPolicy(state, actor, {
+            skillId: 'JUMP',
+            baseRange: 2 + (upgrades.has('JUMP_RANGE') ? 1 : 0),
+            basePathing: 'flight',
+            baseIgnoreGroundHazards: true
+        });
+        const range = movementPolicy.range;
         const hasMeteor = upgrades.has('METEOR_IMPACT');
 
         return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
-            if (isBlockedByWall(state, p)) return false;
-            if (!canLandOnHazard(state, actor, p)) return false;
-            const occupied = getActorAt(state, p);
-            if (occupied && occupied.id !== actor.id && !hasMeteor) return false;
-            return true;
+            return validateMovementDestination(state, actor, p, movementPolicy, {
+                occupancy: hasMeteor ? 'enemy' : 'none'
+            }).isValid;
         });
     },
     upgrades: {

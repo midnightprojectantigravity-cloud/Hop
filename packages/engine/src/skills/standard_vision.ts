@@ -25,6 +25,16 @@ export const STANDARD_VISION: SkillDefinition = {
             providerId: 'standard_vision.los',
             priority: 10,
             resolve: (query) => {
+                const context = query.context || {};
+                if (context.statusBlind === true || context.smokeBlind === true) {
+                    return {
+                        decision: 'block',
+                        blockKind: 'hard',
+                        reason: 'status_blind',
+                        channelId: 'standard_vision',
+                        maxRange: 0
+                    };
+                }
                 const trinity = extractTrinityStats(query.observer);
                 const range = clamp(3 + Math.floor(trinity.mind / 5), 3, 8);
                 if (query.distance > range) {

@@ -136,4 +136,46 @@ describe('capabilities senses integration', () => {
         });
         expect(notMoved.isValid).toBe(false);
     });
+
+    it('supports hard-block interdiction context for future blindness/smoke rules', () => {
+        const state = generateInitialState(1, 'sense-hard-block-context');
+        const origin = createHex(3, 8);
+        const target = createHex(3, 4);
+        const wall = createHex(3, 6);
+
+        state.player = {
+            ...state.player,
+            position: origin,
+            activeSkills: [createActiveSkill('STANDARD_VISION') as any, createActiveSkill('VIBRATION_SENSE') as any],
+            components: new Map([
+                ['trinity', { type: 'trinity', body: 0, mind: 30, instinct: 40 }]
+            ])
+        };
+        const movingTarget = createEnemy({
+            id: 'sense-target-hard-block',
+            subtype: 'footman',
+            position: target,
+            hp: 3,
+            maxHp: 3,
+            speed: 1,
+            skills: ['BASIC_MOVE'],
+            weightClass: 'Standard'
+        });
+        movingTarget.previousPosition = createHex(3, 5);
+        state.enemies = [movingTarget];
+        placeTile(state, wall, 'WALL');
+
+        const visibleWithoutInterdict = validateLineOfSight(state, origin, target, {
+            observerActor: state.player,
+            excludeActorId: state.player.id
+        });
+        expect(visibleWithoutInterdict.isValid).toBe(true);
+
+        const blockedWithInterdict = validateLineOfSight(state, origin, target, {
+            observerActor: state.player,
+            excludeActorId: state.player.id,
+            context: { statusBlind: true }
+        });
+        expect(blockedWithInterdict.isValid).toBe(false);
+    });
 });

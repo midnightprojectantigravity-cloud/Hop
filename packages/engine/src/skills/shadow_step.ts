@@ -1,8 +1,12 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
-import { isBlockedByWall, isBlockedByLava, isBlockedByActor, validateRange } from '../systems/validation';
+import { validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
+import {
+    resolveSkillMovementPolicy,
+    validateMovementDestination
+} from '../systems/capabilities/movement-policy';
 
 /**
  * SHADOW_STEP Skill
@@ -32,16 +36,29 @@ export const SHADOW_STEP: SkillDefinition = {
             return { effects, messages: ['Must be invisible to Shadow Step!'], consumesTurn: false };
         }
 
-        if (!validateRange(attacker.position, target, 2)) {
+        const movementPolicy = resolveSkillMovementPolicy(state, attacker, {
+            skillId: 'SHADOW_STEP',
+            target,
+            baseRange: 2,
+            basePathing: 'teleport'
+        });
+        if (!validateRange(attacker.position, target, movementPolicy.range)) {
             return { effects, messages: ['Too far!'], consumesTurn: false };
         }
 
-        if (isBlockedByWall(state, target) || isBlockedByLava(state, target) || isBlockedByActor(state, target, attacker.id)) {
+        const destination = validateMovementDestination(state, attacker, target, movementPolicy);
+        if (!destination.isValid) {
             return { effects, messages: ['Cannot step there!'], consumesTurn: false };
         }
 
         // Teleport + Stealth Extension
-        effects.push({ type: 'Displacement', target: 'self', destination: target });
+        effects.push({
+            type: 'Displacement',
+            target: 'self',
+            destination: target,
+            simulatePath: movementPolicy.simulatePath,
+            ignoreGroundHazards: movementPolicy.ignoreGroundHazards
+        });
         effects.push({ type: 'SetStealth', target: 'self', amount: 2 });
         effects.push({
             type: 'Juice',
@@ -71,10 +88,15 @@ export const SHADOW_STEP: SkillDefinition = {
         const isStealthed = (state.player.stealthCounter || 0) > 0;
         if (!isStealthed) return [];
 
-        const range = 2;
+        const movementPolicy = resolveSkillMovementPolicy(state, state.player, {
+            skillId: 'SHADOW_STEP',
+            baseRange: 2,
+            basePathing: 'teleport'
+        });
+        const range = movementPolicy.range;
         return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
-            return !isBlockedByWall(state, p) && !isBlockedByLava(state, p) && !isBlockedByActor(state, p);
+            return validateMovementDestination(state, state.player, p, movementPolicy).isValid;
         });
     },
     upgrades: {},

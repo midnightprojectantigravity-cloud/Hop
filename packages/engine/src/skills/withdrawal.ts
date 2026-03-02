@@ -2,10 +2,14 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getNeighbors, hexDistance, hexDirection, hexAdd, getDirectionFromTo } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { SpatialSystem } from '../systems/spatial-system';
-import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { getActorAt } from '../helpers';
 import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
-// import { isBlockedByWall, isBlockedByLava, isBlockedByActor } from '../systems/validation';
+import {
+    resolveSkillMovementPolicy,
+    type ResolvedSkillMovementPolicy,
+    validateMovementDestination,
+    validateMovementTraversalStep
+} from '../systems/capabilities/movement-policy';
 
 /**
  * WITHDRAWAL Skill
@@ -28,8 +32,10 @@ const SKILL_COOLDOWN = 2;
  */
 function calculateSafeSpot(
     state: GameState,
+    actor: Actor,
     origin: Point,
     threatPos: Point,
+    movementPolicy: Pick<ResolvedSkillMovementPolicy, 'ignoreWalls' | 'ignoreGroundHazards' | 'allowPassThroughActors' | 'movementModel'>,
     maxDistance: number = BACKROLL_MAX
 ): Point | null {
     // Get direction FROM threat TO origin (away from threat)
@@ -46,18 +52,18 @@ function calculateSafeSpot(
         for (let step = 0; step < dist; step++) {
             pos = hexAdd(pos, dirVec);
 
-            // Check each step for validity
-            if (!SpatialSystem.isWithinBounds(state, pos)) {
-                valid = false;
-                break;
-            }
-            if (!UnifiedTileService.isWalkable(state, pos)) {
+            const traversal = validateMovementTraversalStep(state, actor, pos, movementPolicy, {
+                skillId: 'WITHDRAWAL',
+                allowAlliedOccupancy: true,
+                excludeActorId: actor.id
+            });
+            if (!traversal.isValid) {
                 valid = false;
                 break;
             }
         }
 
-        if (valid && !getActorAt(state, pos)) {
+        if (valid && validateMovementDestination(state, actor, pos, movementPolicy).isValid) {
             return pos;
         }
     }
@@ -68,9 +74,7 @@ function calculateSafeSpot(
         const altVec = hexDirection(altDir);
         let pos = hexAdd(origin, altVec);
 
-        if (SpatialSystem.isWithinBounds(state, pos) &&
-            UnifiedTileService.isWalkable(state, pos) &&
-            !getActorAt(state, pos)) {
+        if (SpatialSystem.isWithinBounds(state, pos) && validateMovementDestination(state, actor, pos, movementPolicy).isValid) {
             return pos;
         }
     }
@@ -148,7 +152,12 @@ export const WITHDRAWAL: SkillDefinition = {
 
         // 2. Calculate backroll
         const retreatDistance = hasNimbleFeet ? 3 : BACKROLL_MAX;
-        const safeSpot = calculateSafeSpot(state, attacker.position, target, retreatDistance);
+        const movementPolicy = resolveSkillMovementPolicy(state, attacker, {
+            skillId: 'WITHDRAWAL',
+            target,
+            baseRange: retreatDistance
+        });
+        const safeSpot = calculateSafeSpot(state, attacker, attacker.position, target, movementPolicy, movementPolicy.range);
 
         if (safeSpot) {
             effects.push({
@@ -156,6 +165,8 @@ export const WITHDRAWAL: SkillDefinition = {
                 target: 'self',
                 destination: safeSpot,
                 source: attacker.position,
+                simulatePath: movementPolicy.simulatePath,
+                ignoreGroundHazards: movementPolicy.ignoreGroundHazards
             });
             effects.push({
                 type: 'Juice',

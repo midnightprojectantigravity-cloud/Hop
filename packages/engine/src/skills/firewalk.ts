@@ -1,8 +1,12 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance } from '../hex';
 import { getSkillScenarios } from '../scenarios';
-import { validateRange, isBlockedByActor } from '../systems/validation';
+import { validateRange } from '../systems/validation';
 import { pointToKey } from '../hex';
+import {
+    resolveSkillMovementPolicy,
+    validateMovementDestination
+} from '../systems/capabilities/movement-policy';
 
 /**
  * FIREWALK Skill
@@ -25,8 +29,15 @@ export const FIREWALK: SkillDefinition = {
         const messages: string[] = [];
 
         if (!target) return { effects, messages, consumesTurn: false };
+        const movementPolicy = resolveSkillMovementPolicy(state, attacker, {
+            skillId: 'FIREWALK',
+            target,
+            baseRange: 4,
+            basePathing: 'teleport',
+            baseIgnoreGroundHazards: true
+        });
 
-        if (!validateRange(attacker.position, target, 4)) {
+        if (!validateRange(attacker.position, target, movementPolicy.range)) {
             return { effects, messages: ['Out of range!'], consumesTurn: false };
         }
 
@@ -38,7 +49,10 @@ export const FIREWALK: SkillDefinition = {
             return { effects, messages: ['Can only teleport to Fire or Lava!'], consumesTurn: false };
         }
 
-        if (isBlockedByActor(state, target, attacker.id)) {
+        const destination = validateMovementDestination(state, attacker, target, movementPolicy, {
+            ignoreHazards: true
+        });
+        if (!destination.isValid) {
             return { effects, messages: ['Target position occupied!'], consumesTurn: false };
         }
 
@@ -48,7 +62,8 @@ export const FIREWALK: SkillDefinition = {
             target: 'self',
             destination: target,
             source: attacker.position,
-            simulatePath: false
+            simulatePath: movementPolicy.simulatePath,
+            ignoreGroundHazards: movementPolicy.ignoreGroundHazards
         });
 
         // Grant Immunity
@@ -80,9 +95,22 @@ export const FIREWALK: SkillDefinition = {
     },
     getValidTargets: (state: GameState, origin: Point) => {
         const targets: Point[] = [];
+        const actorAtOrigin = state.player.position.q === origin.q
+            && state.player.position.r === origin.r
+            && state.player.position.s === origin.s
+            ? state.player
+            : state.enemies.find(e => e.position.q === origin.q && e.position.r === origin.r && e.position.s === origin.s);
+        const range = actorAtOrigin
+            ? resolveSkillMovementPolicy(state, actorAtOrigin, {
+                skillId: 'FIREWALK',
+                baseRange: 4,
+                basePathing: 'teleport',
+                baseIgnoreGroundHazards: true
+            }).range
+            : 4;
         state.tiles.forEach((tile) => {
             const dist = hexDistance(origin, tile.position);
-            if (dist > 0 && dist <= 4) {
+            if (dist > 0 && dist <= range) {
                 const isFire = tile.effects.some(e => e.id === 'FIRE');
                 const isLava = tile.baseId === 'LAVA' || tile.traits.has('LIQUID');
                 if (isFire || isLava) {

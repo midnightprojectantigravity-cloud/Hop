@@ -7,6 +7,10 @@ import { applyEffects } from '../systems/effect-engine';
 import { SKILL_JUICE_SIGNATURES } from '../systems/visual/juice-manifest';
 import { validateAxialDirection, validateRange, findFirstObstacle, canLandOnHazard } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
+import {
+    resolveSkillMovementPolicy,
+    validateMovementDestination
+} from '../systems/capabilities/movement-policy';
 
 /**
  * KINETIC DASH Skill
@@ -35,7 +39,12 @@ export const DASH: SkillDefinition = {
         const { isAxial, directionIndex } = validateAxialDirection(attacker.position, target);
         // const dist = hexDistance(attacker.position, target);
         const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
-        const range = noEnemies ? 20 : 4;
+        const movementPolicy = resolveSkillMovementPolicy(state, attacker, {
+            skillId: 'DASH',
+            target,
+            baseRange: noEnemies ? 20 : 4
+        });
+        const range = movementPolicy.range;
 
         if (!validateRange(attacker.position, target, range)) {
             return { effects, messages: ['Out of range!'], consumesTurn: false };
@@ -52,8 +61,8 @@ export const DASH: SkillDefinition = {
 
         // findFirstObstacle returns what we hit first
         const obstacleResult = findFirstObstacle(state, fullLine.slice(1), {
-            checkWalls: true,
-            checkActors: true,
+            checkWalls: !movementPolicy.ignoreWalls,
+            checkActors: !movementPolicy.allowPassThroughActors,
             checkLava: false,
             excludeActorId: attacker.id
         });
@@ -86,7 +95,7 @@ export const DASH: SkillDefinition = {
                     target: 'self',
                     destination: stopPos,
                     path: dashPath,
-                    simulatePath: true,
+                    simulatePath: movementPolicy.simulatePath,
                     ignoreGroundHazards: true,
                     animationDuration: dashPath.length * 60  // 60ms per tile (fast dash)
                 }
@@ -134,7 +143,7 @@ export const DASH: SkillDefinition = {
                 target: 'self',
                 destination: stopPos,
                 path: dashPath,
-                simulatePath: true,
+                simulatePath: movementPolicy.simulatePath,
                 ignoreGroundHazards: true,
                 animationDuration: dashPath.length * 60  // 60ms per tile
             };
@@ -149,14 +158,25 @@ export const DASH: SkillDefinition = {
 
     getValidTargets: (state: GameState, origin: Point) => {
         const noEnemies = state.enemies.filter(e => e.hp > 0).length === 0;
-        const range = noEnemies ? 20 : 4;
         const actor = getActorAt(state, origin) as Actor | undefined;
         if (!actor) return [];
+        const movementPolicy = resolveSkillMovementPolicy(state, actor, {
+            skillId: 'DASH',
+            baseRange: noEnemies ? 20 : 4
+        });
+        const range = movementPolicy.range;
         return SpatialSystem.getAxialTargets(state, origin, range, {
-            stopAtObstacles: true,
-            includeActors: true,
+            stopAtObstacles: !(movementPolicy.ignoreWalls || movementPolicy.allowPassThroughActors),
+            includeActors: !movementPolicy.allowPassThroughActors,
             includeWalls: false
-        }).filter(p => canLandOnHazard(state, actor, p));
+        }).filter(p => {
+            const destination = validateMovementDestination(state, actor, p, movementPolicy, {
+                occupancy: 'enemy'
+            });
+            if (!destination.isValid) return false;
+            // Preserve baseline dash behavior of disallowing direct landings on hazards.
+            return canLandOnHazard(state, actor, p, { movementModel: movementPolicy.movementModel });
+        });
     },
 
     upgrades: {

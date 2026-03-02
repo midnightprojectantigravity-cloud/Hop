@@ -2,9 +2,12 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
-import { canLandOnHazard, isBlockedByWall, isBlockedByActor, validateRange } from '../systems/validation';
+import { validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
-import { resolveMovementCapabilities } from '../systems/capabilities/movement';
+import {
+    resolveSkillMovementPolicy,
+    validateMovementDestination
+} from '../systems/capabilities/movement-policy';
 
 /**
  * SWIFT_ROLL Skill
@@ -26,18 +29,19 @@ export const SWIFT_ROLL: SkillDefinition = {
         const messages: string[] = [];
 
         if (!target) return { effects, messages, consumesTurn: false };
-        const movementModel = resolveMovementCapabilities(state, attacker, { skillId: 'SWIFT_ROLL', target }).model;
-        const range = Math.max(2 + (movementModel.rangeModifier || 0), 1);
+        const movementPolicy = resolveSkillMovementPolicy(state, attacker, {
+            skillId: 'SWIFT_ROLL',
+            target,
+            baseRange: 2
+        });
+        const { range, movementModel } = movementPolicy;
 
         if (!validateRange(attacker.position, target, range)) {
             return { effects, messages: ['Too far!'], consumesTurn: false };
         }
 
-        if (
-            (!movementModel.ignoreWalls && isBlockedByWall(state, target))
-            || !canLandOnHazard(state, attacker, target, { movementModel })
-            || isBlockedByActor(state, target, attacker.id)
-        ) {
+        const destination = validateMovementDestination(state, attacker, target, movementPolicy);
+        if (!destination.isValid) {
             return { effects, messages: ['Cannot roll there!'], consumesTurn: false };
         }
 
@@ -45,8 +49,8 @@ export const SWIFT_ROLL: SkillDefinition = {
             type: 'Displacement',
             target: 'self',
             destination: target,
-            simulatePath: movementModel.pathing !== 'teleport',
-            ignoreGroundHazards: movementModel.ignoreGroundHazards || movementModel.pathing === 'flight' || movementModel.pathing === 'teleport'
+            simulatePath: movementPolicy.simulatePath,
+            ignoreGroundHazards: movementPolicy.ignoreGroundHazards
         });
         effects.push({
             type: 'Juice',
@@ -77,15 +81,14 @@ export const SWIFT_ROLL: SkillDefinition = {
     getValidTargets: (state: GameState, origin: Point) => {
         const actor = getActorAt(state, origin) as Actor | undefined;
         if (!actor) return [];
-        const movementModel = resolveMovementCapabilities(state, actor, { skillId: 'SWIFT_ROLL' }).model;
-        const range = Math.max(2 + (movementModel.rangeModifier || 0), 1);
+        const movementPolicy = resolveSkillMovementPolicy(state, actor, {
+            skillId: 'SWIFT_ROLL',
+            baseRange: 2
+        });
+        const { range } = movementPolicy;
         return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
-            return (
-                (movementModel.ignoreWalls || !isBlockedByWall(state, p))
-                && canLandOnHazard(state, actor, p, { movementModel })
-                && !isBlockedByActor(state, p)
-            );
+            return validateMovementDestination(state, actor, p, movementPolicy).isValid;
         });
     },
     upgrades: {},
