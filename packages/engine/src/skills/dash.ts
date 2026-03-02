@@ -156,7 +156,7 @@ export const DASH: SkillDefinition = {
             stopAtObstacles: true,
             includeActors: true,
             includeWalls: false
-        }).filter(p => canLandOnHazard(state, actor, p));
+        }).filter(p => canLandOnHazard(state, actor, p, { skillId: 'DASH' }));
     },
 
     upgrades: {

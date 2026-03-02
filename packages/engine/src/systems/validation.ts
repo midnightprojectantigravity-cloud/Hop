@@ -4,6 +4,7 @@ import { getActorAt } from '../helpers';
 import { pointToKey } from '../hex';
 import { UnifiedTileService } from './tiles/unified-tile-service';
 import { resolveSenseLineOfSight } from './capabilities/senses';
+import { resolveMovementCapabilities } from './capabilities/movement';
 
 /**
  * Validation System
@@ -234,18 +235,58 @@ export function isHazardousTile(state: GameState, position: Point): { isHazard: 
     return { isHazard, isFireHazard };
 }
 
-export function canLandOnHazard(state: GameState, actor: Actor, position: Point): boolean {
+interface MovementHazardQueryOptions {
+    skillId?: string;
+    movementModel?: {
+        pathing?: 'walk' | 'flight' | 'teleport';
+        ignoreGroundHazards?: boolean;
+    };
+}
+
+const resolveMovementHazardFlags = (
+    state: GameState,
+    actor: Actor,
+    position: Point,
+    options: MovementHazardQueryOptions = {}
+): { isAirborne: boolean; ignoresGroundHazards: boolean } => {
+    const model = options.movementModel || resolveMovementCapabilities(state, actor, {
+        skillId: options.skillId,
+        target: position
+    }).model;
+    const isAirborne = actor.isFlying || model.pathing === 'flight';
+    const ignoresGroundHazards = Boolean(model.ignoreGroundHazards || model.pathing === 'flight');
+    return { isAirborne, ignoresGroundHazards };
+};
+
+export function canLandOnHazard(
+    state: GameState,
+    actor: Actor,
+    position: Point,
+    options: MovementHazardQueryOptions = {}
+): boolean {
     const { isHazard, isFireHazard } = isHazardousTile(state, position);
     if (!isHazard) return true;
-    if (actor.isFlying) return true;
+    const movementFlags = resolveMovementHazardFlags(state, actor, position, options);
+    if (movementFlags.isAirborne || movementFlags.ignoresGroundHazards) return true;
     const hasAbsorbFire = actor.activeSkills?.some(s => s.id === 'ABSORB_FIRE')
         || actor.statusEffects?.some(s => s.type === 'fire_immunity');
     if (hasAbsorbFire && isFireHazard) return true;
     return false;
 }
 
-export function canPassHazard(state: GameState, actor: Actor, position: Point, skillId: string): boolean {
-    if (canLandOnHazard(state, actor, position)) return true;
+export function canPassHazard(
+    state: GameState,
+    actor: Actor,
+    position: Point,
+    skillId: string,
+    options: MovementHazardQueryOptions = {}
+): boolean {
+    const movementFlags = resolveMovementHazardFlags(state, actor, position, {
+        ...options,
+        skillId: options.skillId || skillId
+    });
+    if (movementFlags.isAirborne || movementFlags.ignoresGroundHazards) return true;
+    if (canLandOnHazard(state, actor, position, { ...options, skillId: options.skillId || skillId })) return true;
     const passSkills = new Set(['JUMP', 'VAULT', 'GRAPPLE_HOOK', 'DASH']);
     return passSkills.has(skillId);
 }

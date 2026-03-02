@@ -44,7 +44,7 @@ export const JUMP: SkillDefinition = {
         // 3. Occupancy & Environmental Check
         const obstacle = getActorAt(state, target);
         const wall = isBlockedByWall(state, target);
-        const canLand = canLandOnHazard(state, attacker, target);
+        const canLand = canLandOnHazard(state, attacker, target, { skillId: 'JUMP' });
 
         if (wall) {
             messages.push('Cannot jump into a wall!');
@@ -141,7 +141,7 @@ export const JUMP: SkillDefinition = {
         return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
             if (isBlockedByWall(state, p)) return false;
-            if (!canLandOnHazard(state, actor, p)) return false;
+            if (!canLandOnHazard(state, actor, p, { skillId: 'JUMP' })) return false;
             const occupied = getActorAt(state, p);
             if (occupied && occupied.id !== actor.id && !hasMeteor) return false;
             return true;

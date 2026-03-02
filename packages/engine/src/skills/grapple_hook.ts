@@ -183,7 +183,7 @@ export const GRAPPLE_HOOK: SkillDefinition = {
                 : (targetActor ? t : undefined);
 
             if (!landingPos) return false;
-            return canLandOnHazard(state, shooter, landingPos);
+            return canLandOnHazard(state, shooter, landingPos, { skillId: 'GRAPPLE_HOOK' });
         });
     },
     upgrades: {},

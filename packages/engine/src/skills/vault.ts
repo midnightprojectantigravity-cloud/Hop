@@ -37,7 +37,7 @@ export const VAULT: SkillDefinition = {
             messages.push('Blocked!');
             return { effects, messages, consumesTurn: false };
         }
-        if (!canLandOnHazard(state, attacker, target)) {
+        if (!canLandOnHazard(state, attacker, target, { skillId: 'VAULT' })) {
             messages.push('Blocked!');
             return { effects, messages, consumesTurn: false };
         }
@@ -90,7 +90,7 @@ export const VAULT: SkillDefinition = {
         if (!actor) return [];
         return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
-            return !isBlockedByWall(state, p) && !isBlockedByActor(state, p) && canLandOnHazard(state, actor as Actor, p);
+            return !isBlockedByWall(state, p) && !isBlockedByActor(state, p) && canLandOnHazard(state, actor as Actor, p, { skillId: 'VAULT' });
         });
     },
     upgrades: {},

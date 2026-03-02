@@ -5,6 +5,7 @@ import { SpatialSystem } from '../spatial-system';
 import { TileResolver } from '../tiles/tile-effects';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
 import { buildAttachmentPropagationPlans } from '../movement/attachment-system';
+import { resolveMovementCapabilities } from '../capabilities/movement';
 import type { AtomicEffectHandlerMap } from './types';
 
 export const displacementEffectHandlers: AtomicEffectHandlerMap = {
@@ -29,6 +30,18 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
             // Skip displacement safely instead of crashing path simulation.
             return nextState;
         }
+        const movementResult = resolveMovementCapabilities(nextState, actor, {
+            target: effect.destination
+        });
+        const movementModel = movementResult.model;
+        const capabilityIgnoresGroundHazards = Boolean(
+            movementModel.ignoreGroundHazards || movementModel.pathing === 'flight'
+        );
+        const capabilityIgnoreWalls = Boolean(movementModel.ignoreWalls || movementModel.pathing === 'flight');
+        const capabilityIgnoreActors = Boolean(movementModel.allowPassThroughActors);
+        const transitionActor: Actor = ((movementModel.pathing === 'flight' || capabilityIgnoresGroundHazards) && !actor.isFlying)
+            ? { ...actor, isFlying: true }
+            : actor;
 
         const origin = effect.source || actor.position;
         const timelineDelayBeforeMoveMs = Math.min(
@@ -61,9 +74,10 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
             if (!liveActor) {
                 return nextState;
             }
-            const pathResult = TileResolver.processPath(liveActor, path.slice(1), nextState, path.length - 1, {
-                ignoreActors: effect.ignoreCollision,
-                ignoreGroundHazards: effect.ignoreGroundHazards
+            const pathResult = TileResolver.processPath(transitionActor, path.slice(1), nextState, path.length - 1, {
+                ignoreActors: Boolean(effect.ignoreCollision || capabilityIgnoreActors),
+                ignoreGroundHazards: Boolean(effect.ignoreGroundHazards || capabilityIgnoresGroundHazards),
+                ignoreWalls: capabilityIgnoreWalls
             });
             finalDestination = pathResult.lastValidPos;
 
@@ -118,7 +132,10 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
                 if (!liveActorForEntry) {
                     return nextState;
                 }
-                const entryResult = TileResolver.processEntry(liveActorForEntry, finalTile, nextState);
+                const entryActor = ((movementModel.pathing === 'flight' || capabilityIgnoresGroundHazards) && !liveActorForEntry.isFlying)
+                    ? { ...liveActorForEntry, isFlying: true }
+                    : liveActorForEntry;
+                const entryResult = TileResolver.processEntry(entryActor, finalTile, nextState);
                 if (entryResult.effects.length > 0) {
                     nextState = api.applyEffects(nextState, entryResult.effects, { targetId: targetActorId });
                 }
@@ -149,7 +166,14 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
 
                         const tile = UnifiedTileService.getTileAt(nextState, nextSlide);
                         if (tile) {
-                            const transition = TileResolver.processTransition(actor as Actor, tile, nextState, 1);
+                            const slideActor = ((movementModel.pathing === 'flight' || capabilityIgnoresGroundHazards) && !actor.isFlying)
+                                ? { ...actor, isFlying: true }
+                                : actor;
+                            const transition = TileResolver.processTransition(slideActor as Actor, tile, nextState, 1, {
+                                ignoreGroundHazards: capabilityIgnoresGroundHazards,
+                                ignoreWalls: capabilityIgnoreWalls,
+                                ignoreActors: capabilityIgnoreActors
+                            });
                             slidePos = nextSlide;
                             if (transition.effects.length > 0) {
                                 nextState = api.applyEffects(nextState, transition.effects, { targetId: targetActorId });

@@ -6,6 +6,7 @@ import { getSkillScenarios } from '../scenarios';
 import { canLandOnHazard, canPassHazard, isBlockedByActor } from '../systems/validation';
 import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { isFreeMoveMode } from '../systems/free-move';
+import { resolveMovementCapabilities } from '../systems/capabilities/movement';
 
 /**
  * BASIC_MOVE Skill
@@ -13,18 +14,44 @@ import { isFreeMoveMode } from '../systems/free-move';
  */
 
 // 1. Extract the shared logic
-const getEffectiveMoveRange = (state: GameState, actor: Actor): number => {
+const getEffectiveMoveRange = (state: GameState, actor: Actor, rangeModifier = 0): number => {
     if (isFreeMoveMode(state)) return 20;
-    return Math.max(actor.speed || 1, 1);
+    return Math.max((actor.speed || 1) + rangeModifier, 1);
 };
 
-const isBlockedMovementTile = (state: GameState, target: Point): boolean => {
+const isBlockedMovementTile = (
+    state: GameState,
+    target: Point,
+    movementModel: { ignoreWalls?: boolean }
+): boolean => {
     if (!SpatialSystem.isWithinBounds(state, target)) return true;
+    if (movementModel.ignoreWalls) return false;
     const traits = UnifiedTileService.getTraitsAt(state, target);
     return traits.has('BLOCKS_MOVEMENT');
 };
 
-const getSafeMovementRange = (state: GameState, actor: Actor, origin: Point, movePoints: number): Point[] => {
+const canTraverseMovementTile = (
+    state: GameState,
+    target: Point,
+    movementModel: { ignoreWalls?: boolean }
+): boolean => {
+    if (!SpatialSystem.isWithinBounds(state, target)) return false;
+    if (movementModel.ignoreWalls) return true;
+    return UnifiedTileService.isWalkable(state, target);
+};
+
+const getSafeMovementRange = (
+    state: GameState,
+    actor: Actor,
+    origin: Point,
+    movePoints: number,
+    movementModel: {
+        ignoreGroundHazards?: boolean;
+        ignoreWalls?: boolean;
+        allowPassThroughActors?: boolean;
+        pathing?: 'walk' | 'flight' | 'teleport';
+    }
+): Point[] => {
     const visited = new Map<string, number>();
     const out: Point[] = [];
     const key = (p: Point) => `${p.q},${p.r}`;
@@ -37,20 +64,31 @@ const getSafeMovementRange = (state: GameState, actor: Actor, origin: Point, mov
 
         for (const next of getNeighbors(cur.p)) {
             if (!SpatialSystem.isWithinBounds(state, next)) continue;
-            if (!UnifiedTileService.isWalkable(state, next)) continue;
-            if (!canPassHazard(state, actor, next, 'BASIC_MOVE')) continue;
+            if (!canTraverseMovementTile(state, next, movementModel)) continue;
+            if (!canPassHazard(state, actor, next, 'BASIC_MOVE', {
+                movementModel,
+                skillId: 'BASIC_MOVE'
+            })) continue;
 
             const occupant = getActorAt(state, next) as Actor | undefined;
             const occupiedByOther = !!occupant && occupant.id !== actor.id;
             const occupiedByAlly = occupiedByOther && occupant.factionId === actor.factionId;
-            if (occupiedByOther && !occupiedByAlly) continue;
+            const canPassOccupied = occupiedByAlly || Boolean(movementModel.allowPassThroughActors);
+            if (occupiedByOther && !canPassOccupied) continue;
 
             const nk = key(next);
             const newCost = cur.cost + 1;
             if (visited.has(nk) && visited.get(nk)! <= newCost) continue;
 
             visited.set(nk, newCost);
-            if (!occupiedByAlly && canLandOnHazard(state, actor, next) && !isBlockedMovementTile(state, next)) {
+            if (
+                !occupiedByAlly
+                && canLandOnHazard(state, actor, next, {
+                    movementModel,
+                    skillId: 'BASIC_MOVE'
+                })
+                && !isBlockedMovementTile(state, next, movementModel)
+            ) {
                 out.push(next);
             }
             queue.push({ p: next, cost: newCost });
@@ -60,7 +98,19 @@ const getSafeMovementRange = (state: GameState, actor: Actor, origin: Point, mov
     return out;
 };
 
-const findSafePath = (state: GameState, actor: Actor, origin: Point, target: Point, movePoints: number): Point[] | null => {
+const findSafePath = (
+    state: GameState,
+    actor: Actor,
+    origin: Point,
+    target: Point,
+    movePoints: number,
+    movementModel: {
+        ignoreGroundHazards?: boolean;
+        ignoreWalls?: boolean;
+        allowPassThroughActors?: boolean;
+        pathing?: 'walk' | 'flight' | 'teleport';
+    }
+): Point[] | null => {
     const key = (p: Point) => `${p.q},${p.r}`;
     const parseKey = (k: string): Point => {
         const [q, r] = k.split(',').map(Number);
@@ -79,13 +129,17 @@ const findSafePath = (state: GameState, actor: Actor, origin: Point, target: Poi
 
         for (const next of getNeighbors(cur)) {
             if (!SpatialSystem.isWithinBounds(state, next)) continue;
-            if (!UnifiedTileService.isWalkable(state, next)) continue;
-            if (!canPassHazard(state, actor, next, 'BASIC_MOVE')) continue;
+            if (!canTraverseMovementTile(state, next, movementModel)) continue;
+            if (!canPassHazard(state, actor, next, 'BASIC_MOVE', {
+                movementModel,
+                skillId: 'BASIC_MOVE'
+            })) continue;
 
             const occupant = getActorAt(state, next) as Actor | undefined;
             const occupiedByOther = !!occupant && occupant.id !== actor.id;
             const occupiedByAlly = occupiedByOther && occupant.factionId === actor.factionId;
-            if (occupiedByOther && !occupiedByAlly) continue;
+            const canPassOccupied = occupiedByAlly || Boolean(movementModel.allowPassThroughActors);
+            if (occupiedByOther && !canPassOccupied) continue;
 
             const nextKey = key(next);
             const nextCost = curCost + 1;
@@ -99,8 +153,8 @@ const findSafePath = (state: GameState, actor: Actor, origin: Point, target: Poi
 
     const targetKey = key(target);
     if (!cameFrom.has(targetKey)) return null;
-    if (isBlockedMovementTile(state, target)) return null;
-    if (!canLandOnHazard(state, actor, target)) return null;
+    if (isBlockedMovementTile(state, target, movementModel)) return null;
+    if (!canLandOnHazard(state, actor, target, { movementModel, skillId: 'BASIC_MOVE' })) return null;
 
     const path: Point[] = [];
     let cur: string | null = targetKey;
@@ -129,10 +183,15 @@ export const BASIC_MOVE: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
-        const range = getEffectiveMoveRange(state, attacker);
-        const validTargets = getSafeMovementRange(state, attacker, attacker.position, range);
+        const movementResult = resolveMovementCapabilities(state, attacker, {
+            skillId: 'BASIC_MOVE',
+            target
+        });
+        const movementModel = movementResult.model;
+        const range = getEffectiveMoveRange(state, attacker, movementModel.rangeModifier || 0);
+        const validTargets = getSafeMovementRange(state, attacker, attacker.position, range, movementModel);
         const isTargetValid = validTargets.some((p: Point) => hexEquals(p, target));
-        const path = findSafePath(state, attacker, attacker.position, target, range);
+        const path = findSafePath(state, attacker, attacker.position, target, range, movementModel);
 
         if (!isTargetValid || !path || path.length < 2) {
             messages.push('Target out of reach or blocked!');
@@ -148,7 +207,8 @@ export const BASIC_MOVE: SkillDefinition = {
             simulatePath: true,
             // Validation/pathfinding allows passing through allies for free movement.
             // Runtime simulation must match that contract to avoid short-stops.
-            ignoreCollision: true
+            ignoreCollision: true,
+            ignoreGroundHazards: Boolean(movementModel.ignoreGroundHazards || movementModel.pathing === 'flight')
         });
 
         const actorLabel = attacker.id === state.player.id
@@ -162,8 +222,10 @@ export const BASIC_MOVE: SkillDefinition = {
         const actor = getActorAt(state, origin) as Actor;
         if (!actor) return [];
 
-        const range = getEffectiveMoveRange(state, actor);
-        const movementTargets = getSafeMovementRange(state, actor, origin, range);
+        const movementResult = resolveMovementCapabilities(state, actor, { skillId: 'BASIC_MOVE' });
+        const movementModel = movementResult.model;
+        const range = getEffectiveMoveRange(state, actor, movementModel.rangeModifier || 0);
+        const movementTargets = getSafeMovementRange(state, actor, origin, range, movementModel);
         return movementTargets.filter(p => !isBlockedByActor(state, p, actor.id));
     },
     upgrades: {},
