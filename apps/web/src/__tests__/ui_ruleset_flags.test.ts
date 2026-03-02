@@ -9,7 +9,8 @@ describe('ui ruleset flags', () => {
 
     expect(getUiRulesetFlags(state)).toEqual({
       acaeEnabled: false,
-      sharedVectorCarryEnabled: false
+      sharedVectorCarryEnabled: false,
+      intelStrict: false
     });
   });
 
@@ -28,8 +29,8 @@ describe('ui ruleset flags', () => {
 
     expect(getUiRulesetFlags(state)).toEqual({
       acaeEnabled: true,
-      sharedVectorCarryEnabled: true
+      sharedVectorCarryEnabled: true,
+      intelStrict: false
     });
   });
 });
-

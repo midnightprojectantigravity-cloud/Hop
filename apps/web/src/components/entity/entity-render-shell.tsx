@@ -89,7 +89,7 @@ export const EntityRenderShell: React.FC<EntityRenderShellProps> = ({
 
           <EntityAilmentBadges entity={entity} />
 
-          <title>{`${entity.subtype || entity.type} - HP ${entity.hp}/${entity.maxHp}${entity.intent ? ` - ${entity.intent}` : ''}`}</title>
+          <title>{`${entity.subtype || entity.type}`}</title>
         </g>
       </g>
     </g>

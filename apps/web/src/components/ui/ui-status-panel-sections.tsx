@@ -1,6 +1,7 @@
 import React from 'react';
 import type { GameState } from '@hop/engine';
 import { InitiativeDisplay } from '../InitiativeQueue';
+import { getUiActorInformation, getUiInformationRevealMode } from '../../app/information-reveal';
 
 interface CompactFlagProps {
   compact: boolean;
@@ -29,6 +30,7 @@ interface RulesetItemProps {
 export interface UiRulesetFlags {
   acaeEnabled: boolean;
   sharedVectorCarryEnabled: boolean;
+  intelStrict: boolean;
 }
 
 export const UiStatusHeader: React.FC<CompactFlagProps> = ({ compact }) => (
@@ -67,20 +69,29 @@ export const UiVitalsSection: React.FC<StatusGameProps> = ({ gameState, compact 
       </div>
     </div>
 
-    {gameState.enemies.filter(e => e.subtype === 'sentinel').map((boss) => (
-      <div key={boss.id} className="pt-4 animate-in slide-in-from-right-8 duration-500">
-        <div className="flex justify-between items-end mb-2">
-          <span className="text-xs font-black text-red-500 uppercase tracking-tighter italic">Sentinel Directive</span>
-          <span className="text-lg font-black">{boss.hp} <span className="text-white/20 text-xs">/ {boss.maxHp}</span></span>
+    {gameState.enemies.filter(e => e.subtype === 'sentinel').map((boss) => {
+      const info = getUiActorInformation(gameState, gameState.player.id, boss.id);
+      const showName = info.reveal.name;
+      const showHp = info.reveal.hp;
+      const bossLabel = showName ? (info.data.name || 'Sentinel Directive') : 'Unknown Directive';
+      const hpCurrent = showHp ? boss.hp : 0;
+      const hpMax = showHp ? boss.maxHp : 0;
+      const hpWidth = showHp ? (boss.hp / boss.maxHp) * 100 : 0;
+      return (
+        <div key={boss.id} className="pt-4 animate-in slide-in-from-right-8 duration-500">
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-xs font-black text-red-500 uppercase tracking-tighter italic">{bossLabel}</span>
+            <span className="text-lg font-black">{hpCurrent} <span className="text-white/20 text-xs">/ {hpMax}</span></span>
+          </div>
+          <div className="h-4 w-full bg-red-950/30 rounded-md border border-red-500/20 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all duration-300"
+              style={{ width: `${hpWidth}%` }}
+            />
+          </div>
         </div>
-        <div className="h-4 w-full bg-red-950/30 rounded-md border border-red-500/20 overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all duration-300"
-            style={{ width: `${(boss.hp / boss.maxHp) * 100}%` }}
-          />
-        </div>
-      </div>
-    ))}
+      );
+    })}
   </div>
 );
 
@@ -119,7 +130,7 @@ const UiRulesetItem: React.FC<RulesetItemProps> = ({ label, value }) => (
 );
 
 export const UiRulesetSection: React.FC<StatusGameProps> = ({ gameState, compact }) => {
-  const { acaeEnabled, sharedVectorCarryEnabled } = getUiRulesetFlags(gameState);
+  const { acaeEnabled, sharedVectorCarryEnabled, intelStrict } = getUiRulesetFlags(gameState);
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
@@ -127,15 +138,20 @@ export const UiRulesetSection: React.FC<StatusGameProps> = ({ gameState, compact
       <div className={compact ? 'space-y-2' : 'space-y-3'}>
         <UiRulesetItem label="ACAE" value={acaeEnabled} />
         <UiRulesetItem label="Shared Vector Carry" value={sharedVectorCarryEnabled} />
+        <UiRulesetItem label="Intel Strict" value={intelStrict} />
       </div>
     </div>
   );
 };
 
-export const getUiRulesetFlags = (gameState: GameState): UiRulesetFlags => ({
-  acaeEnabled: gameState.ruleset?.ailments?.acaeEnabled === true,
-  sharedVectorCarryEnabled: gameState.ruleset?.attachments?.sharedVectorCarry === true
-});
+export const getUiRulesetFlags = (gameState: GameState): UiRulesetFlags => {
+  const revealMode = getUiInformationRevealMode();
+  return {
+    acaeEnabled: gameState.ruleset?.ailments?.acaeEnabled === true,
+    sharedVectorCarryEnabled: gameState.ruleset?.attachments?.sharedVectorCarry === true,
+    intelStrict: revealMode === 'strict'
+  };
+};
 
 export const UiDirectivesSection: React.FC<DirectivesSectionProps> = ({
   compact,

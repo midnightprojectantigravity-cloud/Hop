@@ -1,4 +1,5 @@
 import { getEntityVisual, type GameState, type Actor, type InitiativeEntry } from '@hop/engine';
+import { getUiActorInformation } from '../app/information-reveal';
 
 interface InitiativeDisplayProps {
     gameState: GameState;
@@ -28,6 +29,15 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
                     const isCurrent = idx === initiativeQueue.currentIndex;
                     const entry = initiativeQueue.entries.find(e => e.actorId === actor.id);
                     const hasActed = entry?.hasActed;
+                    const info = isPlayer
+                        ? null
+                        : getUiActorInformation(gameState, player.id, actor.id);
+                    const isEnemyHpVisible = isPlayer || Boolean(info?.reveal.hp);
+                    const isEnemyNameVisible = isPlayer || Boolean(info?.reveal.name);
+                    const hpPercent = isEnemyHpVisible ? (actor.hp / actor.maxHp) * 100 : 0;
+                    const label = isPlayer
+                        ? 'You'
+                        : (isEnemyNameVisible ? info?.data.name || actor.subtype || 'Enemy' : '????');
 
                     return (
                         <div
@@ -60,12 +70,12 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
                             <div className="w-8 h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
                                 <div
                                     className={`h-full ${isPlayer ? 'bg-blue-400' : 'bg-red-400'}`}
-                                    style={{ width: `${(actor.hp / actor.maxHp) * 100}%` }}
+                                    style={{ width: `${hpPercent}%` }}
                                 ></div>
                             </div>
 
                             <span className={`text-[8px] font-bold uppercase mt-1 ${isPlayer ? 'text-blue-300' : 'text-red-300'} ${isCurrent ? 'text-white' : ''}`}>
-                                {isPlayer ? 'You' : (actor.subtype || 'Enemy')}
+                                {label}
                             </span>
                         </div>
                     );
