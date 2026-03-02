@@ -1,4 +1,5 @@
 import { getEntityVisual, type GameState, type Actor, type InitiativeEntry } from '@hop/engine';
+import { getUiActorInformation } from '../app/information-reveal';
 
 interface InitiativeDisplayProps {
     gameState: GameState;
@@ -28,6 +29,18 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
                     const isCurrent = idx === initiativeQueue.currentIndex;
                     const entry = initiativeQueue.entries.find(e => e.actorId === actor.id);
                     const hasActed = entry?.hasActed;
+                    const actorInfo = isPlayer
+                        ? null
+                        : getUiActorInformation(gameState, player.id, actor.id);
+                    const displayName = isPlayer
+                        ? 'You'
+                        : (actorInfo?.data.name || 'Unknown');
+                    const displayHp = isPlayer
+                        ? { current: actor.hp, max: actor.maxHp }
+                        : actorInfo?.data.hp;
+                    const hpPercent = displayHp
+                        ? Math.max(0, Math.min(100, (displayHp.current / Math.max(1, displayHp.max)) * 100))
+                        : 100;
 
                     return (
                         <div
@@ -59,13 +72,13 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
                             {/* HP bar */}
                             <div className="w-8 h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
                                 <div
-                                    className={`h-full ${isPlayer ? 'bg-blue-400' : 'bg-red-400'}`}
-                                    style={{ width: `${(actor.hp / actor.maxHp) * 100}%` }}
+                                    className={`h-full ${isPlayer ? 'bg-blue-400' : (displayHp ? 'bg-red-400' : 'bg-white/35')}`}
+                                    style={{ width: `${hpPercent}%` }}
                                 ></div>
                             </div>
 
                             <span className={`text-[8px] font-bold uppercase mt-1 ${isPlayer ? 'text-blue-300' : 'text-red-300'} ${isCurrent ? 'text-white' : ''}`}>
-                                {isPlayer ? 'You' : (actor.subtype || 'Enemy')}
+                                {displayName}
                             </span>
                         </div>
                     );

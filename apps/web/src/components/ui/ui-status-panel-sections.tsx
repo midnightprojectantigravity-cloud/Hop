@@ -1,5 +1,6 @@
 import React from 'react';
 import type { GameState } from '@hop/engine';
+import { getUiActorInformation, getUiInformationRevealMode } from '../../app/information-reveal';
 import { InitiativeDisplay } from '../InitiativeQueue';
 
 interface CompactFlagProps {
@@ -67,20 +68,33 @@ export const UiVitalsSection: React.FC<StatusGameProps> = ({ gameState, compact 
       </div>
     </div>
 
-    {gameState.enemies.filter(e => e.subtype === 'sentinel').map((boss) => (
-      <div key={boss.id} className="pt-4 animate-in slide-in-from-right-8 duration-500">
-        <div className="flex justify-between items-end mb-2">
-          <span className="text-xs font-black text-red-500 uppercase tracking-tighter italic">Sentinel Directive</span>
-          <span className="text-lg font-black">{boss.hp} <span className="text-white/20 text-xs">/ {boss.maxHp}</span></span>
+    {gameState.enemies.filter(e => e.subtype === 'sentinel').map((boss) => {
+      const info = getUiActorInformation(gameState, gameState.player.id, boss.id);
+      const displayName = info.data.name || 'Unknown Directive';
+      const hp = info.data.hp;
+      const hpPercent = hp ? Math.max(0, Math.min(100, (hp.current / Math.max(1, hp.max)) * 100)) : 100;
+
+      return (
+        <div key={boss.id} className="pt-4 animate-in slide-in-from-right-8 duration-500">
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-xs font-black text-red-500 uppercase tracking-tighter italic">{displayName}</span>
+            <span className="text-lg font-black">
+              {hp ? (
+                <>{hp.current} <span className="text-white/20 text-xs">/ {hp.max}</span></>
+              ) : (
+                <span className="text-white/40 text-sm">?? / ??</span>
+              )}
+            </span>
+          </div>
+          <div className="h-4 w-full bg-red-950/30 rounded-md border border-red-500/20 overflow-hidden">
+            <div
+              className={`h-full transition-all duration-300 ${hp ? 'bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-white/20'}`}
+              style={{ width: `${hpPercent}%` }}
+            />
+          </div>
         </div>
-        <div className="h-4 w-full bg-red-950/30 rounded-md border border-red-500/20 overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all duration-300"
-            style={{ width: `${(boss.hp / boss.maxHp) * 100}%` }}
-          />
-        </div>
-      </div>
-    ))}
+      );
+    })}
   </div>
 );
 
@@ -120,6 +134,8 @@ const UiRulesetItem: React.FC<RulesetItemProps> = ({ label, value }) => (
 
 export const UiRulesetSection: React.FC<StatusGameProps> = ({ gameState, compact }) => {
   const { acaeEnabled, sharedVectorCarryEnabled } = getUiRulesetFlags(gameState);
+  const revealMode = getUiInformationRevealMode();
+  const intelStrict = revealMode === 'strict';
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
@@ -127,6 +143,7 @@ export const UiRulesetSection: React.FC<StatusGameProps> = ({ gameState, compact
       <div className={compact ? 'space-y-2' : 'space-y-3'}>
         <UiRulesetItem label="ACAE" value={acaeEnabled} />
         <UiRulesetItem label="Shared Vector Carry" value={sharedVectorCarryEnabled} />
+        <UiRulesetItem label="Intel Strict" value={intelStrict} />
       </div>
     </div>
   );
