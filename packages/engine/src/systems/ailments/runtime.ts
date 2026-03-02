@@ -251,6 +251,7 @@ export const isAcaeEnabled = (state: GameState): boolean =>
 export const resolveAcaeRuleset = (state: GameState): NonNullable<GameState['ruleset']> => {
     const defaultEnabled = typeof process !== 'undefined' && process.env?.HOP_ACAE_ENABLED === '1';
     const defaultAttachmentCarryEnabled = typeof process !== 'undefined' && process.env?.HOP_ATTACHMENT_SHARED_VECTOR === '1';
+    const defaultLoadoutPassivesEnabled = typeof process !== 'undefined' && process.env?.HOP_CAP_LOADOUT_PASSIVES === '1';
     const defaultMovementRuntimeEnabled = typeof process !== 'undefined' && process.env?.HOP_CAP_MOVEMENT_RUNTIME === '1';
     return {
         ...(state.ruleset || {}),
@@ -263,7 +264,7 @@ export const resolveAcaeRuleset = (state: GameState): NonNullable<GameState['rul
             version: DEFAULT_ATTACHMENT_VERSION
         },
         capabilities: {
-            loadoutPassivesEnabled: state.ruleset?.capabilities?.loadoutPassivesEnabled ?? false,
+            loadoutPassivesEnabled: state.ruleset?.capabilities?.loadoutPassivesEnabled ?? defaultLoadoutPassivesEnabled,
             movementRuntimeEnabled: state.ruleset?.capabilities?.movementRuntimeEnabled ?? defaultMovementRuntimeEnabled,
             version: DEFAULT_CAPABILITY_VERSION
         }

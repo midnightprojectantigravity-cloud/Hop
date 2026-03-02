@@ -196,6 +196,7 @@ export const resolveGameStateAction = (
             });
             return {
                 ...s,
+                ruleset: resolvedRuleset,
                 player: {
                     ...s.player,
                     activeSkills: applied.activeSkills,

@@ -17,6 +17,7 @@ import { useAppRouting } from './app/use-app-routing';
 import { HubScreen } from './app/HubScreen';
 import { GameScreen } from './app/GameScreen';
 import { buildStartRunPayload } from './app/start-run-overrides';
+import { getUiCapabilityRollout, setUiCapabilityRollout } from './app/capability-rollout';
 
 const summarizeActionPayload = (action: Action): Record<string, unknown> | undefined => {
   const payload = (action as any).payload;
@@ -97,8 +98,13 @@ function App() {
   const [showMovementRange, setShowMovementRange] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [postCommitInputLock, setPostCommitInputLock] = useState(false);
-  const [hubCapabilityPassivesEnabled, setHubCapabilityPassivesEnabled] = useState(false);
-  const [hubMovementRuntimeEnabled, setHubMovementRuntimeEnabled] = useState(false);
+  const initialCapabilityRolloutRef = useRef(getUiCapabilityRollout());
+  const [hubCapabilityPassivesEnabled, setHubCapabilityPassivesEnabled] = useState(
+    initialCapabilityRolloutRef.current.capabilityPassivesEnabled
+  );
+  const [hubMovementRuntimeEnabled, setHubMovementRuntimeEnabled] = useState(
+    initialCapabilityRolloutRef.current.movementRuntimeEnabled
+  );
   const {
     turnDriver,
     isInputLocked,
@@ -177,6 +183,16 @@ function App() {
 
   const handleExitToHub = () => { dispatchWithTrace({ type: 'EXIT_TO_HUB' }, 'exit_to_hub'); setSelectedSkillId(null); resetReplayUi(); navigateTo(hubPath); };
 
+  const handleCapabilityPassivesEnabledChange = useCallback((enabled: boolean) => {
+    setHubCapabilityPassivesEnabled(enabled);
+    setUiCapabilityRollout({ capabilityPassivesEnabled: enabled });
+  }, []);
+
+  const handleMovementRuntimeEnabledChange = useCallback((enabled: boolean) => {
+    setHubMovementRuntimeEnabled(enabled);
+    setUiCapabilityRollout({ movementRuntimeEnabled: enabled });
+  }, []);
+
   const handleStartRun = (mode: 'normal' | 'daily') => {
     const id = gameState.selectedLoadoutId;
     if (!id) { console.warn('Start Run called without a selected loadout.'); return; }
@@ -192,7 +208,15 @@ function App() {
   };
 
   const handleStartArcadeRun = (loadoutId: string) => {
-    dispatchWithTrace({ type: 'START_RUN', payload: { loadoutId, mode: 'daily' } }, 'arcade_start_run');
+    dispatchWithTrace({
+      type: 'START_RUN',
+      payload: buildStartRunPayload({
+        loadoutId,
+        mode: 'daily',
+        capabilityPassivesEnabled: hubCapabilityPassivesEnabled,
+        movementRuntimeEnabled: hubMovementRuntimeEnabled
+      })
+    }, 'arcade_start_run');
     navigateTo(hubPath);
   };
 
@@ -218,9 +242,9 @@ function App() {
         navigateTo={navigateTo}
         onStartArcadeRun={handleStartArcadeRun}
         capabilityPassivesEnabled={hubCapabilityPassivesEnabled}
-        onCapabilityPassivesEnabledChange={setHubCapabilityPassivesEnabled}
+        onCapabilityPassivesEnabledChange={handleCapabilityPassivesEnabledChange}
         movementRuntimeEnabled={hubMovementRuntimeEnabled}
-        onMovementRuntimeEnabledChange={setHubMovementRuntimeEnabled}
+        onMovementRuntimeEnabledChange={handleMovementRuntimeEnabledChange}
         onSelectLoadout={(l) => {
           dispatchWithTrace({ type: 'APPLY_LOADOUT', payload: l }, 'hub_select_loadout');
         }}

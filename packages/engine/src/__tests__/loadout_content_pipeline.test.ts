@@ -48,12 +48,14 @@ describe('loadout content pipeline', () => {
         expect(base.activeSkills.some(skill => skill.id === 'STANDARD_VISION')).toBe(false);
         expect(base.activeSkills.some(skill => skill.id === 'BASIC_AWARENESS')).toBe(false);
         expect(base.activeSkills.some(skill => skill.id === 'TACTICAL_INSIGHT')).toBe(false);
+        expect(base.activeSkills.some(skill => skill.id === 'FLIGHT')).toBe(false);
 
         const enabled = reconcileLoadoutCapabilityPassives(skirmisher, base.activeSkills, true);
         const enabledIds = enabled.map(skill => skill.id);
         expect(enabledIds.filter(id => id === 'STANDARD_VISION')).toHaveLength(1);
         expect(enabledIds.filter(id => id === 'BASIC_AWARENESS')).toHaveLength(1);
         expect(enabledIds.filter(id => id === 'TACTICAL_INSIGHT')).toHaveLength(1);
+        expect(enabledIds.filter(id => id === 'FLIGHT')).toHaveLength(1);
 
         const enabledAgain = reconcileLoadoutCapabilityPassives(skirmisher, enabled, true);
         expect(enabledAgain.map(skill => skill.id)).toEqual(enabledIds);
@@ -62,6 +64,35 @@ describe('loadout content pipeline', () => {
         expect(disabled.some(skill => skill.id === 'STANDARD_VISION')).toBe(false);
         expect(disabled.some(skill => skill.id === 'BASIC_AWARENESS')).toBe(false);
         expect(disabled.some(skill => skill.id === 'TACTICAL_INSIGHT')).toBe(false);
+        expect(disabled.some(skill => skill.id === 'FLIGHT')).toBe(false);
         expect(disabled.map(skill => skill.id)).toEqual(base.activeSkills.map(skill => skill.id));
+    });
+
+    it('maps movement capability passives to every archetype without duplicates', () => {
+        const expectedMovementCapabilityByLoadout = {
+            VANGUARD: 'BURROW',
+            SKIRMISHER: 'FLIGHT',
+            FIREMAGE: 'FLIGHT',
+            NECROMANCER: 'BURROW',
+            HUNTER: 'BURROW',
+            ASSASSIN: 'PHASE_STEP'
+        } as const;
+
+        for (const [loadoutId, expectedMovementSkill] of Object.entries(expectedMovementCapabilityByLoadout) as Array<
+            [keyof typeof expectedMovementCapabilityByLoadout, (typeof expectedMovementCapabilityByLoadout)[keyof typeof expectedMovementCapabilityByLoadout]]
+        >) {
+            const loadout = DEFAULT_LOADOUTS[loadoutId];
+            const base = applyLoadoutToPlayer(loadout);
+            const enabled = reconcileLoadoutCapabilityPassives(loadout, base.activeSkills, true);
+            const enabledIds = enabled.map(skill => skill.id);
+
+            expect(enabledIds.filter(id => id === expectedMovementSkill)).toHaveLength(1);
+
+            const enabledAgain = reconcileLoadoutCapabilityPassives(loadout, enabled, true);
+            expect(enabledAgain.map(skill => skill.id)).toEqual(enabledIds);
+
+            const disabled = reconcileLoadoutCapabilityPassives(loadout, enabled, false);
+            expect(disabled.map(skill => skill.id)).toEqual(base.activeSkills.map(skill => skill.id));
+        }
     });
 });

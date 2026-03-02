@@ -5,6 +5,7 @@ import { createActiveSkill, COMPOSITIONAL_SKILLS, SkillRegistry } from '../skill
 import type { AtomicEffect, Actor, GameState, Point, SkillDefinition } from '../types';
 import { clearCapabilityStateCacheForTests } from '../systems/capabilities/cache';
 import { getDefaultMovementCapabilityModel, resolveMovementCapabilities } from '../systems/capabilities/movement';
+import { resolveSkillMovementPolicy } from '../systems/capabilities/movement-policy';
 
 const TEST_REPLACE_SKILL_ID = 'TEST_MOVE_REPLACE_CAP';
 const TEST_EXTEND_SKILL_ID = 'TEST_MOVE_EXTEND_CAP';
@@ -322,6 +323,111 @@ describe('movement capability runtime integration', () => {
         expect(displacement?.destination).toEqual(farTarget);
         expect(displacement?.simulatePath).toBe(false);
         expect(displacement?.ignoreGroundHazards).toBe(true);
+    });
+
+    it('resolves built-in movement passive capability models', () => {
+        const state = generateInitialState(1, 'cap-move-builtins');
+        clearCapabilityStateCacheForTests();
+
+        const withMovementPassive = (skillId: 'FLIGHT' | 'PHASE_STEP' | 'BURROW') => ({
+            ...state,
+            player: {
+                ...state.player,
+                activeSkills: [
+                    createActiveSkill('BASIC_MOVE') as any,
+                    createActiveSkill(skillId) as any
+                ]
+            }
+        });
+
+        const flight = resolveMovementCapabilities(withMovementPassive('FLIGHT'), withMovementPassive('FLIGHT').player, { skillId: 'BASIC_MOVE' });
+        expect(flight.model.pathing).toBe('flight');
+        expect(flight.model.ignoreGroundHazards).toBe(true);
+        expect(flight.model.ignoreWalls).toBe(false);
+        expect(flight.model.allowPassThroughActors).toBe(false);
+        expect(flight.model.rangeModifier).toBe(0);
+
+        const phaseStep = resolveMovementCapabilities(withMovementPassive('PHASE_STEP'), withMovementPassive('PHASE_STEP').player, { skillId: 'BASIC_MOVE' });
+        expect(phaseStep.model.pathing).toBe('teleport');
+        expect(phaseStep.model.ignoreGroundHazards).toBe(true);
+        expect(phaseStep.model.ignoreWalls).toBe(true);
+        expect(phaseStep.model.allowPassThroughActors).toBe(true);
+        expect(phaseStep.model.rangeModifier).toBe(-1);
+
+        const burrow = resolveMovementCapabilities(withMovementPassive('BURROW'), withMovementPassive('BURROW').player, { skillId: 'BASIC_MOVE' });
+        expect(burrow.model.pathing).toBe('walk');
+        expect(burrow.model.ignoreGroundHazards).toBe(true);
+        expect(burrow.model.ignoreWalls).toBe(true);
+        expect(burrow.model.allowPassThroughActors).toBe(false);
+        expect(burrow.model.rangeModifier).toBe(0);
+    });
+
+    it('applies archetype-mapped movement passives only when movement runtime is enabled', () => {
+        const seed = 'cap-move-archetype-mapping';
+        const hub = gameReducer(generateInitialState(1, `${seed}:hub`), { type: 'EXIT_TO_HUB' });
+        const expectedByLoadout = {
+            VANGUARD: { skillId: 'BURROW', pathing: 'walk', ignoreWalls: true, ignoreGroundHazards: true, allowPassThroughActors: false, rangeModifier: 0 },
+            SKIRMISHER: { skillId: 'FLIGHT', pathing: 'flight', ignoreWalls: false, ignoreGroundHazards: true, allowPassThroughActors: false, rangeModifier: 0 },
+            FIREMAGE: { skillId: 'FLIGHT', pathing: 'flight', ignoreWalls: false, ignoreGroundHazards: true, allowPassThroughActors: false, rangeModifier: 0 },
+            NECROMANCER: { skillId: 'BURROW', pathing: 'walk', ignoreWalls: true, ignoreGroundHazards: true, allowPassThroughActors: false, rangeModifier: 0 },
+            HUNTER: { skillId: 'BURROW', pathing: 'walk', ignoreWalls: true, ignoreGroundHazards: true, allowPassThroughActors: false, rangeModifier: 0 },
+            ASSASSIN: { skillId: 'PHASE_STEP', pathing: 'teleport', ignoreWalls: true, ignoreGroundHazards: true, allowPassThroughActors: true, rangeModifier: -1 }
+        } as const;
+
+        for (const [loadoutId, expected] of Object.entries(expectedByLoadout) as Array<
+            [keyof typeof expectedByLoadout, (typeof expectedByLoadout)[keyof typeof expectedByLoadout]]
+        >) {
+            const runtimeOff = gameReducer(hub, {
+                type: 'START_RUN',
+                payload: {
+                    loadoutId,
+                    seed: `${seed}:${loadoutId}:off`,
+                    rulesetOverrides: {
+                        capabilities: {
+                            loadoutPassivesEnabled: true,
+                            movementRuntimeEnabled: false
+                        }
+                    }
+                }
+            });
+
+            const runtimeOn = gameReducer(hub, {
+                type: 'START_RUN',
+                payload: {
+                    loadoutId,
+                    seed: `${seed}:${loadoutId}:on`,
+                    rulesetOverrides: {
+                        capabilities: {
+                            loadoutPassivesEnabled: true,
+                            movementRuntimeEnabled: true
+                        }
+                    }
+                }
+            });
+
+            expect(runtimeOn.player.activeSkills.some(skill => skill.id === expected.skillId)).toBe(true);
+
+            const policyOff = resolveSkillMovementPolicy(runtimeOff, runtimeOff.player, {
+                skillId: 'BASIC_MOVE',
+                baseRange: 3
+            });
+            const policyOn = resolveSkillMovementPolicy(runtimeOn, runtimeOn.player, {
+                skillId: 'BASIC_MOVE',
+                baseRange: 3
+            });
+
+            expect(policyOff.pathing).toBe('walk');
+            expect(policyOff.ignoreWalls).toBe(false);
+            expect(policyOff.ignoreGroundHazards).toBe(false);
+            expect(policyOff.allowPassThroughActors).toBe(false);
+            expect(policyOff.range).toBe(3);
+
+            expect(policyOn.pathing).toBe(expected.pathing);
+            expect(policyOn.ignoreWalls).toBe(expected.ignoreWalls);
+            expect(policyOn.ignoreGroundHazards).toBe(expected.ignoreGroundHazards);
+            expect(policyOn.allowPassThroughActors).toBe(expected.allowPassThroughActors);
+            expect(policyOn.range).toBe(Math.max(0, 3 + expected.rangeModifier));
+        }
     });
 
     it('does not treat BLOCKS_LOS-only tiles (smoke) as movement walls', () => {

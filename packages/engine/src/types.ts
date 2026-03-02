@@ -733,7 +733,7 @@ export interface GameState {
         };
         capabilities?: {
             loadoutPassivesEnabled: boolean;
-            movementRuntimeEnabled?: boolean;
+            movementRuntimeEnabled: boolean;
             version: 'capabilities-v1';
         };
     };

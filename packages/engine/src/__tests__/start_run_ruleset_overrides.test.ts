@@ -71,6 +71,21 @@ const withCapabilityMovementRuntime = (enabled: boolean) => {
 };
 
 describe('START_RUN ruleset overrides', () => {
+    it('materializes both capability flags when hub ruleset is absent', () => {
+        const hub = {
+            ...generateHubState(),
+            ruleset: undefined
+        };
+        const run = gameReducer(hub, {
+            type: 'START_RUN',
+            payload: { loadoutId: 'VANGUARD', seed: 'start-run-capability-materialize-defaults' }
+        });
+
+        expect(run.ruleset?.capabilities?.loadoutPassivesEnabled).toBe(false);
+        expect(run.ruleset?.capabilities?.movementRuntimeEnabled).toBe(false);
+        expect(run.ruleset?.capabilities?.version).toBe('capabilities-v1');
+    });
+
     it('preserves hub attachment carry flag when no override is provided', () => {
         const hub = withAttachmentCarry(true);
         const run = gameReducer(hub, {
@@ -94,6 +109,7 @@ describe('START_RUN ruleset overrides', () => {
         expect(run.player.activeSkills.some(skill => skill.id === 'STANDARD_VISION')).toBe(true);
         expect(run.player.activeSkills.some(skill => skill.id === 'BASIC_AWARENESS')).toBe(true);
         expect(run.player.activeSkills.some(skill => skill.id === 'TACTICAL_INSIGHT')).toBe(true);
+        expect(run.player.activeSkills.some(skill => skill.id === 'FLIGHT')).toBe(true);
     });
 
     it('supports explicit override to disable attachment carry', () => {
@@ -131,6 +147,7 @@ describe('START_RUN ruleset overrides', () => {
         expect(run.player.activeSkills.some(skill => skill.id === 'STANDARD_VISION')).toBe(false);
         expect(run.player.activeSkills.some(skill => skill.id === 'BASIC_AWARENESS')).toBe(false);
         expect(run.player.activeSkills.some(skill => skill.id === 'TACTICAL_INSIGHT')).toBe(false);
+        expect(run.player.activeSkills.some(skill => skill.id === 'FLIGHT')).toBe(false);
     });
 
     it('preserves hub movement capability runtime flag when no override is provided', () => {
@@ -199,6 +216,7 @@ describe('START_RUN ruleset overrides', () => {
         expect(run.player.activeSkills.some(skill => skill.id === 'STANDARD_VISION')).toBe(true);
         expect(run.player.activeSkills.some(skill => skill.id === 'BASIC_AWARENESS')).toBe(true);
         expect(run.player.activeSkills.some(skill => skill.id === 'COMBAT_ANALYSIS')).toBe(true);
+        expect(run.player.activeSkills.some(skill => skill.id === 'FLIGHT')).toBe(true);
         expect(run.dailyRunDate).toBe('2026-03-02');
     });
 
