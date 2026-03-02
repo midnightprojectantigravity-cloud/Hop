@@ -97,6 +97,22 @@ export const GRAPPLE_HOOK: SkillDefinition = {
             const distance = hexDistance(shooter.position, actualTargetPos);
             const towardShooterVec = hexDirection((directionIndex + 3) % 6);
             const shooterOriginalPos = shooter.position;
+            const attachEffect: AtomicEffect = {
+                type: 'AttachActors',
+                anchor: shooter.id,
+                attached: targetActor.id,
+                mode: 'tow',
+                // Keep current combat behavior stable; this hook currently carries lifecycle/state only.
+                sharedVectorScale: 0,
+                breakOnDamage: true,
+                breakOnStatuses: ['stunned', 'rooted']
+            };
+            const releaseEffect: AtomicEffect = {
+                type: 'ReleaseAttachment',
+                actor: shooter.id,
+                counterpartId: targetActor.id,
+                reason: 'manual_release'
+            };
 
             // JUICE: Execution - Hook cable
             effects.push(...SKILL_JUICE_SIGNATURES.GRAPPLE_HOOK.execution(getHexLine(shooter.position, target)));
@@ -112,7 +128,7 @@ export const GRAPPLE_HOOK: SkillDefinition = {
             if (!victimStillAlive) {
                 messages.push(`${targetActor.subtype || 'Enemy'} neutralized during pull.`);
                 return {
-                    effects: [...effects, ...pullEffects],
+                    effects: [...effects, attachEffect, ...pullEffects, releaseEffect],
                     messages,
                     consumesTurn: true
                 };
@@ -136,7 +152,7 @@ export const GRAPPLE_HOOK: SkillDefinition = {
             effects.push(...SKILL_JUICE_SIGNATURES.GRAPPLE_HOOK.resolution(flingPath, momentum));
 
             return {
-                effects: [...effects, ...pullEffects, ...swapEffects, ...flingEffects],
+                effects: [...effects, attachEffect, ...pullEffects, ...swapEffects, ...flingEffects, releaseEffect],
                 messages: ["Vaulted and Flung!"],
                 consumesTurn: true
             };
