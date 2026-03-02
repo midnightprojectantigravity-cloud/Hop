@@ -58,6 +58,7 @@ export const DEFAULT_SKILLS = {
 
 export const STATUS_REGISTRY: Record<string, { tickWindow: 'START_OF_TURN' | 'END_OF_TURN' }> = {
     stunned: { tickWindow: 'START_OF_TURN' },
+    blinded: { tickWindow: 'END_OF_TURN' },
     poisoned: { tickWindow: 'START_OF_TURN' },
     armored: { tickWindow: 'END_OF_TURN' },
     hidden: { tickWindow: 'END_OF_TURN' },

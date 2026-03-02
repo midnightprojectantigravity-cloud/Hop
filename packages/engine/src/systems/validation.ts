@@ -107,8 +107,10 @@ const buildObserverSenseContext = (
 ): Record<string, unknown> | undefined => {
     const observerTile = UnifiedTileService.getTileAt(state, observer.position);
     const smokeBlind = observerTile.effects.some(effect => effect.id === 'SMOKE' || effect.id === 'STEAM');
-    if (!smokeBlind && !explicitContext) return undefined;
+    const statusBlind = observer.statusEffects?.some(status => status.type === 'blinded') || false;
+    if (!smokeBlind && !statusBlind && !explicitContext) return undefined;
     return {
+        statusBlind,
         smokeBlind,
         ...(explicitContext || {})
     };

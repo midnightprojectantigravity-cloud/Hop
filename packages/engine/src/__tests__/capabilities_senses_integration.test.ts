@@ -230,4 +230,50 @@ describe('capabilities senses integration', () => {
         });
         expect(overrideVisible.isValid).toBe(true);
     });
+
+    it('applies blinded status as hard interdiction context with explicit override precedence', () => {
+        const state = generateInitialState(1, 'sense-blinded-status');
+        const origin = createHex(3, 8);
+        const target = createHex(3, 4);
+
+        state.player = {
+            ...state.player,
+            position: origin,
+            activeSkills: [createActiveSkill('STANDARD_VISION') as any],
+            statusEffects: [{
+                id: 'BLINDED',
+                type: 'blinded',
+                duration: 2,
+                tickWindow: 'END_OF_TURN'
+            }],
+            components: new Map([
+                ['trinity', { type: 'trinity', body: 0, mind: 30, instinct: 0 }]
+            ])
+        };
+        state.enemies = [
+            createEnemy({
+                id: 'sense-target-blinded-status',
+                subtype: 'footman',
+                position: target,
+                hp: 3,
+                maxHp: 3,
+                speed: 1,
+                skills: ['BASIC_MOVE'],
+                weightClass: 'Standard'
+            })
+        ];
+
+        const blockedByBlindness = validateLineOfSight(state, origin, target, {
+            observerActor: state.player,
+            excludeActorId: state.player.id
+        });
+        expect(blockedByBlindness.isValid).toBe(false);
+
+        const overrideVisible = validateLineOfSight(state, origin, target, {
+            observerActor: state.player,
+            excludeActorId: state.player.id,
+            context: { statusBlind: false }
+        });
+        expect(overrideVisible.isValid).toBe(true);
+    });
 });

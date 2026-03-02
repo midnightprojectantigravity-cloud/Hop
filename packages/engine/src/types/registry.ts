@@ -84,6 +84,7 @@ export type SkillID =
 /** All known Status Effect Types */
 export type StatusID =
     | 'stunned'
+    | 'blinded'
     | 'poisoned'
     | 'armored'
     | 'hidden'
