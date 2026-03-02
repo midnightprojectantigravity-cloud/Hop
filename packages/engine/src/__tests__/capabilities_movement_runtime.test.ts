@@ -187,9 +187,34 @@ describe('movement capability runtime integration', () => {
                 createActiveSkill(TEST_REPLACE_SKILL_ID as any) as any
             ]
         };
+        const capabilityFlagOffState = {
+            ...baseView,
+            player: capabilityPlayer,
+            ruleset: {
+                ...baseView.ruleset!,
+                capabilities: {
+                    ...baseView.ruleset!.capabilities!,
+                    movementRuntimeEnabled: false
+                }
+            }
+        };
+        const capabilityFlagOffTargets = basicMoveDef!.getValidTargets!(capabilityFlagOffState, capabilityPlayer.position);
+        const capabilityFlagOffMaxDistance = capabilityFlagOffTargets.reduce(
+            (max, point) => Math.max(max, hexDistance(capabilityPlayer.position, point)),
+            0
+        );
+        expect(capabilityFlagOffMaxDistance).toBe(baseMaxDistance);
+
         const capabilityState = {
             ...baseView,
-            player: capabilityPlayer
+            player: capabilityPlayer,
+            ruleset: {
+                ...baseView.ruleset!,
+                capabilities: {
+                    ...baseView.ruleset!.capabilities!,
+                    movementRuntimeEnabled: true
+                }
+            }
         };
         clearCapabilityStateCacheForTests();
 

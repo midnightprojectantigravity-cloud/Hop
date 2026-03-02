@@ -3,7 +3,7 @@ import { getActorAt } from '../../helpers';
 import { SpatialSystem } from '../spatial-system';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
 import { canLandOnHazard, canPassHazard } from '../validation';
-import { resolveMovementCapabilities } from './movement';
+import { getDefaultMovementCapabilityModel, resolveMovementCapabilities } from './movement';
 
 export interface ResolveSkillMovementPolicyOptions {
     skillId: string;
@@ -26,6 +26,21 @@ export interface ResolvedSkillMovementPolicy {
     simulatePath: boolean;
 }
 
+const getCapabilityBypassResult = (): ReturnType<typeof resolveMovementCapabilities> => ({
+    model: getDefaultMovementCapabilityModel(),
+    meta: {
+        usedCapabilities: false,
+        decision: 'allow',
+        blockedByHardBlock: false,
+        topAllowPriority: null,
+        topSoftBlockPriority: null,
+        appliedProviders: []
+    }
+});
+
+const isMovementCapabilityRuntimeEnabled = (state: GameState): boolean =>
+    state.ruleset?.capabilities?.movementRuntimeEnabled === true;
+
 const resolveComposedPathing = (
     basePathing: MovementModel['pathing'],
     capabilityPathing: MovementModel['pathing']
@@ -40,10 +55,12 @@ export const resolveSkillMovementPolicy = (
     actor: Actor,
     options: ResolveSkillMovementPolicyOptions
 ): ResolvedSkillMovementPolicy => {
-    const capabilityResult = resolveMovementCapabilities(state, actor, {
-        skillId: options.skillId,
-        target: options.target
-    });
+    const capabilityResult = isMovementCapabilityRuntimeEnabled(state)
+        ? resolveMovementCapabilities(state, actor, {
+            skillId: options.skillId,
+            target: options.target
+        })
+        : getCapabilityBypassResult();
     const capabilityModel = capabilityResult.model;
     const basePathing = options.basePathing || 'walk';
     const pathing = resolveComposedPathing(basePathing, capabilityModel.pathing);

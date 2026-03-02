@@ -733,6 +733,7 @@ export interface GameState {
         };
         capabilities?: {
             loadoutPassivesEnabled: boolean;
+            movementRuntimeEnabled?: boolean;
             version: 'capabilities-v1';
         };
     };
@@ -799,6 +800,7 @@ export interface RunRulesetOverrides {
     };
     capabilities?: {
         loadoutPassivesEnabled?: boolean;
+        movementRuntimeEnabled?: boolean;
     };
 }
 

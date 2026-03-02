@@ -75,6 +75,9 @@ const mergeRunRulesetOverrides = (
             ...base.capabilities,
             ...(overrides.capabilities?.loadoutPassivesEnabled !== undefined
                 ? { loadoutPassivesEnabled: overrides.capabilities.loadoutPassivesEnabled }
+                : {}),
+            ...(overrides.capabilities?.movementRuntimeEnabled !== undefined
+                ? { movementRuntimeEnabled: overrides.capabilities.movementRuntimeEnabled }
                 : {})
         }
         : undefined;
