@@ -9,6 +9,8 @@
   - `docs/ACAE_MILESTONE_2026-03-01.md`
 - UPA multi-archetype success tuning tranche is complete and gated:
   - `docs/UPA_SUCCESS_TUNING.md`
+- Capability rollout tranche is complete and validated (staged rollout posture retained):
+  - `docs/CAPABILITY_ROLLOUT.md`
 - Documentation sync for post-tranche architecture is complete:
   - `docs/MASTER_TECH_STACK.md`
   - `docs/GOLD_STANDARD_MANIFESTO.md`
@@ -142,6 +144,28 @@ Notes:
 - `GRAPPLE_HOOK` now emits attachment lifecycle effects in live runtime; non-zero shared-vector carry is controlled by `ruleset.attachments.sharedVectorCarry` to preserve default behavior.
 - `START_RUN` supports deterministic `rulesetOverrides.attachments.sharedVectorCarry` so carry mode can be explicitly toggled per run.
 - `BULWARK_CHARGE` now emits attachment lifecycle effects on successful charge resolution with the same ruleset-gated carry behavior.
+
+### D4: Capability Rollout Promotion (Engine + Web)
+Goal: promote capability defaults in production only after canary evidence and rollback readiness.
+
+- [ ] Keep production defaults staged off until canary metrics remain stable for the agreed soak window.
+- [ ] Keep canary activation paths explicit and deterministic:
+  - hub toggles
+  - URL/env overrides
+  - `START_RUN.rulesetOverrides.capabilities`
+- [ ] Add/retain CI merge-gate coverage for both rollout postures:
+  - defaults off parity/fallback gates
+  - enabled override movement/capability behavior gates
+- [ ] Prepare dedicated production-default flip commit (no feature code changes) for:
+  - `apps/web/.env.production`
+  - deployment environment variable defaults
+- [ ] Document rollback procedure and verify one-command reversion to staged-off production posture.
+
+Acceptance:
+- [ ] No parity drift with defaults off (`enemy_ai_parity_corpus`, `enemy_ai_shadow_fallback_rate`).
+- [ ] Capability-on movement/runtime tests remain green.
+- [ ] Web ruleset/intel observability shows expected flags in QA.
+- [ ] Production-default flip is shipped only in a dedicated promotion PR/commit.
 
 ## History and Archives
 - Historical roadmap log: `docs/ROADMAP_HISTORY.md`

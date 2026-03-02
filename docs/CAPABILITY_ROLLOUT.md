@@ -2,6 +2,17 @@
 
 This project ships capability rollout in compatibility-first mode.
 
+## Completion Snapshot (March 2, 2026)
+
+- Phase completion (engine + web bridge + movement passive content): `a4e47b4`
+- Non-prod default posture commit (development on, production off): `0083563`
+- Validation passed at completion:
+  - `npx vitest run packages/engine/src/__tests__`
+  - `npx vitest run apps/web/src`
+  - `npx tsc -p packages/engine/tsconfig.json --noEmit`
+  - `npx tsc -p apps/web/tsconfig.json --noEmit`
+- Parity/fallback gates passed with production-safe defaults off.
+
 ## Default Posture
 
 - `loadoutPassivesEnabled = false`
@@ -77,3 +88,7 @@ rulesetOverrides: {
 - With both toggles off, deterministic traces and AI parity corpus should remain stable.
 - With capability toggles on, behavior changes are expected only where capability providers are present.
 - Movement capability runtime only affects self-mobility skill policy paths; forced displacement systems are out of scope.
+
+## Backlog Tracking
+
+Future promotion items are tracked in `docs/NEXT_LEVEL.md` under deferred backlog item `D4: Capability Rollout Promotion (Engine + Web)`.

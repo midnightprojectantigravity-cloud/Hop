@@ -1,4 +1,4 @@
-# Codebase Status - March 1, 2026
+# Codebase Status - March 2, 2026
 
 ## Major Accomplishment
 Post-AI roadmap tranches are complete and hardened (content pipeline closure, frontend decomposition, harness core unification).
@@ -38,6 +38,20 @@ Delivered outcomes:
 
 Reference:
 - `docs/UPA_SUCCESS_TUNING.md`
+
+## Capability Rollout Milestone
+Capability rollout completion is merged and validated with staged production safety.
+
+Delivered outcomes:
+1. Engine ruleset control plane finalized for capability passives and movement runtime toggles.
+2. Movement capability passive content shipped (`FLIGHT`, `PHASE_STEP`, `BURROW`) with deterministic loadout mapping.
+3. Web rollout bridge finalized (hub + URL + env precedence) with compatibility-safe intel reveal defaults.
+4. Full engine/web suites and parity/fallback gates validated at merge.
+5. Non-prod defaults enabled (`development`), production defaults retained off (`production`) for staged promotion.
+
+Reference:
+- `docs/CAPABILITY_ROLLOUT.md`
+- `docs/NEXT_LEVEL.md` (Deferred Backlog `D4`)
 
 ## Validation Snapshot (Current)
 
