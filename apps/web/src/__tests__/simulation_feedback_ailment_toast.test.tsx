@@ -45,4 +45,23 @@ describe('simulation feedback ailment toasts', () => {
     expect(toasts[0].text).toBe('Blinded');
     expect(toasts[0].tone).toBe('status');
   });
+
+  it('emits system toast for blinded expiry message logs', () => {
+    const playerId = 'player';
+    const events: SimulationEvent[] = [
+      {
+        id: 'sim:3',
+        turn: 5,
+        type: 'MessageLogged',
+        payload: {
+          text: 'You are no longer blinded.'
+        }
+      }
+    ];
+
+    const toasts = deriveMobileToastsFromSimulationEvents(events, playerId);
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].text).toBe('You are no longer blinded.');
+    expect(toasts[0].tone).toBe('system');
+  });
 });

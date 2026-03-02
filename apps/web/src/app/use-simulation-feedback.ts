@@ -69,6 +69,7 @@ export const deriveMobileToastsFromSimulationEvents = (
       const isImportant =
         lower.includes('stun')
         || lower.includes('snare')
+        || lower.includes('blind')
         || lower.includes('lava')
         || lower.includes('fire')
         || lower.includes('burn')
