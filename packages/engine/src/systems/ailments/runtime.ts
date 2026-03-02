@@ -21,6 +21,7 @@ export interface AilmentTickResultEnvelope {
 
 const DEFAULT_VERSION = 'acae-v1' as const;
 const DEFAULT_ATTACHMENT_VERSION = 'attachment-v1' as const;
+const DEFAULT_CAPABILITY_VERSION = 'capabilities-v1' as const;
 
 const clonePoint = (point: Point): Point => ({ q: point.q, r: point.r, s: point.s });
 const clampPercent = (value: number): number => Math.max(0, Math.min(100, value));
@@ -259,6 +260,10 @@ export const resolveAcaeRuleset = (state: GameState): NonNullable<GameState['rul
         attachments: {
             sharedVectorCarry: state.ruleset?.attachments?.sharedVectorCarry ?? defaultAttachmentCarryEnabled,
             version: DEFAULT_ATTACHMENT_VERSION
+        },
+        capabilities: {
+            loadoutPassivesEnabled: state.ruleset?.capabilities?.loadoutPassivesEnabled ?? false,
+            version: DEFAULT_CAPABILITY_VERSION
         }
     };
 };

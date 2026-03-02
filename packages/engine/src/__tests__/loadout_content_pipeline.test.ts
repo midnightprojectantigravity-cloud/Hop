@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseLoadoutCatalog, validateLoadoutCatalog } from '../data/loadouts/parser';
 import { DEFAULT_LOADOUT_DEFINITIONS } from '../data/loadouts/default-loadouts';
-import { DEFAULT_LOADOUTS, validateDefaultLoadouts } from '../systems/loadout';
+import {
+    DEFAULT_LOADOUTS,
+    applyLoadoutToPlayer,
+    reconcileLoadoutCapabilityPassives,
+    validateDefaultLoadouts
+} from '../systems/loadout';
 import { bootstrapTacticalData, resetTacticalDataBootstrap } from '../systems/tactical-data-bootstrap';
 
 describe('loadout content pipeline', () => {
@@ -35,5 +40,28 @@ describe('loadout content pipeline', () => {
         expect(boot.loadoutsValidated).toBe(count);
         resetTacticalDataBootstrap();
     });
-});
 
+    it('reconciles rollout-gated capability passives deterministically', () => {
+        const skirmisher = DEFAULT_LOADOUTS.SKIRMISHER;
+        const base = applyLoadoutToPlayer(skirmisher);
+
+        expect(base.activeSkills.some(skill => skill.id === 'STANDARD_VISION')).toBe(false);
+        expect(base.activeSkills.some(skill => skill.id === 'BASIC_AWARENESS')).toBe(false);
+        expect(base.activeSkills.some(skill => skill.id === 'TACTICAL_INSIGHT')).toBe(false);
+
+        const enabled = reconcileLoadoutCapabilityPassives(skirmisher, base.activeSkills, true);
+        const enabledIds = enabled.map(skill => skill.id);
+        expect(enabledIds.filter(id => id === 'STANDARD_VISION')).toHaveLength(1);
+        expect(enabledIds.filter(id => id === 'BASIC_AWARENESS')).toHaveLength(1);
+        expect(enabledIds.filter(id => id === 'TACTICAL_INSIGHT')).toHaveLength(1);
+
+        const enabledAgain = reconcileLoadoutCapabilityPassives(skirmisher, enabled, true);
+        expect(enabledAgain.map(skill => skill.id)).toEqual(enabledIds);
+
+        const disabled = reconcileLoadoutCapabilityPassives(skirmisher, enabled, false);
+        expect(disabled.some(skill => skill.id === 'STANDARD_VISION')).toBe(false);
+        expect(disabled.some(skill => skill.id === 'BASIC_AWARENESS')).toBe(false);
+        expect(disabled.some(skill => skill.id === 'TACTICAL_INSIGHT')).toBe(false);
+        expect(disabled.map(skill => skill.id)).toEqual(base.activeSkills.map(skill => skill.id));
+    });
+});

@@ -70,10 +70,19 @@ const mergeRunRulesetOverrides = (
                 : {})
         }
         : undefined;
+    const nextCapabilities = base?.capabilities
+        ? {
+            ...base.capabilities,
+            ...(overrides.capabilities?.loadoutPassivesEnabled !== undefined
+                ? { loadoutPassivesEnabled: overrides.capabilities.loadoutPassivesEnabled }
+                : {})
+        }
+        : undefined;
     return {
         ...(base || {}),
         ...(nextAilments ? { ailments: nextAilments } : {}),
-        ...(nextAttachments ? { attachments: nextAttachments } : {})
+        ...(nextAttachments ? { attachments: nextAttachments } : {}),
+        ...(nextCapabilities ? { capabilities: nextCapabilities } : {})
     };
 };
 
@@ -178,7 +187,10 @@ export const resolveGameStateAction = (
         case 'APPLY_LOADOUT': {
             if (!('payload' in a)) return s;
             const loadout = a.payload as Loadout;
-            const applied = applyLoadoutToPlayer(loadout);
+            const resolvedRuleset = resolveAcaeRuleset(s);
+            const applied = applyLoadoutToPlayer(loadout, {
+                capabilityPassivesEnabled: resolvedRuleset.capabilities?.loadoutPassivesEnabled === true
+            });
             return {
                 ...s,
                 player: {
@@ -206,8 +218,16 @@ export const resolveGameStateAction = (
                     ...next,
                     ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)
                 });
+                const reconciledLoadout = applyLoadoutToPlayer(loadout, {
+                    capabilityPassivesEnabled: mergedRuleset.capabilities?.loadoutPassivesEnabled === true
+                });
                 return {
                     ...next,
+                    player: {
+                        ...next.player,
+                        activeSkills: reconciledLoadout.activeSkills,
+                        archetype: reconciledLoadout.archetype
+                    },
                     ruleset: mergedRuleset,
                     dailyRunDate: dateKey,
                     runObjectives: createDailyObjectives(dailySeed),
@@ -219,8 +239,16 @@ export const resolveGameStateAction = (
                 ...next,
                 ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)
             });
+            const reconciledLoadout = applyLoadoutToPlayer(loadout, {
+                capabilityPassivesEnabled: mergedRuleset.capabilities?.loadoutPassivesEnabled === true
+            });
             return {
                 ...next,
+                player: {
+                    ...next.player,
+                    activeSkills: reconciledLoadout.activeSkills,
+                    archetype: reconciledLoadout.archetype
+                },
                 ruleset: mergedRuleset
             };
         }

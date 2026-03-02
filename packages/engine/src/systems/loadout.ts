@@ -5,6 +5,7 @@
  * TODO: Implement "Cloud Save" by integrating with an external database/API.
  */
 import type { Skill, Actor } from '../types';
+import type { ArchetypeID, SkillID } from '../types/registry';
 import { SkillRegistry, createActiveSkill } from '../skillRegistry';
 import { DEFAULT_LOADOUT_DEFINITIONS } from '../data/loadouts/default-loadouts';
 import { cloneLoadoutCatalog, parseLoadoutCatalog } from '../data/loadouts/parser';
@@ -88,11 +89,65 @@ export const deserializeLoadout = (json: string): Loadout => {
     return JSON.parse(json);
 };
 
+const LOADOUT_CAPABILITY_PASSIVES: Readonly<Partial<Record<ArchetypeID, readonly SkillID[]>>> = {
+    VANGUARD: ['STANDARD_VISION', 'BASIC_AWARENESS'],
+    SKIRMISHER: ['STANDARD_VISION', 'BASIC_AWARENESS', 'TACTICAL_INSIGHT'],
+    FIREMAGE: ['STANDARD_VISION', 'BASIC_AWARENESS', 'COMBAT_ANALYSIS'],
+    NECROMANCER: ['STANDARD_VISION', 'BASIC_AWARENESS', 'COMBAT_ANALYSIS'],
+    HUNTER: ['STANDARD_VISION', 'BASIC_AWARENESS', 'TACTICAL_INSIGHT'],
+    ASSASSIN: ['STANDARD_VISION', 'BASIC_AWARENESS', 'TACTICAL_INSIGHT']
+};
+
+const getCapabilityPassivesForLoadout = (loadout: Loadout): SkillID[] =>
+    [...(LOADOUT_CAPABILITY_PASSIVES[loadout.id as ArchetypeID] || [])];
+
+/**
+ * Deterministically add/remove rollout-gated capability passives for a loadout.
+ */
+export const reconcileLoadoutCapabilityPassives = (
+    loadout: Loadout,
+    activeSkills: Skill[] = [],
+    enabled: boolean
+): Skill[] => {
+    const capabilityPassives = getCapabilityPassivesForLoadout(loadout);
+    if (capabilityPassives.length === 0) return activeSkills;
+
+    if (!enabled) {
+        const removable = new Set(capabilityPassives);
+        const filtered = activeSkills.filter(skill => !removable.has(skill.id as SkillID));
+        return filtered.length === activeSkills.length ? activeSkills : filtered;
+    }
+
+    const existing = new Set(activeSkills.map(skill => skill.id));
+    let nextSkills = activeSkills;
+    for (const skillId of capabilityPassives) {
+        if (existing.has(skillId)) continue;
+        const created = createActiveSkill(skillId) as Skill | null;
+        if (!created) continue;
+        if (nextSkills === activeSkills) {
+            nextSkills = [...activeSkills];
+        }
+        nextSkills.push(created);
+        existing.add(skillId);
+    }
+    return nextSkills;
+};
+
+export interface ApplyLoadoutOptions {
+    capabilityPassivesEnabled?: boolean;
+}
+
 /**
  * Apply a loadout to a set of player stats.
  */
-export const applyLoadoutToPlayer = (loadout: Loadout): { upgrades: string[]; activeSkills: Skill[]; archetype: any } => {
-    const activeSkills = loadout.startingSkills.map(s => createActiveSkill(s as any)).filter(Boolean) as Skill[];
+export const applyLoadoutToPlayer = (
+    loadout: Loadout,
+    options: ApplyLoadoutOptions = {}
+): { upgrades: string[]; activeSkills: Skill[]; archetype: any } => {
+    const baseSkills = loadout.startingSkills.map(s => createActiveSkill(s as any)).filter(Boolean) as Skill[];
+    const activeSkills = options.capabilityPassivesEnabled === undefined
+        ? baseSkills
+        : reconcileLoadoutCapabilityPassives(loadout, baseSkills, options.capabilityPassivesEnabled);
     const archetype = loadout.id;
     return {
         upgrades: [...loadout.startingUpgrades],
