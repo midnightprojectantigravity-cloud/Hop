@@ -37,7 +37,7 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
         const capabilityIgnoresGroundHazards = Boolean(
             movementModel.ignoreGroundHazards || movementModel.pathing === 'flight'
         );
-        const capabilityIgnoreWalls = Boolean(movementModel.ignoreWalls || movementModel.pathing === 'flight');
+        const capabilityIgnoreWalls = Boolean(movementModel.ignoreWalls);
         const capabilityIgnoreActors = Boolean(movementModel.allowPassThroughActors);
         const transitionActor: Actor = ((movementModel.pathing === 'flight' || capabilityIgnoresGroundHazards) && !actor.isFlying)
             ? { ...actor, isFlying: true }

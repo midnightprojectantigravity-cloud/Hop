@@ -87,9 +87,9 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
             name: 'Pouncer',
             stats: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'melee', cost: 2, actionCooldown: 1, weightClass: 'Standard', speed: 1 },
             trinity: { body: 2, mind: 0, instinct: 1 },
-            skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'GRAPPLE_HOOK'], passive: [] }
+            skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'GRAPPLE_HOOK'], passive: ['BURROW'] }
         },
-        runtimeSkills: { base: ['BASIC_MOVE', 'GRAPPLE_HOOK'], passive: [] }
+        runtimeSkills: { base: ['BASIC_MOVE', 'GRAPPLE_HOOK'], passive: ['BURROW'] }
     },
     shieldBearer: {
         packUnitId: 'ENEMY_SHIELDBEARER_V1',
@@ -131,9 +131,9 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
             name: 'Warlock',
             stats: { hp: 1, maxHp: 1, range: 4, damage: 1, type: 'ranged', cost: 2, actionCooldown: 2, weightClass: 'Standard', speed: 1 },
             trinity: { body: 0.4, mind: 0.6, instinct: 0.2 },
-            skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'SENTINEL_BLAST'], passive: [] }
+            skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'SENTINEL_BLAST'], passive: ['PHASE_STEP'] }
         },
-        runtimeSkills: { base: ['BASIC_MOVE', 'SENTINEL_BLAST'], passive: [] }
+        runtimeSkills: { base: ['BASIC_MOVE', 'SENTINEL_BLAST'], passive: ['PHASE_STEP'] }
     },
     sentinel: {
         packUnitId: 'ENEMY_SENTINEL_V1',
@@ -142,9 +142,9 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
             name: 'Sentinel',
             stats: { hp: 30, maxHp: 30, range: 4, damage: 2, type: 'boss', cost: 25, actionCooldown: 1, weightClass: 'Heavy', speed: 1 },
             trinity: { body: 4, mind: 2, instinct: 2 },
-            skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'SENTINEL_BLAST'], passive: [] }
+            skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'SENTINEL_BLAST'], passive: ['FLIGHT'] }
         },
-        runtimeSkills: { base: ['BASIC_MOVE', 'SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'], passive: [] }
+        runtimeSkills: { base: ['BASIC_MOVE', 'SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'], passive: ['FLIGHT'] }
     }
 };
 
