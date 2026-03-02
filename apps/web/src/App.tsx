@@ -16,7 +16,7 @@ import { useTurnDriverTrace } from './app/use-turn-driver-trace';
 import { useAppRouting } from './app/use-app-routing';
 import { HubScreen } from './app/HubScreen';
 import { GameScreen } from './app/GameScreen';
-import { buildCapabilityPassivesRulesetOverrides } from './app/start-run-overrides';
+import { buildStartRunPayload } from './app/start-run-overrides';
 
 const summarizeActionPayload = (action: Action): Record<string, unknown> | undefined => {
   const payload = (action as any).payload;
@@ -181,11 +181,11 @@ function App() {
     if (!id) { console.warn('Start Run called without a selected loadout.'); return; }
     dispatchWithTrace({
       type: 'START_RUN',
-      payload: {
+      payload: buildStartRunPayload({
         loadoutId: id,
         mode,
-        rulesetOverrides: buildCapabilityPassivesRulesetOverrides(hubCapabilityPassivesEnabled)
-      }
+        capabilityPassivesEnabled: hubCapabilityPassivesEnabled
+      })
     }, 'hub_start_run');
   };
 

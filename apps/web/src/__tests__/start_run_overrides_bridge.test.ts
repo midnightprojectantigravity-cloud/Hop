@@ -1,14 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { gameReducer, generateInitialState } from '@hop/engine';
-import { buildCapabilityPassivesRulesetOverrides } from '../app/start-run-overrides';
+import {
+  buildCapabilityPassivesRulesetOverrides,
+  buildStartRunPayload
+} from '../app/start-run-overrides';
 
 describe('hub capability-passives start-run bridge', () => {
-  it('builds deterministic capability overrides payload', () => {
+  it('builds deterministic capability overrides and start-run payloads', () => {
     expect(buildCapabilityPassivesRulesetOverrides(true)).toEqual({
       capabilities: { loadoutPassivesEnabled: true }
     });
     expect(buildCapabilityPassivesRulesetOverrides(false)).toEqual({
       capabilities: { loadoutPassivesEnabled: false }
+    });
+    expect(buildStartRunPayload({
+      loadoutId: 'VANGUARD',
+      mode: 'normal',
+      capabilityPassivesEnabled: true
+    })).toEqual({
+      loadoutId: 'VANGUARD',
+      mode: 'normal',
+      rulesetOverrides: {
+        capabilities: { loadoutPassivesEnabled: true }
+      }
     });
   });
 
@@ -52,4 +66,3 @@ describe('hub capability-passives start-run bridge', () => {
     expect(run.ruleset?.capabilities?.version).toBe('capabilities-v1');
   });
 });
-

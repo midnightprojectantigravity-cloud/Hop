@@ -1,4 +1,4 @@
-import type { GameState, Point, Actor } from '../types';
+import type { GameState, Point, Actor, MovementModel } from '../types';
 import { hexEquals, getHexLine, hexDistance, getDirectionFromTo } from '../hex';
 import { getActorAt } from '../helpers';
 import { pointToKey } from '../hex';
@@ -234,9 +234,24 @@ export function isHazardousTile(state: GameState, position: Point): { isHazard: 
     return { isHazard, isFireHazard };
 }
 
-export function canLandOnHazard(state: GameState, actor: Actor, position: Point): boolean {
+interface HazardMovementOptions {
+    movementModel?: Pick<MovementModel, 'pathing' | 'ignoreGroundHazards'>;
+}
+
+const ignoresGroundHazards = (options?: HazardMovementOptions): boolean =>
+    options?.movementModel?.ignoreGroundHazards === true
+    || options?.movementModel?.pathing === 'flight'
+    || options?.movementModel?.pathing === 'teleport';
+
+export function canLandOnHazard(
+    state: GameState,
+    actor: Actor,
+    position: Point,
+    options: HazardMovementOptions = {}
+): boolean {
     const { isHazard, isFireHazard } = isHazardousTile(state, position);
     if (!isHazard) return true;
+    if (ignoresGroundHazards(options)) return true;
     if (actor.isFlying) return true;
     const hasAbsorbFire = actor.activeSkills?.some(s => s.id === 'ABSORB_FIRE')
         || actor.statusEffects?.some(s => s.type === 'fire_immunity');
@@ -244,8 +259,14 @@ export function canLandOnHazard(state: GameState, actor: Actor, position: Point)
     return false;
 }
 
-export function canPassHazard(state: GameState, actor: Actor, position: Point, skillId: string): boolean {
-    if (canLandOnHazard(state, actor, position)) return true;
+export function canPassHazard(
+    state: GameState,
+    actor: Actor,
+    position: Point,
+    skillId: string,
+    options: HazardMovementOptions = {}
+): boolean {
+    if (canLandOnHazard(state, actor, position, options)) return true;
     const passSkills = new Set(['JUMP', 'VAULT', 'GRAPPLE_HOOK', 'DASH']);
     return passSkills.has(skillId);
 }
