@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { hexDistance } from '../hex';
+import { hexDistance, pointToKey } from '../hex';
 import { generateInitialState } from '../logic';
 import { createActiveSkill, COMPOSITIONAL_SKILLS, SkillRegistry } from '../skillRegistry';
 import type { AtomicEffect, Actor, GameState, Point, SkillDefinition } from '../types';
@@ -206,5 +206,43 @@ describe('movement capability runtime integration', () => {
         expect(displacement?.destination).toEqual(farTarget);
         expect(displacement?.simulatePath).toBe(false);
         expect(displacement?.ignoreGroundHazards).toBe(true);
+    });
+
+    it('does not treat BLOCKS_LOS-only tiles (smoke) as movement walls', () => {
+        const state = generateInitialState(1, 'cap-move-smoke-tile');
+        clearCapabilityStateCacheForTests();
+        const basicMoveDef = SkillRegistry.get('BASIC_MOVE');
+        expect(basicMoveDef?.getValidTargets).toBeTruthy();
+
+        const player = {
+            ...state.player,
+            speed: 1,
+            activeSkills: [createActiveSkill('BASIC_MOVE') as any]
+        };
+        const view = {
+            ...state,
+            player
+        };
+
+        const baselineTargets = basicMoveDef!.getValidTargets!(view, player.position);
+        expect(baselineTargets.length).toBeGreaterThan(0);
+        const smokeTarget = baselineTargets[0];
+        const smokeKey = pointToKey(smokeTarget);
+        const targetTile = view.tiles.get(smokeKey) ?? {
+            position: smokeTarget,
+            baseId: 'STONE',
+            traits: new Set(['WALKABLE']),
+            effects: []
+        };
+        view.tiles.set(smokeKey, {
+            ...targetTile!,
+            effects: [...targetTile!.effects, { id: 'SMOKE', duration: 2, potency: 1 }]
+        });
+
+        const targets = basicMoveDef!.getValidTargets!(view, player.position);
+        expect(targets.some(point => point.q === smokeTarget.q && point.r === smokeTarget.r)).toBe(true);
+
+        const result = basicMoveDef!.execute(view, player, smokeTarget);
+        expect(result.consumesTurn).toBe(true);
     });
 });

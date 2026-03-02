@@ -2,7 +2,7 @@ import type { Actor, GameState, MovementModel, Point } from '../../types';
 import { getActorAt } from '../../helpers';
 import { SpatialSystem } from '../spatial-system';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
-import { canLandOnHazard, canPassHazard, isBlockedByWall } from '../validation';
+import { canLandOnHazard, canPassHazard } from '../validation';
 import { resolveMovementCapabilities } from './movement';
 
 export interface ResolveSkillMovementPolicyOptions {
@@ -121,9 +121,6 @@ export const validateMovementDestination = (
         if (requireWalkable && !UnifiedTileService.isWalkable(state, target)) {
             return { isValid: false, blockedBy: 'wall' };
         }
-        if (isBlockedByWall(state, target)) {
-            return { isValid: false, blockedBy: 'wall' };
-        }
     }
 
     if (!ignoreHazards && !canLandOnHazard(state, actor, target, { movementModel: policy.movementModel })) {
@@ -188,4 +185,3 @@ export const validateMovementTraversalStep = (
 
     return { isValid: true };
 };
-
