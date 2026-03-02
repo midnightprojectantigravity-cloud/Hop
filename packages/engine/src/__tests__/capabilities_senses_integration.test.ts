@@ -178,4 +178,56 @@ describe('capabilities senses integration', () => {
         });
         expect(blockedWithInterdict.isValid).toBe(false);
     });
+
+    it('applies smoke-based hard interdiction context from observer tile effects', () => {
+        const state = generateInitialState(1, 'sense-smoke-interdict');
+        const origin = createHex(3, 8);
+        const target = createHex(3, 4);
+
+        state.player = {
+            ...state.player,
+            position: origin,
+            activeSkills: [createActiveSkill('STANDARD_VISION') as any],
+            components: new Map([
+                ['trinity', { type: 'trinity', body: 0, mind: 30, instinct: 0 }]
+            ])
+        };
+        state.enemies = [
+            createEnemy({
+                id: 'sense-target-smoke-interdict',
+                subtype: 'footman',
+                position: target,
+                hp: 3,
+                maxHp: 3,
+                speed: 1,
+                skills: ['BASIC_MOVE'],
+                weightClass: 'Standard'
+            })
+        ];
+
+        const observerTileKey = pointToKey(origin);
+        const observerTile = state.tiles.get(observerTileKey) || {
+            baseId: 'STONE',
+            position: origin,
+            traits: new Set(BASE_TILES.STONE.defaultTraits),
+            effects: []
+        };
+        state.tiles.set(observerTileKey, {
+            ...observerTile,
+            effects: [...observerTile.effects, { id: 'SMOKE', duration: 2, potency: 1 }]
+        });
+
+        const blockedBySmoke = validateLineOfSight(state, origin, target, {
+            observerActor: state.player,
+            excludeActorId: state.player.id
+        });
+        expect(blockedBySmoke.isValid).toBe(false);
+
+        const overrideVisible = validateLineOfSight(state, origin, target, {
+            observerActor: state.player,
+            excludeActorId: state.player.id,
+            context: { smokeBlind: false }
+        });
+        expect(overrideVisible.isValid).toBe(true);
+    });
 });

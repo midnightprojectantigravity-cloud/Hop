@@ -100,6 +100,20 @@ const resolveObserver = (state: GameState, options: LineOfSightOptions): Actor |
     return state.enemies.find(e => e.id === options.observerId) || state.companions?.find(c => c.id === options.observerId);
 };
 
+const buildObserverSenseContext = (
+    state: GameState,
+    observer: Actor,
+    explicitContext?: Record<string, unknown>
+): Record<string, unknown> | undefined => {
+    const observerTile = UnifiedTileService.getTileAt(state, observer.position);
+    const smokeBlind = observerTile.effects.some(effect => effect.id === 'SMOKE' || effect.id === 'STEAM');
+    if (!smokeBlind && !explicitContext) return undefined;
+    return {
+        smokeBlind,
+        ...(explicitContext || {})
+    };
+};
+
 const computeLegacyLineOfSight = (
     state: GameState,
     origin: Point,
@@ -147,7 +161,7 @@ export function validateLineOfSight(
         stopAtActors: options.stopAtActors ?? true,
         stopAtLava: options.stopAtLava ?? false,
         excludeActorId: options.excludeActorId,
-        context: options.context,
+        context: buildObserverSenseContext(state, observer, options.context),
         evaluateLegacyLineOfSight: (overrides) => computeLegacyLineOfSight(state, origin, target, {
             stopAtWalls: overrides?.stopAtWalls ?? options.stopAtWalls,
             stopAtActors: overrides?.stopAtActors ?? options.stopAtActors,
@@ -217,6 +231,7 @@ export function hasClearLineToActor(
         stopAtActors: true,
         stopAtLava: false,
         excludeActorId,
+        context: buildObserverSenseContext(state, observerActor),
         evaluateLegacyLineOfSight: strictLegacyEvaluator
     });
 
