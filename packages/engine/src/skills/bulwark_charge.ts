@@ -37,6 +37,22 @@ export const BULWARK_CHARGE: SkillDefinition = {
             messages.push('No target!');
             return { effects, messages, consumesTurn: false };
         }
+        const sharedVectorCarryEnabled = state.ruleset?.attachments?.sharedVectorCarry === true;
+        const attachEffect: AtomicEffect = {
+            type: 'AttachActors',
+            anchor: player.id,
+            attached: first.id,
+            mode: 'tow',
+            sharedVectorScale: sharedVectorCarryEnabled ? 1 : 0,
+            breakOnDamage: true,
+            breakOnStatuses: ['stunned', 'rooted']
+        };
+        const releaseEffect: AtomicEffect = {
+            type: 'ReleaseAttachment',
+            actor: player.id,
+            counterpartId: first.id,
+            reason: 'manual_release'
+        };
 
         // Build chain: starting at first, collect subsequent enemies in same direction
         const { isAxial, directionIndex } = validateAxialDirection(player.position, target);
@@ -89,11 +105,13 @@ export const BULWARK_CHARGE: SkillDefinition = {
         }
 
         // All clear: push actors, then move player into first's initial hex
+        effects.push(attachEffect);
         for (const d of desired) {
             effects.push({ type: 'Displacement', target: d.actor.id, destination: d.dest });
         }
         // Move player into first's previous position
         effects.push({ type: 'Displacement', target: 'self', destination: first.position });
+        effects.push(releaseEffect);
         messages.push('Bulwark Charge!');
 
         return { effects, messages };
