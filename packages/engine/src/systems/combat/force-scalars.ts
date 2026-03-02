@@ -2,6 +2,7 @@ import type { Actor, WeightClass } from '../../types';
 import type { PhysicsComponent } from '../components';
 import { getComponent } from '../components';
 import { extractTrinityStats } from './combat-calculator';
+import { computeCanonicalForce } from './force-contract';
 
 export interface ForceScalars {
     mass: number;
@@ -18,6 +19,8 @@ const WEIGHT_CLASS_BASE_MASS: Record<WeightClass, number> = {
 };
 
 const round3 = (value: number): number => Math.round(value * 1000) / 1000;
+const INSTINCT_MOMENTUM_MODIFIER_COEFFICIENT = 0.15;
+const FORCE_TO_MOMENTUM_DIVISOR = 4;
 
 export const resolveActorForceScalars = (actor: Actor): ForceScalars => {
     const trinity = extractTrinityStats(actor);
@@ -27,8 +30,12 @@ export const resolveActorForceScalars = (actor: Actor): ForceScalars => {
 
     const mass = round3(Math.max(0.5, baseMass + (trinity.body * 0.03)));
     const velocity = round3(Math.max(0.5, Number(actor.speed || 1)));
-    const momentum = round3(Math.max(0, ((mass * velocity) + (trinity.instinct * 0.15)) / 4));
+    const canonicalForce = computeCanonicalForce(
+        mass,
+        velocity,
+        trinity.instinct * INSTINCT_MOMENTUM_MODIFIER_COEFFICIENT
+    );
+    const momentum = round3(Math.max(0, canonicalForce / FORCE_TO_MOMENTUM_DIVISOR));
 
     return { mass, velocity, momentum };
 };
-

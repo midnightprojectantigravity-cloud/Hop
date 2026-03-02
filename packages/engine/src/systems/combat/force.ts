@@ -2,6 +2,7 @@ import type { AtomicEffect, GameState, Point } from '../../types';
 import { DIRECTIONS, hexAdd, hexEquals } from '../../hex';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
 import { resolveBlockedCollisionEffects } from './collision-policy';
+import { toCanonicalDistance } from './force-contract';
 
 export interface ForceResolutionInput {
     source: Point;
@@ -54,7 +55,7 @@ export const resolveForce = (state: GameState, input: ForceResolutionInput): For
     const target = findActorById(state, input.targetActorId);
     if (!target) return { effects: [], destination: null, collided: false };
 
-    const distance = Math.max(0, Math.min(input.maxDistance, Math.floor(input.magnitude)));
+    const distance = toCanonicalDistance(input.magnitude, input.maxDistance);
     if (distance <= 0) return { effects: [], destination: target.position, collided: false };
 
     const origin = target.position;

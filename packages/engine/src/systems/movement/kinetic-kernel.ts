@@ -6,6 +6,7 @@ import { JuiceHelpers, ENVIRONMENTAL_JUICE } from "../visual/juice-manifest";
 
 import { UnifiedTileService } from "../tiles/unified-tile-service";
 import { resolveBlockedCollisionEffects, type CollisionResolutionPolicy } from "../combat/collision-policy";
+import { normalizeMomentumBudget } from "../combat/force-contract";
 
 /**
  * 1. Input Architecture
@@ -33,6 +34,7 @@ interface UnitOnLine {
 export function processKineticPulse(state: GameState, request: KineticPulseRequest): AtomicEffect[] {
     const { origin, direction, momentum } = request;
     const effects: AtomicEffect[] = [];
+    const momentumBudget = normalizeMomentumBudget(momentum);
     const collisionPolicy: CollisionResolutionPolicy = {
         onBlocked: request.collision?.onBlocked || 'stop',
         crushDamage: request.collision?.crushDamage,
@@ -43,19 +45,19 @@ export function processKineticPulse(state: GameState, request: KineticPulseReque
     };
 
     // JUICE: Kinetic wave emanating from origin
-    effects.push(JuiceHelpers.kineticWave(origin, direction, momentum > 6 ? 'high' : 'medium'));
+    effects.push(JuiceHelpers.kineticWave(origin, direction, momentumBudget > 6 ? 'high' : 'medium'));
 
     // Step A: Project the 1D Line
     // We project far enough to cover potential movement
     // momentum + 10 ensures we capture units beyond the initial momentum radius that might be pushed
     const distalPoint = hexAdd(origin, {
-        q: direction.q * (momentum + 10),
-        r: direction.r * (momentum + 10),
-        s: direction.s * (momentum + 10)
+        q: direction.q * (momentumBudget + 10),
+        r: direction.r * (momentumBudget + 10),
+        s: direction.s * (momentumBudget + 10)
     });
     const lineHexes = getHexLine(origin, distalPoint);
 
-    let energyPool = momentum;
+    let energyPool = momentumBudget;
 
     // Identify all units on this line and map them to their 1D position
     let unitsOnLine: UnitOnLine[] = getInitialUnitsOnLine(state, lineHexes);
@@ -293,7 +295,7 @@ export function resolveKineticPulse(board: BoardState): KineticIntention {
     const history: KineticEntity[][] = [];
     const activeIdHistory: string[] = [];
     let entities = board.entities.map(e => ({ ...e }));
-    let momentum = board.momentum;
+    let momentum = normalizeMomentumBudget(board.momentum);
 
     while (momentum > 0) {
         // Compatibility implementation of the same "dumb" logic for 1D BoardState
