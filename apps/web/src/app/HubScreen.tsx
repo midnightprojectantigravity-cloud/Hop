@@ -14,6 +14,8 @@ interface HubScreenProps {
   tutorialInstructions: string | null;
   navigateTo: (path: string) => void;
   onStartArcadeRun: (loadoutId: string) => void;
+  capabilityPassivesEnabled: boolean;
+  onCapabilityPassivesEnabledChange: (enabled: boolean) => void;
   onSelectLoadout: (loadout: Loadout) => void;
   onStartRun: (mode: 'normal' | 'daily') => void;
   onLoadScenario: (state: GameState, instructions: string) => void;
@@ -31,6 +33,8 @@ export const HubScreen = ({
   tutorialInstructions,
   navigateTo,
   onStartArcadeRun,
+  capabilityPassivesEnabled,
+  onCapabilityPassivesEnabledChange,
   onSelectLoadout,
   onStartRun,
   onLoadScenario,
@@ -56,6 +60,8 @@ export const HubScreen = ({
       ) : (
         <Hub
           gameState={gameState}
+          capabilityPassivesEnabled={capabilityPassivesEnabled}
+          onCapabilityPassivesEnabledChange={onCapabilityPassivesEnabledChange}
           onSelectLoadout={onSelectLoadout}
           onStartRun={onStartRun}
           onOpenArcade={() => navigateTo(arcadePath)}

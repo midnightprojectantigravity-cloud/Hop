@@ -7,6 +7,8 @@ import type { ReplayRecord } from './ReplayManager';
 
 interface HubProps {
   gameState: GameState;
+  capabilityPassivesEnabled: boolean;
+  onCapabilityPassivesEnabledChange: (enabled: boolean) => void;
   onSelectLoadout: (loadout: Loadout) => void;
   onStartRun: (mode: 'normal' | 'daily') => void;
   onOpenArcade: () => void;
@@ -14,7 +16,16 @@ interface HubProps {
   onStartReplay: (r: ReplayRecord) => void;
 }
 
-export const Hub: React.FC<HubProps> = ({ gameState, onSelectLoadout, onStartRun, onOpenArcade, onLoadScenario, onStartReplay }) => {
+export const Hub: React.FC<HubProps> = ({
+  gameState,
+  capabilityPassivesEnabled,
+  onCapabilityPassivesEnabledChange,
+  onSelectLoadout,
+  onStartRun,
+  onOpenArcade,
+  onLoadScenario,
+  onStartReplay
+}) => {
   return (
     <div className="w-full h-full flex flex-col bg-[#020617]">
       {/* Header */}
@@ -29,6 +40,26 @@ export const Hub: React.FC<HubProps> = ({ gameState, onSelectLoadout, onStartRun
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 lg:gap-8">
+            <div className="rounded-xl border border-cyan-300/25 bg-cyan-500/5 px-3 py-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-cyan-200/70 mb-1">Capability Passives</div>
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Run Override</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onCapabilityPassivesEnabledChange(!capabilityPassivesEnabled)}
+                  aria-pressed={capabilityPassivesEnabled}
+                  className={`px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-colors ${
+                    capabilityPassivesEnabled
+                      ? 'bg-cyan-400/15 border-cyan-300/50 text-cyan-100'
+                      : 'bg-white/[0.02] border-white/10 text-white/50 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  {capabilityPassivesEnabled ? 'On' : 'Off'}
+                </button>
+              </div>
+            </div>
             <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 sm:bg-transparent sm:border-0 sm:p-0">
               <div className="text-[10px] uppercase tracking-widest text-white/40 mb-1">Current Loadout</div>
               <div className="text-sm font-bold text-indigo-400 truncate">{gameState.selectedLoadoutId || 'No Archetype Selected'}</div>

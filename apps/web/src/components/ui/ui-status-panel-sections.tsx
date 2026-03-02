@@ -1,7 +1,10 @@
 import React from 'react';
 import type { GameState } from '@hop/engine';
 import { InitiativeDisplay } from '../InitiativeQueue';
-import { getUiActorInformation, getUiInformationRevealMode } from '../../app/information-reveal';
+import {
+  getUiActorInformation,
+  type UiInformationRevealMode
+} from '../../app/information-reveal';
 
 interface CompactFlagProps {
   compact: boolean;
@@ -9,6 +12,10 @@ interface CompactFlagProps {
 
 interface StatusGameProps extends CompactFlagProps {
   gameState: GameState;
+}
+
+interface StatusIntelProps extends StatusGameProps {
+  intelMode: UiInformationRevealMode;
 }
 
 interface ProgressSectionProps extends StatusGameProps {
@@ -27,9 +34,15 @@ interface RulesetItemProps {
   value: boolean;
 }
 
+interface IntelToggleProps {
+  intelMode: UiInformationRevealMode;
+  onIntelModeChange: (mode: UiInformationRevealMode) => void;
+}
+
 export interface UiRulesetFlags {
   acaeEnabled: boolean;
   sharedVectorCarryEnabled: boolean;
+  capabilityPassivesEnabled: boolean;
   intelStrict: boolean;
 }
 
@@ -45,12 +58,13 @@ export const UiStatusHeader: React.FC<CompactFlagProps> = ({ compact }) => (
   </div>
 );
 
-export const UiInitiativeSection: React.FC<{ hideInitiativeQueue: boolean; gameState: GameState }> = ({
+export const UiInitiativeSection: React.FC<{ hideInitiativeQueue: boolean; gameState: GameState; intelMode: UiInformationRevealMode }> = ({
   hideInitiativeQueue,
-  gameState
-}) => (hideInitiativeQueue ? null : <InitiativeDisplay gameState={gameState} />);
+  gameState,
+  intelMode
+}) => (hideInitiativeQueue ? null : <InitiativeDisplay gameState={gameState} revealMode={intelMode} />);
 
-export const UiVitalsSection: React.FC<StatusGameProps> = ({ gameState, compact }) => (
+export const UiVitalsSection: React.FC<StatusIntelProps> = ({ gameState, compact, intelMode }) => (
   <div className={compact ? 'space-y-4' : 'space-y-6'}>
     <div className="flex flex-col">
       <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2">Vitality</span>
@@ -70,7 +84,7 @@ export const UiVitalsSection: React.FC<StatusGameProps> = ({ gameState, compact 
     </div>
 
     {gameState.enemies.filter(e => e.subtype === 'sentinel').map((boss) => {
-      const info = getUiActorInformation(gameState, gameState.player.id, boss.id);
+      const info = getUiActorInformation(gameState, gameState.player.id, boss.id, intelMode);
       const showName = info.reveal.name;
       const showHp = info.reveal.hp;
       const bossLabel = showName ? (info.data.name || 'Sentinel Directive') : 'Unknown Directive';
@@ -129,26 +143,60 @@ const UiRulesetItem: React.FC<RulesetItemProps> = ({ label, value }) => (
   </div>
 );
 
-export const UiRulesetSection: React.FC<StatusGameProps> = ({ gameState, compact }) => {
-  const { acaeEnabled, sharedVectorCarryEnabled, intelStrict } = getUiRulesetFlags(gameState);
+export const UiIntelToggleSection: React.FC<IntelToggleProps> = ({ intelMode, onIntelModeChange }) => (
+  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2">
+    <span className="block text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2">Intel Mode</span>
+    <div className="grid grid-cols-2 gap-2">
+      <button
+        onClick={() => onIntelModeChange('force_reveal')}
+        className={`px-2 py-1.5 rounded border text-[10px] font-black uppercase tracking-widest transition-colors ${
+          intelMode === 'force_reveal'
+            ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200'
+            : 'bg-white/[0.03] border-white/10 text-white/50 hover:bg-white/[0.06]'
+        }`}
+      >
+        Force
+      </button>
+      <button
+        onClick={() => onIntelModeChange('strict')}
+        className={`px-2 py-1.5 rounded border text-[10px] font-black uppercase tracking-widest transition-colors ${
+          intelMode === 'strict'
+            ? 'bg-amber-400/15 border-amber-300/40 text-amber-200'
+            : 'bg-white/[0.03] border-white/10 text-white/50 hover:bg-white/[0.06]'
+        }`}
+      >
+        Strict
+      </button>
+    </div>
+  </div>
+);
 
+export const UiRulesetSection: React.FC<StatusIntelProps & { onIntelModeChange: (mode: UiInformationRevealMode) => void }> = ({
+  gameState,
+  compact,
+  intelMode,
+  onIntelModeChange
+}) => {
+  const { acaeEnabled, sharedVectorCarryEnabled, capabilityPassivesEnabled, intelStrict } = getUiRulesetFlags(gameState, intelMode);
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
       <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Ruleset</span>
       <div className={compact ? 'space-y-2' : 'space-y-3'}>
         <UiRulesetItem label="ACAE" value={acaeEnabled} />
         <UiRulesetItem label="Shared Vector Carry" value={sharedVectorCarryEnabled} />
+        <UiRulesetItem label="Capability Passives" value={capabilityPassivesEnabled} />
         <UiRulesetItem label="Intel Strict" value={intelStrict} />
+        <UiIntelToggleSection intelMode={intelMode} onIntelModeChange={onIntelModeChange} />
       </div>
     </div>
   );
 };
 
-export const getUiRulesetFlags = (gameState: GameState): UiRulesetFlags => {
-  const revealMode = getUiInformationRevealMode();
+export const getUiRulesetFlags = (gameState: GameState, revealMode: UiInformationRevealMode): UiRulesetFlags => {
   return {
     acaeEnabled: gameState.ruleset?.ailments?.acaeEnabled === true,
     sharedVectorCarryEnabled: gameState.ruleset?.attachments?.sharedVectorCarry === true,
+    capabilityPassivesEnabled: gameState.ruleset?.capabilities?.loadoutPassivesEnabled === true,
     intelStrict: revealMode === 'strict'
   };
 };

@@ -2,12 +2,15 @@ import React from 'react';
 import type { GameState } from '@hop/engine';
 import { UiStatusPanel } from './ui/ui-status-panel';
 import { UiLogFeed } from './ui/ui-log-feed';
+import type { UiInformationRevealMode } from '../app/information-reveal';
 
 interface UIProps {
   gameState: GameState;
   onReset: () => void;
   onWait: () => void;
   onExitToHub: () => void;
+  intelMode: UiInformationRevealMode;
+  onIntelModeChange: (mode: UiInformationRevealMode) => void;
   inputLocked?: boolean;
   compact?: boolean;
   hideInitiativeQueue?: boolean;
@@ -19,6 +22,8 @@ export const UI: React.FC<UIProps> = ({
   onReset,
   onWait,
   onExitToHub,
+  intelMode,
+  onIntelModeChange,
   inputLocked = false,
   compact = false,
   hideInitiativeQueue = false,
@@ -33,6 +38,8 @@ export const UI: React.FC<UIProps> = ({
         onReset={onReset}
         onWait={onWait}
         onExitToHub={onExitToHub}
+        intelMode={intelMode}
+        onIntelModeChange={onIntelModeChange}
         inputLocked={inputLocked}
         compact={compact}
         hideInitiativeQueue={hideInitiativeQueue}
@@ -41,4 +48,3 @@ export const UI: React.FC<UIProps> = ({
     </div>
   );
 };
-

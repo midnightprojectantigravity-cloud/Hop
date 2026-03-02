@@ -1,9 +1,15 @@
 import type { GameState, Point, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
+import React from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { UI } from '../components/UI';
 import { UpgradeOverlay } from '../components/UpgradeOverlay';
 import { SkillTray } from '../components/SkillTray';
 import type { VisualAssetManifest } from '../visual/asset-manifest';
+import {
+  getUiInformationRevealMode,
+  setUiInformationRevealMode,
+  type UiInformationRevealMode
+} from './information-reveal';
 import {
   ResolvingTurnOverlay,
   MobileToastsOverlay,
@@ -22,6 +28,40 @@ type MobileToast = {
 };
 
 type FloorIntroState = { floor: number; theme: string } | null;
+
+interface IntelModeToggleProps {
+  mode: UiInformationRevealMode;
+  onChange: (mode: UiInformationRevealMode) => void;
+  compact?: boolean;
+}
+
+const IntelModeToggle = ({ mode, onChange, compact = false }: IntelModeToggleProps) => (
+  <div className={`rounded-lg border border-white/10 bg-white/[0.03] ${compact ? 'p-1.5' : 'p-2'} flex flex-col gap-1.5`}>
+    <span className={`text-[10px] font-bold uppercase tracking-widest text-white/45 ${compact ? 'text-[9px]' : ''}`}>Intel</span>
+    <div className="grid grid-cols-2 gap-1.5">
+      <button
+        onClick={() => onChange('force_reveal')}
+        className={`${compact ? 'px-2 py-1' : 'px-2.5 py-1.5'} rounded border text-[10px] font-black uppercase tracking-widest transition-colors ${
+          mode === 'force_reveal'
+            ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200'
+            : 'bg-white/[0.03] border-white/10 text-white/55 hover:bg-white/[0.06]'
+        }`}
+      >
+        Force
+      </button>
+      <button
+        onClick={() => onChange('strict')}
+        className={`${compact ? 'px-2 py-1' : 'px-2.5 py-1.5'} rounded border text-[10px] font-black uppercase tracking-widest transition-colors ${
+          mode === 'strict'
+            ? 'bg-amber-400/15 border-amber-300/40 text-amber-200'
+            : 'bg-white/[0.03] border-white/10 text-white/55 hover:bg-white/[0.06]'
+        }`}
+      >
+        Strict
+      </button>
+    </div>
+  </div>
+);
 
 interface GameScreenProps {
   gameState: GameState;
@@ -78,10 +118,26 @@ export const GameScreen = ({
   onStepReplay,
   onCloseReplay,
 }: GameScreenProps) => {
+  const [intelMode, setIntelMode] = React.useState<UiInformationRevealMode>(() => getUiInformationRevealMode());
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const syncFromLocation = () => {
+      setIntelMode(getUiInformationRevealMode());
+    };
+    window.addEventListener('popstate', syncFromLocation);
+    return () => {
+      window.removeEventListener('popstate', syncFromLocation);
+    };
+  }, []);
+  const handleIntelModeChange = React.useCallback((mode: UiInformationRevealMode) => {
+    setIntelMode(mode);
+    setUiInformationRevealMode(mode);
+  }, []);
+
   return (
     <div className="flex flex-col lg:flex-row w-screen h-screen bg-[#030712] overflow-hidden text-white font-['Inter',_sans-serif]">
       <div className="lg:hidden shrink-0 border-b border-white/5 bg-[#030712]/95 backdrop-blur-sm z-20">
-        <div className="px-4 py-3 flex items-center justify-between gap-4">
+        <div className="px-4 py-3 grid grid-cols-3 items-center gap-4">
           <div className="min-w-0">
             <div className="text-[10px] uppercase tracking-[0.2em] text-white/35 font-bold">Level</div>
             <div className="text-lg font-black text-white leading-none">
@@ -89,13 +145,14 @@ export const GameScreen = ({
               <span className="text-white/25 text-sm ml-1">/ 10</span>
             </div>
           </div>
-          <div className="ml-auto min-w-0 text-right">
+          <div className="min-w-0 text-right">
             <div className="text-[10px] uppercase tracking-[0.2em] text-white/35 font-bold">HP</div>
             <div className="text-lg font-black text-red-400 leading-none">
               {gameState.player.hp}
               <span className="text-white/25 text-sm ml-1">/ {gameState.player.maxHp}</span>
             </div>
           </div>
+          <IntelModeToggle mode={intelMode} onChange={handleIntelModeChange} compact />
         </div>
       </div>
 
@@ -105,11 +162,16 @@ export const GameScreen = ({
           onReset={onReset}
           onWait={onWait}
           onExitToHub={onExitToHub}
+          intelMode={intelMode}
+          onIntelModeChange={handleIntelModeChange}
           inputLocked={isInputLocked}
         />
       </aside>
 
       <main className="flex-1 min-h-0 relative flex items-center justify-center bg-[#020617] overflow-hidden">
+        <div className="hidden lg:block absolute top-5 right-5 z-30">
+          <IntelModeToggle mode={intelMode} onChange={handleIntelModeChange} />
+        </div>
         <div className="w-full h-full p-0 sm:p-3 lg:p-8 flex items-center justify-center">
           <div className={`w-full h-full relative border border-white/5 bg-[#030712]/50 rounded-none sm:rounded-3xl lg:rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
             <GameBoard

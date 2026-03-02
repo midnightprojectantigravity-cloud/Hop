@@ -30,9 +30,17 @@ export const resolveUiInformationRevealMode = (options: {
 export const getUiInformationRevealMode = (): UiInformationRevealMode =>
   resolveUiInformationRevealMode();
 
+export const setUiInformationRevealMode = (mode: UiInformationRevealMode): void => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  url.searchParams.set('intel', mode);
+  window.history.replaceState({}, '', url.toString());
+};
+
 export const getUiActorInformation = (
   state: GameState,
   viewerId: string,
-  subjectId: string
+  subjectId: string,
+  revealMode?: UiInformationRevealMode
 ): InformationResult =>
-  getActorInformation(state, viewerId, subjectId, { revealMode: getUiInformationRevealMode() });
+  getActorInformation(state, viewerId, subjectId, { revealMode: revealMode || getUiInformationRevealMode() });

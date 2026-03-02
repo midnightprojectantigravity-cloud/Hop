@@ -1,15 +1,16 @@
 import { getEntityVisual, type GameState, type Actor, type InitiativeEntry } from '@hop/engine';
-import { getUiActorInformation } from '../app/information-reveal';
+import { getUiActorInformation, type UiInformationRevealMode } from '../app/information-reveal';
 
 interface InitiativeDisplayProps {
     gameState: GameState;
+    revealMode?: UiInformationRevealMode;
 }
 
 /**
  * Visualizes the turn order (Initiative Queue).
  * High priority "Juice" feature.
  */
-export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState }) => {
+export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState, revealMode }) => {
     const { initiativeQueue, player, enemies } = gameState;
 
     if (!initiativeQueue || !initiativeQueue.entries || initiativeQueue.entries.length === 0) return null;
@@ -31,7 +32,7 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState 
                     const hasActed = entry?.hasActed;
                     const info = isPlayer
                         ? null
-                        : getUiActorInformation(gameState, player.id, actor.id);
+                        : getUiActorInformation(gameState, player.id, actor.id, revealMode);
                     const isEnemyHpVisible = isPlayer || Boolean(info?.reveal.hp);
                     const isEnemyNameVisible = isPlayer || Boolean(info?.reveal.name);
                     const hpPercent = isEnemyHpVisible ? (actor.hp / actor.maxHp) * 100 : 0;

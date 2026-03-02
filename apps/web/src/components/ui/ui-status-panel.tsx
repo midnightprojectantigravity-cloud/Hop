@@ -9,12 +9,15 @@ import {
   UiStatusHeader,
   UiVitalsSection
 } from './ui-status-panel-sections';
+import type { UiInformationRevealMode } from '../../app/information-reveal';
 
 interface UiStatusPanelProps {
   gameState: GameState;
   onReset: () => void;
   onWait: () => void;
   onExitToHub: () => void;
+  intelMode: UiInformationRevealMode;
+  onIntelModeChange: (mode: UiInformationRevealMode) => void;
   inputLocked?: boolean;
   compact?: boolean;
   hideInitiativeQueue?: boolean;
@@ -25,6 +28,8 @@ export const UiStatusPanel: React.FC<UiStatusPanelProps> = ({
   onReset,
   onWait,
   onExitToHub,
+  intelMode,
+  onIntelModeChange,
   inputLocked = false,
   compact = false,
   hideInitiativeQueue = false
@@ -34,10 +39,15 @@ export const UiStatusPanel: React.FC<UiStatusPanelProps> = ({
   return (
     <div className={`flex flex-col overflow-y-auto flex-1 min-h-0 ${compact ? 'gap-4 p-4' : 'gap-8 p-8'}`}>
       <UiStatusHeader compact={compact} />
-      <UiInitiativeSection gameState={gameState} hideInitiativeQueue={hideInitiativeQueue} />
-      <UiVitalsSection gameState={gameState} compact={compact} />
+      <UiInitiativeSection gameState={gameState} hideInitiativeQueue={hideInitiativeQueue} intelMode={intelMode} />
+      <UiVitalsSection gameState={gameState} compact={compact} intelMode={intelMode} />
       <UiProgressSection gameState={gameState} compact={compact} score={score} />
-      <UiRulesetSection gameState={gameState} compact={compact} />
+      <UiRulesetSection
+        gameState={gameState}
+        compact={compact}
+        intelMode={intelMode}
+        onIntelModeChange={onIntelModeChange}
+      />
       <UiDirectivesSection
         compact={compact}
         inputLocked={inputLocked}

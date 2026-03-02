@@ -16,6 +16,7 @@ import { useTurnDriverTrace } from './app/use-turn-driver-trace';
 import { useAppRouting } from './app/use-app-routing';
 import { HubScreen } from './app/HubScreen';
 import { GameScreen } from './app/GameScreen';
+import { buildCapabilityPassivesRulesetOverrides } from './app/start-run-overrides';
 
 const summarizeActionPayload = (action: Action): Record<string, unknown> | undefined => {
   const payload = (action as any).payload;
@@ -96,6 +97,7 @@ function App() {
   const [showMovementRange, setShowMovementRange] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [postCommitInputLock, setPostCommitInputLock] = useState(false);
+  const [hubCapabilityPassivesEnabled, setHubCapabilityPassivesEnabled] = useState(false);
   const {
     turnDriver,
     isInputLocked,
@@ -177,7 +179,14 @@ function App() {
   const handleStartRun = (mode: 'normal' | 'daily') => {
     const id = gameState.selectedLoadoutId;
     if (!id) { console.warn('Start Run called without a selected loadout.'); return; }
-    dispatchWithTrace({ type: 'START_RUN', payload: { loadoutId: id, mode } }, 'hub_start_run');
+    dispatchWithTrace({
+      type: 'START_RUN',
+      payload: {
+        loadoutId: id,
+        mode,
+        rulesetOverrides: buildCapabilityPassivesRulesetOverrides(hubCapabilityPassivesEnabled)
+      }
+    }, 'hub_start_run');
   };
 
   const handleStartArcadeRun = (loadoutId: string) => {
@@ -206,6 +215,8 @@ function App() {
         tutorialInstructions={tutorialInstructions}
         navigateTo={navigateTo}
         onStartArcadeRun={handleStartArcadeRun}
+        capabilityPassivesEnabled={hubCapabilityPassivesEnabled}
+        onCapabilityPassivesEnabledChange={setHubCapabilityPassivesEnabled}
         onSelectLoadout={(l) => {
           dispatchWithTrace({ type: 'APPLY_LOADOUT', payload: l }, 'hub_select_loadout');
         }}

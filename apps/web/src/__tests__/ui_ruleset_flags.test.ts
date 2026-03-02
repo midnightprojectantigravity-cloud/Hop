@@ -7,9 +7,10 @@ describe('ui ruleset flags', () => {
     const state = generateInitialState(1, 'ui-ruleset-flags-default');
     state.ruleset = undefined;
 
-    expect(getUiRulesetFlags(state)).toEqual({
+    expect(getUiRulesetFlags(state, 'force_reveal')).toEqual({
       acaeEnabled: false,
       sharedVectorCarryEnabled: false,
+      capabilityPassivesEnabled: false,
       intelStrict: false
     });
   });
@@ -24,13 +25,18 @@ describe('ui ruleset flags', () => {
       attachments: {
         sharedVectorCarry: true,
         version: 'attachment-v1'
+      },
+      capabilities: {
+        loadoutPassivesEnabled: true,
+        version: 'capabilities-v1'
       }
     };
 
-    expect(getUiRulesetFlags(state)).toEqual({
+    expect(getUiRulesetFlags(state, 'strict')).toEqual({
       acaeEnabled: true,
       sharedVectorCarryEnabled: true,
-      intelStrict: false
+      capabilityPassivesEnabled: true,
+      intelStrict: true
     });
   });
 });
