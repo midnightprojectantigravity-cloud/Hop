@@ -58,6 +58,7 @@ Status: complete for this tranche (`BiomeSandbox.tsx` is 74 lines, `Entity.tsx` 
 - [x] Extract `GameBoard` SVG/layer render stack into `components/game-board/GameBoardSceneSvg.tsx` and keep `GameBoard.tsx` focused on orchestration/hooks.
 - [x] Decompose `ui-log-feed` into classifier/types/filter-controls/entries modules and add classifier unit coverage.
 - [x] Decompose `ui-status-panel` into focused section modules (header, initiative, vitals, progress, directives).
+- [x] Surface active ruleset flags (`ACAE`, `Shared Vector Carry`) in `ui-status-panel` and add unit coverage for ruleset flag mapping.
 - [x] Continue decomposition of `apps/web/src/components/BiomeSandbox.tsx` into smaller feature modules.
 - [x] Continue decomposition of `apps/web/src/components/Entity.tsx` rendering branches where complexity remains high.
 - [x] Keep external props/API behavior stable for existing app integration.

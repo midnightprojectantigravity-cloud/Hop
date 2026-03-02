@@ -5,6 +5,7 @@ import {
   UiDirectivesSection,
   UiInitiativeSection,
   UiProgressSection,
+  UiRulesetSection,
   UiStatusHeader,
   UiVitalsSection
 } from './ui-status-panel-sections';
@@ -36,6 +37,7 @@ export const UiStatusPanel: React.FC<UiStatusPanelProps> = ({
       <UiInitiativeSection gameState={gameState} hideInitiativeQueue={hideInitiativeQueue} />
       <UiVitalsSection gameState={gameState} compact={compact} />
       <UiProgressSection gameState={gameState} compact={compact} score={score} />
+      <UiRulesetSection gameState={gameState} compact={compact} />
       <UiDirectivesSection
         compact={compact}
         inputLocked={inputLocked}

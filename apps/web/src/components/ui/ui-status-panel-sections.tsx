@@ -21,6 +21,16 @@ interface DirectivesSectionProps extends CompactFlagProps {
   onExitToHub: () => void;
 }
 
+interface RulesetItemProps {
+  label: string;
+  value: boolean;
+}
+
+export interface UiRulesetFlags {
+  acaeEnabled: boolean;
+  sharedVectorCarryEnabled: boolean;
+}
+
 export const UiStatusHeader: React.FC<CompactFlagProps> = ({ compact }) => (
   <div className="flex justify-between items-start">
     <div>
@@ -95,6 +105,38 @@ export const UiProgressSection: React.FC<ProgressSectionProps> = ({ compact, gam
   </div>
 );
 
+const UiRulesetItem: React.FC<RulesetItemProps> = ({ label, value }) => (
+  <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+    <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">{label}</span>
+    <span
+      className={`text-[10px] font-black uppercase tracking-widest ${
+        value ? 'text-emerald-300' : 'text-white/40'
+      }`}
+    >
+      {value ? 'On' : 'Off'}
+    </span>
+  </div>
+);
+
+export const UiRulesetSection: React.FC<StatusGameProps> = ({ gameState, compact }) => {
+  const { acaeEnabled, sharedVectorCarryEnabled } = getUiRulesetFlags(gameState);
+
+  return (
+    <div className={compact ? 'space-y-2' : 'space-y-3'}>
+      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Ruleset</span>
+      <div className={compact ? 'space-y-2' : 'space-y-3'}>
+        <UiRulesetItem label="ACAE" value={acaeEnabled} />
+        <UiRulesetItem label="Shared Vector Carry" value={sharedVectorCarryEnabled} />
+      </div>
+    </div>
+  );
+};
+
+export const getUiRulesetFlags = (gameState: GameState): UiRulesetFlags => ({
+  acaeEnabled: gameState.ruleset?.ailments?.acaeEnabled === true,
+  sharedVectorCarryEnabled: gameState.ruleset?.attachments?.sharedVectorCarry === true
+});
+
 export const UiDirectivesSection: React.FC<DirectivesSectionProps> = ({
   compact,
   inputLocked,
@@ -131,4 +173,3 @@ export const UiDirectivesSection: React.FC<DirectivesSectionProps> = ({
     </button>
   </div>
 );
-
