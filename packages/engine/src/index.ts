@@ -39,6 +39,7 @@ export * from './systems/composite-skill-bridge';
 export * from './systems/action-preview';
 export * from './systems/state-mirror';
 export * from './systems/tactical-data-bootstrap';
+export * from './systems/capabilities';
 
 // Juice & VFX
 

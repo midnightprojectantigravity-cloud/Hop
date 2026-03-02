@@ -114,7 +114,7 @@ export const SPEAR_THROW: SkillDefinition = {
                 return { effects, messages, consumesTurn: false };
             }
 
-            const hasClearLos = hasClearLineToActor(state, shooter.position, target, targetEnemy.id, shooter.id);
+            const hasClearLos = hasClearLineToActor(state, shooter.position, target, targetEnemy.id, shooter.id, shooter);
             if (!hasClearLos) {
                 messages.push('No clear line of sight to enemy.');
                 return { effects, messages, consumesTurn: false };
@@ -259,7 +259,7 @@ export const SPEAR_THROW: SkillDefinition = {
             const axial = validateAxialDirection(origin, p);
             if (!axial.isAxial) return false;
             if (!validateRange(origin, p, range)) return false;
-            return hasClearLineToActor(state, origin, p, e.id, shooter.id);
+            return hasClearLineToActor(state, origin, p, e.id, shooter.id, shooter);
         }).map(e => e.position);
     },
     upgrades: {

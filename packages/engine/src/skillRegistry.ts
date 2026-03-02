@@ -8,6 +8,7 @@ import type { SkillID } from './types/registry';
 import { hydrateSkillIntentProfiles } from './systems/skill-intent-profile';
 import { getCompositeSkillRuntimeRegistry } from './systems/composite-skill-bridge';
 import { GENERATED_COMPOSITIONAL_SKILLS } from './generated/skill-registry.generated';
+import { registerCapabilitySkillDefinitionResolver } from './systems/capabilities/cache';
 
 /**
  * A registry of all skills using the new Compositional Skill Framework.
@@ -137,3 +138,5 @@ export const getSkillRange = SkillRegistry.getSkillRange;
 export const getSkillDefinition = (id: string): SkillDefinition | undefined => {
     return SkillRegistry.get(id);
 };
+
+registerCapabilitySkillDefinitionResolver((skillId: string) => SkillRegistry.get(skillId));

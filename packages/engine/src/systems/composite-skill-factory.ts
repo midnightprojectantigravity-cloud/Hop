@@ -304,7 +304,10 @@ export const materializeCompositeSkill = (def: CompositeSkillDefinition): SkillD
             let targets = getSortedTargets(state, origin, def.targeting.range, def.targeting.deterministicSort);
             if (def.targeting.mode === 'single' || def.targeting.mode === 'radius' || def.targeting.mode === 'line') {
                 if (def.targeting.requiresLos) {
-                    targets = targets.filter(target => validateLineOfSight(state, origin, target).isValid);
+                    const observer = getActorAt(state, origin) as Actor | undefined;
+                    targets = targets.filter(target => validateLineOfSight(state, origin, target, {
+                        observerActor: observer
+                    }).isValid);
                 }
                 if (!def.targeting.allowOccupied) {
                     targets = targets.filter(target => !getActorAt(state, target));

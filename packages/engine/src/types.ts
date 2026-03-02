@@ -381,6 +381,167 @@ export interface SkillIntentProfile {
     complexity: number;
 }
 
+export type CapabilityDomain = 'senses' | 'information' | 'movement';
+export type CapabilityDecision = 'allow' | 'block' | 'neutral';
+export type CapabilityBlockKind = 'soft' | 'hard';
+
+export interface CapabilityDecisionEnvelope {
+    decision: CapabilityDecision;
+    blockKind?: CapabilityBlockKind;
+    reason?: string;
+}
+
+export type SenseObstacle = 'wall' | 'actor' | 'lava';
+
+export interface SenseLineOfSightResult {
+    isValid: boolean;
+    blockedBy?: SenseObstacle;
+    blockedAt?: Point;
+}
+
+export interface SenseQuery {
+    state: GameState;
+    observer: Actor;
+    origin: Point;
+    target: Point;
+    targetActor?: Actor;
+    excludeActorId?: string;
+    stopAtWalls: boolean;
+    stopAtActors: boolean;
+    stopAtLava: boolean;
+    distance: number;
+    context?: Record<string, unknown>;
+    evaluateLegacyLineOfSight: (
+        overrides?: Partial<Pick<SenseQuery, 'stopAtWalls' | 'stopAtActors' | 'stopAtLava' | 'excludeActorId'>>
+    ) => SenseLineOfSightResult;
+}
+
+export interface SenseProviderResult extends CapabilityDecisionEnvelope {
+    channelId?: string;
+    maxRange?: number;
+    metadata?: Record<string, unknown>;
+}
+
+export interface SenseProvider {
+    domain: 'senses';
+    providerId: string;
+    priority: number;
+    resolve: (query: SenseQuery) => SenseProviderResult;
+}
+
+export interface InformationRevealFlags {
+    name: boolean;
+    hp: boolean;
+    trinityStats: boolean;
+    intentBadge: boolean;
+    topActionUtilities: boolean;
+}
+
+export interface InformationPayload {
+    name?: string;
+    hp?: { current: number; max: number };
+    trinityStats?: { body: number; mind: number; instinct: number };
+    intentBadge?: string;
+    topActionUtilities?: Array<{ skillId: string; score: number }>;
+}
+
+export interface InformationQuery {
+    state: GameState;
+    viewer: Actor;
+    subject: Actor;
+    revealMode?: 'strict' | 'force_reveal';
+    context?: {
+        topActionUtilities?: Array<{ skillId: string; score: number }>;
+    };
+}
+
+export interface InformationProviderResult extends CapabilityDecisionEnvelope {
+    reveal?: Partial<InformationRevealFlags>;
+    data?: Partial<InformationPayload>;
+}
+
+export interface InformationProvider {
+    domain: 'information';
+    providerId: string;
+    priority: number;
+    resolve: (query: InformationQuery) => InformationProviderResult;
+}
+
+export type MovementResolutionMode = 'EXTEND' | 'REPLACE';
+
+export interface MovementModel {
+    pathing: 'walk' | 'flight' | 'teleport';
+    ignoreGroundHazards: boolean;
+    ignoreWalls: boolean;
+    allowPassThroughActors: boolean;
+    rangeModifier: number;
+    unseenAttackPenaltyMultiplier?: number;
+}
+
+export interface MovementQuery {
+    state: GameState;
+    actor: Actor;
+    origin: Point;
+    target?: Point;
+    skillId?: string;
+    context?: Record<string, unknown>;
+}
+
+export interface MovementProviderResult extends CapabilityDecisionEnvelope {
+    resolutionMode: MovementResolutionMode;
+    model?: Partial<MovementModel>;
+}
+
+export interface MovementProvider {
+    domain: 'movement';
+    providerId: string;
+    priority: number;
+    resolutionMode: MovementResolutionMode;
+    resolve: (query: MovementQuery) => MovementProviderResult;
+}
+
+export interface SkillCapabilities {
+    senses?: SenseProvider[];
+    information?: InformationProvider[];
+    movement?: MovementProvider[];
+}
+
+export interface SenseResult extends SenseLineOfSightResult {
+    usedCapabilities: boolean;
+    decision: CapabilityDecision;
+    blockedByHardBlock: boolean;
+    topAllowPriority: number | null;
+    topSoftBlockPriority: number | null;
+    appliedProviders: string[];
+    channels: string[];
+}
+
+export interface InformationResult {
+    reveal: InformationRevealFlags;
+    data: InformationPayload;
+    meta: {
+        isForceRevealApplied: boolean;
+        usedCapabilities: boolean;
+        decision: CapabilityDecision;
+        blockedByHardBlock: boolean;
+        topAllowPriority: number | null;
+        topSoftBlockPriority: number | null;
+        appliedProviders: string[];
+    };
+}
+
+export interface MovementResult {
+    model: MovementModel;
+    meta: {
+        usedCapabilities: boolean;
+        decision: CapabilityDecision;
+        blockedByHardBlock: boolean;
+        topAllowPriority: number | null;
+        topSoftBlockPriority: number | null;
+        appliedProviders: string[];
+    };
+}
+
 export interface SkillDefinition {
     id: SkillID;
     /** Tactical name (supports State-Shifting skills) */
@@ -400,6 +561,7 @@ export interface SkillDefinition {
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades?: string[], context?: Record<string, any>) => SkillExecutionResult;
     /** Optional helper for UI/tests: return valid target hexes for previews (Level 1/2) */
     getValidTargets?: (state: GameState, origin: Point) => Point[];
+    capabilities?: SkillCapabilities;
     intentProfile?: SkillIntentProfile;
     upgrades: Record<string, SkillModifier>;
     scenarios?: ScenarioV2[];

@@ -44,7 +44,7 @@ export const ARCHER_SHOT: SkillDefinition = {
             return { effects, messages: ['Cannot target ally.'], consumesTurn: false };
         }
 
-        if (!hasClearLineToActor(state, shooter.position, target, targetActor.id, shooter.id)) {
+        if (!hasClearLineToActor(state, shooter.position, target, targetActor.id, shooter.id, shooter)) {
             return { effects, messages: ['No clear line of sight.'], consumesTurn: false };
         }
 
@@ -158,7 +158,7 @@ export const ARCHER_SHOT: SkillDefinition = {
                 && a.factionId !== shooter.factionId
                 && validateRange(origin, a.position, 4)
                 && validateAxialDirection(origin, a.position).isAxial
-                && hasClearLineToActor(state, origin, a.position, a.id, shooter.id)
+                && hasClearLineToActor(state, origin, a.position, a.id, shooter.id, shooter)
             )
             .map(a => a.position)
             .filter((p, idx, arr) => arr.findIndex(other => hexEquals(other, p)) === idx);

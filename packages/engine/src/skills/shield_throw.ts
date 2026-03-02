@@ -40,7 +40,8 @@ export const SHIELD_THROW: SkillDefinition = {
         const { isValid, blockedBy, blockedAt } = validateLineOfSight(state, attacker.position, target, {
             stopAtWalls: true,
             stopAtActors: true,
-            excludeActorId: attacker.id
+            excludeActorId: attacker.id,
+            observerActor: attacker
         });
 
         if (!isValid && blockedBy === 'wall') {

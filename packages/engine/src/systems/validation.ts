@@ -3,6 +3,7 @@ import { hexEquals, getHexLine, hexDistance, getDirectionFromTo } from '../hex';
 import { getActorAt } from '../helpers';
 import { pointToKey } from '../hex';
 import { UnifiedTileService } from './tiles/unified-tile-service';
+import { resolveSenseLineOfSight } from './capabilities/senses';
 
 /**
  * Validation System
@@ -25,7 +26,6 @@ export function isBlockedByLava(state: GameState, position: Point): boolean {
     const tile = state.tiles.get(pointToKey(position));
     return tile?.baseId === 'LAVA' || tile?.traits.has('LIQUID') || false;
 }
-
 
 /**
  * Checks if a position is blocked by an actor (optionally excluding one).
@@ -83,26 +83,37 @@ export function findFirstObstacle(state: GameState, path: Point[], options: {
     return {};
 }
 
-/**
- * Validates line-of-sight between two points.
- */
-export function validateLineOfSight(state: GameState, origin: Point, target: Point, options: {
+export interface LineOfSightOptions {
     stopAtWalls?: boolean;
     stopAtActors?: boolean;
     stopAtLava?: boolean;
     excludeActorId?: string;
-} = {}): { isValid: boolean; blockedBy?: 'wall' | 'actor' | 'lava'; blockedAt?: Point } {
+    observerActor?: Actor;
+    observerId?: string;
+    context?: Record<string, unknown>;
+}
+
+const resolveObserver = (state: GameState, options: LineOfSightOptions): Actor | undefined => {
+    if (options.observerActor) return options.observerActor;
+    if (!options.observerId) return undefined;
+    if (options.observerId === state.player.id) return state.player;
+    return state.enemies.find(e => e.id === options.observerId) || state.companions?.find(c => c.id === options.observerId);
+};
+
+const computeLegacyLineOfSight = (
+    state: GameState,
+    origin: Point,
+    target: Point,
+    options: Pick<LineOfSightOptions, 'stopAtWalls' | 'stopAtActors' | 'stopAtLava' | 'excludeActorId'>
+): { isValid: boolean; blockedBy?: 'wall' | 'actor' | 'lava'; blockedAt?: Point } => {
     const line = getHexLine(origin, target);
-    // Ignore start, check up to target
     const pathToCheck = line.slice(1);
 
-    const { stopAtWalls = true, stopAtActors = true, stopAtLava = false, excludeActorId } = options;
-
     const result = findFirstObstacle(state, pathToCheck, {
-        checkWalls: stopAtWalls,
-        checkActors: stopAtActors,
-        checkLava: stopAtLava,
-        excludeActorId
+        checkWalls: options.stopAtWalls ?? true,
+        checkActors: options.stopAtActors ?? true,
+        checkLava: options.stopAtLava ?? false,
+        excludeActorId: options.excludeActorId
     });
 
     if (result.obstacle) {
@@ -112,6 +123,46 @@ export function validateLineOfSight(state: GameState, origin: Point, target: Poi
     }
 
     return { isValid: true };
+};
+
+/**
+ * Validates line-of-sight between two points.
+ */
+export function validateLineOfSight(
+    state: GameState,
+    origin: Point,
+    target: Point,
+    options: LineOfSightOptions = {}
+): { isValid: boolean; blockedBy?: 'wall' | 'actor' | 'lava'; blockedAt?: Point } {
+    const legacy = computeLegacyLineOfSight(state, origin, target, options);
+    const observer = resolveObserver(state, options);
+    if (!observer) return legacy;
+
+    const capabilityResult = resolveSenseLineOfSight({
+        state,
+        observer,
+        origin,
+        target,
+        stopAtWalls: options.stopAtWalls ?? true,
+        stopAtActors: options.stopAtActors ?? true,
+        stopAtLava: options.stopAtLava ?? false,
+        excludeActorId: options.excludeActorId,
+        context: options.context,
+        evaluateLegacyLineOfSight: (overrides) => computeLegacyLineOfSight(state, origin, target, {
+            stopAtWalls: overrides?.stopAtWalls ?? options.stopAtWalls,
+            stopAtActors: overrides?.stopAtActors ?? options.stopAtActors,
+            stopAtLava: overrides?.stopAtLava ?? options.stopAtLava,
+            excludeActorId: overrides?.excludeActorId ?? options.excludeActorId
+        })
+    });
+
+    if (!capabilityResult.usedCapabilities) return legacy;
+    if (capabilityResult.isValid) return { isValid: true };
+    return {
+        isValid: false,
+        blockedBy: capabilityResult.blockedBy,
+        blockedAt: capabilityResult.blockedAt
+    };
 }
 
 /**
@@ -123,20 +174,54 @@ export function hasClearLineToActor(
     origin: Point,
     target: Point,
     targetActorId: string,
-    excludeActorId?: string
+    excludeActorId?: string,
+    observer?: Actor | string
 ): boolean {
-    const line = getHexLine(origin, target);
-    const pathToCheck = line.slice(1);
-    const result = findFirstObstacle(state, pathToCheck, {
-        checkWalls: true,
-        checkActors: true,
-        checkLava: false,
-        excludeActorId
+    const strictLegacyEvaluator = (
+        overrides?: {
+            stopAtWalls?: boolean;
+            stopAtActors?: boolean;
+            stopAtLava?: boolean;
+            excludeActorId?: string;
+        }
+    ): { isValid: boolean; blockedBy?: 'wall' | 'actor' | 'lava'; blockedAt?: Point } => {
+        const line = getHexLine(origin, target);
+        const pathToCheck = line.slice(1);
+        const result = findFirstObstacle(state, pathToCheck, {
+            checkWalls: overrides?.stopAtWalls ?? true,
+            checkActors: overrides?.stopAtActors ?? true,
+            checkLava: overrides?.stopAtLava ?? false,
+            excludeActorId: overrides?.excludeActorId ?? excludeActorId
+        });
+        const hitsTarget = result.obstacle === 'actor'
+            && result.actor?.id === targetActorId
+            && !!result.position
+            && hexEquals(result.position, target);
+        if (hitsTarget) return { isValid: true };
+        if (!result.obstacle || !result.position) return { isValid: false };
+        return { isValid: false, blockedBy: result.obstacle, blockedAt: result.position };
+    };
+
+    const observerActor = typeof observer === 'string'
+        ? resolveObserver(state, { observerId: observer })
+        : observer;
+
+    if (!observerActor) return strictLegacyEvaluator().isValid;
+
+    const capabilityResult = resolveSenseLineOfSight({
+        state,
+        observer: observerActor,
+        origin,
+        target,
+        stopAtWalls: true,
+        stopAtActors: true,
+        stopAtLava: false,
+        excludeActorId,
+        evaluateLegacyLineOfSight: strictLegacyEvaluator
     });
-    return result.obstacle === 'actor'
-        && result.actor?.id === targetActorId
-        && !!result.position
-        && hexEquals(result.position, target);
+
+    if (!capabilityResult.usedCapabilities) return strictLegacyEvaluator().isValid;
+    return capabilityResult.isValid;
 }
 
 /**

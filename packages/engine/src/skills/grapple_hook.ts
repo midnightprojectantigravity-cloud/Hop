@@ -40,7 +40,8 @@ export const GRAPPLE_HOOK: SkillDefinition = {
         const { isValid, blockedBy } = validateLineOfSight(state, shooter.position, target, {
             stopAtWalls: true,
             stopAtActors: true,
-            excludeActorId: shooter.id
+            excludeActorId: shooter.id,
+            observerActor: shooter
         });
 
         if (!isValid) {
