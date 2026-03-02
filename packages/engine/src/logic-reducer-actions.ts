@@ -1,10 +1,11 @@
-import type { Action, GameState } from './types';
+import type { Action, GameState, RunRulesetOverrides } from './types';
 import { hexEquals } from './hex';
 import { getEnemyAt } from './helpers';
 import { SkillRegistry } from './skillRegistry';
 import { appendTaggedMessage } from './systems/engine-messages';
 import { StrategyRegistry } from './systems/ai/strategy-registry';
 import { isPlayerTurn } from './systems/initiative';
+import { resolveAcaeRuleset } from './systems/ailments/runtime';
 import { applyLoadoutToPlayer, DEFAULT_LOADOUTS, type Loadout } from './systems/loadout';
 import { createDailyObjectives, createDailySeed, toDateKey } from './systems/run-objectives';
 import { ManualStrategy } from './strategy/manual';
@@ -47,6 +48,34 @@ const playerInputMetadata = {
     reasoningCode: 'PLAYER_INPUT',
     isGhost: false
 } as const;
+
+const mergeRunRulesetOverrides = (
+    base: GameState['ruleset'],
+    overrides?: RunRulesetOverrides
+): GameState['ruleset'] => {
+    if (!overrides) return base;
+    const nextAilments = base?.ailments
+        ? {
+            ...base.ailments,
+            ...(overrides.ailments?.acaeEnabled !== undefined
+                ? { acaeEnabled: overrides.ailments.acaeEnabled }
+                : {})
+        }
+        : undefined;
+    const nextAttachments = base?.attachments
+        ? {
+            ...base.attachments,
+            ...(overrides.attachments?.sharedVectorCarry !== undefined
+                ? { sharedVectorCarry: overrides.attachments.sharedVectorCarry }
+                : {})
+        }
+        : undefined;
+    return {
+        ...(base || {}),
+        ...(nextAilments ? { ailments: nextAilments } : {}),
+        ...(nextAttachments ? { attachments: nextAttachments } : {})
+    };
+};
 
 export const resolveGameStateAction = (
     s: GameState,
@@ -166,25 +195,33 @@ export const resolveGameStateAction = (
         }
 
         case 'START_RUN': {
-            const { loadoutId, seed, mode, date } = a.payload;
+            const { loadoutId, seed, mode, date, rulesetOverrides } = a.payload;
             const loadout = DEFAULT_LOADOUTS[loadoutId];
             if (!loadout) return s;
             if (mode === 'daily') {
                 const dateKey = toDateKey(date);
                 const dailySeed = createDailySeed(dateKey);
                 const next = deps.generateInitialState(1, seed || dailySeed, undefined, undefined, loadout);
+                const mergedRuleset = resolveAcaeRuleset({
+                    ...next,
+                    ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)
+                });
                 return {
                     ...next,
-                    ruleset: s.ruleset || next.ruleset,
+                    ruleset: mergedRuleset,
                     dailyRunDate: dateKey,
                     runObjectives: createDailyObjectives(dailySeed),
                     hazardBreaches: 0
                 };
             }
             const next = deps.generateInitialState(1, seed, undefined, undefined, loadout);
+            const mergedRuleset = resolveAcaeRuleset({
+                ...next,
+                ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)
+            });
             return {
                 ...next,
-                ruleset: s.ruleset || next.ruleset
+                ruleset: mergedRuleset
             };
         }
 

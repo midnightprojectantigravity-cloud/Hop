@@ -619,10 +619,19 @@ export type Action =
     | { type: 'USE_SKILL'; payload: { skillId: string; target?: Point } }
     | { type: 'ADVANCE_TURN' }
     | { type: 'LOAD_STATE'; payload: GameState }
-    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string; mode?: 'normal' | 'daily'; date?: string } }
+    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string; mode?: 'normal' | 'daily'; date?: string; rulesetOverrides?: RunRulesetOverrides } }
     | { type: 'APPLY_LOADOUT'; payload: any }
     | { type: 'EXIT_TO_HUB' }
     | { type: 'RESOLVE_PENDING' };
+
+export interface RunRulesetOverrides {
+    ailments?: {
+        acaeEnabled?: boolean;
+    };
+    attachments?: {
+        sharedVectorCarry?: boolean;
+    };
+}
 
 export interface Scenario {
     id: string;

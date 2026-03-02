@@ -139,6 +139,7 @@ Acceptance:
 
 Notes:
 - `GRAPPLE_HOOK` now emits attachment lifecycle effects in live runtime; non-zero shared-vector carry is controlled by `ruleset.attachments.sharedVectorCarry` to preserve default behavior.
+- `START_RUN` supports deterministic `rulesetOverrides.attachments.sharedVectorCarry` so carry mode can be explicitly toggled per run.
 
 ## History and Archives
 - Historical roadmap log: `docs/ROADMAP_HISTORY.md`
