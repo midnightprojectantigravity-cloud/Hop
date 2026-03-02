@@ -21,6 +21,7 @@ export interface AilmentTickResultEnvelope {
 
 const DEFAULT_VERSION = 'acae-v1' as const;
 const DEFAULT_ATTACHMENT_VERSION = 'attachment-v1' as const;
+const DEFAULT_CAPABILITY_VERSION = 'capabilities-v1' as const;
 
 const clonePoint = (point: Point): Point => ({ q: point.q, r: point.r, s: point.s });
 const clampPercent = (value: number): number => Math.max(0, Math.min(100, value));
@@ -250,6 +251,8 @@ export const isAcaeEnabled = (state: GameState): boolean =>
 export const resolveAcaeRuleset = (state: GameState): NonNullable<GameState['ruleset']> => {
     const defaultEnabled = typeof process !== 'undefined' && process.env?.HOP_ACAE_ENABLED === '1';
     const defaultAttachmentCarryEnabled = typeof process !== 'undefined' && process.env?.HOP_ATTACHMENT_SHARED_VECTOR === '1';
+    const defaultCapabilityLoadoutPassivesEnabled =
+        typeof process !== 'undefined' && process.env?.HOP_CAPABILITY_LOADOUT_PASSIVES === '1';
     return {
         ...(state.ruleset || {}),
         ailments: {
@@ -259,6 +262,11 @@ export const resolveAcaeRuleset = (state: GameState): NonNullable<GameState['rul
         attachments: {
             sharedVectorCarry: state.ruleset?.attachments?.sharedVectorCarry ?? defaultAttachmentCarryEnabled,
             version: DEFAULT_ATTACHMENT_VERSION
+        },
+        capabilities: {
+            loadoutPassivesEnabled:
+                state.ruleset?.capabilities?.loadoutPassivesEnabled ?? defaultCapabilityLoadoutPassivesEnabled,
+            version: DEFAULT_CAPABILITY_VERSION
         }
     };
 };

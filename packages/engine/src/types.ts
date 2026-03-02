@@ -731,6 +731,10 @@ export interface GameState {
             sharedVectorCarry: boolean;
             version: 'attachment-v1';
         };
+        capabilities?: {
+            loadoutPassivesEnabled: boolean;
+            version: 'capabilities-v1';
+        };
     };
 
     // Score
@@ -792,6 +796,9 @@ export interface RunRulesetOverrides {
     };
     attachments?: {
         sharedVectorCarry?: boolean;
+    };
+    capabilities?: {
+        loadoutPassivesEnabled?: boolean;
     };
 }
 

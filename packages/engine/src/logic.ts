@@ -170,6 +170,16 @@ export const generateInitialState = (
     };
 
     tempState.ruleset = resolveAcaeRuleset(tempState);
+    if (loadout && !preservePlayer?.activeSkills) {
+        const resolvedLoadout = applyLoadoutToPlayer(loadout, {
+            capabilityPassivesEnabled: tempState.ruleset?.capabilities?.loadoutPassivesEnabled === true
+        });
+        tempState.player = {
+            ...tempState.player,
+            activeSkills: ensureMobilitySkill(resolvedLoadout.activeSkills),
+            archetype: resolvedLoadout.archetype
+        };
+    }
 
     tempState.initiativeQueue = buildInitiativeQueue(tempState);
     tempState.occupancyMask = SpatialSystem.refreshOccupancyMask(tempState);
