@@ -49,6 +49,11 @@ const configureState = () => {
 const hasStatus = (actor: Actor | undefined, status: string): boolean =>
     !!actor?.statusEffects?.some(s => s.type === status);
 
+const getSignatureIds = (state: { visualEvents?: Array<{ type: string; payload: any }> }): string[] =>
+    (state.visualEvents || [])
+        .filter(event => event.type === 'juice_signature')
+        .map(event => String(event.payload?.signature || ''));
+
 describe('SMOKE_SCREEN blinding upgrade', () => {
     it('keeps baseline behavior unchanged when BLINDING_SMOKE is not active', () => {
         const { state } = configureState();
@@ -93,5 +98,25 @@ describe('SMOKE_SCREEN blinding upgrade', () => {
             context: { statusBlind: false }
         });
         expect(overridden.isValid).toBe(true);
+    });
+
+    it('emits blinded apply and expire juice signatures', () => {
+        const { state } = configureState();
+        const smokeScreen = SkillRegistry.get('SMOKE_SCREEN');
+        expect(smokeScreen).toBeTruthy();
+
+        const result = smokeScreen!.execute(state, state.player, state.player.position, ['BLINDING_SMOKE']);
+        const appliedState = applyEffects(state, result.effects, { sourceId: state.player.id });
+        expect(getSignatureIds(appliedState)).toContain('STATE.APPLY.SHADOW.BLINDED');
+
+        const blindedEnemy = appliedState.enemies.find(enemy => enemy.id === 'enemy-adjacent');
+        const blindedStatus = blindedEnemy?.statusEffects.find(status => status.type === 'blinded');
+        expect(blindedStatus?.onTick).toBeTruthy();
+        const expireTickEffects = blindedStatus!.onTick!(blindedEnemy!, appliedState);
+        const expiredState = applyEffects(appliedState, expireTickEffects, {
+            sourceId: blindedEnemy?.id,
+            targetId: blindedEnemy?.id
+        });
+        expect(getSignatureIds(expiredState)).toContain('STATE.EXPIRE.SHADOW.BLINDED');
     });
 });

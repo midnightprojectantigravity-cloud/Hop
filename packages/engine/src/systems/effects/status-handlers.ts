@@ -104,6 +104,27 @@ export const statusEffectHandlers: AtomicEffectHandlerMap = {
             ];
         }
         const resolvedTargetId = targetActorId || (resolvedPos ? api.resolveActorAt(nextState, resolvedPos)?.id : undefined);
+        if (effect.status === 'blinded' && resolvedTargetId) {
+            nextState = api.applyEffects(nextState, [{
+                type: 'Juice',
+                effect: 'hiddenFade',
+                target: resolvedTargetId,
+                intensity: 'low',
+                metadata: {
+                    signature: 'STATE.APPLY.SHADOW.BLINDED',
+                    family: 'status',
+                    primitive: 'status_apply',
+                    phase: 'impact',
+                    element: 'shadow',
+                    variant: 'blinded_apply',
+                    targetRef: { kind: 'target_actor' },
+                    statusId: 'blinded'
+                }
+            }], {
+                ...context,
+                targetId: resolvedTargetId
+            });
+        }
         if (resolvedTargetId) {
             const releaseEffects = buildStatusBreakReleaseEffects(nextState, resolvedTargetId, effect.status);
             if (releaseEffects.length > 0) {

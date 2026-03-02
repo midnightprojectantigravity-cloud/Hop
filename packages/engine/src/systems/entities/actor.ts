@@ -6,6 +6,30 @@ import type { Entity, StatusEffect } from '../../types';
 import { STATUS_REGISTRY } from '../../constants';
 import type { StatusID } from '../../types/registry';
 
+const buildStatusOnTick = (type: StatusID): StatusEffect['onTick'] | undefined => {
+  if (type !== 'blinded') return undefined;
+  return (actor) => {
+    const blinded = actor.statusEffects.find(status => status.type === 'blinded');
+    if (!blinded || blinded.duration > 1) return [];
+    return [{
+      type: 'Juice',
+      effect: 'hiddenFade',
+      target: actor.id,
+      intensity: 'low',
+      metadata: {
+        signature: 'STATE.EXPIRE.SHADOW.BLINDED',
+        family: 'status',
+        primitive: 'status_tick',
+        phase: 'aftermath',
+        element: 'shadow',
+        variant: 'blinded_expire',
+        targetRef: { kind: 'target_actor' },
+        statusId: 'blinded'
+      }
+    }];
+  };
+};
+
 /** Apply damage with Armor Absorption logic */
 export const applyDamage = (actor: Entity, amount: number): Entity => {
   let remainingDamage = amount;
@@ -42,7 +66,13 @@ export const addStatus = (
       ...actor,
       statusEffects: actor.statusEffects.map(s =>
         s.id === id
-          ? { ...s, duration: Math.max(s.duration, duration), tickWindow, stacks: stacks || s.stacks }
+          ? {
+            ...s,
+            duration: Math.max(s.duration, duration),
+            tickWindow,
+            stacks: stacks || s.stacks,
+            onTick: buildStatusOnTick(type) || s.onTick
+          }
           : s
       )
     };
@@ -54,8 +84,7 @@ export const addStatus = (
     duration,
     tickWindow,
     stacks: stacks || 1,
-    // onTick is omitted here; typically handled by a StatusRegistry or 
-    // assigned during the ApplyStatus AtomicEffect resolution.
+    onTick: buildStatusOnTick(type)
   };
 
   return {

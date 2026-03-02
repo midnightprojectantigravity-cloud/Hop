@@ -57,6 +57,8 @@ export const EXACT_SIGNATURE_RECIPES: Record<string, JuiceRecipe> = {
     'MOVE.DASH.KINETIC.MOMENTUM_TRAIL': { rendererId: 'dash_blur', ttlMs: 360 },
     'STATE.FADE.SHADOW.HIDDEN': { rendererId: 'hidden_fade', ttlMs: 360 },
     'STATE.FADE.SHADOW.SMOKE_SCREEN': { rendererId: 'hidden_fade', ttlMs: 420 },
+    'STATE.APPLY.SHADOW.BLINDED': { rendererId: 'hidden_fade', ttlMs: 420 },
+    'STATE.EXPIRE.SHADOW.BLINDED': { rendererId: 'generic_ring', ttlMs: 360 },
     'MOVE.BLINK.SHADOW.SHADOW_STEP': { rendererId: 'hidden_fade', ttlMs: 380 },
     'MOVE.BLINK.ARCANE.SOUL_SWAP_ARRIVE': { rendererId: 'flash', ttlMs: 280 },
     'MOVE.BLINK.ARCANE.SOUL_SWAP_DEPART': { rendererId: 'flash', ttlMs: 280 },
