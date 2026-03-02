@@ -43,6 +43,7 @@ export interface UiRulesetFlags {
   acaeEnabled: boolean;
   sharedVectorCarryEnabled: boolean;
   capabilityPassivesEnabled: boolean;
+  movementRuntimeEnabled: boolean;
   intelStrict: boolean;
 }
 
@@ -177,7 +178,7 @@ export const UiRulesetSection: React.FC<StatusIntelProps & { onIntelModeChange: 
   intelMode,
   onIntelModeChange
 }) => {
-  const { acaeEnabled, sharedVectorCarryEnabled, capabilityPassivesEnabled, intelStrict } = getUiRulesetFlags(gameState, intelMode);
+  const { acaeEnabled, sharedVectorCarryEnabled, capabilityPassivesEnabled, movementRuntimeEnabled, intelStrict } = getUiRulesetFlags(gameState, intelMode);
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
       <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Ruleset</span>
@@ -185,6 +186,7 @@ export const UiRulesetSection: React.FC<StatusIntelProps & { onIntelModeChange: 
         <UiRulesetItem label="ACAE" value={acaeEnabled} />
         <UiRulesetItem label="Shared Vector Carry" value={sharedVectorCarryEnabled} />
         <UiRulesetItem label="Capability Passives" value={capabilityPassivesEnabled} />
+        <UiRulesetItem label="Movement Runtime" value={movementRuntimeEnabled} />
         <UiRulesetItem label="Intel Strict" value={intelStrict} />
         <UiIntelToggleSection intelMode={intelMode} onIntelModeChange={onIntelModeChange} />
       </div>
@@ -197,6 +199,7 @@ export const getUiRulesetFlags = (gameState: GameState, revealMode: UiInformatio
     acaeEnabled: gameState.ruleset?.ailments?.acaeEnabled === true,
     sharedVectorCarryEnabled: gameState.ruleset?.attachments?.sharedVectorCarry === true,
     capabilityPassivesEnabled: gameState.ruleset?.capabilities?.loadoutPassivesEnabled === true,
+    movementRuntimeEnabled: gameState.ruleset?.capabilities?.movementRuntimeEnabled === true,
     intelStrict: revealMode === 'strict'
   };
 };

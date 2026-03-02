@@ -9,6 +9,8 @@ interface HubProps {
   gameState: GameState;
   capabilityPassivesEnabled: boolean;
   onCapabilityPassivesEnabledChange: (enabled: boolean) => void;
+  movementRuntimeEnabled: boolean;
+  onMovementRuntimeEnabledChange: (enabled: boolean) => void;
   onSelectLoadout: (loadout: Loadout) => void;
   onStartRun: (mode: 'normal' | 'daily') => void;
   onOpenArcade: () => void;
@@ -20,6 +22,8 @@ export const Hub: React.FC<HubProps> = ({
   gameState,
   capabilityPassivesEnabled,
   onCapabilityPassivesEnabledChange,
+  movementRuntimeEnabled,
+  onMovementRuntimeEnabledChange,
   onSelectLoadout,
   onStartRun,
   onOpenArcade,
@@ -57,6 +61,26 @@ export const Hub: React.FC<HubProps> = ({
                   }`}
                 >
                   {capabilityPassivesEnabled ? 'On' : 'Off'}
+                </button>
+              </div>
+            </div>
+            <div className="rounded-xl border border-amber-300/25 bg-amber-500/5 px-3 py-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-amber-200/70 mb-1">Movement Runtime</div>
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Capability Gate</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onMovementRuntimeEnabledChange(!movementRuntimeEnabled)}
+                  aria-pressed={movementRuntimeEnabled}
+                  className={`px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-colors ${
+                    movementRuntimeEnabled
+                      ? 'bg-amber-400/15 border-amber-300/50 text-amber-100'
+                      : 'bg-white/[0.02] border-white/10 text-white/50 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  {movementRuntimeEnabled ? 'On' : 'Off'}
                 </button>
               </div>
             </div>

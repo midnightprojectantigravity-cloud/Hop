@@ -98,6 +98,7 @@ function App() {
   const [isBusy, setIsBusy] = useState(false);
   const [postCommitInputLock, setPostCommitInputLock] = useState(false);
   const [hubCapabilityPassivesEnabled, setHubCapabilityPassivesEnabled] = useState(false);
+  const [hubMovementRuntimeEnabled, setHubMovementRuntimeEnabled] = useState(false);
   const {
     turnDriver,
     isInputLocked,
@@ -184,7 +185,8 @@ function App() {
       payload: buildStartRunPayload({
         loadoutId: id,
         mode,
-        capabilityPassivesEnabled: hubCapabilityPassivesEnabled
+        capabilityPassivesEnabled: hubCapabilityPassivesEnabled,
+        movementRuntimeEnabled: hubMovementRuntimeEnabled
       })
     }, 'hub_start_run');
   };
@@ -217,6 +219,8 @@ function App() {
         onStartArcadeRun={handleStartArcadeRun}
         capabilityPassivesEnabled={hubCapabilityPassivesEnabled}
         onCapabilityPassivesEnabledChange={setHubCapabilityPassivesEnabled}
+        movementRuntimeEnabled={hubMovementRuntimeEnabled}
+        onMovementRuntimeEnabledChange={setHubMovementRuntimeEnabled}
         onSelectLoadout={(l) => {
           dispatchWithTrace({ type: 'APPLY_LOADOUT', payload: l }, 'hub_select_loadout');
         }}

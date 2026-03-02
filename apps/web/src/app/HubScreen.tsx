@@ -16,6 +16,8 @@ interface HubScreenProps {
   onStartArcadeRun: (loadoutId: string) => void;
   capabilityPassivesEnabled: boolean;
   onCapabilityPassivesEnabledChange: (enabled: boolean) => void;
+  movementRuntimeEnabled: boolean;
+  onMovementRuntimeEnabledChange: (enabled: boolean) => void;
   onSelectLoadout: (loadout: Loadout) => void;
   onStartRun: (mode: 'normal' | 'daily') => void;
   onLoadScenario: (state: GameState, instructions: string) => void;
@@ -35,6 +37,8 @@ export const HubScreen = ({
   onStartArcadeRun,
   capabilityPassivesEnabled,
   onCapabilityPassivesEnabledChange,
+  movementRuntimeEnabled,
+  onMovementRuntimeEnabledChange,
   onSelectLoadout,
   onStartRun,
   onLoadScenario,
@@ -62,6 +66,8 @@ export const HubScreen = ({
           gameState={gameState}
           capabilityPassivesEnabled={capabilityPassivesEnabled}
           onCapabilityPassivesEnabledChange={onCapabilityPassivesEnabledChange}
+          movementRuntimeEnabled={movementRuntimeEnabled}
+          onMovementRuntimeEnabledChange={onMovementRuntimeEnabledChange}
           onSelectLoadout={onSelectLoadout}
           onStartRun={onStartRun}
           onOpenArcade={() => navigateTo(arcadePath)}

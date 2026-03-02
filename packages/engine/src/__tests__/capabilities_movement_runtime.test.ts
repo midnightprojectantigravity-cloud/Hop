@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { hexDistance, pointToKey } from '../hex';
-import { generateInitialState } from '../logic';
+import { gameReducer, generateInitialState } from '../logic';
 import { createActiveSkill, COMPOSITIONAL_SKILLS, SkillRegistry } from '../skillRegistry';
 import type { AtomicEffect, Actor, GameState, Point, SkillDefinition } from '../types';
 import { clearCapabilityStateCacheForTests } from '../systems/capabilities/cache';
@@ -228,6 +228,97 @@ describe('movement capability runtime integration', () => {
         const capabilityAttempt = basicMoveDef!.execute(capabilityState, capabilityPlayer, farTarget);
         expect(capabilityAttempt.consumesTurn).toBe(true);
         const displacement = capabilityAttempt.effects.find(effect => effect.type === 'Displacement') as Extract<AtomicEffect, { type: 'Displacement' }> | undefined;
+        expect(displacement?.destination).toEqual(farTarget);
+        expect(displacement?.simulatePath).toBe(false);
+        expect(displacement?.ignoreGroundHazards).toBe(true);
+    });
+
+    it('applies movement capability runtime when enabled through START_RUN overrides', () => {
+        registerTestSkill(toPassiveDefinition(TEST_REPLACE_SKILL_ID, [{
+            domain: 'movement',
+            providerId: 'test.replace',
+            priority: 30,
+            resolutionMode: 'REPLACE',
+            resolve: () => ({
+                decision: 'allow',
+                resolutionMode: 'REPLACE',
+                model: {
+                    pathing: 'teleport',
+                    ignoreWalls: true,
+                    ignoreGroundHazards: true,
+                    rangeModifier: 3
+                }
+            })
+        }]));
+
+        const seed = 'cap-move-start-run-runtime-toggle';
+        const hub = gameReducer(generateInitialState(1, `${seed}:hub`), { type: 'EXIT_TO_HUB' });
+        const runDisabled = gameReducer(hub, {
+            type: 'START_RUN',
+            payload: {
+                loadoutId: 'VANGUARD',
+                seed,
+                rulesetOverrides: {
+                    capabilities: {
+                        movementRuntimeEnabled: false
+                    }
+                }
+            }
+        });
+        const runEnabled = gameReducer(hub, {
+            type: 'START_RUN',
+            payload: {
+                loadoutId: 'VANGUARD',
+                seed,
+                rulesetOverrides: {
+                    capabilities: {
+                        movementRuntimeEnabled: true
+                    }
+                }
+            }
+        });
+
+        const withTestSkill = (state: GameState): GameState => ({
+            ...state,
+            player: {
+                ...state.player,
+                speed: 1,
+                activeSkills: [
+                    ...state.player.activeSkills,
+                    createActiveSkill(TEST_REPLACE_SKILL_ID as any) as any
+                ]
+            }
+        });
+
+        const disabledState = withTestSkill(runDisabled);
+        const enabledState = withTestSkill(runEnabled);
+        clearCapabilityStateCacheForTests();
+
+        const basicMoveDef = SkillRegistry.get('BASIC_MOVE');
+        expect(basicMoveDef?.getValidTargets).toBeTruthy();
+
+        const disabledTargets = basicMoveDef!.getValidTargets!(disabledState, disabledState.player.position);
+        const disabledMaxDistance = disabledTargets.reduce(
+            (max, point) => Math.max(max, hexDistance(disabledState.player.position, point)),
+            0
+        );
+
+        const enabledTargets = basicMoveDef!.getValidTargets!(enabledState, enabledState.player.position);
+        const enabledMaxDistance = enabledTargets.reduce(
+            (max, point) => Math.max(max, hexDistance(enabledState.player.position, point)),
+            0
+        );
+
+        expect(enabledMaxDistance).toBeGreaterThan(disabledMaxDistance);
+        const farTarget = enabledTargets.find(point => hexDistance(enabledState.player.position, point) > disabledMaxDistance);
+        expect(farTarget).toBeTruthy();
+
+        const disabledAttempt = basicMoveDef!.execute(disabledState, disabledState.player, farTarget);
+        expect(disabledAttempt.consumesTurn).toBe(false);
+
+        const enabledAttempt = basicMoveDef!.execute(enabledState, enabledState.player, farTarget);
+        expect(enabledAttempt.consumesTurn).toBe(true);
+        const displacement = enabledAttempt.effects.find(effect => effect.type === 'Displacement') as Extract<AtomicEffect, { type: 'Displacement' }> | undefined;
         expect(displacement?.destination).toEqual(farTarget);
         expect(displacement?.simulatePath).toBe(false);
         expect(displacement?.ignoreGroundHazards).toBe(true);

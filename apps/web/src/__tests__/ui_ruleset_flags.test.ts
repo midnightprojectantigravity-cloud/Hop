@@ -11,6 +11,7 @@ describe('ui ruleset flags', () => {
       acaeEnabled: false,
       sharedVectorCarryEnabled: false,
       capabilityPassivesEnabled: false,
+      movementRuntimeEnabled: false,
       intelStrict: false
     });
   });
@@ -28,6 +29,7 @@ describe('ui ruleset flags', () => {
       },
       capabilities: {
         loadoutPassivesEnabled: true,
+        movementRuntimeEnabled: true,
         version: 'capabilities-v1'
       }
     };
@@ -36,6 +38,7 @@ describe('ui ruleset flags', () => {
       acaeEnabled: true,
       sharedVectorCarryEnabled: true,
       capabilityPassivesEnabled: true,
+      movementRuntimeEnabled: true,
       intelStrict: true
     });
   });

@@ -1,12 +1,27 @@
 import type { Action, RunRulesetOverrides } from '@hop/engine';
 
-export const buildCapabilityPassivesRulesetOverrides = (
-  loadoutPassivesEnabled: boolean
-): RunRulesetOverrides => ({
+export interface BuildCapabilityRulesetOverridesOptions {
+  loadoutPassivesEnabled: boolean;
+  movementRuntimeEnabled?: boolean;
+}
+
+export const buildCapabilityRulesetOverrides = ({
+  loadoutPassivesEnabled,
+  movementRuntimeEnabled = false
+}: BuildCapabilityRulesetOverridesOptions): RunRulesetOverrides => ({
   capabilities: {
-    loadoutPassivesEnabled
+    loadoutPassivesEnabled,
+    movementRuntimeEnabled
   }
 });
+
+export const buildCapabilityPassivesRulesetOverrides = (
+  loadoutPassivesEnabled: boolean
+): RunRulesetOverrides =>
+  buildCapabilityRulesetOverrides({
+    loadoutPassivesEnabled,
+    movementRuntimeEnabled: false
+  });
 
 type StartRunPayload = Extract<Action, { type: 'START_RUN' }>['payload'];
 
@@ -16,6 +31,7 @@ export interface BuildStartRunPayloadOptions {
   seed?: string;
   date?: string;
   capabilityPassivesEnabled: boolean;
+  movementRuntimeEnabled?: boolean;
 }
 
 export const buildStartRunPayload = ({
@@ -23,11 +39,15 @@ export const buildStartRunPayload = ({
   mode,
   seed,
   date,
-  capabilityPassivesEnabled
+  capabilityPassivesEnabled,
+  movementRuntimeEnabled = false
 }: BuildStartRunPayloadOptions): StartRunPayload => ({
   loadoutId,
   ...(mode ? { mode } : {}),
   ...(seed ? { seed } : {}),
   ...(date ? { date } : {}),
-  rulesetOverrides: buildCapabilityPassivesRulesetOverrides(capabilityPassivesEnabled)
+  rulesetOverrides: buildCapabilityRulesetOverrides({
+    loadoutPassivesEnabled: capabilityPassivesEnabled,
+    movementRuntimeEnabled
+  })
 });
