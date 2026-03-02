@@ -1,5 +1,5 @@
 import type { WeightClass } from '../types';
-import type { AilmentID } from '../types/registry';
+import type { AilmentID, StatusID } from '../types/registry';
 
 /**
  * Base Interface for all Components
@@ -102,6 +102,27 @@ export interface ArchetypeComponent extends Component {
     archetype: 'VANGUARD' | 'SKIRMISHER';
 }
 
+export type AttachmentRole = 'anchor' | 'attached';
+export type AttachmentMode = 'tow' | 'carry';
+
+export interface AttachmentLink {
+    id: string;
+    counterpartId: string;
+    role: AttachmentRole;
+    mode: AttachmentMode;
+    sharedVectorScale: number;
+    breakOnDamage: boolean;
+    breakOnStatuses: StatusID[];
+}
+
+/**
+ * Shared-vector attachment state used by catch/release mechanics.
+ */
+export interface AttachmentComponent extends Component {
+    type: 'attachment';
+    links: AttachmentLink[];
+}
+
 /**
  * Union type for all registered components
  */
@@ -115,7 +136,8 @@ export type GameComponent =
     | AilmentProfileComponent
     | VisibilityComponent
     | VaultComponent
-    | ArchetypeComponent;
+    | ArchetypeComponent
+    | AttachmentComponent;
 
 /**
  * Component Helper Functions

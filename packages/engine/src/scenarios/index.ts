@@ -30,6 +30,7 @@ import { objectiveScenarios } from './objectives';
 import { necromancerScenarios } from './necromancer';
 import { archerShotScenarios } from './archer_shot';
 import { acaeScenarios } from './acae';
+import { attachmentScenarios } from './attachments';
 
 /**
  * Central registry for all test scenarios
@@ -68,6 +69,7 @@ export const SCENARIO_COLLECTIONS: ScenarioCollection[] = [
     necromancerScenarios,
     archerShotScenarios,
     acaeScenarios,
+    attachmentScenarios,
 ];
 
 // Flat list of all scenarios for easy iteration

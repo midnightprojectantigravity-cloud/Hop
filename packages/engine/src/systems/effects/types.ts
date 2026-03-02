@@ -4,6 +4,7 @@ export interface AtomicEffectContext {
     targetId?: string;
     sourceId?: string;
     stepId?: string;
+    attachmentVisited?: string[];
     stackReactions?: AtomicStackReactionHooks;
 }
 

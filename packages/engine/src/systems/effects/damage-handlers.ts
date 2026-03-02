@@ -2,6 +2,7 @@ import { getDirectionFromTo, hexEquals } from '../../hex';
 import type { Actor, Point } from '../../types';
 import { applyDamage, applyHeal } from '../entities/actor';
 import { appendTaggedMessage } from '../engine-messages';
+import { buildDamageBreakReleaseEffects } from '../movement/attachment-system';
 import type { AtomicEffectHandlerMap } from './types';
 
 const HAZARD_DAMAGE_REASONS = ['lava_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage'] as const;
@@ -42,6 +43,7 @@ export const damageEffectHandlers: AtomicEffectHandlerMap = {
         let simulationTargetId: string | undefined;
         let simulationPos: Point | undefined;
         let simulationAmount = effect.amount;
+        const damagedActorIds = new Set<string>();
 
         if (typeof effect.target === 'string') {
             if (effect.target === 'targetActor') targetActorId = context.targetId || '';
@@ -100,6 +102,7 @@ export const damageEffectHandlers: AtomicEffectHandlerMap = {
                 simulationTargetId = nextState.player.id;
                 simulationPos = nextState.player.position;
                 simulationAmount = damageAmount;
+                if (damageAmount > 0) damagedActorIds.add(nextState.player.id);
                 if (isFireDamage) {
                     nextState.hazardBreaches = (nextState.hazardBreaches || 0) + 1;
                 }
@@ -117,6 +120,7 @@ export const damageEffectHandlers: AtomicEffectHandlerMap = {
                 simulationTargetId = targetActorId || victim?.id;
                 simulationPos = victimPos || victim?.position;
                 simulationAmount = scaledAmount;
+                if (scaledAmount > 0 && targetActorId) damagedActorIds.add(targetActorId);
 
                 const updateDamage = (e: Actor) => {
                     if (e.id === targetActorId) {
@@ -209,14 +213,18 @@ export const damageEffectHandlers: AtomicEffectHandlerMap = {
                 }].slice(-500);
             }
             if (hexEquals(nextState.player.position, targetPos)) {
-                nextState.player = applyDamage(nextState.player, scaledAmount + markedPredatorBonus(nextState.player));
+                const playerDamage = scaledAmount + markedPredatorBonus(nextState.player);
+                nextState.player = applyDamage(nextState.player, playerDamage);
+                if (playerDamage > 0) damagedActorIds.add(nextState.player.id);
                 if (isFireDamage) {
                     nextState.hazardBreaches = (nextState.hazardBreaches || 0) + 1;
                 }
             }
             const updateDamageAt = (e: Actor) => {
                 if (hexEquals(e.position, targetPos)) {
-                    const updated = applyDamage(e, scaledAmount + markedPredatorBonus(e));
+                    const enemyDamage = scaledAmount + markedPredatorBonus(e);
+                    const updated = applyDamage(e, enemyDamage);
+                    if (enemyDamage > 0) damagedActorIds.add(e.id);
                     if (updated.hp <= 0) {
                         nextState.dyingEntities = [...(nextState.dyingEntities || []), e];
                         killedAtIds.push(e.id);
@@ -245,6 +253,16 @@ export const damageEffectHandlers: AtomicEffectHandlerMap = {
             });
             killedAtPositions.forEach(pos => {
                 nextState = api.addCorpseTraitAt(nextState, pos);
+            });
+        }
+
+        for (const damagedActorId of damagedActorIds) {
+            const releaseEffects = buildDamageBreakReleaseEffects(nextState, damagedActorId);
+            if (releaseEffects.length === 0) continue;
+            nextState = api.applyEffects(nextState, releaseEffects, {
+                ...context,
+                targetId: damagedActorId,
+                attachmentVisited: [damagedActorId]
             });
         }
 

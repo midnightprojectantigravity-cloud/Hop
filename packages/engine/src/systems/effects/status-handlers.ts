@@ -2,6 +2,7 @@ import type { Actor, Point } from '../../types';
 import { addStatus } from '../entities/actor';
 import { computeStatusDuration, extractTrinityStats } from '../combat/combat-calculator';
 import { appendTaggedMessage } from '../engine-messages';
+import { buildStatusBreakReleaseEffects } from '../movement/attachment-system';
 import type { AtomicEffectHandlerMap } from './types';
 
 export const statusEffectHandlers: AtomicEffectHandlerMap = {
@@ -103,6 +104,16 @@ export const statusEffectHandlers: AtomicEffectHandlerMap = {
             ];
         }
         const resolvedTargetId = targetActorId || (resolvedPos ? api.resolveActorAt(nextState, resolvedPos)?.id : undefined);
+        if (resolvedTargetId) {
+            const releaseEffects = buildStatusBreakReleaseEffects(nextState, resolvedTargetId, effect.status);
+            if (releaseEffects.length > 0) {
+                nextState = api.applyEffects(nextState, releaseEffects, {
+                    ...context,
+                    targetId: resolvedTargetId,
+                    attachmentVisited: [resolvedTargetId]
+                });
+            }
+        }
         nextState = api.appendSimulationEvent(nextState, {
             type: 'StatusApplied',
             targetId: resolvedTargetId,

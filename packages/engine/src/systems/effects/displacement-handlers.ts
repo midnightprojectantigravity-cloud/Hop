@@ -4,6 +4,7 @@ import { appendTaggedMessages } from '../engine-messages';
 import { SpatialSystem } from '../spatial-system';
 import { TileResolver } from '../tiles/tile-effects';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
+import { buildAttachmentPropagationPlans } from '../movement/attachment-system';
 import type { AtomicEffectHandlerMap } from './types';
 
 export const displacementEffectHandlers: AtomicEffectHandlerMap = {
@@ -254,6 +255,42 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
         }
 
         nextState.occupancyMask = SpatialSystem.refreshOccupancyMask(nextState);
+
+        const attachmentVisited = new Set(context.attachmentVisited || []);
+        attachmentVisited.add(targetActorId);
+        const attachmentPlans = buildAttachmentPropagationPlans(
+            nextState,
+            targetActorId,
+            origin,
+            finalDestination,
+            attachmentVisited
+        );
+        for (const plan of attachmentPlans) {
+            const followerBefore = resolveActor(nextState, plan.counterpartId);
+            if (!followerBefore) continue;
+
+            const chainContext = {
+                ...context,
+                targetId: plan.counterpartId,
+                attachmentVisited: Array.from(attachmentVisited)
+            };
+            nextState = api.applyEffects(nextState, [plan.effect], chainContext);
+
+            const followerAfter = resolveActor(nextState, plan.counterpartId);
+            if (!followerAfter || !hexEquals(followerAfter.position, plan.expectedDestination)) {
+                nextState = api.applyEffects(nextState, [
+                    {
+                        type: 'ReleaseAttachment',
+                        actor: targetActorId,
+                        counterpartId: plan.counterpartId,
+                        reason: 'obstacle_break'
+                    }
+                ], chainContext);
+            } else {
+                attachmentVisited.add(plan.counterpartId);
+            }
+        }
+
         if (!moveEndedEventEmitted) {
             nextState = api.appendTimelineEvent(
                 nextState,

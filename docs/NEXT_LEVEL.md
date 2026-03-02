@@ -128,14 +128,14 @@ Acceptance:
 ### D3: Catch/Release Attachment States (V2)
 Goal: add explicit attachment mechanics for shared-vector movement while preserving determinism.
 
-- [ ] Define attachment state model (attach, maintain, release) and ownership rules.
-- [ ] Model shared-vector updates and collision propagation for attached pairs/chains.
-- [ ] Add release conditions (manual release, obstacle break, damage break, status break).
-- [ ] Add focused scenarios for attach/release edge cases and collision correctness.
+- [x] Define attachment state model (attach, maintain, release) and ownership rules.
+- [x] Model shared-vector updates and collision propagation for attached pairs/chains.
+- [x] Add release conditions (manual release, obstacle break, damage break, status break).
+- [x] Add focused scenarios for attach/release edge cases and collision correctness.
 
 Acceptance:
-- [ ] Attach/release scenarios pass under strict deterministic replay.
-- [ ] No regression in non-attachment movement flows.
+- [x] Attach/release scenarios pass under strict deterministic replay.
+- [x] No regression in non-attachment movement flows.
 
 ## History and Archives
 - Historical roadmap log: `docs/ROADMAP_HISTORY.md`

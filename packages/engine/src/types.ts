@@ -124,6 +124,22 @@ export type AtomicEffect =
         expectedCollision?: boolean;
     }
     | {
+        type: 'AttachActors';
+        anchor: 'self' | 'targetActor' | string;
+        attached: 'self' | 'targetActor' | string;
+        mode?: 'tow' | 'carry';
+        sharedVectorScale?: number;
+        breakOnDamage?: boolean;
+        breakOnStatuses?: StatusID[];
+    }
+    | {
+        type: 'ReleaseAttachment';
+        actor: 'self' | 'targetActor' | string;
+        counterpartId?: string;
+        linkId?: string;
+        reason?: 'manual_release' | 'obstacle_break' | 'damage_break' | 'status_break' | 'system';
+    }
+    | {
         type: 'ApplyAilment';
         target: 'targetActor' | Point | string;
         ailment: AilmentID;

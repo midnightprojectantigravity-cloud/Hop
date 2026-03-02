@@ -2,6 +2,7 @@ import type { AtomicEffect, GameState } from '../../types';
 import type { AtomicEffectContext, AtomicEffectHandlerApi, AtomicEffectHandlerMap } from './types';
 import { actorStateEffectHandlers } from './actor-state-handlers';
 import { ailmentEffectHandlers } from './ailment-handlers';
+import { attachmentEffectHandlers } from './attachment-handlers';
 import { corpseEffectHandlers } from './corpse-handlers';
 import { damageEffectHandlers } from './damage-handlers';
 import { displacementEffectHandlers } from './displacement-handlers';
@@ -22,6 +23,7 @@ export const atomicEffectHandlers: AtomicEffectHandlerMap = {
     ...forceEffectHandlers,
     ...itemHazardEffectHandlers,
     ...trapEffectHandlers,
+    ...attachmentEffectHandlers,
     ...actorStateEffectHandlers,
     ...ailmentEffectHandlers,
     ...statusEffectHandlers,
