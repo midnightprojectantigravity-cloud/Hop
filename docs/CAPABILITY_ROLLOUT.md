@@ -47,6 +47,11 @@ Example:
 Same accepted values as URL params.
 URL overrides env when both are present.
 
+Current repo defaults by mode:
+
+- `apps/web/.env.development`: capability passives `on`, movement runtime `on` (non-prod canary posture)
+- `apps/web/.env.production`: capability passives `off`, movement runtime `off` (production safety posture)
+
 ### 4) Engine Runtime Environment Defaults
 
 - `HOP_CAP_LOADOUT_PASSIVES=1`
