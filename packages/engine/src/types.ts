@@ -565,6 +565,10 @@ export interface GameState {
             acaeEnabled: boolean;
             version: 'acae-v1';
         };
+        attachments?: {
+            sharedVectorCarry: boolean;
+            version: 'attachment-v1';
+        };
     };
 
     // Score

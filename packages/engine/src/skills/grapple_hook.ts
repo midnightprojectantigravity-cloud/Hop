@@ -97,13 +97,13 @@ export const GRAPPLE_HOOK: SkillDefinition = {
             const distance = hexDistance(shooter.position, actualTargetPos);
             const towardShooterVec = hexDirection((directionIndex + 3) % 6);
             const shooterOriginalPos = shooter.position;
+            const sharedVectorCarryEnabled = state.ruleset?.attachments?.sharedVectorCarry === true;
             const attachEffect: AtomicEffect = {
                 type: 'AttachActors',
                 anchor: shooter.id,
                 attached: targetActor.id,
                 mode: 'tow',
-                // Keep current combat behavior stable; this hook currently carries lifecycle/state only.
-                sharedVectorScale: 0,
+                sharedVectorScale: sharedVectorCarryEnabled ? 1 : 0,
                 breakOnDamage: true,
                 breakOnStatuses: ['stunned', 'rooted']
             };

@@ -137,6 +137,9 @@ Acceptance:
 - [x] Attach/release scenarios pass under strict deterministic replay.
 - [x] No regression in non-attachment movement flows.
 
+Notes:
+- `GRAPPLE_HOOK` now emits attachment lifecycle effects in live runtime; non-zero shared-vector carry is controlled by `ruleset.attachments.sharedVectorCarry` to preserve default behavior.
+
 ## History and Archives
 - Historical roadmap log: `docs/ROADMAP_HISTORY.md`
 - Archived implementation plans: `docs/archive/`
