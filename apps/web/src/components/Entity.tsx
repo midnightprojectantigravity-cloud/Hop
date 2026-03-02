@@ -62,6 +62,7 @@ const EntityBase: React.FC<EntityProps> = ({
     // Handle invisibility (assassin)
     const isInvisible = entity.isVisible === false;
     const stunned = isStunned(entity);
+    const blinded = (entity.statusEffects || []).some(status => status.type === 'blinded');
 
     if (isSpear) {
         const spearVisual = getEntityVisual('spear', 'enemy'); // Spear is treated like an entity for visual config
@@ -110,6 +111,7 @@ const EntityBase: React.FC<EntityProps> = ({
             handleAssetError={handleAssetError}
             contrastBoost={contrastBoost}
             stunned={stunned}
+            blinded={blinded}
             showFacing={Boolean(visual.showFacing)}
             borderColor={visual.borderColor}
         />

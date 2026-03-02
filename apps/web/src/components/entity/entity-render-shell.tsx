@@ -28,6 +28,7 @@ interface EntityRenderShellProps {
   handleAssetError: () => void;
   contrastBoost: number;
   stunned: boolean;
+  blinded: boolean;
   showFacing: boolean;
   borderColor: string;
 }
@@ -55,6 +56,7 @@ export const EntityRenderShell: React.FC<EntityRenderShellProps> = ({
   handleAssetError,
   contrastBoost,
   stunned,
+  blinded,
   showFacing,
   borderColor
 }) => (
@@ -82,6 +84,7 @@ export const EntityRenderShell: React.FC<EntityRenderShellProps> = ({
 
           <EntityStatusOverlays
             stunned={stunned}
+            blinded={blinded}
             showFacing={showFacing}
             facing={entity.facing}
             borderColor={borderColor}

@@ -24,5 +24,25 @@ describe('simulation feedback ailment toasts', () => {
     expect(toasts[0].text).toContain('Hardened: burn');
     expect(toasts[0].tone).toBe('status');
   });
-});
 
+  it('formats status-applied toasts for blinded', () => {
+    const playerId = 'player';
+    const events: SimulationEvent[] = [
+      {
+        id: 'sim:2',
+        turn: 4,
+        type: 'StatusApplied',
+        targetId: playerId,
+        payload: {
+          status: 'blinded',
+          duration: 1
+        }
+      }
+    ];
+
+    const toasts = deriveMobileToastsFromSimulationEvents(events, playerId);
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].text).toBe('Blinded');
+    expect(toasts[0].tone).toBe('status');
+  });
+});
