@@ -7,6 +7,7 @@ import { EntitySpear } from './entity/entity-spear';
 import { useEntityMotion } from './entity/use-entity-motion';
 import { useEntityVisualState } from './entity/use-entity-visual-state';
 import type { EntityProps } from './entity/entity-types';
+import { SYNAPSE_PULSE_DURATION_MS } from '../app/synapse';
 
 export type { EntityVisualPose } from './entity/entity-types';
 
@@ -19,7 +20,10 @@ const EntityBase: React.FC<EntityProps> = ({
     assetHref,
     fallbackAssetHref,
     floorTheme,
-    visualPose
+    visualPose,
+    synapseMode = false,
+    onSynapseInspect,
+    synapsePulseToken,
 }) => {
     const isPlayer = entity.type === 'player';
     const movementDebugEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_MOVEMENT);
@@ -45,6 +49,14 @@ const EntityBase: React.FC<EntityProps> = ({
         assetHref,
         fallbackAssetHref
     });
+    const [synapsePulseActive, setSynapsePulseActive] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!synapsePulseToken) return undefined;
+        setSynapsePulseActive(true);
+        const timeoutId = setTimeout(() => setSynapsePulseActive(false), SYNAPSE_PULSE_DURATION_MS);
+        return () => clearTimeout(timeoutId);
+    }, [synapsePulseToken]);
 
     const { x, y } = displayPixel || hexToPixel(displayPos, TILE_SIZE);
 
@@ -86,6 +98,12 @@ const EntityBase: React.FC<EntityProps> = ({
     const poseTransform = hasPoseTransform
         ? `translate(${poseOffsetX},${poseOffsetY}) scale(${poseScaleX},${poseScaleY})`
         : undefined;
+    const inspectable = Boolean(synapseMode && onSynapseInspect && !isSpear && !isDying);
+    const handleInspect = React.useCallback((event: React.MouseEvent<SVGGElement>) => {
+        if (!onSynapseInspect) return;
+        event.stopPropagation();
+        onSynapseInspect(entity.id);
+    }, [entity.id, onSynapseInspect]);
 
     return (
         <EntityRenderShell
@@ -114,6 +132,9 @@ const EntityBase: React.FC<EntityProps> = ({
             blinded={blinded}
             showFacing={Boolean(visual.showFacing)}
             borderColor={visual.borderColor}
+            interactive={inspectable}
+            onInspect={inspectable ? handleInspect : undefined}
+            synapsePulseActive={synapsePulseActive}
         />
     );
 };

@@ -284,10 +284,58 @@ export interface TelegraphProjectionEntry {
     dangerTiles: Point[];
 }
 
+export type SigmaTier = 'below' | 'elevated' | 'high' | 'extreme';
+
+export type SynapseThreatBand = 'safe' | 'contested_low' | 'contested_high' | 'deadly';
+
+export interface UnifiedPowerScoreEntry {
+    actorId: string;
+    factionId: string;
+    isHostileToPlayer: boolean;
+    ups: number;
+    statScore: number;
+    skillScore: number;
+    stateScore: number;
+    zScore: number;
+    sigmaTier: SigmaTier;
+}
+
+export interface SynapseThreatSource {
+    actorId: string;
+    position: Point;
+    actionReach: number;
+    ups: number;
+    zScore: number;
+    sigmaTier: SigmaTier;
+    emitterWeight: number;
+}
+
+export interface SynapseThreatTile {
+    tile: Point;
+    heat: number;
+    band: SynapseThreatBand;
+    sourceActorIds: string[];
+}
+
+export interface SynapseThreatPreview {
+    sourceTurn: number;
+    playerScore: number;
+    sigmaRef: number;
+    unitScores: UnifiedPowerScoreEntry[];
+    sources: SynapseThreatSource[];
+    tiles: SynapseThreatTile[];
+    bandThresholds: {
+        contestedHighMin: number;
+        deadlyMin: number;
+        deadZoneZMin: number;
+    };
+}
+
 export interface IntentPreview {
     sourceTurn: number;
     dangerTiles: Point[];
     projections: TelegraphProjectionEntry[];
+    synapse?: SynapseThreatPreview;
 }
 
 export interface RunObjective {

@@ -17,4 +17,7 @@ export interface EntityProps {
   fallbackAssetHref?: string;
   floorTheme?: string;
   visualPose?: EntityVisualPose;
+  synapseMode?: boolean;
+  onSynapseInspect?: (actorId: string) => void;
+  synapsePulseToken?: number;
 }

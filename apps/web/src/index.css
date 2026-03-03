@@ -915,3 +915,42 @@ body::after {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* ============================================
+   SYNAPSE OVERLAY
+   ============================================ */
+@keyframes synapseActorPulse {
+  0% {
+    filter: drop-shadow(0 0 0 rgba(34, 211, 238, 0));
+  }
+
+  35% {
+    filter: drop-shadow(0 0 9px rgba(34, 211, 238, 0.95));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 0 rgba(34, 211, 238, 0));
+  }
+}
+
+.entity-synapse-pulse {
+  animation: synapseActorPulse 900ms ease-out;
+}
+
+.entity-synapse-inspectable {
+  cursor: pointer;
+}
+
+.entity-synapse-inspectable:hover {
+  filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.72));
+}
+
+@keyframes synapseThreadDash {
+  to {
+    stroke-dashoffset: -90;
+  }
+}
+
+.synapse-thread-line {
+  animation: synapseThreadDash 2.2s linear infinite;
+}

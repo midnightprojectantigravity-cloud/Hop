@@ -5,6 +5,7 @@ import { StrategyRegistry } from './ai/strategy-registry';
 import { processIntent } from './intent-middleware';
 import { TacticalEngine } from './tactical-engine';
 import { getActorAt } from '../helpers';
+import { buildSynapseThreatPreview } from './synapse-threat';
 
 const byPoint = (a: Point, b: Point) => {
     if (a.q !== b.q) return a.q - b.q;
@@ -107,6 +108,7 @@ export const buildIntentPreview = (state: GameState): IntentPreview => {
     return {
         sourceTurn: state.turnNumber,
         dangerTiles: [...union.values()].sort(byPoint),
-        projections: entries
+        projections: entries,
+        synapse: buildSynapseThreatPreview(state)
     };
 };

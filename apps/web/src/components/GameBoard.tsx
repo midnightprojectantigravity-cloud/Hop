@@ -25,6 +25,7 @@ import {
     type CameraRect,
     CAMERA_ZOOM_PRESETS,
 } from '../visual/camera';
+import { resolveSynapsePreview, type SynapseDeltaEntry, type SynapsePulse, type SynapseSelection } from '../app/synapse';
 
 interface GameBoardProps {
     gameState: GameState;
@@ -56,6 +57,11 @@ interface GameBoardProps {
         ailmentDeltaLines?: string[];
     } | null;
     cameraSafeInsetsPx?: Partial<CameraInsetsPx>;
+    isSynapseMode?: boolean;
+    synapseSelection?: SynapseSelection;
+    synapsePulse?: SynapsePulse;
+    synapseDeltasByActorId?: Record<string, SynapseDeltaEntry>;
+    onSynapseInspectEntity?: (actorId: string) => void;
 }
 
 const getHexPoints = (size: number): string => {
@@ -79,6 +85,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     onMirrorSnapshot,
     enginePreviewGhost,
     cameraSafeInsetsPx,
+    isSynapseMode = false,
+    synapseSelection = { mode: 'empty' },
+    synapsePulse = null,
+    synapseDeltasByActorId = {},
+    onSynapseInspectEntity,
 }) => {
     type BoardDecal = { id: string; position: Point; href: string; createdAt: number };
     const [hoveredTile, setHoveredTile] = useState<Point | null>(null);
@@ -304,6 +315,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         resetBoardJuicePresentation();
     }, [gameState.floor, cancelCameraAnimation, resetMovementPlayback, resetBoardEventEffects, resetBoardJuicePresentation]);
     const gridPoints = useMemo(() => getHexPoints(TILE_SIZE - 1), []);
+    const synapsePreview = useMemo(() => resolveSynapsePreview(gameState.intentPreview), [gameState.intentPreview]);
+    const handleSynapseInspectEntity = React.useCallback((actorId: string) => {
+        if (!isSynapseMode || !onSynapseInspectEntity) return;
+        onSynapseInspectEntity(actorId);
+    }, [isSynapseMode, onSynapseInspectEntity]);
 
     return (
         <div
@@ -359,6 +375,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     assetManifest={assetManifest}
                     backdropLayerProps={backdropLayerProps}
                     gridPoints={gridPoints}
+                    isSynapseMode={isSynapseMode}
+                    synapsePreview={synapsePreview}
+                    synapseSelection={synapseSelection}
+                    synapsePulse={synapsePulse}
+                    synapseDeltasByActorId={synapseDeltasByActorId}
+                    onSynapseInspectEntity={handleSynapseInspectEntity}
                     onTileClick={handleTileClick}
                     onTileHover={handleHoverTile}
                     onMouseLeave={() => setHoveredTile(null)}

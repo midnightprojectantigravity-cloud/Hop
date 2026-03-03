@@ -26,6 +26,7 @@ import { applyPlayerEndOfTurnRules, hydrateLoadedState } from './logic-rules';
 import { resolveGameStateAction } from './logic-reducer-actions';
 import { createProcessNextTurn } from './logic-turn-loop';
 import { resolveAcaeRuleset, tickActorAilments } from './systems/ailments/runtime';
+import { buildIntentPreview } from './systems/telegraph-projection';
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
@@ -183,6 +184,7 @@ export const generateInitialState = (
 
     tempState.initiativeQueue = buildInitiativeQueue(tempState);
     tempState.occupancyMask = SpatialSystem.refreshOccupancyMask(tempState);
+    tempState.intentPreview = buildIntentPreview(tempState);
 
     return tempState;
 };

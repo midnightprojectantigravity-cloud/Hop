@@ -5,6 +5,7 @@ import { Entity, type EntityVisualPose } from '../Entity';
 import { JuiceManager } from '../JuiceManager';
 import type { VisualAssetEntry, VisualAssetManifest } from '../../visual/asset-manifest';
 import { resolveUnitAssetId, resolveUnitFallbackAssetHref } from '../../visual/asset-selectors';
+import type { SynapsePulse } from '../../app/synapse';
 
 type JuiceActorSnapshot = {
     id: string;
@@ -23,6 +24,9 @@ interface EntityLayerProps {
     juiceActorSnapshots: JuiceActorSnapshot[];
     assetManifest?: VisualAssetManifest | null;
     onJuiceBusyStateChange: (busy: boolean) => void;
+    isSynapseMode: boolean;
+    synapsePulse: SynapsePulse;
+    onSynapseInspectEntity: (actorId: string) => void;
 }
 
 export const EntityLayer: React.FC<EntityLayerProps> = ({
@@ -34,6 +38,9 @@ export const EntityLayer: React.FC<EntityLayerProps> = ({
     juiceActorSnapshots,
     assetManifest,
     onJuiceBusyStateChange,
+    isSynapseMode,
+    synapsePulse,
+    onSynapseInspectEntity,
 }) => {
     return (
         <g>
@@ -67,6 +74,9 @@ export const EntityLayer: React.FC<EntityLayerProps> = ({
                 assetHref={assetById.get(resolveUnitAssetId(gameState.player))?.path}
                 fallbackAssetHref={resolveUnitFallbackAssetHref(gameState.player)}
                 floorTheme={biomeThemeKey}
+                synapseMode={isSynapseMode}
+                onSynapseInspect={onSynapseInspectEntity}
+                synapsePulseToken={synapsePulse?.actorId === gameState.player.id ? synapsePulse.token : undefined}
             />
             {gameState.enemies.map(e => (
                 <Entity
@@ -78,6 +88,9 @@ export const EntityLayer: React.FC<EntityLayerProps> = ({
                     assetHref={assetById.get(resolveUnitAssetId(e))?.path}
                     fallbackAssetHref={resolveUnitFallbackAssetHref(e)}
                     floorTheme={biomeThemeKey}
+                    synapseMode={isSynapseMode}
+                    onSynapseInspect={onSynapseInspectEntity}
+                    synapsePulseToken={synapsePulse?.actorId === e.id ? synapsePulse.token : undefined}
                 />
             ))}
             {gameState.dyingEntities?.map(e => (

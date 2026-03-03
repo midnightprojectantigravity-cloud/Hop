@@ -15,6 +15,7 @@ import { ensurePlayerLoadoutIntegrity } from './systems/loadout';
 import { buildInitiativeQueue } from './systems/initiative';
 import { SpatialSystem } from './systems/spatial-system';
 import { resolveAcaeRuleset } from './systems/ailments/runtime';
+import { buildIntentPreview } from './systems/telegraph-projection';
 
 type PendingFrameStateBuilder = (
     state: GameState,
@@ -49,6 +50,7 @@ export const hydrateLoadedState = (loaded: GameState): GameState => {
         loaded.companions = loaded.companions.map(ensureActorTrinity);
     }
     loaded.ruleset = resolveAcaeRuleset(loaded);
+    loaded.intentPreview = buildIntentPreview(loaded);
     return loaded;
 };
 

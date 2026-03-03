@@ -26,6 +26,8 @@ export const areEntityPropsEqual = (prev: EntityProps, next: EntityProps): boole
     && prev.assetHref === next.assetHref
     && prev.fallbackAssetHref === next.fallbackAssetHref
     && prev.floorTheme === next.floorTheme
+    && prev.synapseMode === next.synapseMode
+    && (prev.synapsePulseToken ?? 0) === (next.synapsePulseToken ?? 0)
     && (prev.visualPose?.offsetX ?? 0) === (next.visualPose?.offsetX ?? 0)
     && (prev.visualPose?.offsetY ?? 0) === (next.visualPose?.offsetY ?? 0)
     && (prev.visualPose?.scaleX ?? 1) === (next.visualPose?.scaleX ?? 1)

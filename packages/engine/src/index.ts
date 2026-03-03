@@ -40,6 +40,8 @@ export * from './systems/action-preview';
 export * from './systems/state-mirror';
 export * from './systems/tactical-data-bootstrap';
 export * from './systems/capabilities';
+export * from './systems/threat-scoring';
+export * from './systems/synapse-threat';
 
 // Juice & VFX
 

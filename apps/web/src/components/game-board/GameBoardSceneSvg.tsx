@@ -1,5 +1,5 @@
 import React from 'react';
-import type { GameState, Point } from '@hop/engine';
+import type { GameState, Point, SynapseThreatPreview } from '@hop/engine';
 import type { VisualAssetManifest } from '../../visual/asset-manifest';
 import type { CameraRect } from '../../visual/camera';
 import { BiomeBackdropLayer } from './BiomeBackdropLayer';
@@ -8,6 +8,10 @@ import { ClutterObstaclesLayer } from './ClutterObstaclesLayer';
 import { EntityLayer } from './EntityLayer';
 import { UiGridLayer } from './UiGridLayer';
 import { ObjectiveMarkersLayer } from './ObjectiveMarkersLayer';
+import { SynapseHeatmapLayer } from './SynapseHeatmapLayer';
+import { SynapseUnitScoreLayer } from './SynapseUnitScoreLayer';
+import { SynapseThreadOverlay } from './SynapseThreadOverlay';
+import type { SynapseDeltaEntry, SynapsePulse, SynapseSelection } from '../../app/synapse';
 
 interface GameBoardSceneSvgProps {
     svgRef: React.MutableRefObject<SVGSVGElement | null>;
@@ -65,6 +69,12 @@ interface GameBoardSceneSvgProps {
     assetManifest?: VisualAssetManifest | null;
     backdropLayerProps: any;
     gridPoints: string;
+    isSynapseMode: boolean;
+    synapsePreview: SynapseThreatPreview | null;
+    synapseSelection: SynapseSelection;
+    synapsePulse: SynapsePulse;
+    synapseDeltasByActorId: Record<string, SynapseDeltaEntry>;
+    onSynapseInspectEntity: (actorId: string) => void;
     onTileClick: (hex: Point) => void;
     onTileHover: (hex: Point) => void;
     onMouseLeave: () => void;
@@ -108,6 +118,12 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
     assetManifest,
     backdropLayerProps,
     gridPoints,
+    isSynapseMode,
+    synapsePreview,
+    synapseSelection,
+    synapsePulse,
+    synapseDeltasByActorId,
+    onSynapseInspectEntity,
     onTileClick,
     onTileHover,
     onMouseLeave,
@@ -166,6 +182,10 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
             mountainSettingsByAssetId={mountainSettingsByAssetId}
             resolveMountainSettings={resolveMountainSettings}
         />
+        <SynapseHeatmapLayer
+            enabled={isSynapseMode}
+            preview={synapsePreview}
+        />
         <EntityLayer
             gameState={gameState}
             latestTraceByActor={latestTraceByActor}
@@ -175,6 +195,21 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
             juiceActorSnapshots={juiceActorSnapshots}
             assetManifest={assetManifest}
             onJuiceBusyStateChange={onJuiceBusyStateChange}
+            isSynapseMode={isSynapseMode}
+            synapsePulse={synapsePulse}
+            onSynapseInspectEntity={onSynapseInspectEntity}
+        />
+        <SynapseUnitScoreLayer
+            enabled={isSynapseMode}
+            gameState={gameState}
+            preview={synapsePreview}
+            deltasByActorId={synapseDeltasByActorId}
+        />
+        <SynapseThreadOverlay
+            enabled={isSynapseMode}
+            gameState={gameState}
+            renderedViewBox={renderedViewBox}
+            selection={synapseSelection}
         />
         <UiGridLayer cells={cells} gridPoints={gridPoints} />
         <ObjectiveMarkersLayer boardProps={boardProps} />

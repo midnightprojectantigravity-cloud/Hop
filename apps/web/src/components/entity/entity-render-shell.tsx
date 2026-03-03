@@ -31,6 +31,9 @@ interface EntityRenderShellProps {
   blinded: boolean;
   showFacing: boolean;
   borderColor: string;
+  interactive?: boolean;
+  onInspect?: (event: React.MouseEvent<SVGGElement>) => void;
+  synapsePulseActive?: boolean;
 }
 
 export const EntityRenderShell: React.FC<EntityRenderShellProps> = ({
@@ -58,16 +61,21 @@ export const EntityRenderShell: React.FC<EntityRenderShellProps> = ({
   stunned,
   blinded,
   showFacing,
-  borderColor
+  borderColor,
+  interactive,
+  onInspect,
+  synapsePulseActive
 }) => (
-  <g style={{ pointerEvents: 'none' }}>
+  <g style={{ pointerEvents: interactive ? 'auto' : 'none' }}>
     <g
       data-actor-node={entity.id}
+      data-synapse-pulse={synapsePulseActive ? 'active' : undefined}
       style={{
         transition: waapiControlled ? 'none' : `transform ${segmentDurationMs}ms ${segmentEasing}`,
         transform: `translate(${x}px, ${y}px)`
       }}
-      className={isDying ? 'animate-lava-sink' : ''}
+      className={`${isDying ? 'animate-lava-sink' : ''} ${interactive ? 'entity-synapse-inspectable' : ''} ${synapsePulseActive ? 'entity-synapse-pulse' : ''}`}
+      onClick={interactive ? onInspect : undefined}
     >
       <g transform={poseTransform}>
         <g

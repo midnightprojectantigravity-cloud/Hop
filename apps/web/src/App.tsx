@@ -1,5 +1,5 @@
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { hexEquals } from '@hop/engine';
 import type { Point, Action, GameState } from '@hop/engine';
 import { BiomeSandbox } from './components/BiomeSandbox';
@@ -18,6 +18,11 @@ import { HubScreen } from './app/HubScreen';
 import { GameScreen } from './app/GameScreen';
 import { buildStartRunPayload } from './app/start-run-overrides';
 import { getUiCapabilityRollout, setUiCapabilityRollout } from './app/capability-rollout';
+import {
+  EMPTY_SYNAPSE_SELECTION,
+  type SynapsePulse,
+  type SynapseSelection,
+} from './app/synapse';
 
 const summarizeActionPayload = (action: Action): Record<string, unknown> | undefined => {
   const payload = (action as any).payload;
@@ -98,6 +103,9 @@ function App() {
   const [showMovementRange, setShowMovementRange] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [postCommitInputLock, setPostCommitInputLock] = useState(false);
+  const [isSynapseMode, setIsSynapseMode] = useState(false);
+  const [synapseSelection, setSynapseSelection] = useState<SynapseSelection>(EMPTY_SYNAPSE_SELECTION);
+  const [synapsePulse, setSynapsePulse] = useState<SynapsePulse>(null);
   const initialCapabilityRolloutRef = useRef(getUiCapabilityRollout());
   const [hubCapabilityPassivesEnabled, setHubCapabilityPassivesEnabled] = useState(
     initialCapabilityRolloutRef.current.capabilityPassivesEnabled
@@ -140,13 +148,61 @@ function App() {
   const floorIntro = useFloorIntro(gameState);
   useRunRecording(gameState, isReplayMode);
 
+  const clearSynapseContext = useCallback(() => {
+    setSynapseSelection(EMPTY_SYNAPSE_SELECTION);
+    setSynapsePulse(null);
+  }, []);
+
+  const setSynapseMode = useCallback((enabled: boolean) => {
+    setIsSynapseMode(enabled);
+    if (!enabled) {
+      setSynapseSelection(EMPTY_SYNAPSE_SELECTION);
+      setSynapsePulse(null);
+    }
+  }, []);
+
+  const toggleSynapseMode = useCallback(() => {
+    setSynapseMode(!isSynapseMode);
+  }, [isSynapseMode, setSynapseMode]);
+
+  useEffect(() => {
+    if (gameState.gameStatus !== 'playing' && isSynapseMode) {
+      setSynapseMode(false);
+    }
+  }, [gameState.gameStatus, isSynapseMode, setSynapseMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (gameState.gameStatus !== 'playing') return;
+      if (event.code === 'KeyI') {
+        event.preventDefault();
+        toggleSynapseMode();
+        return;
+      }
+      if (event.code === 'Escape' && isSynapseMode) {
+        event.preventDefault();
+        setSynapseMode(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [gameState.gameStatus, isSynapseMode, setSynapseMode, toggleSynapseMode]);
+
   const handleSelectSkill = (skillId: string | null) => {
     if (isInputLocked) return;
+    if (skillId && isSynapseMode) {
+      setSynapseMode(false);
+    }
     setSelectedSkillId(skillId);
   };
 
   const handleTileClick = (target: Point) => {
     if (isInputLocked) return;
+    if (isSynapseMode) {
+      setSynapseSelection({ mode: 'tile', tile: target });
+      return;
+    }
     if (selectedSkillId) {
       armPostCommitLock();
       dispatchWithTrace({ type: 'USE_SKILL', payload: { skillId: selectedSkillId, target } }, 'player_use_skill');
@@ -162,14 +218,29 @@ function App() {
     setShowMovementRange(false);
   };
 
+  const handleSynapseInspectEntity = useCallback((actorId: string) => {
+    if (!isSynapseMode) return;
+    setSynapseSelection({ mode: 'entity', actorId });
+    setSynapsePulse({ actorId, token: Date.now() });
+  }, [isSynapseMode]);
+
   const handleSelectUpgrade = (upgrade: string) => {
     if (isReplayMode || isBusy) return;
     dispatchWithTrace({ type: 'SELECT_UPGRADE', payload: upgrade }, 'upgrade_select');
   };
 
-  const handleReset = () => { dispatchWithTrace({ type: 'RESET' }, 'reset'); setSelectedSkillId(null); resetReplayUi(); };
+  const handleReset = () => {
+    dispatchWithTrace({ type: 'RESET' }, 'reset');
+    setSelectedSkillId(null);
+    setSynapseMode(false);
+    resetReplayUi();
+  };
   const handleWait = () => {
     if (isInputLocked) return;
+    if (isSynapseMode) {
+      setSynapseSelection(EMPTY_SYNAPSE_SELECTION);
+      return;
+    }
     armPostCommitLock();
     dispatchWithTrace({ type: 'WAIT' }, 'player_wait');
     setSelectedSkillId(null);
@@ -179,9 +250,20 @@ function App() {
     handleExitToHub();
   };
 
-  const handleLoadScenario = (state: GameState, instructions: string) => { dispatchWithTrace({ type: 'LOAD_STATE', payload: state }, 'scenario_load'); setTutorialInstructions(instructions); setSelectedSkillId(null); };
+  const handleLoadScenario = (state: GameState, instructions: string) => {
+    dispatchWithTrace({ type: 'LOAD_STATE', payload: state }, 'scenario_load');
+    setTutorialInstructions(instructions);
+    setSelectedSkillId(null);
+    setSynapseMode(false);
+  };
 
-  const handleExitToHub = () => { dispatchWithTrace({ type: 'EXIT_TO_HUB' }, 'exit_to_hub'); setSelectedSkillId(null); resetReplayUi(); navigateTo(hubPath); };
+  const handleExitToHub = () => {
+    dispatchWithTrace({ type: 'EXIT_TO_HUB' }, 'exit_to_hub');
+    setSelectedSkillId(null);
+    setSynapseMode(false);
+    resetReplayUi();
+    navigateTo(hubPath);
+  };
 
   const handleCapabilityPassivesEnabledChange = useCallback((enabled: boolean) => {
     setHubCapabilityPassivesEnabled(enabled);
@@ -278,6 +360,13 @@ function App() {
       onExitToHub={handleExitToHub}
       onSelectSkill={handleSelectSkill}
       onSelectUpgrade={handleSelectUpgrade}
+      isSynapseMode={isSynapseMode}
+      synapseSelection={synapseSelection}
+      synapsePulse={synapsePulse}
+      onToggleSynapseMode={toggleSynapseMode}
+      onSynapseInspectEntity={handleSynapseInspectEntity}
+      onSynapseSelectSource={handleSynapseInspectEntity}
+      onSynapseClearSelection={clearSynapseContext}
       onDismissTutorial={() => setTutorialInstructions(null)}
       onToggleReplay={() => setReplayActive(!replayActive)}
       onStepReplay={stepReplay}
