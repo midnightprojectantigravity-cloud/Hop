@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { generateInitialState, gameReducer } from '../src/logic.ts';
 import { safeParse } from '../src/systems/serialization.ts';
+import { validateReplayEnvelopeV3 } from '../src/systems/replay-validation.ts';
 
 const usage = () => {
   console.log('Usage: validateReplay <replay.json>');
@@ -26,14 +27,23 @@ try {
   try { parsed = JSON.parse(txt); } catch { console.error('Failed to parse replay file'); process.exit(3); }
 }
 
-const actions = parsed.actions ?? parsed.actionLog ?? parsed;
-const seed = parsed.seed ?? parsed.meta?.seed ?? '';
+const envelopeCandidate = parsed?.replay ?? parsed;
+const replayValidation = validateReplayEnvelopeV3(envelopeCandidate);
+if (!replayValidation.valid || !replayValidation.envelope) {
+  console.error('ReplayEnvelopeV3 validation failed:', replayValidation.errors.join(' | '));
+  process.exit(5);
+}
 
-console.log('Replaying', full, 'seed=', seed, 'actions=', actions?.length ?? 0);
-const init = generateInitialState(1, seed || '', seed || '');
+const replay = replayValidation.envelope;
+const seed = replay.run.seed;
+const startFloor = replay.run.startFloor ?? 1;
+const initialSeed = replay.run.initialSeed ?? seed;
+
+console.log('Replaying', full, 'seed=', seed, 'actions=', replay.actions.length);
+const init = generateInitialState(startFloor, seed || '', initialSeed || '');
 let s = init;
 try {
-  for (const a of actions) {
+  for (const a of replay.actions) {
     s = gameReducer(s, a);
   }
   // Print a small fingerprint

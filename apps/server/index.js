@@ -2,7 +2,12 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateInitialState, gameReducer, fingerprintFromState, safeParse } from '@hop/engine';
+import { safeParse } from '@hop/engine';
+import {
+  MAX_REQUEST_BYTES,
+  validateReplaySubmissionPayload,
+  verifyReplayEnvelope
+} from './replay-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,50 +55,36 @@ const server = http.createServer((req, res) => {
 
   if (req.url === '/submit' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { body += chunk; });
+    let tooLarge = false;
+    req.on('data', chunk => {
+      if (tooLarge) return;
+      body += chunk;
+      if (Buffer.byteLength(body, 'utf8') > MAX_REQUEST_BYTES) {
+        tooLarge = true;
+      }
+    });
     req.on('end', () => {
       try {
-        let payload;
-        try { payload = safeParse(body); } catch (e) { payload = JSON.parse(body); }
-        // Basic validation: require seed and actions
-        if (!payload || !payload.seed || !Array.isArray(payload.actions)) {
-          res.writeHead(400, { ...headers, 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, error: 'Invalid payload' }));
+        if (tooLarge) {
+          res.writeHead(413, { ...headers, 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'Payload too large' }));
           return;
         }
 
-        // Server-side verification: Replay the actions using the REAL engine
-        let verified = false;
-        let finalScore = 0;
-        let finalFloor = 1;
-
-        try {
-          // 1. Initial State re-simulation
-          const init = generateInitialState(1, payload.seed, payload.seed);
-          let s = init;
-
-          // 2. Action Replay
-          for (const a of payload.actions) {
-            s = gameReducer(s, a);
-          }
-
-          // 3. Fingerprint comparison
-          const computedFp = fingerprintFromState(s);
-          finalScore = (s.player.hp || 0) + (s.floor || 0) * 100; // Legacy score for now
-          finalFloor = s.floor;
-
-          if (payload.fingerprint) {
-            verified = payload.fingerprint === computedFp;
-          } else {
-            // fallback: score/floor safety check
-            verified = (payload.floor === s.floor);
-          }
-        } catch (ve) {
-          console.error('Verification engine error', ve);
-          verified = false;
+        let payload;
+        try { payload = safeParse(body); } catch (e) { payload = JSON.parse(body); }
+        const validated = validateReplaySubmissionPayload(payload);
+        if (!validated.valid || !validated.replay) {
+          res.writeHead(400, { ...headers, 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: validated.error || 'Invalid payload' }));
+          return;
         }
 
-        if (!verified) {
+        const verification = verifyReplayEnvelope(validated.replay);
+        if (!verification.verified) {
+          if (verification.error) {
+            console.error('Verification engine error', verification.error);
+          }
           res.writeHead(400, { ...headers, 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: false, error: 'Verification failed' }));
           return;
@@ -102,11 +93,14 @@ const server = http.createServer((req, res) => {
         const list = readJson();
         const entry = {
           id: String(Date.now()),
-          seed: payload.seed,
-          score: payload.score || finalScore,
-          floor: payload.floor || finalFloor,
+          seed: validated.replay.run.seed,
+          score: verification.score,
+          floor: verification.floor,
+          fingerprint: verification.computedFingerprint,
+          replayVersion: validated.replay.version,
+          actionCount: validated.replay.actions.length,
           date: new Date().toISOString(),
-          client: payload.client || null
+          client: validated.client || null
         };
         list.unshift(entry);
         writeJson(list.slice(0, 1000));

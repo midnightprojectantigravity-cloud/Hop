@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { DEFAULT_LOADOUTS, generateInitialState, validateReplayActions } from '@hop/engine';
-import type { Action } from '@hop/engine';
+import { DEFAULT_LOADOUTS, generateInitialState, validateReplayEnvelopeV3 } from '@hop/engine';
+import type { Action, GameState } from '@hop/engine';
 import type { ReplayRecord } from '../components/ReplayManager';
 
 type DispatchWithTrace = (action: Action, source: string) => void;
@@ -8,6 +8,35 @@ type DispatchWithTrace = (action: Action, source: string) => void;
 interface ReplayControllerOptions {
   dispatchWithTrace: DispatchWithTrace;
 }
+
+export interface ReplayPlaybackValidationResult {
+  ok: boolean;
+  actions?: Action[];
+  initState?: GameState;
+  error?: string;
+}
+
+export const validateReplayRecordForPlayback = (record: ReplayRecord): ReplayPlaybackValidationResult => {
+  const validation = validateReplayEnvelopeV3(record.replay);
+  if (!validation.valid || !validation.envelope) {
+    return {
+      ok: false,
+      error: `Replay rejected: ${validation.errors.slice(0, 3).join(' | ')}`
+    };
+  }
+
+  const run = validation.envelope.run;
+  const seed = run.seed;
+  const loadout = run.loadoutId ? (DEFAULT_LOADOUTS as any)[run.loadoutId] : undefined;
+  const startFloor = run.startFloor ?? 1;
+  const init = generateInitialState(startFloor, seed, run.initialSeed || seed, undefined, loadout);
+
+  return {
+    ok: true,
+    actions: validation.envelope.actions,
+    initState: init
+  };
+};
 
 export const useReplayController = ({ dispatchWithTrace }: ReplayControllerOptions) => {
   const [isReplayMode, setIsReplayMode] = useState(false);
@@ -26,27 +55,22 @@ export const useReplayController = ({ dispatchWithTrace }: ReplayControllerOptio
 
   const startReplay = useCallback((r: ReplayRecord) => {
     if (!r) return;
-    const validation = validateReplayActions(r.actions || []);
-    if (!validation.valid) {
-      const msg = `Replay rejected: ${validation.errors.slice(0, 3).join(' | ')}`;
-      setReplayError(msg);
-      console.error('[HOP_REPLAY] Invalid replay actions', {
+    const parsed = validateReplayRecordForPlayback(r);
+    if (!parsed.ok || !parsed.actions || !parsed.initState) {
+      setReplayError(parsed.error || 'Replay rejected.');
+      console.error('[HOP_REPLAY] Invalid ReplayEnvelopeV3', {
         replayId: r.id,
-        errors: validation.errors
+        error: parsed.error
       });
       return;
     }
 
     setReplayError(null);
     setIsReplayMode(true);
-    setReplayActions(validation.actions);
+    setReplayActions(parsed.actions);
     setReplayActive(false);
     replayIndexRef.current = 0;
-
-    const seed = r.seed || r.id || String(Date.now());
-    const loadout = r.loadoutId ? (DEFAULT_LOADOUTS as any)[r.loadoutId] : undefined;
-    const init = generateInitialState(1, seed, seed, undefined, loadout);
-    dispatchWithTrace({ type: 'LOAD_STATE', payload: init } as Action, 'replay_start');
+    dispatchWithTrace({ type: 'LOAD_STATE', payload: parsed.initState } as Action, 'replay_start');
   }, [dispatchWithTrace]);
 
   const stepReplay = useCallback(() => {

@@ -27,6 +27,7 @@ import { resolveGameStateAction } from './logic-reducer-actions';
 import { createProcessNextTurn } from './logic-turn-loop';
 import { resolveAcaeRuleset, tickActorAilments } from './systems/ailments/runtime';
 import { buildIntentPreview } from './systems/telegraph-projection';
+import { isReplayRecordableAction } from './systems/replay-validation';
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
@@ -280,12 +281,15 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
     const intermediateState = resolveGameState(curState, action);
     const delta = createDelta(oldState, intermediateState, state);
     command.delta = delta;
+    const nextActionLog = isReplayRecordableAction(action)
+        ? [...(intermediateState.actionLog || []), action]
+        : [...(intermediateState.actionLog || [])];
 
     return {
         ...intermediateState,
         commandLog: [...(intermediateState.commandLog || []), command],
         undoStack: [...(intermediateState.undoStack || []), delta],
-        actionLog: [...(intermediateState.actionLog || []), action]
+        actionLog: nextActionLog
     };
 };
 

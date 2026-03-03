@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "start": "tsx index.js",
-        "dev": "tsx --watch index.js"
+        "dev": "tsx --watch index.js",
+        "test": "tsx --test replay-validator.test.js"
     },
     "dependencies": {
         "@hop/engine": "*"

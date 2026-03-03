@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { validateReplayActions } from '../systems/replay-validation';
+import {
+    isReplayRecordableAction,
+    validateReplayActions,
+    validateReplayEnvelopeV3
+} from '../systems/replay-validation';
 
 describe('replay action validation', () => {
     it('accepts valid replay actions without dropping entries', () => {
@@ -33,5 +37,62 @@ describe('replay action validation', () => {
         expect(result.actions).toHaveLength(0);
         expect(result.errors[0]).toContain('must be an array');
     });
+
+    it('classifies replay recordable action types', () => {
+        expect(isReplayRecordableAction({ type: 'WAIT' })).toBe(true);
+        expect(isReplayRecordableAction({ type: 'START_RUN' })).toBe(false);
+        expect(isReplayRecordableAction(null)).toBe(false);
+    });
 });
 
+describe('replay envelope v3 validation', () => {
+    it('accepts a valid replay envelope v3 payload', () => {
+        const payload = {
+            version: 3,
+            run: {
+                seed: 'seed-123',
+                loadoutId: 'VANGUARD',
+                startFloor: 1,
+                mode: 'normal'
+            },
+            actions: [
+                { type: 'WAIT' },
+                { type: 'ADVANCE_TURN' }
+            ],
+            meta: {
+                recordedAt: '2026-03-03T09:00:00.000Z',
+                source: 'client'
+            }
+        };
+
+        const result = validateReplayEnvelopeV3(payload);
+        expect(result.valid).toBe(true);
+        expect(result.errors).toHaveLength(0);
+        expect(result.envelope?.version).toBe(3);
+        expect(result.envelope?.actions).toHaveLength(2);
+    });
+
+    it('rejects non-v3 replay payloads', () => {
+        const payload = {
+            seed: 'legacy-seed',
+            actions: [{ type: 'WAIT' }]
+        };
+
+        const result = validateReplayEnvelopeV3(payload as any);
+        expect(result.valid).toBe(false);
+        expect(result.errors.some(e => e.includes('version must be 3'))).toBe(true);
+    });
+
+    it('rejects envelopes with non-replayable actions', () => {
+        const payload = {
+            version: 3,
+            run: { seed: 'seed-456' },
+            actions: [{ type: 'START_RUN', payload: { loadoutId: 'VANGUARD' } }],
+            meta: { recordedAt: '2026-03-03T09:00:00.000Z' }
+        };
+
+        const result = validateReplayEnvelopeV3(payload as any);
+        expect(result.valid).toBe(false);
+        expect(result.errors.some(e => e.includes('not replayable'))).toBe(true);
+    });
+});
