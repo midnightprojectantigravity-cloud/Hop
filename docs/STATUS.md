@@ -1,4 +1,4 @@
-# Codebase Status - March 2, 2026
+# Codebase Status - March 3, 2026
 
 ## Major Accomplishment
 Post-AI roadmap tranches are complete and hardened (content pipeline closure, frontend decomposition, harness core unification).
@@ -53,16 +53,45 @@ Reference:
 - `docs/CAPABILITY_ROLLOUT.md`
 - `docs/NEXT_LEVEL.md` (Deferred Backlog `D4`)
 
+## Replay V3 + Stability Milestone
+Replay contract migration and deterministic runtime hardening are merged and validated.
+
+Delivered outcomes:
+1. Replay contract migration:
+   - canonical `ReplayEnvelopeV3` adopted across engine/web/server
+   - legacy replay payload acceptance removed from runtime validation paths
+   - reducer replay logging restricted to in-run recordable actions only
+2. Server verification hardening:
+   - strict v3 schema + action/payload validation
+   - fingerprint match required for submissions
+   - server-computed score/floor persisted as authoritative values
+3. Engine correctness + determinism hardening:
+   - pure load hydration (no input mutation)
+   - turn loop state updates kept immutable
+   - centralized tactical target validation with deterministic failure paths
+4. Hotspot optimization with parity safety:
+   - tile tick processing reduced from tile x actor scans while preserving ordering semantics
+   - repeated actor lookups in turn loop reduced via per-iteration index map
+5. Repo hygiene:
+   - tracked `%TEMP%/hop_upa_baseline_worktree` mirror removed
+   - `%TEMP%/` ignored to prevent duplicate test discovery
+
+Reference:
+- `docs/REPLAY_V3_STABILITY_WRAPUP_2026-03-03.md`
+
 ## Validation Snapshot (Current)
 
 Engine:
 - `npm --workspace @hop/engine run build` -> pass
-- `npm --workspace @hop/engine run check-script-imports` -> pass
-- `npm --workspace @hop/engine run test:ai-acceptance:strict` -> pass
+- `npm --workspace @hop/engine test` -> pass
+- `npm --workspace @hop/engine run bench:runtime:candidate` -> pass (5% regression gate)
 
 Web:
 - `npm --workspace @hop/web run test:run` -> pass
 - `npm --workspace @hop/web run build` -> pass
+
+Server:
+- `npm --workspace @hop/server run test` -> pass
 
 ## Current Risk Posture
 
