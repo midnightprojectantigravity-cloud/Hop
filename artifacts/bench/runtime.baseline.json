@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-03-03T17:27:09.199Z",
+  "benches": {
+    "reducer_turn_loop": {
+      "iterations": 60,
+      "totalMs": 177.678,
+      "avgMs": 2.6783,
+      "opsPerSecond": 373.3723
+    },
+    "tile_tick": {
+      "iterations": 200,
+      "totalMs": 250.5163,
+      "avgMs": 1.1722,
+      "opsPerSecond": 853.0822
+    },
+    "apply_effects_batch": {
+      "iterations": 120,
+      "totalMs": 1343.0321,
+      "avgMs": 11.0788,
+      "opsPerSecond": 90.2623
+    }
+  }
+}

@@ -1,8 +1,0 @@
-{
-  "metric": "acae_cleanse_path",
-  "initialBurn": 10,
-  "wetApplied": 5,
-  "residualBurn": 5,
-  "clearRatio": 0.5
-}
-

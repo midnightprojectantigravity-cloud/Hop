@@ -42,6 +42,8 @@
     "validate-replay": "npx tsx ./scripts/validateReplay.ts",
     "validate-replay-smoke": "npx tsx ./scripts/validateReplay.ts ./scripts/fixtures/replay.smoke.json",
     "replay-parity-gate": "npx tsx ./scripts/runReplayParityGate.ts",
+    "bench:runtime:baseline": "npx tsx ./scripts/runRuntimeBenchmarks.ts ../../artifacts/bench/runtime.baseline.json",
+    "bench:runtime:candidate": "npx tsx ./scripts/runRuntimeBenchmarks.ts ../../artifacts/bench/runtime.candidate.json ../../artifacts/bench/runtime.baseline.json 5",
     "check-rng-parity": "node ./scripts/checkRngParity.js",
     "validate-state-mirror": "npx tsx ./scripts/validateStateMirror.ts",
     "validate-state-mirror-sample": "npx tsx ./scripts/validateStateMirror.ts ./scripts/fixtures/mirror.engine.sample.json ./scripts/fixtures/mirror.ui.sample.json"

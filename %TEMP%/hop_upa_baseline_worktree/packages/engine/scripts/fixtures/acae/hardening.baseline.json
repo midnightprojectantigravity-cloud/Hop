@@ -1,8 +1,0 @@
-{
-  "metric": "acae_hardening",
-  "sampleSize": 8,
-  "avgBurnResistancePct": 85,
-  "maxBurnResistancePct": 85,
-  "capBreaches": 0
-}
-
