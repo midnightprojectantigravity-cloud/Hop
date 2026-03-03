@@ -53,6 +53,14 @@ export type ProcessNextTurnFactoryDeps = {
 };
 
 export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
+    const buildActorIndex = (state: GameState): Map<string, Entity> => {
+        const index = new Map<string, Entity>();
+        index.set(state.player.id, state.player);
+        for (const enemy of state.enemies) index.set(enemy.id, enemy);
+        for (const companion of state.companions || []) index.set(companion.id, companion);
+        return index;
+    };
+
     const processNextTurn = (state: GameState, isResuming: boolean = false): GameState => {
         if (state.pendingStatus || (state.pendingFrames?.length ?? 0) > 0) {
             deps.warnTurnStackInvariant('Blocked processNextTurn while pendingStatus is active.', {
@@ -89,7 +97,11 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                     { reason: 'GLOBAL_DEATH_CHECK' }
                 );
             }
-            curState.occupancyMask = SpatialSystem.refreshOccupancyMask(curState);
+            curState = {
+                ...curState,
+                occupancyMask: SpatialSystem.refreshOccupancyMask(curState)
+            };
+            let actorIndex = buildActorIndex(curState);
 
             let actorId: string | undefined;
 
@@ -107,7 +119,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
 
             if (!actorId) break;
 
-            const actor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
+            const actor = actorIndex.get(actorId);
             const actorStepId = `${curState.turnNumber}:${curState.initiativeQueue?.round ?? 0}:${actorId}:${iterations}`;
 
             if (!actor || actor.hp <= 0) {
@@ -162,7 +174,8 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 messages.push(...tele.messages);
             }
 
-            const activeActor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
+            actorIndex = buildActorIndex(curState);
+            const activeActor = actorIndex.get(actorId);
             if (!activeActor || activeActor.hp <= 0) {
                 curState = {
                     ...curState,
@@ -172,7 +185,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 continue;
             }
 
-            const actorForIntent = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
+            const actorForIntent = activeActor;
             if (!actorForIntent || actorForIntent.hp <= 0) {
                 continue;
             }
@@ -292,7 +305,8 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 }
             }
 
-            const postActionActor = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
+            actorIndex = buildActorIndex(curState);
+            const postActionActor = actorIndex.get(actorId);
             if (!postActionActor || postActionActor.hp <= 0) {
                 if (actorId === 'player') {
                     const completedRun = buildRunSummary(curState);
@@ -331,7 +345,8 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 initiativeQueue: endActorTurn(curState, actorId)
             };
 
-            const actorAfterTurn = actorId === 'player' ? curState.player : curState.enemies.find(e => e.id === actorId);
+            actorIndex = buildActorIndex(curState);
+            const actorAfterTurn = actorIndex.get(actorId);
             const skipPassivesThisTurn =
                 forcedStunSkip
                 || intent.metadata?.reasoningCode === 'STATUS_STUNNED'

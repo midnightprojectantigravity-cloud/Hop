@@ -72,7 +72,29 @@ export class TacticalEngine {
 
         if (!targetHex) {
             // Failed to find target
-            return { effects: [], messages: [`No valid target found for ${intent.skillId}`], consumesTurn: false };
+            return {
+                effects: [],
+                messages: [`No valid target found for ${intent.skillId}`],
+                consumesTurn: actor.id === gameState.player.id ? false : true
+            };
+        }
+
+        if (skillDef?.getValidTargets) {
+            const validTargets = skillDef.getValidTargets(gameState, actor.position);
+            const isValidTarget = validTargets.some(point =>
+                point.q === targetHex!.q && point.r === targetHex!.r && point.s === targetHex!.s
+            );
+            if (!isValidTarget) {
+                const probeMessages = this.getInvalidTargetProbeMessages(skillDef, gameState, actor, targetHex, actorSkill?.activeUpgrades || []);
+                return {
+                    effects: [],
+                    messages: [
+                        `Invalid target for ${intent.skillId}.`,
+                        ...probeMessages
+                    ],
+                    consumesTurn: actor.id === gameState.player.id ? false : true
+                };
+            }
         }
 
         // AUTO-DETECT: If we have a hex but no ID, resolve ID from hex.
@@ -117,6 +139,33 @@ export class TacticalEngine {
             kills: execution.kills || 0,
             stackReactions: execution.stackReactions
         };
+    }
+
+    private static getInvalidTargetProbeMessages(
+        skillDef: NonNullable<ReturnType<typeof SkillRegistry.get>>,
+        gameState: GameState,
+        actor: Actor,
+        targetHex: Point,
+        upgrades: string[]
+    ): string[] {
+        try {
+            const probe = skillDef.execute(gameState, actor, targetHex, upgrades);
+            if (probe.consumesTurn !== false || !Array.isArray(probe.messages)) {
+                return [];
+            }
+            const seen = new Set<string>();
+            const out: string[] = [];
+            for (const message of probe.messages) {
+                if (typeof message !== 'string') continue;
+                const trimmed = message.trim();
+                if (!trimmed || seen.has(trimmed)) continue;
+                seen.add(trimmed);
+                out.push(trimmed);
+            }
+            return out;
+        } catch {
+            return [];
+        }
     }
 
     /**

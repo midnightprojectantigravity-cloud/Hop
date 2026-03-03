@@ -180,12 +180,21 @@ export const FALCON_COMMAND: SkillDefinition = {
         }
     },
     getValidTargets: (state: GameState, origin: Point) => {
-        // Can target any tile within range, or enemies for predator mode
-        const range = 6;
-        return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
-            if (hexEquals(p, origin)) return true; // Can target self for Roost
-            return true; // All tiles valid for Scout mode
-        });
+        // Execution currently accepts any in-bounds tile (plus self) for mode selection.
+        // Keep targeting contract aligned with execution semantics.
+        const validTargets: Point[] = [];
+        for (let q = 0; q < state.gridWidth; q++) {
+            for (let r = 0; r < state.gridHeight; r++) {
+                const candidate: Point = { q, r, s: -q - r };
+                if (SpatialSystem.isWithinBounds(state, candidate)) {
+                    validTargets.push(candidate);
+                }
+            }
+        }
+        if (!validTargets.some(p => hexEquals(p, origin))) {
+            validTargets.push(origin);
+        }
+        return validTargets;
     },
     upgrades: {
         KEEN_SIGHT: {

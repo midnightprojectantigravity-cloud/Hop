@@ -70,7 +70,17 @@ export const FALCON_SCOUT: SkillDefinition = {
         return { effects, messages, consumesTurn: false };
     },
     upgrades: {},
-    getValidTargets: (_state: GameState, _origin: Point) => {
-        return []; // Autonomous skill, no manual targeting usually
+    getValidTargets: (state: GameState, _origin: Point) => {
+        // Autonomous skill: tactical validation should not reject AI-provided target metadata.
+        const validTargets: Point[] = [];
+        for (let q = 0; q < state.gridWidth; q++) {
+            for (let r = 0; r < state.gridHeight; r++) {
+                const candidate: Point = { q, r, s: -q - r };
+                if (SpatialSystem.isWithinBounds(state, candidate)) {
+                    validTargets.push(candidate);
+                }
+            }
+        }
+        return validTargets;
     },
 };

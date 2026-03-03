@@ -33,25 +33,46 @@ type GenerateInitialStateFn = (
 ) => GameState;
 
 export const hydrateLoadedState = (loaded: GameState): GameState => {
+    const normalizeTileEntry = (tile: any) => ({
+        ...tile,
+        traits: new Set(tile?.traits || []),
+        effects: [...(tile?.effects || [])]
+    });
+
+    let hydratedTiles: GameState['tiles'];
     if (Array.isArray(loaded.tiles)) {
-        loaded.tiles = new Map(
-            loaded.tiles.map(([key, tile]: [string, any]) => [
-                key,
-                {
-                    ...tile,
-                    traits: new Set(tile.traits),
-                }
-            ])
+        hydratedTiles = new Map(
+            loaded.tiles.map(([key, tile]: [string, any]) => [key, normalizeTileEntry(tile)])
         );
+    } else if (loaded.tiles instanceof Map) {
+        hydratedTiles = new Map(
+            Array.from(loaded.tiles.entries()).map(([key, tile]) => [key, normalizeTileEntry(tile)])
+        );
+    } else {
+        hydratedTiles = new Map();
     }
-    loaded.player = ensurePlayerLoadoutIntegrity(ensureActorTrinity(loaded.player));
-    loaded.enemies = (loaded.enemies || []).map(ensureActorTrinity);
-    if (loaded.companions) {
-        loaded.companions = loaded.companions.map(ensureActorTrinity);
-    }
-    loaded.ruleset = resolveAcaeRuleset(loaded);
-    loaded.intentPreview = buildIntentPreview(loaded);
-    return loaded;
+
+    const hydratedPlayer = ensurePlayerLoadoutIntegrity(ensureActorTrinity(loaded.player));
+    const hydratedEnemies = (loaded.enemies || []).map(actor => ensureActorTrinity(actor));
+    const hydratedCompanions = loaded.companions?.map(actor => ensureActorTrinity(actor));
+
+    const hydratedState: GameState = {
+        ...loaded,
+        tiles: hydratedTiles,
+        player: hydratedPlayer,
+        enemies: hydratedEnemies,
+        companions: hydratedCompanions
+    };
+
+    const withRuleset: GameState = {
+        ...hydratedState,
+        ruleset: resolveAcaeRuleset(hydratedState)
+    };
+
+    return {
+        ...withRuleset,
+        intentPreview: buildIntentPreview(withRuleset)
+    };
 };
 
 export const resolveSelectUpgradeAction = (s: GameState, upgradeId: string): GameState => {

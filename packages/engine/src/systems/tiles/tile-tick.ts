@@ -1,4 +1,5 @@
 import type { GameState, AtomicEffect } from '../../types';
+import { pointToKey } from '../../hex';
 import { TileResolver } from './tile-effects';
 import { applyEffects } from '../effect-engine';
 
@@ -44,20 +45,17 @@ export function tickTileEffects(state: GameState): { state: GameState, messages:
         if (tileModified) {
             nextTiles.set(key, { ...tile, effects: effectsToKeep });
         }
+    }
 
-        // 2. Trigger onStay for actors on tiles
-        // We check all actors (player + enemies)
-        const actors = [curState.player, ...curState.enemies];
-        const pointToKey = (p: { q: number, r: number }) => `${p.q},${p.r}`;
-
-        for (const actor of actors) {
-            if (pointToKey(actor.position) === key) {
-                // Actor is on this tile, trigger stay hooks
-                const stayResult = TileResolver.processStay(actor, tile, curState);
-                allEffects.push(...stayResult.effects);
-                messages.push(...stayResult.messages);
-            }
-        }
+    // 2. Trigger onStay via actor-first tile lookup.
+    const actors = [curState.player, ...curState.enemies];
+    for (const actor of actors) {
+        const key = pointToKey(actor.position);
+        const tile = curState.tiles.get(key);
+        if (!tile) continue;
+        const stayResult = TileResolver.processStay(actor, tile, curState);
+        allEffects.push(...stayResult.effects);
+        messages.push(...stayResult.messages);
     }
 
     curState = { ...curState, tiles: nextTiles };

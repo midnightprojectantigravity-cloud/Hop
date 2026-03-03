@@ -11,7 +11,7 @@ import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../systems/visual/juice-ma
 import { TileResolver } from '../systems/tiles/tile-effects';
 import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 
-import { validateLineOfSight, validateAxialDirection, canLandOnHazard } from '../systems/validation';
+import { validateLineOfSight, validateAxialDirection } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
 
 
@@ -164,8 +164,6 @@ export const GRAPPLE_HOOK: SkillDefinition = {
     },
 
     getValidTargets: (state: GameState, origin: Point) => {
-        const shooter = getActorAt(state, origin) as Actor | undefined;
-        if (!shooter) return [];
         return SpatialSystem.getAxialTargets(state, origin, 4, {
             includeWalls: true,
             includeActors: true,
@@ -183,7 +181,7 @@ export const GRAPPLE_HOOK: SkillDefinition = {
                 : (targetActor ? t : undefined);
 
             if (!landingPos) return false;
-            return canLandOnHazard(state, shooter, landingPos);
+            return SpatialSystem.isWithinBounds(state, landingPos);
         });
     },
     upgrades: {},
