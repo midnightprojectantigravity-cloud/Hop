@@ -34,7 +34,7 @@ export const SWIFT_ROLL: SkillDefinition = {
             target,
             baseRange: 2
         });
-        const { range, movementModel } = movementPolicy;
+        const { range } = movementPolicy;
 
         if (!validateRange(attacker.position, target, range)) {
             return { effects, messages: ['Too far!'], consumesTurn: false };

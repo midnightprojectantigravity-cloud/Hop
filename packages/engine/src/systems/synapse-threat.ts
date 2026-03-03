@@ -13,8 +13,13 @@ import { SkillRegistry } from '../skillRegistry';
 import { computeRelativeThreatScores } from './threat-scoring';
 
 const DEAD_ZONE_Z_MIN = 0.25;
-const CONTESTED_HIGH_MIN = 1;
-const DEADLY_MIN = 2;
+// Heat bands tuned for 4-tier readability:
+// - 0 => safe (white)
+// - 1 => contested_low (orange)
+// - 2..4 => contested_high (red)
+// - 5+ => deadly (black)
+const CONTESTED_HIGH_MIN = 2;
+const DEADLY_MIN = 5;
 
 const byPoint = (a: Point, b: Point): number => {
     if (a.q !== b.q) return a.q - b.q;
@@ -30,6 +35,12 @@ const resolveTileBand = (heat: number): SynapseThreatBand => {
     if (heat < DEADLY_MIN) return 'contested_high';
     return 'deadly';
 };
+
+// Banding semantics:
+// - low-danger source contributes 1 threat unit
+// - high/extreme source contributes 2 threat units (deadly by itself)
+const resolveThreatUnit = (source: SynapseThreatSource): number =>
+    source.sigmaTier === 'high' || source.sigmaTier === 'extreme' ? 2 : 1;
 
 const resolveMaxSkillRange = (actor: Actor): number => {
     const ranges = (actor.activeSkills || []).map(skill => {
@@ -83,7 +94,7 @@ const resolveHostileSources = (
     }
 
     return unitScores
-        .filter(entry => entry.isHostileToPlayer && entry.zScore >= 0)
+        .filter(entry => entry.isHostileToPlayer)
         .map(entry => {
             const actor = actorById.get(entry.actorId);
             if (!actor) return null;
@@ -111,9 +122,8 @@ const computeTileThreat = (
     let heat = 0;
 
     for (const source of sources) {
-        if (source.emitterWeight <= 0) continue;
         if (hexDistance(source.position, tile) > source.actionReach) continue;
-        heat += source.emitterWeight;
+        heat += resolveThreatUnit(source);
         contributorIds.push(source.actorId);
     }
 
@@ -146,4 +156,3 @@ export const buildSynapseThreatPreview = (state: GameState): SynapseThreatPrevie
         }
     };
 };
-
