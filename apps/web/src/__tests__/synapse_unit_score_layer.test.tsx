@@ -21,7 +21,7 @@ describe('synapse unit score layer', () => {
           actorId: gameState.player.id,
           factionId: gameState.player.factionId,
           isHostileToPlayer: false,
-          ups: 48,
+          ups: 4800,
           statScore: 0,
           skillScore: 0,
           stateScore: 20,
@@ -32,7 +32,7 @@ describe('synapse unit score layer', () => {
           actorId: enemy.id,
           factionId: enemy.factionId,
           isHostileToPlayer: true,
-          ups: 55.5,
+          ups: 5550,
           statScore: 0,
           skillScore: 0,
           stateScore: 18,
@@ -56,8 +56,8 @@ describe('synapse unit score layer', () => {
           gameState={gameState}
           preview={preview}
           deltasByActorId={{
-            [gameState.player.id]: { upsDelta: 0.01, stateDelta: 0 },
-            [enemy.id]: { upsDelta: 0.8, stateDelta: 0 }
+            [gameState.player.id]: { upsDelta: 1, stateDelta: 0 },
+            [enemy.id]: { upsDelta: 80, stateDelta: 0 }
           }}
         />
       </svg>
@@ -69,4 +69,3 @@ describe('synapse unit score layer', () => {
     expect(markers).toHaveLength(1);
   });
 });
-

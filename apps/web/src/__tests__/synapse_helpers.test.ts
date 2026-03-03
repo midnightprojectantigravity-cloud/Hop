@@ -32,16 +32,16 @@ describe('synapse helpers', () => {
 
   it('computes UPS and State deltas by actor id', () => {
     const previous = buildSynapseScoreSnapshot([
-      makeEntry('player', 50, 20),
-      makeEntry('enemy-1', 61, 30)
+      makeEntry('player', 5000, 20),
+      makeEntry('enemy-1', 6100, 30)
     ]);
     const current = buildSynapseScoreSnapshot([
-      makeEntry('player', 50.1, 19),
-      makeEntry('enemy-1', 60.5, 28.5)
+      makeEntry('player', 5010, 19),
+      makeEntry('enemy-1', 6050, 28.5)
     ]);
     const deltas = buildSynapseDeltaMap(previous, current);
-    expect(deltas.player).toEqual({ upsDelta: 0.1, stateDelta: -1 });
-    expect(deltas['enemy-1']).toEqual({ upsDelta: -0.5, stateDelta: -1.5 });
+    expect(deltas.player).toEqual({ upsDelta: 10, stateDelta: -1 });
+    expect(deltas['enemy-1']).toEqual({ upsDelta: -50, stateDelta: -1.5 });
   });
 
   it('applies delta marker threshold directions', () => {
@@ -50,4 +50,3 @@ describe('synapse helpers', () => {
     expect(resolveSynapseDeltaDirection(DELTA_VISUAL_THRESHOLD - 0.001)).toBe('none');
   });
 });
-

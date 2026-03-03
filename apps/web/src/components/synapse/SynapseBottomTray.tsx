@@ -1,7 +1,7 @@
 import React from 'react';
 import { pointToKey, type GameState, type Point, type SynapseThreatPreview } from '@hop/engine';
 import { getUiActorInformation, type UiInformationRevealMode } from '../../app/information-reveal';
-import type { SynapseDeltaEntry, SynapseSelection } from '../../app/synapse';
+import { DELTA_VISUAL_THRESHOLD, type SynapseDeltaEntry, type SynapseSelection } from '../../app/synapse';
 
 interface SynapseBottomTrayProps {
     gameState: GameState;
@@ -14,19 +14,25 @@ interface SynapseBottomTrayProps {
 }
 
 const round1 = (value: number): string => Number(value.toFixed(1)).toString();
-
-const formatSigned = (value: number): string => `${value >= 0 ? '+' : ''}${round1(value)}`;
+const formatUPS = (value: number): string => Math.round(value).toString();
+const formatSignedUpsDelta = (value: number): string => `${value >= 0 ? '+' : ''}${Math.round(value).toString()}`;
+const formatSignedStateDelta = (value: number): string => `${value >= 0 ? '+' : ''}${round1(value)}`;
 
 const resolveActorById = (state: GameState, actorId: string) => {
     if (state.player.id === actorId) return state.player;
     return state.enemies.find(enemy => enemy.id === actorId) || state.companions?.find(companion => companion.id === actorId);
 };
 
-const DeltaBadge: React.FC<{ value: number; label: string }> = ({ value, label }) => {
-    if (Math.abs(value) < 0.05) {
+const DeltaBadge: React.FC<{ value: number; label: string; threshold?: number; formatter?: (value: number) => string }> = ({
+    value,
+    label,
+    threshold = 0.05,
+    formatter = formatSignedStateDelta
+}) => {
+    if (Math.abs(value) < threshold) {
         return (
             <span className="text-[10px] font-bold uppercase tracking-wide text-white/35">
-                {label} +0.0
+                {label} +0
             </span>
         );
     }
@@ -35,7 +41,7 @@ const DeltaBadge: React.FC<{ value: number; label: string }> = ({ value, label }
     const arrow = isUp ? '^' : 'v';
     return (
         <span className={`text-[10px] font-bold uppercase tracking-wide ${tone}`}>
-            {label} {arrow} {formatSigned(value)}
+            {label} {arrow} {formatter(value)}
         </span>
     );
 };
@@ -97,7 +103,7 @@ const TileModeTray: React.FC<{
                                 <span className="font-black text-amber-200">z {round1(source.zScore)}</span>
                             </div>
                             <div className="flex items-center justify-between text-[10px] mt-0.5 text-white/55">
-                                <span>UPS {round1(source.ups)}</span>
+                                <span>UPS {formatUPS(source.ups)}</span>
                                 <span>{source.sigmaTier.toUpperCase()}</span>
                             </div>
                         </button>
@@ -135,7 +141,7 @@ const EntityModeTray: React.FC<{
             <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5">
                     <div className="text-white/55 text-[10px] uppercase font-bold">UPS</div>
-                    <div className="font-black text-white">{round1(score?.ups || 0)}</div>
+                    <div className="font-black text-white">{formatUPS(score?.ups || 0)}</div>
                 </div>
                 <div className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5">
                     <div className="text-white/55 text-[10px] uppercase font-bold">Sigma</div>
@@ -143,7 +149,7 @@ const EntityModeTray: React.FC<{
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                <DeltaBadge value={delta.upsDelta} label="UPS D" />
+                <DeltaBadge value={delta.upsDelta} label="UPS D" threshold={DELTA_VISUAL_THRESHOLD} formatter={formatSignedUpsDelta} />
                 <DeltaBadge value={delta.stateDelta} label="State D" />
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">

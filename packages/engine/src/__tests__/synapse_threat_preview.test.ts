@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { generateInitialState } from '../logic';
-import type { Actor, GameState } from '../types';
-import { buildSynapseThreatPreview } from '../systems/synapse-threat';
+import type { Actor, GameState, Point } from '../types';
+import { buildSynapseThreatPreview, computeActionReach } from '../systems/synapse-threat';
 import { computeRelativeThreatScores, computeUnifiedPowerScoreBreakdown } from '../systems/threat-scoring';
 import { buildIntentPreview } from '../systems/telegraph-projection';
-import { getNeighbors } from '../hex';
+import { getHexLine, getNeighbors, hexDistance, pointToKey } from '../hex';
+import { validateAxialDirection } from '../systems/validation';
+import { createActiveSkill } from '../skillRegistry';
 
 const withSingleEnemyState = (seed: string): GameState => {
     const state = generateInitialState(1, seed);
@@ -22,6 +24,39 @@ const withSingleEnemyState = (seed: string): GameState => {
     };
 };
 
+const findThreatTileForSource = (
+    preview: ReturnType<typeof buildSynapseThreatPreview>,
+    sourceActorId: string
+) => preview.tiles.find(tile => tile.sourceActorIds.includes(sourceActorId));
+
+const buildMeleeEnemy = (
+    template: Actor,
+    id: string,
+    position: Point,
+    overrides: Partial<Actor> = {}
+): Actor => ({
+    ...template,
+    id,
+    type: 'enemy',
+    factionId: 'enemy',
+    position,
+    activeSkills: [createActiveSkill('BASIC_ATTACK') as any],
+    ...overrides
+});
+
+const pickCenterTile = (tiles: Array<{ tile: Point }>): Point => {
+    const tileByKey = new Set(tiles.map(entry => pointToKey(entry.tile)));
+    const ranked = tiles
+        .map(entry => ({
+            tile: entry.tile,
+            openNeighbors: getNeighbors(entry.tile)
+                .filter(neighbor => tileByKey.has(pointToKey(neighbor)))
+                .length
+        }))
+        .sort((a, b) => b.openNeighbors - a.openNeighbors);
+    return ranked[0]?.tile || tiles[0]?.tile;
+};
+
 describe('synapse threat preview', () => {
     it('includes synapse preview on fresh initial state', () => {
         const state = generateInitialState(1, 'synapse-initial-seed');
@@ -37,6 +72,7 @@ describe('synapse threat preview', () => {
         const second = computeUnifiedPowerScoreBreakdown(state.player);
         expect(first).toEqual(second);
         expect(first.ups).toBeGreaterThan(0);
+        expect(Number.isInteger(first.ups)).toBe(true);
     });
 
     it('handles sparse skill edge cases (0/1/2 skills)', () => {
@@ -65,7 +101,7 @@ describe('synapse threat preview', () => {
     it('applies sigma floor and tier boundaries deterministically', () => {
         const state = withSingleEnemyState('synapse-sigma-seed');
         const relative = computeRelativeThreatScores(state);
-        expect(relative.sigmaRef).toBeGreaterThanOrEqual(6);
+        expect(relative.sigmaRef).toBeGreaterThanOrEqual(600);
 
         const playerEntry = relative.entries.find(entry => entry.actorId === state.player.id);
         expect(playerEntry?.zScore).toBe(0);
@@ -79,13 +115,49 @@ describe('synapse threat preview', () => {
         expect(first).toEqual(second);
     });
 
-    it('suppresses dead-zone emitters below z<0.25', () => {
+    it('uses attack range only for danger reach', () => {
+        const state = generateInitialState(1, 'synapse-reach-seed');
+        const base = state.player.activeSkills[0];
+        const actor: Actor = {
+            ...state.player,
+            speed: 2,
+            activeSkills: [
+                {
+                    ...base,
+                    id: 'BASIC_MOVE',
+                    range: 2,
+                    slot: 'utility',
+                },
+                {
+                    ...base,
+                    id: 'TEST_ATTACK_RANGE_1' as any,
+                    range: 1,
+                    slot: 'offensive',
+                }
+            ]
+        };
+        expect(computeActionReach(actor)).toBe(1);
+    });
+
+    it('treats sprinter-style basic attack reach as 1', () => {
+        const state = generateInitialState(1, 'synapse-sprinter-reach-seed');
+        const actor: Actor = {
+            ...state.player,
+            speed: 2,
+            activeSkills: [
+                createActiveSkill('BASIC_MOVE') as any,
+                createActiveSkill('BASIC_ATTACK') as any
+            ]
+        };
+        expect(computeActionReach(actor)).toBe(1);
+    });
+
+    it('suppresses dead-zone emitter weight below z<0.25', () => {
         const state = withSingleEnemyState('synapse-deadzone-seed');
         const enemy = state.enemies[0];
         state.enemies = [
             {
                 ...enemy,
-                // Small state increase keeps z positive but below dead-zone threshold.
                 temporaryArmor: (enemy.temporaryArmor || 0) + 1,
             }
         ];
@@ -96,25 +168,17 @@ describe('synapse threat preview', () => {
         expect(source!.zScore).toBeGreaterThanOrEqual(0);
         expect(source!.zScore).toBeLessThan(0.25);
         expect(source!.emitterWeight).toBe(0);
-        const playerTile = preview.tiles.find(tile =>
-            tile.tile.q === state.player.position.q
-            && tile.tile.r === state.player.position.r
-            && tile.tile.s === state.player.position.s
-        );
-        expect(playerTile?.band).toBe('contested_low');
-        expect(playerTile?.heat).toBe(1);
+        const threatTile = findThreatTileForSource(preview, 'enemy-a');
+        expect(threatTile?.band).toBe('contested_low');
+        expect(threatTile?.heat).toBe(1);
     });
 
     it('marks one low threat source as low danger', () => {
         const state = withSingleEnemyState('synapse-one-low-seed');
         const preview = buildSynapseThreatPreview(state);
-        const playerTile = preview.tiles.find(tile =>
-            tile.tile.q === state.player.position.q
-            && tile.tile.r === state.player.position.r
-            && tile.tile.s === state.player.position.s
-        );
-        expect(playerTile?.band).toBe('contested_low');
-        expect(playerTile?.heat).toBe(1);
+        const threatTile = findThreatTileForSource(preview, 'enemy-a');
+        expect(threatTile?.band).toBe('contested_low');
+        expect(threatTile?.heat).toBe(1);
     });
 
     it('marks a single high source as high danger', () => {
@@ -125,84 +189,151 @@ describe('synapse threat preview', () => {
         }];
 
         const preview = buildSynapseThreatPreview(state);
-        const playerTile = preview.tiles.find(tile =>
-            tile.tile.q === state.player.position.q
-            && tile.tile.r === state.player.position.r
-            && tile.tile.s === state.player.position.s
-        );
-        expect(playerTile?.band).toBe('contested_high');
-        expect(playerTile?.heat).toBe(2);
+        const threatTile = findThreatTileForSource(preview, 'enemy-a');
+        expect(threatTile?.band).toBe('contested_high');
+        expect(threatTile?.heat).toBe(2);
     });
 
     it('marks multiple low sources as high danger', () => {
         const state = generateInitialState(1, 'synapse-multi-low-seed');
-        const neighbors = getNeighbors(state.player.position);
-        const enemyA: Actor = {
-            ...state.player,
-            id: 'enemy-a',
-            type: 'enemy',
-            factionId: 'enemy',
-            position: neighbors[0] || { q: state.player.position.q + 1, r: state.player.position.r, s: state.player.position.s - 1 },
-        };
-        const enemyB: Actor = {
-            ...state.player,
-            id: 'enemy-b',
-            type: 'enemy',
-            factionId: 'enemy',
-            position: neighbors[1] || { q: state.player.position.q, r: state.player.position.r + 1, s: state.player.position.s - 1 },
-        };
+        const baseline = buildSynapseThreatPreview({
+            ...state,
+            enemies: [],
+            companions: []
+        });
+        const center = pickCenterTile(baseline.tiles);
+        const candidateNeighbors = getNeighbors(center)
+            .filter(neighbor => baseline.tiles.some(tile => pointToKey(tile.tile) === pointToKey(neighbor)));
+        const enemyA = buildMeleeEnemy(state.player, 'enemy-a', candidateNeighbors[0] || { q: center.q + 1, r: center.r, s: center.s - 1 });
+        const enemyB = buildMeleeEnemy(state.player, 'enemy-b', candidateNeighbors[1] || { q: center.q, r: center.r + 1, s: center.s - 1 });
         const preview = buildSynapseThreatPreview({
             ...state,
             enemies: [enemyA, enemyB],
             companions: []
         });
-        const playerTile = preview.tiles.find(tile =>
-            tile.tile.q === state.player.position.q
-            && tile.tile.r === state.player.position.r
-            && tile.tile.s === state.player.position.s
-        );
-        expect(playerTile?.band).toBe('contested_high');
-        expect(playerTile?.heat).toBe(2);
+        const centerTile = preview.tiles.find(tile => pointToKey(tile.tile) === pointToKey(center));
+        expect(centerTile?.heat).toBe(2);
+        expect(centerTile?.band).toBe('contested_high');
+        const highTile = preview.tiles.find(tile => tile.band === 'contested_high' && tile.heat >= 2);
+        expect(highTile).toBeDefined();
     });
 
     it('marks stacked high pressure as deadly', () => {
         const state = generateInitialState(1, 'synapse-stacked-high-seed');
-        const neighbors = getNeighbors(state.player.position);
-        const baseEnemy: Actor = {
-            ...state.player,
-            type: 'enemy',
-            factionId: 'enemy',
-            temporaryArmor: 40
-        };
-        const enemyA: Actor = {
-            ...baseEnemy,
-            id: 'enemy-a',
-            position: neighbors[0] || { q: state.player.position.q + 1, r: state.player.position.r, s: state.player.position.s - 1 },
-        };
-        const enemyB: Actor = {
-            ...baseEnemy,
-            id: 'enemy-b',
-            position: neighbors[1] || { q: state.player.position.q, r: state.player.position.r + 1, s: state.player.position.s - 1 },
-        };
-        const enemyC: Actor = {
-            ...state.player,
-            id: 'enemy-c',
-            type: 'enemy',
-            factionId: 'enemy',
-            position: neighbors[2] || { q: state.player.position.q - 1, r: state.player.position.r + 1, s: state.player.position.s },
-        };
+        const baseline = buildSynapseThreatPreview({
+            ...state,
+            enemies: [],
+            companions: []
+        });
+        const center = pickCenterTile(baseline.tiles);
+        const neighbors = getNeighbors(center)
+            .filter(neighbor => baseline.tiles.some(tile => pointToKey(tile.tile) === pointToKey(neighbor)));
+        const enemyA = buildMeleeEnemy(
+            state.player,
+            'enemy-a',
+            neighbors[0] || { q: center.q + 1, r: center.r, s: center.s - 1 },
+            { temporaryArmor: 40 }
+        );
+        const enemyB = buildMeleeEnemy(
+            state.player,
+            'enemy-b',
+            neighbors[1] || { q: center.q, r: center.r + 1, s: center.s - 1 },
+            { temporaryArmor: 40 }
+        );
+        const enemyC = buildMeleeEnemy(
+            state.player,
+            'enemy-c',
+            neighbors[2] || { q: center.q - 1, r: center.r + 1, s: center.s }
+        );
         const preview = buildSynapseThreatPreview({
             ...state,
             enemies: [enemyA, enemyB, enemyC],
             companions: []
         });
-        const playerTile = preview.tiles.find(tile =>
-            tile.tile.q === state.player.position.q
-            && tile.tile.r === state.player.position.r
-            && tile.tile.s === state.player.position.s
-        );
-        expect(playerTile?.band).toBe('deadly');
-        expect(playerTile?.heat).toBe(5);
+        const centerTile = preview.tiles.find(tile => pointToKey(tile.tile) === pointToKey(center));
+        expect(centerTile?.heat).toBe(5);
+        expect(centerTile?.band).toBe('deadly');
+        const deadlyTile = preview.tiles.find(tile => tile.band === 'deadly' && tile.heat === 5);
+        expect(deadlyTile).toBeDefined();
+    });
+
+    it('keeps occupied tiles out of synapse heatmap overlay', () => {
+        const state = generateInitialState(1, 'synapse-occupied-filter-seed');
+        const preview = buildSynapseThreatPreview(state);
+        const occupiedKeys = new Set<string>([
+            pointToKey(state.player.position),
+            ...state.enemies.filter(enemy => enemy.hp > 0).map(enemy => pointToKey(enemy.position)),
+            ...(state.companions || []).filter(companion => companion.hp > 0).map(companion => pointToKey(companion.position))
+        ]);
+        for (const tile of preview.tiles) {
+            expect(occupiedKeys.has(pointToKey(tile.tile))).toBe(false);
+        }
+    });
+
+    it('projects archer threat as axial only and outside range-1', () => {
+        const state = generateInitialState(1, 'synapse-archer-shape-seed');
+        const archerPosition = getNeighbors(state.player.position)[0] || { q: state.player.position.q + 1, r: state.player.position.r, s: state.player.position.s - 1 };
+        const archer: Actor = {
+            ...state.player,
+            id: 'enemy-archer',
+            type: 'enemy',
+            factionId: 'enemy',
+            position: archerPosition,
+            activeSkills: [
+                createActiveSkill('BASIC_MOVE') as any,
+                createActiveSkill('ARCHER_SHOT') as any
+            ]
+        };
+        const preview = buildSynapseThreatPreview({
+            ...state,
+            enemies: [archer],
+            companions: []
+        });
+        const threatened = preview.tiles.filter(tile => tile.sourceActorIds.includes('enemy-archer'));
+        expect(threatened.length).toBeGreaterThan(0);
+        for (const tile of threatened) {
+            const distance = hexDistance(archer.position, tile.tile);
+            expect(distance).toBeGreaterThanOrEqual(2);
+            expect(distance).toBeLessThanOrEqual(4);
+            expect(validateAxialDirection(archer.position, tile.tile).isAxial).toBe(true);
+        }
+    });
+
+    it('respects line of sight for archer threat projection', () => {
+        const state = generateInitialState(1, 'synapse-archer-los-seed');
+        const archerPosition = getNeighbors(state.player.position)[0] || { q: state.player.position.q + 1, r: state.player.position.r, s: state.player.position.s - 1 };
+        const archer: Actor = {
+            ...state.player,
+            id: 'enemy-archer',
+            type: 'enemy',
+            factionId: 'enemy',
+            position: archerPosition,
+            activeSkills: [
+                createActiveSkill('BASIC_MOVE') as any,
+                createActiveSkill('ARCHER_SHOT') as any
+            ]
+        };
+        const withArcher: GameState = {
+            ...state,
+            enemies: [archer],
+            companions: []
+        };
+        const clearPreview = buildSynapseThreatPreview(withArcher);
+        const openTile = clearPreview.tiles.find(tile => tile.sourceActorIds.includes('enemy-archer'));
+        expect(openTile).toBeDefined();
+        const line = getHexLine(archer.position, openTile!.tile);
+        expect(line.length).toBeGreaterThan(2);
+        const blockedPoint = line[1];
+        const blockedPointKey = pointToKey(blockedPoint);
+        const blockTile = withArcher.tiles.get(blockedPointKey);
+        expect(blockTile).toBeDefined();
+        withArcher.tiles.set(blockedPointKey, {
+            ...blockTile!,
+            traits: new Set([...blockTile!.traits, 'BLOCKS_LOS'])
+        });
+        const blockedPreview = buildSynapseThreatPreview(withArcher);
+        const blockedTarget = blockedPreview.tiles.find(tile => pointToKey(tile.tile) === pointToKey(openTile!.tile));
+        expect(blockedTarget?.sourceActorIds.includes('enemy-archer')).toBe(false);
     });
 
     it('keeps sources/tiles/sourceActorIds stably sorted', () => {

@@ -10,10 +10,10 @@ interface SynapseUnitScoreLayerProps {
     deltasByActorId: Record<string, SynapseDeltaEntry>;
 }
 
-const round1 = (value: number): string => Number(value.toFixed(1)).toString();
+const formatUPS = (value: number): string => Math.round(value).toString();
 
 const formatSigned = (value: number): string =>
-    `${value >= 0 ? '+' : ''}${round1(value)}`;
+    `${value >= 0 ? '+' : ''}${Math.round(value).toString()}`;
 
 const resolveTierTone = (tier: UnifiedPowerScoreEntry['sigmaTier']): {
     border: string;
@@ -112,7 +112,7 @@ export const SynapseUnitScoreLayer: React.FC<SynapseUnitScoreLayerProps> = ({
                             fill={tone.text}
                             style={{ letterSpacing: '0.02em' }}
                         >
-                            {`UPS ${round1(ups)}`}
+                            {`UPS ${formatUPS(ups)}`}
                         </text>
                         {deltaDirection !== 'none' && (
                             <text

@@ -1,9 +1,12 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { getHexLine, hexEquals, hexDirection } from '../hex';
+import { getHexLine, hexDistance, hexEquals, hexDirection } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange, validateAxialDirection, hasClearLineToActor } from '../systems/validation';
 import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+
+const ARCHER_MIN_RANGE = 2;
+const ARCHER_MAX_RANGE = 4;
 
 /**
  * ARCHER_SHOT
@@ -27,7 +30,11 @@ export const ARCHER_SHOT: SkillDefinition = {
 
         if (!target) return { effects, messages, consumesTurn: false };
 
-        if (!validateRange(shooter.position, target, 4)) {
+        if (!validateRange(shooter.position, target, ARCHER_MAX_RANGE)) {
+            return { effects, messages: ['Out of range!'], consumesTurn: false };
+        }
+
+        if (hexDistance(shooter.position, target) < ARCHER_MIN_RANGE) {
             return { effects, messages: ['Out of range!'], consumesTurn: false };
         }
 
@@ -156,7 +163,8 @@ export const ARCHER_SHOT: SkillDefinition = {
             .filter(a =>
                 a.id !== shooter.id
                 && a.factionId !== shooter.factionId
-                && validateRange(origin, a.position, 4)
+                && validateRange(origin, a.position, ARCHER_MAX_RANGE)
+                && hexDistance(origin, a.position) >= ARCHER_MIN_RANGE
                 && validateAxialDirection(origin, a.position).isAxial
                 && hasClearLineToActor(state, origin, a.position, a.id, shooter.id, shooter)
             )

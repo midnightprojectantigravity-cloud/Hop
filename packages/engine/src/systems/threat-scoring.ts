@@ -5,6 +5,8 @@ import { extractTrinityStats } from './combat/combat-calculator';
 import { isStunned } from './status';
 
 const round4 = (value: number): number => Number(value.toFixed(4));
+const UPS_SCALE = 100;
+const SIGMA_FLOOR = 6 * UPS_SCALE;
 
 const clamp = (value: number, min: number, max: number): number =>
     Math.max(min, Math.min(max, value));
@@ -94,7 +96,7 @@ export const computeUnifiedPowerScoreBreakdown = (actor: Actor): UnifiedPowerSco
     const statScore = computeStatScore(actor);
     const skillScore = computeSkillScore(actor);
     const stateScore = computeStateScore(actor);
-    const ups = round4((0.45 * statScore) + (0.40 * skillScore) + (0.15 * stateScore));
+    const ups = Math.round(((0.45 * statScore) + (0.40 * skillScore) + (0.15 * stateScore)) * UPS_SCALE);
     return {
         ups,
         statScore,
@@ -129,7 +131,7 @@ export const computeRelativeThreatScores = (state: GameState): RelativeThreatBre
     const hostileEnemyScores = scoredActors
         .filter(entry => entry.actor.type === 'enemy' && entry.actor.factionId !== state.player.factionId)
         .map(entry => entry.breakdown.ups);
-    const sigmaRef = round4(Math.max(6, populationStdDev([playerScore, ...hostileEnemyScores])));
+    const sigmaRef = round4(Math.max(SIGMA_FLOOR, populationStdDev([playerScore, ...hostileEnemyScores])));
 
     const entries: UnifiedPowerScoreEntry[] = scoredActors
         .map(entry => {
@@ -158,4 +160,3 @@ export const computeRelativeThreatScores = (state: GameState): RelativeThreatBre
         entries
     };
 };
-

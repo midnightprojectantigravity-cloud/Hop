@@ -2,6 +2,7 @@ import type {
     Actor,
     GameState,
     Point,
+    Skill,
     SynapseThreatBand,
     SynapseThreatPreview,
     SynapseThreatSource,
@@ -20,6 +21,7 @@ const DEAD_ZONE_Z_MIN = 0.25;
 // - 5+ => deadly (black)
 const CONTESTED_HIGH_MIN = 2;
 const DEADLY_MIN = 5;
+const SYNAPSE_GHOST_PREFIX = '__synapse_probe__';
 
 const byPoint = (a: Point, b: Point): number => {
     if (a.q !== b.q) return a.q - b.q;
@@ -42,20 +44,55 @@ const resolveTileBand = (heat: number): SynapseThreatBand => {
 const resolveThreatUnit = (source: SynapseThreatSource): number =>
     source.sigmaTier === 'high' || source.sigmaTier === 'extreme' ? 2 : 1;
 
+const resolveSkillDefinition = (skill: Skill) => SkillRegistry.get(skill.id);
+
+const resolveSkillSlot = (skill: Skill): string => {
+    const definition = resolveSkillDefinition(skill);
+    return definition?.slot || skill.slot || 'utility';
+};
+
+const isThreatSkill = (skill: Skill): boolean => {
+    if (skill.id === 'BASIC_MOVE') return false;
+    if (skill.id === 'BASIC_ATTACK') return true;
+    const definition = resolveSkillDefinition(skill);
+    if (!definition) {
+        return resolveSkillSlot(skill) !== 'passive';
+    }
+    const intentTags = definition.intentProfile?.intentTags || [];
+    if (intentTags.includes('damage') || intentTags.includes('hazard')) return true;
+    return resolveSkillSlot(skill) !== 'passive';
+};
+
+const resolveSkillRange = (skill: Skill): number => {
+    const definition = resolveSkillDefinition(skill);
+    if (definition) return Math.max(0, Number(definition.baseVariables.range || 0));
+    return Math.max(0, Number(skill.range || 0));
+};
+
 const resolveMaxSkillRange = (actor: Actor): number => {
-    const ranges = (actor.activeSkills || []).map(skill => {
-        const def = SkillRegistry.get(skill.id);
-        const slot = def?.slot || skill.slot;
-        if (slot === 'passive') return 0;
-        if (skill.id === 'BASIC_MOVE') return 0;
-        if (def) return Math.max(0, Number(def.baseVariables.range || 0));
-        return Math.max(0, Number(skill.range || 0));
-    });
+    const ranges = (actor.activeSkills || [])
+        .filter(isThreatSkill)
+        .map(resolveSkillRange);
     if (ranges.length === 0) return 0;
     return Math.max(...ranges);
 };
 
+const buildOccupiedTileKeySet = (state: GameState): Set<string> => {
+    const occupied = new Set<string>();
+    occupied.add(pointToKey(state.player.position));
+    for (const enemy of state.enemies) {
+        if (enemy.hp <= 0) continue;
+        occupied.add(pointToKey(enemy.position));
+    }
+    for (const companion of state.companions || []) {
+        if (companion.hp <= 0) continue;
+        occupied.add(pointToKey(companion.position));
+    }
+    return occupied;
+};
+
 const buildPlayableCells = (state: GameState): Point[] => {
+    const occupiedTileKeys = buildOccupiedTileKeySet(state);
     const roomHexes = state.rooms?.[0]?.hexes || [];
     const raw = roomHexes.length > 0
         ? roomHexes
@@ -72,15 +109,91 @@ const buildPlayableCells = (state: GameState): Point[] => {
     const deduped = new Map<string, Point>();
     for (const tile of raw) {
         if (!isTileInDiamond(tile.q, tile.r, state.gridWidth, state.gridHeight)) continue;
-        deduped.set(pointToKey(tile), tile);
+        const key = pointToKey(tile);
+        if (occupiedTileKeys.has(key)) continue;
+        deduped.set(key, tile);
     }
     return [...deduped.values()].sort(byPoint);
 };
 
 export const computeActionReach = (actor: Actor): number => {
-    const moveReach = Math.max(1, Number(actor.speed || 1));
+    // Synapse danger projects damage threat only. If a unit can either move or attack,
+    // movement does not extend immediate damage range for this overlay.
     const maxSkillRange = resolveMaxSkillRange(actor);
-    return moveReach + maxSkillRange;
+    return Math.max(0, maxSkillRange);
+};
+
+const buildSynapseProbeState = (
+    state: GameState,
+    source: Actor,
+    tile: Point
+): GameState => {
+    const ghostId = `${SYNAPSE_GHOST_PREFIX}:${source.id}:${tile.q},${tile.r},${tile.s}`;
+    const hostileFactionId = source.factionId === state.player.factionId ? 'enemy' : state.player.factionId;
+    const ghost: Actor = {
+        ...state.player,
+        id: ghostId,
+        type: source.type === 'enemy' ? 'player' : 'enemy',
+        subtype: 'synapse_probe',
+        factionId: hostileFactionId,
+        position: tile,
+        hp: 1,
+        maxHp: 1,
+        speed: 1,
+        activeSkills: [],
+        statusEffects: [],
+        temporaryArmor: 0
+    };
+
+    return {
+        ...state,
+        enemies: [...state.enemies, ghost]
+    };
+};
+
+const collectThreatenedTileKeys = (
+    state: GameState,
+    actor: Actor,
+    playableCells: Point[]
+): Set<string> => {
+    const threatenedKeys = new Set<string>();
+    const playableByKey = new Map<string, Point>();
+    for (const cell of playableCells) {
+        playableByKey.set(pointToKey(cell), cell);
+    }
+
+    for (const skill of actor.activeSkills || []) {
+        if (!isThreatSkill(skill)) continue;
+        const definition = resolveSkillDefinition(skill);
+        if (definition?.getValidTargets) {
+            const directTargets = definition.getValidTargets(state, actor.position) || [];
+            for (const directTarget of directTargets) {
+                const key = pointToKey(directTarget);
+                if (playableByKey.has(key)) threatenedKeys.add(key);
+            }
+
+            for (const cell of playableCells) {
+                const cellKey = pointToKey(cell);
+                if (threatenedKeys.has(cellKey)) continue;
+                const probeState = buildSynapseProbeState(state, actor, cell);
+                const probeTargets = definition.getValidTargets(probeState, actor.position) || [];
+                if (probeTargets.some(target => pointToKey(target) === cellKey)) {
+                    threatenedKeys.add(cellKey);
+                }
+            }
+            continue;
+        }
+
+        const range = resolveSkillRange(skill);
+        if (range <= 0) continue;
+        for (const cell of playableCells) {
+            const distance = hexDistance(actor.position, cell);
+            if (distance < 1 || distance > range) continue;
+            threatenedKeys.add(pointToKey(cell));
+        }
+    }
+
+    return threatenedKeys;
 };
 
 const resolveHostileSources = (
@@ -116,13 +229,16 @@ const resolveHostileSources = (
 
 const computeTileThreat = (
     tile: Point,
-    sources: SynapseThreatSource[]
+    sources: SynapseThreatSource[],
+    threatenedTilesBySourceId: Map<string, Set<string>>
 ): SynapseThreatTile => {
     const contributorIds: string[] = [];
     let heat = 0;
+    const tileKey = pointToKey(tile);
 
     for (const source of sources) {
-        if (hexDistance(source.position, tile) > source.actionReach) continue;
+        const threatenedTiles = threatenedTilesBySourceId.get(source.actorId);
+        if (!threatenedTiles?.has(tileKey)) continue;
         heat += resolveThreatUnit(source);
         contributorIds.push(source.actorId);
     }
@@ -140,7 +256,24 @@ export const buildSynapseThreatPreview = (state: GameState): SynapseThreatPrevie
     const relative = computeRelativeThreatScores(state);
     const cells = buildPlayableCells(state);
     const sources = resolveHostileSources(state, relative.entries);
-    const tiles = cells.map(tile => computeTileThreat(tile, sources));
+    const actorById = new Map<string, Actor>();
+    for (const enemy of state.enemies) {
+        if (enemy.hp <= 0) continue;
+        actorById.set(enemy.id, enemy);
+    }
+    const threatenedTilesBySourceId = new Map<string, Set<string>>();
+    for (const source of sources) {
+        const actor = actorById.get(source.actorId);
+        if (!actor) {
+            threatenedTilesBySourceId.set(source.actorId, new Set<string>());
+            continue;
+        }
+        threatenedTilesBySourceId.set(
+            source.actorId,
+            collectThreatenedTileKeys(state, actor, cells)
+        );
+    }
+    const tiles = cells.map(tile => computeTileThreat(tile, sources, threatenedTilesBySourceId));
 
     return {
         sourceTurn: state.turnNumber,

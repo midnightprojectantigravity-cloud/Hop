@@ -15,7 +15,7 @@ export type SynapsePulse = {
 } | null;
 
 export const EMPTY_SYNAPSE_SELECTION: SynapseSelection = { mode: 'empty' };
-export const DELTA_VISUAL_THRESHOLD = 0.05;
+export const DELTA_VISUAL_THRESHOLD = 5;
 export const SYNAPSE_PULSE_DURATION_MS = 900;
 
 export interface SynapseDeltaEntry {
@@ -56,7 +56,7 @@ export const buildSynapseDeltaMap = (
         const cur = current[actorId];
         const prev = previous?.[actorId];
         deltas[actorId] = {
-            upsDelta: prev ? Number((cur.ups - prev.ups).toFixed(4)) : 0,
+            upsDelta: prev ? (cur.ups - prev.ups) : 0,
             stateDelta: prev ? Number((cur.stateScore - prev.stateScore).toFixed(4)) : 0
         };
     }

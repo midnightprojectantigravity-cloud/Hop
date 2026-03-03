@@ -22,7 +22,7 @@ describe('synapse bottom tray', () => {
           actorId: gameState.player.id,
           factionId: gameState.player.factionId,
           isHostileToPlayer: false,
-          ups: 52,
+          ups: 5200,
           statScore: 0,
           skillScore: 0,
           stateScore: 0,
@@ -33,7 +33,7 @@ describe('synapse bottom tray', () => {
           actorId: enemy.id,
           factionId: enemy.factionId,
           isHostileToPlayer: true,
-          ups: 64.2,
+          ups: 6420,
           statScore: 0,
           skillScore: 0,
           stateScore: 0,
@@ -46,7 +46,7 @@ describe('synapse bottom tray', () => {
           actorId: enemy.id,
           position: enemy.position,
           actionReach: 4,
-          ups: 64.2,
+          ups: 6420,
           zScore: 1.4,
           sigmaTier: 'high',
           emitterWeight: 1.4
@@ -81,7 +81,7 @@ describe('synapse bottom tray', () => {
 
     expect(html).toContain('Tile Intel');
     expect(html).toContain('Threat Sources');
-    expect(html).toContain('UPS 64.2');
+    expect(html).toContain('UPS 6420');
     expect(html).toContain('z 1.4');
   });
 
@@ -98,7 +98,7 @@ describe('synapse bottom tray', () => {
           actorId,
           factionId: gameState.player.factionId,
           isHostileToPlayer: false,
-          ups: 50,
+          ups: 5000,
           statScore: 0,
           skillScore: 0,
           stateScore: 25,
@@ -121,7 +121,7 @@ describe('synapse bottom tray', () => {
         synapsePreview={preview}
         synapseSelection={{ mode: 'entity', actorId }}
         intelMode="force_reveal"
-        deltasByActorId={{ [actorId]: { upsDelta: -0.7, stateDelta: -10 } }}
+        deltasByActorId={{ [actorId]: { upsDelta: -70, stateDelta: -10 } }}
         onSelectSource={() => { }}
         onClearSelection={() => { }}
       />
@@ -130,7 +130,7 @@ describe('synapse bottom tray', () => {
     expect(html).toContain('Entity Intel');
     expect(html).toContain('UPS');
     expect(html).toContain('Sigma');
-    expect(html).toContain('UPS D v -0.7');
+    expect(html).toContain('UPS D v -70');
     expect(html).toContain('State D v -10');
   });
 });

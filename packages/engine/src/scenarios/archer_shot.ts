@@ -79,7 +79,30 @@ export const archerShotScenarios: ScenarioCollection = {
                 const axialRejected = logs.some(l => l.includes('Target must be axial'));
                 return targetUntouched && axialRejected;
             }
+        },
+        {
+            id: 'archer_shot_rejects_adjacent_range_1',
+            title: 'Archer Shot: Adjacent Target Rejected',
+            description: 'Archer Shot enforces minimum range 2 and rejects adjacent targets.',
+            relatedSkills: ['ARCHER_SHOT'],
+            category: 'combat',
+            difficulty: 'beginner',
+            isTutorial: false,
+            tags: ['projectile', 'range', 'targeting'],
+
+            setup: (engine: any) => {
+                engine.setPlayer({ q: 3, r: 6, s: -9 }, ['ARCHER_SHOT']);
+                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'target');
+            },
+            run: (engine: any) => {
+                engine.useSkill('ARCHER_SHOT', { q: 3, r: 5, s: -8 });
+            },
+            verify: (state: GameState, logs: string[]) => {
+                const target = state.enemies.find(e => e.id === 'target');
+                const targetUntouched = !!target && target.hp === target.maxHp;
+                const rangeRejected = logs.some(l => l.includes('Out of range'));
+                return targetUntouched && rangeRejected;
+            }
         }
     ]
 };
-
