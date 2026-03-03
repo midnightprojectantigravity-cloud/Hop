@@ -57,7 +57,6 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
         const index = new Map<string, Entity>();
         index.set(state.player.id, state.player);
         for (const enemy of state.enemies) index.set(enemy.id, enemy);
-        for (const companion of state.companions || []) index.set(companion.id, companion);
         return index;
     };
 

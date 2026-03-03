@@ -13,6 +13,14 @@ export function tickTileEffects(state: GameState): { state: GameState, messages:
     let curState = state;
     const messages: string[] = [];
     const allEffects: AtomicEffect[] = [];
+    const actors = [curState.player, ...curState.enemies];
+    const actorsByTile = new Map<string, typeof actors>();
+    for (const actor of actors) {
+        const key = pointToKey(actor.position);
+        const bucket = actorsByTile.get(key);
+        if (bucket) bucket.push(actor);
+        else actorsByTile.set(key, [actor]);
+    }
 
     // 1. Process Duration Decay & Hooks
     const nextTiles = new Map(curState.tiles);
@@ -45,17 +53,15 @@ export function tickTileEffects(state: GameState): { state: GameState, messages:
         if (tileModified) {
             nextTiles.set(key, { ...tile, effects: effectsToKeep });
         }
-    }
 
-    // 2. Trigger onStay via actor-first tile lookup.
-    const actors = [curState.player, ...curState.enemies];
-    for (const actor of actors) {
-        const key = pointToKey(actor.position);
-        const tile = curState.tiles.get(key);
-        if (!tile) continue;
-        const stayResult = TileResolver.processStay(actor, tile, curState);
-        allEffects.push(...stayResult.effects);
-        messages.push(...stayResult.messages);
+        // Preserve historical tile-first ordering while avoiding tile x actor scans.
+        const tileActors = actorsByTile.get(key);
+        if (!tileActors || tileActors.length === 0) continue;
+        for (const actor of tileActors) {
+            const stayResult = TileResolver.processStay(actor, tile, curState);
+            allEffects.push(...stayResult.effects);
+            messages.push(...stayResult.messages);
+        }
     }
 
     curState = { ...curState, tiles: nextTiles };

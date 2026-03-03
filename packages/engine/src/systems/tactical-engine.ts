@@ -61,9 +61,15 @@ export class TacticalEngine {
             };
         }
 
+        const targetPattern = skillDef?.intentProfile?.target?.pattern;
         // 2. Target Resolution (Search Phase)
         let targetHex = intent.targetHex;
         let finalTargetId = intent.primaryTargetId;
+
+        // Self-pattern skills are valid when targeting self even if no explicit target was provided.
+        if (!targetHex && targetPattern === 'self') {
+            targetHex = actor.position;
+        }
 
         // If no target specified but skill requires one, find the optimal hex
         if (!targetHex && skillDef) {
@@ -81,19 +87,41 @@ export class TacticalEngine {
 
         if (skillDef?.getValidTargets) {
             const validTargets = skillDef.getValidTargets(gameState, actor.position);
-            const isValidTarget = validTargets.some(point =>
-                point.q === targetHex!.q && point.r === targetHex!.r && point.s === targetHex!.s
-            );
-            if (!isValidTarget) {
-                const probeMessages = this.getInvalidTargetProbeMessages(skillDef, gameState, actor, targetHex, actorSkill?.activeUpgrades || []);
-                return {
-                    effects: [],
-                    messages: [
-                        `Invalid target for ${intent.skillId}.`,
-                        ...probeMessages
-                    ],
-                    consumesTurn: actor.id === gameState.player.id ? false : true
-                };
+            if (validTargets.length === 0) {
+                const isSelfTarget = targetHex.q === actor.position.q
+                    && targetHex.r === actor.position.r
+                    && targetHex.s === actor.position.s;
+                if (targetPattern === 'self' && isSelfTarget) {
+                    // Continue to execution for self-pattern skills with empty explicit target lists.
+                    finalTargetId = finalTargetId || actor.id;
+                } else {
+                    const probeMessages = this.getInvalidTargetProbeMessages(skillDef, gameState, actor, targetHex, actorSkill?.activeUpgrades || []);
+                    return {
+                        effects: [],
+                        messages: [
+                            `Invalid target for ${intent.skillId}.`,
+                            ...probeMessages
+                        ],
+                        consumesTurn: actor.id === gameState.player.id ? false : true
+                    };
+                }
+            } else {
+                const isValidTarget = validTargets.some(point =>
+                    point.q === targetHex!.q && point.r === targetHex!.r && point.s === targetHex!.s
+                );
+                if (isValidTarget) {
+                    // Continue to execution.
+                } else {
+                    const probeMessages = this.getInvalidTargetProbeMessages(skillDef, gameState, actor, targetHex, actorSkill?.activeUpgrades || []);
+                    return {
+                        effects: [],
+                        messages: [
+                            `Invalid target for ${intent.skillId}.`,
+                            ...probeMessages
+                        ],
+                        consumesTurn: actor.id === gameState.player.id ? false : true
+                    };
+                }
             }
         }
 
