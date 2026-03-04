@@ -20,7 +20,7 @@ export const UiLogFilterControls: React.FC<UiLogFilterControlsProps> = ({
     <select
       value={channelFilter}
       onChange={(e) => onChannelFilterChange(e.target.value as LogChannel)}
-      className="text-[10px] bg-white/5 border border-white/10 rounded px-2 py-1 text-white/80"
+      className="text-[10px] bg-[var(--surface-panel-hover)] border border-[var(--border-subtle)] rounded px-2 py-1 text-[var(--text-secondary)]"
     >
       <option value="all">All Channels</option>
       <option value="combat">Combat</option>
@@ -32,7 +32,7 @@ export const UiLogFilterControls: React.FC<UiLogFilterControlsProps> = ({
     <select
       value={levelFilter}
       onChange={(e) => onLevelFilterChange(e.target.value as LogLevel)}
-      className="text-[10px] bg-white/5 border border-white/10 rounded px-2 py-1 text-white/80"
+      className="text-[10px] bg-[var(--surface-panel-hover)] border border-[var(--border-subtle)] rounded px-2 py-1 text-[var(--text-secondary)]"
     >
       <option value="all">All Levels</option>
       <option value="info">Info</option>
@@ -42,4 +42,3 @@ export const UiLogFilterControls: React.FC<UiLogFilterControlsProps> = ({
     </select>
   </div>
 );
-

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import type { GameState } from '@hop/engine';
 import { InitiativeDisplay } from '../InitiativeQueue';
 import {
@@ -50,10 +50,10 @@ export interface UiRulesetFlags {
 export const UiStatusHeader: React.FC<CompactFlagProps> = ({ compact }) => (
   <div className="flex justify-between items-start">
     <div>
-      <h1 className={`${compact ? 'text-base' : 'text-xl'} font-black uppercase tracking-widest text-white/90 mb-1`}>Hoplite</h1>
-      <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Tactical Arena</p>
+      <h1 className={`${compact ? 'text-base' : 'text-xl'} font-black uppercase tracking-widest text-[var(--text-primary)] mb-1`}>Hoplite</h1>
+      <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">Tactical Arena</p>
     </div>
-    <div className={`px-2 py-1 bg-white/10 rounded border border-white/20 text-[10px] font-black text-white/60 ${compact ? 'hidden sm:block' : ''}`}>
+    <div className={`px-2 py-1 bg-[var(--surface-panel-muted)] rounded border border-[var(--border-subtle)] text-[10px] font-black text-[var(--text-muted)] ${compact ? 'hidden sm:block' : ''}`}>
       V2.1.0
     </div>
   </div>
@@ -68,19 +68,19 @@ export const UiInitiativeSection: React.FC<{ hideInitiativeQueue: boolean; gameS
 export const UiVitalsSection: React.FC<StatusIntelProps> = ({ gameState, compact, intelMode }) => (
   <div className={compact ? 'space-y-4' : 'space-y-6'}>
     <div className="flex flex-col">
-      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2">Vitality</span>
+      <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-2">Vitality</span>
       <div className="flex items-end gap-2">
-        <span className={`${compact ? 'text-3xl' : 'text-4xl'} font-black text-red-500 leading-none`}>{gameState.player.hp}</span>
-        <span className="text-xl text-white/20 font-bold leading-none mb-1">/</span>
-        <span className="text-xl text-gray-500 font-bold leading-none mb-1">{gameState.player.maxHp}</span>
+        <span className={`${compact ? 'text-3xl' : 'text-4xl'} font-black text-[var(--accent-danger)] leading-none`}>{gameState.player.hp}</span>
+        <span className="text-xl text-[var(--text-muted)] font-bold leading-none mb-1">/</span>
+        <span className="text-xl text-[var(--text-secondary)] font-bold leading-none mb-1">{gameState.player.maxHp}</span>
       </div>
     </div>
 
     <div className="flex flex-col">
-      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2">Guardian Plating</span>
+      <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-2">Guardian Plating</span>
       <div className="flex items-center gap-3">
-        <div className={`w-3 h-3 rounded-sm ${gameState.player.temporaryArmor ? 'bg-blue-400 rotate-45' : 'bg-white/5 border border-white/10'}`} />
-        <span className="text-2xl font-black text-blue-400 leading-none">{gameState.player.temporaryArmor || 0}</span>
+        <div className={`w-3 h-3 rounded-sm ${gameState.player.temporaryArmor ? 'bg-[var(--accent-royal)] rotate-45' : 'bg-[var(--surface-panel-hover)] border border-[var(--border-subtle)]'}`} />
+        <span className="text-2xl font-black text-[var(--accent-royal)] leading-none">{gameState.player.temporaryArmor || 0}</span>
       </div>
     </div>
 
@@ -95,12 +95,12 @@ export const UiVitalsSection: React.FC<StatusIntelProps> = ({ gameState, compact
       return (
         <div key={boss.id} className="pt-4 animate-in slide-in-from-right-8 duration-500">
           <div className="flex justify-between items-end mb-2">
-            <span className="text-xs font-black text-red-500 uppercase tracking-tighter italic">{bossLabel}</span>
-            <span className="text-lg font-black">{hpCurrent} <span className="text-white/20 text-xs">/ {hpMax}</span></span>
+            <span className="text-xs font-black text-[var(--accent-danger)] uppercase tracking-tighter italic">{bossLabel}</span>
+            <span className="text-lg font-black">{hpCurrent} <span className="text-[var(--text-muted)] text-xs">/ {hpMax}</span></span>
           </div>
-          <div className="h-4 w-full bg-red-950/30 rounded-md border border-red-500/20 overflow-hidden">
+          <div className="h-4 w-full bg-[var(--accent-danger-soft)] rounded-md border border-[var(--accent-danger-border)] overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all duration-300"
+              className="h-full bg-gradient-to-r from-[var(--accent-danger)] to-[color:var(--accent-danger)] shadow-[0_0_20px_rgba(200,79,53,0.35)] transition-all duration-300"
               style={{ width: `${hpWidth}%` }}
             />
           </div>
@@ -111,32 +111,32 @@ export const UiVitalsSection: React.FC<StatusIntelProps> = ({ gameState, compact
 );
 
 export const UiProgressSection: React.FC<ProgressSectionProps> = ({ compact, gameState, score }) => (
-  <div className={`${compact ? 'py-4 space-y-4' : 'py-8 space-y-6'} border-y border-white/5`}>
+  <div className={`${compact ? 'py-4 space-y-4' : 'py-8 space-y-6'} border-y border-[var(--border-subtle)]`}>
     <div className="flex flex-col gap-3">
       <div className="flex justify-between items-center">
-        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Arcade Progress</span>
-        <span className="text-xl font-black">{gameState.floor} <span className="text-white/20 text-sm">/ 10</span></span>
+        <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Arcade Progress</span>
+        <span className="text-xl font-black">{gameState.floor} <span className="text-[var(--text-muted)] text-sm">/ 10</span></span>
       </div>
-      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+      <div className="h-1.5 w-full bg-[var(--surface-panel-hover)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
         <div
-          className="h-full bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all duration-1000 ease-out"
+          className="h-full bg-[var(--accent-royal)] shadow-[0_0_15px_rgba(39,82,146,0.35)] transition-all duration-1000 ease-out"
           style={{ width: `${(gameState.floor / 10) * 100}%` }}
         />
       </div>
     </div>
     <div className="flex justify-between items-center">
-      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Current Score</span>
-      <span className="text-xl font-black text-white">{score.toLocaleString()}</span>
+      <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Current Score</span>
+      <span className="text-xl font-black text-[var(--text-primary)]">{score.toLocaleString()}</span>
     </div>
   </div>
 );
 
 const UiRulesetItem: React.FC<RulesetItemProps> = ({ label, value }) => (
-  <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-    <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">{label}</span>
+  <div className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
+    <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{label}</span>
     <span
       className={`text-[10px] font-black uppercase tracking-widest ${
-        value ? 'text-emerald-300' : 'text-white/40'
+        value ? 'text-[var(--accent-royal)]' : 'text-[var(--text-muted)]'
       }`}
     >
       {value ? 'On' : 'Off'}
@@ -145,15 +145,15 @@ const UiRulesetItem: React.FC<RulesetItemProps> = ({ label, value }) => (
 );
 
 export const UiIntelToggleSection: React.FC<IntelToggleProps> = ({ intelMode, onIntelModeChange }) => (
-  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2">
-    <span className="block text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2">Intel Mode</span>
+  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-2">
+    <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">Intel Mode</span>
     <div className="grid grid-cols-2 gap-2">
       <button
         onClick={() => onIntelModeChange('force_reveal')}
         className={`px-2 py-1.5 rounded border text-[10px] font-black uppercase tracking-widest transition-colors ${
           intelMode === 'force_reveal'
-            ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200'
-            : 'bg-white/[0.03] border-white/10 text-white/50 hover:bg-white/[0.06]'
+            ? 'bg-[var(--accent-brass-soft)] border-[var(--accent-brass)] text-[var(--text-primary)]'
+            : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--surface-panel-hover)]'
         }`}
       >
         Force
@@ -162,8 +162,8 @@ export const UiIntelToggleSection: React.FC<IntelToggleProps> = ({ intelMode, on
         onClick={() => onIntelModeChange('strict')}
         className={`px-2 py-1.5 rounded border text-[10px] font-black uppercase tracking-widest transition-colors ${
           intelMode === 'strict'
-            ? 'bg-amber-400/15 border-amber-300/40 text-amber-200'
-            : 'bg-white/[0.03] border-white/10 text-white/50 hover:bg-white/[0.06]'
+            ? 'bg-[var(--accent-danger-soft)] border-[var(--accent-danger)] text-[var(--accent-danger)]'
+            : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--surface-panel-hover)]'
         }`}
       >
         Strict
@@ -181,7 +181,7 @@ export const UiRulesetSection: React.FC<StatusIntelProps & { onIntelModeChange: 
   const { acaeEnabled, sharedVectorCarryEnabled, capabilityPassivesEnabled, movementRuntimeEnabled, intelStrict } = getUiRulesetFlags(gameState, intelMode);
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
-      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Ruleset</span>
+      <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">Ruleset</span>
       <div className={compact ? 'space-y-2' : 'space-y-3'}>
         <UiRulesetItem label="ACAE" value={acaeEnabled} />
         <UiRulesetItem label="Shared Vector Carry" value={sharedVectorCarryEnabled} />
@@ -212,31 +212,32 @@ export const UiDirectivesSection: React.FC<DirectivesSectionProps> = ({
   onExitToHub
 }) => (
   <div className={`flex flex-col ${compact ? 'gap-2' : 'gap-3'}`}>
-    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Directives</span>
+    <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold mb-1">Directives</span>
     <button
       disabled={inputLocked}
       onClick={onWait}
       className={`w-full flex justify-between items-center ${compact ? 'px-3 py-2.5' : 'px-4 py-3'} border rounded-xl transition-all group ${inputLocked
-        ? 'bg-white/[0.03] border-white/5 text-white/30 cursor-not-allowed opacity-50'
-        : 'bg-white/5 hover:bg-white/10 border-white/10'
+        ? 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] cursor-not-allowed opacity-50'
+        : 'bg-[var(--surface-panel-hover)] hover:bg-[var(--surface-panel-muted)] border-[var(--border-subtle)]'
       }`}
     >
-      <span className="text-sm font-bold text-white/70">Secure & Wait</span>
+      <span className="text-sm font-bold text-[var(--text-secondary)]">Secure & Wait</span>
       <span className="text-lg grayscale group-hover:grayscale-0 transition-all">S</span>
     </button>
     <button
       onClick={onReset}
-      className={`w-full flex justify-between items-center ${compact ? 'px-3 py-2.5' : 'px-4 py-3'} bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-all group`}
+      className={`w-full flex justify-between items-center ${compact ? 'px-3 py-2.5' : 'px-4 py-3'} bg-[var(--accent-danger-soft)] hover:brightness-105 border border-[var(--accent-danger-border)] rounded-xl transition-all group`}
     >
-      <span className="text-sm font-bold text-red-400/80">Reset Chronology</span>
+      <span className="text-sm font-bold text-[var(--accent-danger)]">Reset Chronology</span>
       <span className="text-lg grayscale group-hover:grayscale-0 transition-all">R</span>
     </button>
     <button
       onClick={onExitToHub}
-      className={`w-full flex justify-between items-center ${compact ? 'px-3 py-2.5' : 'px-4 py-3'} bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group`}
+      className={`w-full flex justify-between items-center ${compact ? 'px-3 py-2.5' : 'px-4 py-3'} bg-[var(--surface-panel-hover)] hover:bg-[var(--surface-panel-muted)] border border-[var(--border-subtle)] rounded-xl transition-all group`}
     >
-      <span className="text-sm font-bold text-white/70">Return to Hub</span>
+      <span className="text-sm font-bold text-[var(--text-secondary)]">Return to Hub</span>
       <span className="text-lg grayscale group-hover:grayscale-0 transition-all">H</span>
     </button>
   </div>
 );
+

@@ -79,6 +79,37 @@ Delivered outcomes:
 Reference:
 - `docs/REPLAY_V3_STABILITY_WRAPUP_2026-03-03.md`
 
+## UI/UX Great Refactor Milestone
+Mobile-first parchment productization for web UI is merged and validated.
+
+Delivered outcomes:
+1. Theme and preferences foundation:
+   - tokenized parchment-first light theme with secondary medieval-apocalypse dark theme
+   - canonical `UiPreferencesV1` with persisted `colorMode`, `motionMode`, `hudDensity`, and `mobileLayout`
+2. Core flow overhaul priority delivered:
+   - Hub two-tap start journey
+   - portrait one-handed in-run HUD with bottom action dock
+   - defeat/replay loop with `Quick Restart` and `View Replay`
+3. Quick restart and context persistence:
+   - `RunResumeContext` persisted for normal/daily restart routing
+   - Hub bypass on defeat restart with mode-correct seed/date handling
+4. Synapse and layout integration:
+   - synapse tray shares bottom interaction footprint with skills tray on mobile
+   - desktop command-center panes remain always visible
+5. Web shell performance hardening:
+   - route-level lazy screen modules + idle-time prefetch
+   - manual chunk splitting to remove monolithic app bundle shape
+6. Regression coverage:
+   - UI preference persistence
+   - run-resume context and quick restart routing
+   - hub start CTA wiring
+   - run lost overlay action wiring
+   - layout breakpoint contract tests
+   - replay control overlay placement contract
+
+Reference:
+- `docs/UI_UX_GREAT_REFACTOR_WRAPUP_2026-03-03.md`
+
 ## Validation Snapshot (Current)
 
 Engine:

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { classifyMessage } from './ui-log-classifier';
 import type { LogChannel, LogLevel } from './ui-log-types';
 import { UiLogFilterControls } from './ui-log-filter-controls';
@@ -34,9 +34,9 @@ export const UiLogFeed: React.FC<UiLogFeedProps> = ({
   if (messages.length === 0) return null;
 
   return (
-    <div className={`${compact ? 'p-4' : 'p-8'} border-t border-white/5 bg-[#030712]/80 backdrop-blur-sm`}>
+    <div className={`${compact ? 'p-4' : 'p-8'} border-t border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm`}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold block">Tactical Log</span>
+        <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold block">Tactical Log</span>
         <UiLogFilterControls
           compact={compact}
           levelFilter={levelFilter}
@@ -49,3 +49,4 @@ export const UiLogFeed: React.FC<UiLogFeedProps> = ({
     </div>
   );
 };
+

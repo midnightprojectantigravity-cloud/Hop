@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { pointToKey, type GameState, type Point, type SynapseThreatPreview } from '@hop/engine';
 import { getUiActorInformation, type UiInformationRevealMode } from '../../app/information-reveal';
 import { DELTA_VISUAL_THRESHOLD, type SynapseDeltaEntry, type SynapseSelection } from '../../app/synapse';
@@ -11,6 +11,7 @@ interface SynapseBottomTrayProps {
     deltasByActorId: Record<string, SynapseDeltaEntry>;
     onSelectSource: (actorId: string) => void;
     onClearSelection: () => void;
+    docked?: boolean;
 }
 
 const round1 = (value: number): string => Number(value.toFixed(1)).toString();
@@ -31,7 +32,7 @@ const DeltaBadge: React.FC<{ value: number; label: string; threshold?: number; f
 }) => {
     if (Math.abs(value) < threshold) {
         return (
-            <span className="text-[10px] font-bold uppercase tracking-wide text-white/35">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
                 {label} +0
             </span>
         );
@@ -47,7 +48,7 @@ const DeltaBadge: React.FC<{ value: number; label: string; threshold?: number; f
 };
 
 const EmptyTray: React.FC = () => (
-    <div className="text-xs text-white/60 font-semibold tracking-wide">
+    <div className="text-xs text-[var(--text-secondary)] font-semibold tracking-wide">
         Select a tile or enemy for details.
     </div>
 );
@@ -71,24 +72,24 @@ const TileModeTray: React.FC<{
         .sort((a, b) => b.source.zScore - a.source.zScore);
 
     return (
-        <div className="flex flex-col gap-2.5 min-w-[260px]">
+        <div className="flex flex-col gap-2.5 min-w-0">
             <div className="flex items-center justify-between">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">Tile Intel</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-white/55">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Tile Intel</div>
+                <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
                     {tile.q},{tile.r}
                 </div>
             </div>
             <div className="flex items-center justify-between text-xs">
-                <span className="text-white/70">Heat</span>
-                <span className="font-black text-white">{round1(tileEntry?.heat || 0)}</span>
+                <span className="text-[var(--text-secondary)]">Heat</span>
+                <span className="font-black text-[var(--text-primary)]">{round1(tileEntry?.heat || 0)}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
-                <span className="text-white/70">Threat Sources</span>
-                <span className="font-black text-white">{sources.length}</span>
+                <span className="text-[var(--text-secondary)]">Threat Sources</span>
+                <span className="font-black text-[var(--text-primary)]">{sources.length}</span>
             </div>
             <div className="max-h-28 overflow-y-auto pr-1 space-y-1">
                 {sources.length === 0 && (
-                    <div className="text-[11px] text-white/45">No elevated hostile sources on this tile.</div>
+                    <div className="text-[11px] text-[var(--text-muted)]">No elevated hostile sources on this tile.</div>
                 )}
                 {sources.map(({ source, actor, info }) => {
                     const name = info?.reveal.name ? (info.data.name || actor.subtype || actor.id) : `Enemy ${actor.id}`;
@@ -96,13 +97,13 @@ const TileModeTray: React.FC<{
                         <button
                             key={`source-${actor.id}`}
                             onClick={() => onSelectSource(actor.id)}
-                            className="w-full px-2.5 py-1.5 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-colors text-left"
+                            className="w-full px-2.5 py-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] hover:bg-[var(--surface-panel-hover)] transition-colors text-left"
                         >
                             <div className="flex items-center justify-between text-[11px]">
-                                <span className="font-bold text-white/85 truncate">{name}</span>
+                                <span className="font-bold text-[var(--text-primary)] truncate">{name}</span>
                                 <span className="font-black text-amber-200">z {round1(source.zScore)}</span>
                             </div>
-                            <div className="flex items-center justify-between text-[10px] mt-0.5 text-white/55">
+                            <div className="flex items-center justify-between text-[10px] mt-0.5 text-[var(--text-secondary)]">
                                 <span>UPS {formatUPS(source.ups)}</span>
                                 <span>{source.sigmaTier.toUpperCase()}</span>
                             </div>
@@ -130,21 +131,21 @@ const EntityModeTray: React.FC<{
     const delta = deltasByActorId[actor.id] || { upsDelta: 0, stateDelta: 0 };
 
     return (
-        <div className="flex flex-col gap-2.5 min-w-[260px]">
+        <div className="flex flex-col gap-2.5 min-w-0">
             <div className="flex items-center justify-between">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">Entity Intel</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-white/55">{actor.id}</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Entity Intel</div>
+                <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">{actor.id}</div>
             </div>
-            <div className="text-sm font-black text-white">
+            <div className="text-sm font-black text-[var(--text-primary)]">
                 {info.reveal.name ? (info.data.name || actor.subtype || actor.id) : `Unknown ${actor.type}`}
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5">
-                    <div className="text-white/55 text-[10px] uppercase font-bold">UPS</div>
-                    <div className="font-black text-white">{formatUPS(score?.ups || 0)}</div>
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
+                    <div className="text-[var(--text-secondary)] text-[10px] uppercase font-bold">UPS</div>
+                    <div className="font-black text-[var(--text-primary)]">{formatUPS(score?.ups || 0)}</div>
                 </div>
-                <div className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5">
-                    <div className="text-white/55 text-[10px] uppercase font-bold">Sigma</div>
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
+                    <div className="text-[var(--text-secondary)] text-[10px] uppercase font-bold">Sigma</div>
                     <div className="font-black text-amber-200">{round1(score?.zScore || 0)}</div>
                 </div>
             </div>
@@ -153,15 +154,15 @@ const EntityModeTray: React.FC<{
                 <DeltaBadge value={delta.stateDelta} label="State D" />
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5">
-                    <div className="text-white/55 text-[10px] uppercase font-bold">HP</div>
-                    <div className="font-black text-white">
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
+                    <div className="text-[var(--text-secondary)] text-[10px] uppercase font-bold">HP</div>
+                    <div className="font-black text-[var(--text-primary)]">
                         {info.reveal.hp ? `${actor.hp}/${actor.maxHp}` : '?/?'}
                     </div>
                 </div>
-                <div className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5">
-                    <div className="text-white/55 text-[10px] uppercase font-bold">Intent</div>
-                    <div className="font-black text-white">
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
+                    <div className="text-[var(--text-secondary)] text-[10px] uppercase font-bold">Intent</div>
+                    <div className="font-black text-[var(--text-primary)]">
                         {info.reveal.intentBadge ? (info.data.intentBadge || actor.intent || 'Unknown') : 'Unknown'}
                     </div>
                 </div>
@@ -178,10 +179,15 @@ export const SynapseBottomTray: React.FC<SynapseBottomTrayProps> = ({
     deltasByActorId,
     onSelectSource,
     onClearSelection,
+    docked = false,
 }) => {
+    const containerClass = docked
+        ? 'relative w-full'
+        : 'absolute bottom-3 left-1/2 -translate-x-1/2 z-40 w-[min(92vw,34rem)] pointer-events-auto';
+
     return (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 w-[min(92vw,34rem)] pointer-events-auto">
-            <div className="rounded-xl border border-cyan-300/30 bg-[#041120]/90 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.45)] p-3">
+        <div className={containerClass}>
+            <div className="rounded-xl border border-[var(--synapse-border)] bg-[color:var(--synapse-surface)] backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] p-3 transition-transform duration-150 ease-out">
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                         {synapseSelection.mode === 'empty' && <EmptyTray />}
@@ -206,7 +212,7 @@ export const SynapseBottomTray: React.FC<SynapseBottomTrayProps> = ({
                     </div>
                     <button
                         onClick={onClearSelection}
-                        className="shrink-0 px-2 py-1 rounded border border-white/15 bg-white/[0.03] text-[10px] font-black uppercase tracking-widest text-white/60 hover:bg-white/[0.08]"
+                        className="shrink-0 px-2 py-1 rounded border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] hover:bg-[var(--surface-panel-hover)]"
                     >
                         Clear
                     </button>
@@ -215,3 +221,4 @@ export const SynapseBottomTray: React.FC<SynapseBottomTrayProps> = ({
         </div>
     );
 };
+

@@ -1,44 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  /* Medieval apocalyptic palette */
-  --bg-1: #0b0b0b;
-  /* near-black */
-  --bg-2: #2b1f17;
-  /* burnt umber */
-  --accent: #8b5e34;
-  /* aged bronze */
-  --lava: #f97316;
-  /* molten */
-  --shrine: #6d28d9;
-  /* corrupted purple */
-  --muted: #6b6b6b;
-  --hp-fill: #b91c1c;
-  /* blood red */
-  --hp-enemy: #fb7185;
-  /* enemy hurt */
+:root {
+  --font-heading: 'Cinzel', 'Palatino Linotype', 'Times New Roman', serif;
+  --font-body: 'Source Sans 3', 'Segoe UI', sans-serif;
 
-  background: radial-gradient(circle at 20% 10%, rgba(139, 94, 52, 0.04), transparent 15%), linear-gradient(180deg, var(--bg-1), var(--bg-2));
-  color: #efe6da;
+  --surface-app: #f4ecd8;
+  --surface-board: #efe4cd;
+  --surface-panel: #f9f2e3;
+  --surface-panel-muted: #f2e8d5;
+  --surface-panel-hover: #ebddc5;
+
+  --text-primary: #2f261b;
+  --text-secondary: #4a3b2b;
+  --text-muted: #806e5a;
+  --text-inverse: #fef9ef;
+
+  --border-subtle: rgba(79, 58, 35, 0.24);
+  --accent-brass: #b48d50;
+  --accent-brass-soft: rgba(180, 141, 80, 0.2);
+  --accent-royal: #275292;
+  --accent-royal-soft: rgba(39, 82, 146, 0.16);
+  --accent-royal-soft-hover: rgba(39, 82, 146, 0.24);
+  --accent-danger: #c84f35;
+  --accent-danger-soft: rgba(200, 79, 53, 0.16);
+  --accent-danger-border: rgba(200, 79, 53, 0.4);
+
+  --synapse-border: rgba(70, 132, 170, 0.45);
+  --synapse-surface: #153141;
+  --synapse-text: #e2f8ff;
+  --synapse-soft: rgba(70, 132, 170, 0.2);
+
+  --overlay-defeat: rgba(48, 15, 8, 0.84);
+  --overlay-victory: rgba(34, 26, 16, 0.72);
+  --overlay-veil: rgba(35, 25, 16, 0.5);
+
+  --motion-fast: 140ms;
+  --motion-medium: 180ms;
+}
+
+:root[data-theme='dark'] {
+  --surface-app: #18120e;
+  --surface-board: #150f0c;
+  --surface-panel: #1f1712;
+  --surface-panel-muted: #271d16;
+  --surface-panel-hover: #31241b;
+
+  --text-primary: #f1e5cf;
+  --text-secondary: #d3c2a8;
+  --text-muted: #a99274;
+  --text-inverse: #18120e;
+
+  --border-subtle: rgba(166, 126, 88, 0.25);
+  --accent-brass: #d6a55e;
+  --accent-brass-soft: rgba(214, 165, 94, 0.2);
+  --accent-royal: #8f3b3f;
+  --accent-royal-soft: rgba(143, 59, 63, 0.22);
+  --accent-royal-soft-hover: rgba(143, 59, 63, 0.3);
+  --accent-danger: #e2674f;
+  --accent-danger-soft: rgba(226, 103, 79, 0.22);
+  --accent-danger-border: rgba(226, 103, 79, 0.45);
+
+  --synapse-border: rgba(193, 119, 89, 0.45);
+  --synapse-surface: #2a1812;
+  --synapse-text: #ffe6d0;
+  --synapse-soft: rgba(193, 119, 89, 0.2);
+
+  --overlay-defeat: rgba(28, 9, 6, 0.86);
+  --overlay-victory: rgba(24, 15, 10, 0.82);
+  --overlay-veil: rgba(14, 9, 6, 0.6);
+}
+
+:root[data-motion='reduced'] {
+  --motion-fast: 1ms;
+  --motion-medium: 1ms;
+}
+
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(180, 141, 80, 0.15), transparent 24%),
+    radial-gradient(circle at 88% 18%, rgba(150, 106, 50, 0.1), transparent 28%),
+    linear-gradient(180deg, var(--surface-app), var(--surface-board));
+  color: var(--text-primary);
   margin: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-body);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
 }
 
 /* Movement animation for hex tiles */
 .hex-tile {
-  transition: transform 0.2s ease-out, fill 0.2s ease-out, stroke 0.2s ease-out;
+  transition: transform var(--motion-fast) ease-out, fill var(--motion-fast) ease-out, stroke var(--motion-fast) ease-out;
 }
 
 /* Entity HP bars */
 .hp-bar-bg {
-  fill: #2b1f17;
+  fill: color-mix(in srgb, var(--surface-panel) 88%, black 12%);
 }
 
 .hp-bar-fill {
-  fill: var(--hp-fill);
-  transition: width 0.2s ease;
+  fill: var(--accent-danger);
+  transition: width var(--motion-fast) ease;
 }
 
 .entity-emoji {
@@ -47,7 +126,7 @@ body {
 
 /* Enemy HP color override */
 rect[fill="#fb7185"] {
-  fill: var(--hp-enemy);
+  fill: color-mix(in srgb, var(--accent-danger) 80%, white 20%);
 }
 
 /* Subtle grain overlay for apocalyptic feel */
@@ -57,7 +136,8 @@ body::after {
   position: fixed;
   inset: 0;
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.03"/></svg>');
-  mix-blend-mode: overlay;
+  mix-blend-mode: multiply;
+  opacity: 0.55;
 }
 
 /* ============================================
@@ -908,12 +988,30 @@ body::after {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--text-muted) 35%, transparent);
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--text-muted) 55%, transparent);
+}
+
+/* ============================================
+   SYNAPSE MODE GLOBAL VISUAL SHIFT
+   ============================================ */
+.synapse-vision-active {
+  position: relative;
+  filter: saturate(0.88) contrast(0.96);
+}
+
+.synapse-vision-active::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  box-shadow: inset 0 0 120px rgba(76, 38, 21, 0.45);
+  opacity: 0.85;
 }
 
 /* ============================================

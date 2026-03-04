@@ -136,23 +136,23 @@ const ReplayManager: React.FC<{
     <div className="flex flex-col gap-8">
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Manual Replay</h3>
-          <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest">Replay V3 Only</span>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-royal)]">Manual Replay</h3>
+          <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest">Replay V3 Only</span>
         </div>
-        <div className="space-y-2 p-3 rounded-2xl border border-white/5 bg-white/[0.02]">
+        <div className="space-y-2 p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)]">
           <textarea
             value={manualEnvelope}
             onChange={(e) => setManualEnvelope(e.target.value)}
             placeholder='Paste ReplayEnvelopeV3 JSON: {"version":3,"run":...,"actions":[...],"meta":...}'
             rows={8}
-            className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-emerald-400/40 font-mono"
+            className="w-full bg-[var(--surface-panel)] border border-[var(--border-subtle)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-royal)] font-mono"
           />
           {manualError && (
-            <div className="text-[10px] text-red-400 font-bold uppercase tracking-wider">{manualError}</div>
+            <div className="text-[10px] text-[var(--accent-danger)] font-bold uppercase tracking-wider">{manualError}</div>
           )}
           <button
             onClick={handleStartManualReplay}
-            className="w-full py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/30 text-emerald-300 text-xs font-black uppercase tracking-widest transition-colors"
+            className="w-full py-2 rounded-lg bg-[var(--accent-royal-soft)] hover:brightness-105 border border-[var(--accent-royal)] text-[var(--text-primary)] text-xs font-black uppercase tracking-widest transition-colors"
           >
             Start Manual Replay
           </button>
@@ -161,14 +161,14 @@ const ReplayManager: React.FC<{
 
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400">Hall of Fame</h3>
-          <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest">Top 5 Only</span>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--accent-brass)]">Hall of Fame</h3>
+          <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest">Top 5 Only</span>
         </div>
 
         <div className="space-y-2">
           {leaderboard.length === 0 && (
-            <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02] text-center">
-              <span className="text-[10px] text-white/30 uppercase font-black">No Champions Yet</span>
+            <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-center">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase font-black">No Champions Yet</span>
             </div>
           )}
           {leaderboard.slice(0, 5).map((e, i) => {
@@ -186,26 +186,26 @@ const ReplayManager: React.FC<{
               <button
                 key={e.id}
                 onClick={() => onStartReplay(replay)}
-                className="w-full group relative flex items-center gap-4 p-4 bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 hover:border-indigo-500/30 rounded-2xl transition-all text-left"
+                className="w-full group relative flex items-center gap-4 p-4 bg-[var(--surface-panel-muted)] hover:bg-[var(--surface-panel-hover)] border border-[var(--border-subtle)] hover:border-[var(--accent-royal)] rounded-2xl transition-all text-left"
               >
-                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-indigo-500/10 rounded-lg text-indigo-400 font-black text-sm border border-indigo-500/20">
+                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-[var(--accent-royal-soft)] rounded-lg text-[var(--accent-royal)] font-black text-sm border border-[var(--accent-royal)]">
                   {i + 1}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-0.5">
-                    <span className="font-black text-white uppercase text-xs truncate tracking-wider">{e.name}</span>
-                    <span className="text-[10px] font-black text-indigo-400 tabular-nums">{e.score.toLocaleString()}</span>
+                    <span className="font-black text-[var(--text-primary)] uppercase text-xs truncate tracking-wider">{e.name}</span>
+                    <span className="text-[10px] font-black text-[var(--accent-royal)] tabular-nums">{e.score.toLocaleString()}</span>
                   </div>
-                  <div className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
+                  <div className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-widest">
                     Floor {e.floor} * {new Date(e.date).toLocaleDateString()} * {q.actionCount} acts
                   </div>
                   {q.label && (
-                    <div className="text-[9px] mt-1 text-amber-400/80 font-bold uppercase tracking-widest">
+                    <div className="text-[9px] mt-1 text-[var(--accent-danger)] font-bold uppercase tracking-widest">
                       {q.label}
                     </div>
                   )}
                 </div>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-400 text-xs">Play</div>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--accent-royal)] text-xs">Play</div>
               </button>
             );
           })}
@@ -214,13 +214,13 @@ const ReplayManager: React.FC<{
 
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Recent Simulations</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Recent Simulations</h3>
         </div>
 
         <div className="space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
           {list.length === 0 && (
             <div className="text-center py-4">
-              <span className="text-[10px] text-white/10 uppercase font-bold">Log Empty</span>
+              <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold">Log Empty</span>
             </div>
           )}
           {list.slice(0, 10).map((r) => {
@@ -229,22 +229,22 @@ const ReplayManager: React.FC<{
               <button
                 key={r.id}
                 onClick={() => onStartReplay(r)}
-                className="w-full flex items-center justify-between p-3 hover:bg-white/[0.04] rounded-xl transition-colors text-left group"
+                className="w-full flex items-center justify-between p-3 hover:bg-[var(--surface-panel-hover)] rounded-xl transition-colors text-left group"
               >
                 <div className="min-w-0">
-                  <div className="text-[10px] font-bold text-white/60 mb-0.5 truncate uppercase">
-                    Score: <span className="text-white">{r.score}</span> * F{r.floor} * {q.actionCount} acts
+                  <div className="text-[10px] font-bold text-[var(--text-secondary)] mb-0.5 truncate uppercase">
+                    Score: <span className="text-[var(--text-primary)]">{r.score}</span> * F{r.floor} * {q.actionCount} acts
                   </div>
-                  <div className="text-[9px] text-white/20 font-medium">
+                  <div className="text-[9px] text-[var(--text-muted)] font-medium">
                     {new Date(r.date).toLocaleTimeString()}
                   </div>
                   {q.label && (
-                    <div className="text-[9px] mt-1 text-amber-400/80 font-bold uppercase tracking-widest">
+                    <div className="text-[9px] mt-1 text-[var(--accent-danger)] font-bold uppercase tracking-widest">
                       {q.label}
                     </div>
                   )}
                 </div>
-                <div className="text-[10px] text-white/0 group-hover:text-white/40 font-black uppercase tracking-widest transition-all">Replay</div>
+                <div className="text-[10px] text-transparent group-hover:text-[var(--text-secondary)] font-black uppercase tracking-widest transition-all">Replay</div>
               </button>
             );
           })}

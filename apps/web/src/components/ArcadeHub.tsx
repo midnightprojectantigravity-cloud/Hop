@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { DEFAULT_LOADOUTS } from '@hop/engine';
 import type { Loadout } from '@hop/engine';
 
@@ -49,27 +49,27 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({ onBack, onLaunchArcade }) 
   const [left, right] = React.useMemo(() => buildDailyPair(allLoadouts, dateKey), [allLoadouts, dateKey]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#040a18]">
-      <header className="h-20 border-b border-white/10 flex items-center justify-between px-12 bg-[#050b1f]/80 backdrop-blur-xl z-30">
-        <div>
-          <h1 className="text-xl font-black uppercase tracking-tight italic">
-            Hop <span className="text-emerald-400">Arcade</span>
+    <div className="w-full h-full flex flex-col bg-[var(--surface-app)]">
+      <header className="border-b border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-8 lg:px-12 py-3 bg-[color:var(--surface-panel)] backdrop-blur-xl z-30">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-black uppercase tracking-tight font-[var(--font-heading)]">
+            Hop <span className="text-[var(--accent-royal)]">Arcade</span>
           </h1>
-          <div className="text-[10px] uppercase tracking-[0.3em] text-white/40 mt-1">Daily Draft {dateKey}</div>
+          <div className="text-[10px] uppercase tracking-[0.3em] text-[var(--text-muted)] mt-1">Daily Draft {dateKey}</div>
         </div>
         <button
           onClick={onBack}
-          className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-xs font-black uppercase tracking-widest"
+          className="w-full sm:w-auto min-h-11 px-5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] hover:bg-[var(--surface-panel)] text-xs font-black uppercase tracking-widest"
         >
           Back to Strategic Hub
         </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-12">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12">
         <div className="max-w-5xl mx-auto">
-          <div className="mb-10">
-            <h2 className="text-4xl font-black uppercase tracking-tight italic mb-3">Arcade Mode</h2>
-            <p className="text-white/60 max-w-3xl">
+          <div className="mb-6 sm:mb-10">
+            <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight font-[var(--font-heading)] mb-3">Arcade Mode</h2>
+            <p className="text-[var(--text-secondary)] max-w-3xl">
               Pick one of two daily archetypes and run the seeded challenge. Both options share the same seed for fair comparison.
             </p>
           </div>
@@ -82,35 +82,35 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({ onBack, onLaunchArcade }) 
                 <button
                   key={loadout.id}
                   onClick={() => onLaunchArcade(loadout.id)}
-                  className="w-full text-left group rounded-3xl border border-white/10 bg-gradient-to-r from-white/[0.06] to-white/[0.02] hover:from-emerald-500/20 hover:to-cyan-500/10 transition-all p-6"
+                  className="w-full text-left group rounded-3xl border border-[var(--border-subtle)] bg-gradient-to-r from-[var(--surface-panel-hover)] to-[var(--surface-panel-muted)] hover:brightness-105 transition-all p-4 sm:p-6"
                 >
-                  <div className={`flex items-center justify-between gap-6 ${mirrored ? 'flex-row-reverse' : ''}`}>
-                    <div className="flex items-center gap-4 min-w-[200px]">
+                  <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 ${mirrored ? 'sm:flex-row-reverse' : ''}`}>
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                       <div
-                        className={`w-20 h-20 rounded-2xl border border-white/15 bg-[#0b1733] flex items-center justify-center text-4xl font-black text-emerald-300 shadow-[0_0_35px_rgba(16,185,129,0.25)] ${mirrored ? '-scale-x-100' : ''}`}
+                        className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] flex items-center justify-center text-3xl sm:text-4xl font-black text-[var(--accent-brass)] shadow-[0_0_35px_rgba(180,141,80,0.25)] ${mirrored ? '-scale-x-100' : ''}`}
                       >
                         {glyph}
                       </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-[0.25em] text-white/40">Daily Archetype</div>
-                        <div className="text-2xl font-black uppercase tracking-tight">{loadout.name}</div>
+                      <div className="min-w-0">
+                        <div className="text-[10px] uppercase tracking-[0.25em] text-[var(--text-muted)]">Daily Archetype</div>
+                        <div className="text-xl sm:text-2xl font-black uppercase tracking-tight truncate">{loadout.name}</div>
                       </div>
                     </div>
 
                     <div className="flex-1">
-                      <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 mb-2">Starting Skills</div>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Starting Skills</div>
                       <div className="flex flex-wrap gap-2">
                         {loadout.startingSkills.slice(0, 6).map(skill => (
-                          <span key={skill} className="text-[10px] px-2 py-1 rounded-full border border-white/20 bg-white/5 font-bold tracking-wide">
+                          <span key={skill} className="text-[10px] px-2 py-1 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)] font-bold tracking-wide">
                             {skill}
                           </span>
                         ))}
                       </div>
                     </div>
 
-                    <div className="text-right min-w-[150px]">
-                      <div className="text-[10px] uppercase tracking-[0.25em] text-white/40">Launch</div>
-                      <div className="text-sm font-black uppercase tracking-widest text-emerald-300 group-hover:text-emerald-200">
+                    <div className="text-left sm:text-right sm:min-w-[150px]">
+                      <div className="text-[10px] uppercase tracking-[0.25em] text-[var(--text-muted)]">Launch</div>
+                      <div className="text-sm font-black uppercase tracking-widest text-[var(--accent-royal)] group-hover:opacity-85">
                         Start Arcade Run
                       </div>
                     </div>
