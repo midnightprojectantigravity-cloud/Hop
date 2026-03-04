@@ -8,20 +8,35 @@ import type { Skill, Actor } from '../types';
 import type { ArchetypeID, SkillID } from '../types/registry';
 import { SkillRegistry, createActiveSkill } from '../skillRegistry';
 import { DEFAULT_LOADOUT_DEFINITIONS } from '../data/loadouts/default-loadouts';
-import { cloneLoadoutCatalog, parseLoadoutCatalog } from '../data/loadouts/parser';
+import { parseLoadoutCatalog } from '../data/loadouts/parser';
 import type { LoadoutDefinition } from '../data/loadouts/contracts';
 
 export type Loadout = LoadoutDefinition;
 export type { LoadoutDefinition };
 
-const parsedDefaultLoadouts = parseLoadoutCatalog(DEFAULT_LOADOUT_DEFINITIONS);
+const cloneDefaultLoadouts = (
+    definitions: Record<string, LoadoutDefinition>
+): Record<string, Loadout> =>
+    Object.fromEntries(
+        Object.entries(definitions).map(([id, value]) => [
+            id,
+            {
+                ...value,
+                startingSkills: [...value.startingSkills],
+                startingUpgrades: [...value.startingUpgrades]
+            }
+        ])
+    );
 
 /**
  * Default Loadouts for the "Strategic Hub" (data-driven source + runtime facade).
  */
-export const DEFAULT_LOADOUTS: Record<string, Loadout> = cloneLoadoutCatalog(parsedDefaultLoadouts);
+export const DEFAULT_LOADOUTS: Record<string, Loadout> = cloneDefaultLoadouts(
+    DEFAULT_LOADOUT_DEFINITIONS as Record<string, LoadoutDefinition>
+);
 
 let defaultLoadoutsValidated = false;
+let defaultLoadoutSchemaValidated = false;
 
 export interface LoadoutRegistryValidationIssue {
     loadoutId: string;
@@ -61,6 +76,11 @@ export const validateLoadoutCatalogAgainstSkillRegistry = (
 
 export const validateDefaultLoadouts = (): number => {
     if (defaultLoadoutsValidated) return Object.keys(DEFAULT_LOADOUTS).length;
+    if (!defaultLoadoutSchemaValidated) {
+        // Keep schema validation explicit but lazy to avoid import-time circular init hazards in bundled builds.
+        parseLoadoutCatalog(DEFAULT_LOADOUT_DEFINITIONS);
+        defaultLoadoutSchemaValidated = true;
+    }
     const issues = validateLoadoutCatalogAgainstSkillRegistry(DEFAULT_LOADOUTS);
     if (issues.length > 0) {
         const message = issues
@@ -71,9 +91,6 @@ export const validateDefaultLoadouts = (): number => {
     defaultLoadoutsValidated = true;
     return Object.keys(DEFAULT_LOADOUTS).length;
 };
-
-// Fail fast during module import and keep an explicit validation seam for bootstrap/tests.
-validateDefaultLoadouts();
 
 /**
  * Serialize a loadout to JSON for storage.

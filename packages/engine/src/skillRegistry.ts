@@ -15,17 +15,31 @@ import { registerCapabilitySkillDefinitionResolver } from './systems/capabilitie
  */
 export const COMPOSITIONAL_SKILLS = GENERATED_COMPOSITIONAL_SKILLS;
 
-const skillIntentCoverage = hydrateSkillIntentProfiles(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>);
-if (skillIntentCoverage.missing.length > 0 || skillIntentCoverage.invalid.length > 0) {
-    const missing = skillIntentCoverage.missing.join(', ');
-    const invalid = skillIntentCoverage.invalid.map(x => `${x.skillId}: ${x.errors.join('; ')}`).join(' | ');
-    throw new Error(`Skill intent profile validation failed. missing=[${missing}] invalid=[${invalid}]`);
-}
+let skillIntentCoverageValidated = false;
+let capabilityResolverRegistered = false;
 
-const getMergedRegistry = (): Record<string, SkillDefinition> => ({
-    ...(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>),
-    ...getCompositeSkillRuntimeRegistry()
-});
+const ensureSkillIntentCoverageValidated = (): void => {
+    if (skillIntentCoverageValidated) return;
+    const skillIntentCoverage = hydrateSkillIntentProfiles(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>);
+    if (skillIntentCoverage.missing.length > 0 || skillIntentCoverage.invalid.length > 0) {
+        const missing = skillIntentCoverage.missing.join(', ');
+        const invalid = skillIntentCoverage.invalid.map(x => `${x.skillId}: ${x.errors.join('; ')}`).join(' | ');
+        throw new Error(`Skill intent profile validation failed. missing=[${missing}] invalid=[${invalid}]`);
+    }
+    skillIntentCoverageValidated = true;
+};
+
+const getMergedRegistry = (): Record<string, SkillDefinition> => {
+    ensureSkillIntentCoverageValidated();
+    if (!capabilityResolverRegistered) {
+        registerCapabilitySkillDefinitionResolver((skillId: string) => SkillRegistry.get(skillId));
+        capabilityResolverRegistered = true;
+    }
+    return {
+        ...(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>),
+        ...getCompositeSkillRuntimeRegistry()
+    };
+};
 
 /**
  * Creates an ActiveSkill instance from a SkillID.
@@ -138,5 +152,3 @@ export const getSkillRange = SkillRegistry.getSkillRange;
 export const getSkillDefinition = (id: string): SkillDefinition | undefined => {
     return SkillRegistry.get(id);
 };
-
-registerCapabilitySkillDefinitionResolver((skillId: string) => SkillRegistry.get(skillId));

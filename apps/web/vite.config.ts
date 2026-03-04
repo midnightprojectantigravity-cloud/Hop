@@ -22,10 +22,9 @@ export default defineConfig({
           if (normalized.includes('/node_modules/react-dom/')) return 'vendor-react-dom';
           if (normalized.includes('/node_modules/')) return 'vendor-misc';
 
-          if (normalized.includes('/packages/engine/src/systems/')) return 'engine-systems';
-          if (normalized.includes('/packages/engine/src/skills/')) return 'engine-skills';
-          if (normalized.includes('/packages/engine/src/scenarios/')) return 'engine-scenarios';
-          if (normalized.includes('/packages/engine/src/')) return 'engine-core';
+          // Keep engine runtime in a single chunk to avoid cross-chunk ESM TDZ issues
+          // from circular imports between engine core/systems modules.
+          if (normalized.includes('/packages/engine/src/')) return 'engine';
 
           if (normalized.includes('/apps/web/src/components/biome-sandbox/')) return 'ui-biome-sandbox';
           if (normalized.includes('/apps/web/src/components/game-board/')) return 'ui-game-board';
