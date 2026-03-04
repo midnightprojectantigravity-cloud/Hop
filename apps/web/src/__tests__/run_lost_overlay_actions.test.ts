@@ -76,4 +76,15 @@ describe('run lost overlay actions', () => {
     expect(onQuickRestart).toHaveBeenCalledTimes(1);
     expect(onViewReplay).toHaveBeenCalledTimes(1);
   });
+
+  it('triggers onActionsReady callback when visible', () => {
+    const onActionsReady = vi.fn();
+    RunLostOverlay({
+      visible: true,
+      onQuickRestart: vi.fn(),
+      onViewReplay: vi.fn(),
+      onActionsReady
+    });
+    expect(onActionsReady).toHaveBeenCalledTimes(1);
+  });
 });

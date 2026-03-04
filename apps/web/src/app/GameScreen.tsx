@@ -106,11 +106,63 @@ interface GameScreenProps {
   onDismissTutorial: () => void;
   onToggleReplay: () => void;
   onStepReplay: () => void;
+  onJumpReplay: (index: number) => void;
+  replayMarkerIndices?: number[];
   onCloseReplay: () => void;
   onQuickRestart: () => void;
   onViewReplay: () => void;
+  onRunLostActionsReady?: () => void;
   onSetColorMode: (mode: UiColorMode) => void;
+  mobileDockV2Enabled?: boolean;
+  replayChronicleEnabled?: boolean;
 }
+
+interface GuardedActionButtonProps {
+  disabled?: boolean;
+  onConfirm: () => void;
+  label: string;
+  className: string;
+}
+
+const GuardedActionButton = ({ disabled, onConfirm, label, className }: GuardedActionButtonProps) => {
+  const [holding, setHolding] = React.useState(false);
+  const timerRef = React.useRef<number | null>(null);
+
+  const clearHold = React.useCallback(() => {
+    setHolding(false);
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const startHold = React.useCallback(() => {
+    if (disabled) return;
+    setHolding(true);
+    timerRef.current = window.setTimeout(() => {
+      onConfirm();
+      clearHold();
+    }, 600);
+  }, [clearHold, disabled, onConfirm]);
+
+  React.useEffect(() => clearHold, [clearHold]);
+
+  return (
+    <button
+      disabled={disabled}
+      onMouseDown={startHold}
+      onMouseUp={clearHold}
+      onMouseLeave={clearHold}
+      onTouchStart={startHold}
+      onTouchEnd={clearHold}
+      onTouchCancel={clearHold}
+      className={`${className} ${holding ? 'brightness-110' : ''}`}
+      title={`${label} (hold)`}
+    >
+      {holding ? `${label}...` : label}
+    </button>
+  );
+};
 
 export const resolveLayoutMode = (
   width: number,
@@ -155,10 +207,15 @@ export const GameScreen = ({
   onDismissTutorial,
   onToggleReplay,
   onStepReplay,
+  onJumpReplay,
+  replayMarkerIndices,
   onCloseReplay,
   onQuickRestart,
   onViewReplay,
+  onRunLostActionsReady,
   onSetColorMode,
+  mobileDockV2Enabled = false,
+  replayChronicleEnabled = false,
 }: GameScreenProps) => {
   const [intelMode, setIntelMode] = React.useState<UiInformationRevealMode>(() => getUiInformationRevealMode());
   const [layoutMode, setLayoutMode] = React.useState<'mobile_portrait' | 'tablet' | 'desktop_command_center'>(() => {
@@ -192,6 +249,16 @@ export const GameScreen = ({
     () => resolveSynapsePreview(gameState.intentPreview),
     [gameState.intentPreview]
   );
+  const sigmaValue = React.useMemo(() => {
+    const scores = (synapsePreview?.unitScores || []) as Array<{ zScore?: number }>;
+    if (scores.length === 0) return 0;
+    return scores.reduce((peak, entry) => {
+      const z = Number((entry as any).zScore || 0);
+      return Math.abs(z) > Math.abs(peak) ? z : peak;
+    }, 0);
+  }, [synapsePreview]);
+  const hpProjectionDelta = Number((gameState as any)?.intentPreview?.playerHpDelta || 0);
+  const projectedHp = Math.max(0, Math.min(gameState.player.maxHp, gameState.player.hp + hpProjectionDelta));
   const [synapseDeltasByActorId, setSynapseDeltasByActorId] = React.useState<Record<string, SynapseDeltaEntry>>({});
   const prevSynapseScoresRef = React.useRef<ReturnType<typeof buildSynapseScoreSnapshot> | null>(null);
 
@@ -256,6 +323,11 @@ export const GameScreen = ({
               {gameState.player.hp}
               <span className="text-[var(--text-muted)] text-sm ml-1">/ {gameState.player.maxHp}</span>
             </div>
+            {mobileDockV2Enabled && hpProjectionDelta !== 0 && (
+              <div className={`text-[10px] font-black uppercase tracking-[0.16em] ${hpProjectionDelta < 0 ? 'text-[var(--accent-danger)]' : 'text-emerald-600'}`}>
+                {hpProjectionDelta > 0 ? '+' : ''}{hpProjectionDelta}{' -> '}{projectedHp}
+              </div>
+            )}
           </div>
           <IntelModeToggle mode={intelMode} onChange={handleIntelModeChange} compact />
           <button
@@ -267,6 +339,16 @@ export const GameScreen = ({
           >
             Synapse
           </button>
+          {mobileDockV2Enabled && (
+            <>
+              <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                Wait: {isInputLocked ? 'Resolving' : 'Ready'}
+              </div>
+              <div className={`rounded-lg border px-2 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] ${Math.abs(sigmaValue) >= 2 ? 'border-[var(--accent-danger)] text-[var(--accent-danger)] bg-[var(--accent-danger-soft)]' : 'border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--surface-panel-muted)]'}`}>
+                Sigma {sigmaValue >= 0 ? '+' : ''}{sigmaValue.toFixed(1)}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -319,6 +401,7 @@ export const GameScreen = ({
               synapsePulse={synapsePulse}
               synapseDeltasByActorId={synapseDeltasByActorId}
               onSynapseInspectEntity={onSynapseInspectEntity}
+              visualEchoesEnabled={mobileDockV2Enabled}
             />
             {isSynapseMode && (
               <div className="hidden lg:block">
@@ -342,44 +425,90 @@ export const GameScreen = ({
 
       <aside className="lg:hidden shrink-0 h-[25svh] min-h-[176px] max-h-[280px] border-t border-[var(--border-subtle)] bg-[var(--surface-panel)] z-20 overflow-y-auto">
         <div className={`${uiPreferences.hudDensity === 'compact' ? 'p-3 gap-3' : 'p-4 gap-4'} flex flex-col h-full`}>
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-              {isSynapseMode ? 'Synapse' : 'Skills'}
-            </h3>
-            <div className="grid grid-cols-4 gap-1.5 w-full sm:w-auto">
-              <button
-                disabled={isInputLocked}
-                onClick={onWait}
-                className={`w-full px-2 min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isInputLocked
-                  ? 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] opacity-50'
-                  : 'bg-[var(--surface-panel-hover)] border-[var(--border-subtle)] text-[var(--text-primary)] active:bg-[var(--surface-panel)]'
-                  }`}
-              >
-                Wait
-              </button>
-              <button
-                onClick={onToggleSynapseMode}
-                className={`w-full px-2 min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isSynapseMode
-                  ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
-                  : 'border-[var(--synapse-border)] bg-[var(--synapse-soft)] text-[var(--synapse-text)] active:opacity-90'
-                  }`}
-              >
-                Synapse
-              </button>
-              <button
-                onClick={onExitToHub}
-                className="w-full px-2 min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)] active:bg-[var(--surface-panel)]"
-              >
-                Hub
-              </button>
-              <button
-                onClick={onReset}
-                className="w-full px-2 min-h-11 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] text-[10px] font-black uppercase tracking-widest text-[var(--accent-danger)] active:opacity-90"
-              >
-                Reset
-              </button>
+          {!mobileDockV2Enabled && (
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                {isSynapseMode ? 'Synapse' : 'Skills'}
+              </h3>
+              <div className="grid grid-cols-4 gap-1.5 w-full sm:w-auto">
+                <button
+                  disabled={isInputLocked}
+                  onClick={onWait}
+                  className={`w-full px-2 min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isInputLocked
+                    ? 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] opacity-50'
+                    : 'bg-[var(--surface-panel-hover)] border-[var(--border-subtle)] text-[var(--text-primary)] active:bg-[var(--surface-panel)]'
+                    }`}
+                >
+                  Wait
+                </button>
+                <button
+                  onClick={onToggleSynapseMode}
+                  className={`w-full px-2 min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isSynapseMode
+                    ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
+                    : 'border-[var(--synapse-border)] bg-[var(--synapse-soft)] text-[var(--synapse-text)] active:opacity-90'
+                    }`}
+                >
+                  Synapse
+                </button>
+                <button
+                  onClick={onExitToHub}
+                  className="w-full px-2 min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)] active:bg-[var(--surface-panel)]"
+                >
+                  Hub
+                </button>
+                <button
+                  onClick={onReset}
+                  className="w-full px-2 min-h-11 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] text-[10px] font-black uppercase tracking-widest text-[var(--accent-danger)] active:opacity-90"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+          {mobileDockV2Enabled && (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    disabled={isInputLocked}
+                    onClick={onWait}
+                    className={`px-2 min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isInputLocked
+                      ? 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] opacity-50'
+                      : 'bg-[var(--surface-panel-hover)] border-[var(--border-subtle)] text-[var(--text-primary)] active:bg-[var(--surface-panel)]'
+                    }`}
+                  >
+                    Wait
+                  </button>
+                  <GuardedActionButton
+                    disabled={false}
+                    onConfirm={onExitToHub}
+                    label="Hub"
+                    className="px-2 min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]"
+                  />
+                  <GuardedActionButton
+                    disabled={false}
+                    onConfirm={onReset}
+                    label="Reset"
+                    className="px-2 min-h-11 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] text-[10px] font-black uppercase tracking-widest text-[var(--accent-danger)]"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                    {isSynapseMode ? 'Synapse' : 'Skills'}
+                  </div>
+                  <button
+                    onClick={onToggleSynapseMode}
+                    className={`px-3 min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isSynapseMode
+                      ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
+                      : 'border-[var(--synapse-border)] bg-[var(--synapse-soft)] text-[var(--synapse-text)] active:opacity-90'
+                      }`}
+                  >
+                    Synapse
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
           {!isSynapseMode && (
             <SkillTray
               skills={gameState.player.activeSkills || []}
@@ -440,6 +569,7 @@ export const GameScreen = ({
         visible={gameState.gameStatus === 'lost'}
         onQuickRestart={onQuickRestart}
         onViewReplay={onViewReplay}
+        onActionsReady={onRunLostActionsReady}
       />
       <RunWonOverlay visible={gameState.gameStatus === 'won'} score={gameState.completedRun?.score || 0} onExitToHub={onExitToHub} />
 
@@ -452,6 +582,8 @@ export const GameScreen = ({
         replayActive={replayActive}
         onToggleReplay={onToggleReplay}
         onStepReplay={onStepReplay}
+        onJumpReplay={replayChronicleEnabled ? onJumpReplay : undefined}
+        markerIndices={replayChronicleEnabled ? replayMarkerIndices : undefined}
         onCloseReplay={onCloseReplay}
       />
     </div>

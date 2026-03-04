@@ -11,9 +11,14 @@ interface HubScreenProps {
   hubPath: string;
   arcadePath: string;
   biomesPath: string;
+  settingsPath: string;
+  leaderboardPath: string;
+  tutorialsPath: string;
   replayError: string | null;
   tutorialInstructions: string | null;
   uiPreferences: UiPreferencesV1;
+  dedicatedRoutesEnabled: boolean;
+  arcadeSplashV2Enabled: boolean;
   navigateTo: (path: string) => void;
   onSetColorMode: (mode: UiColorMode) => void;
   onSetMotionMode: (mode: UiMotionMode) => void;
@@ -36,9 +41,14 @@ export const HubScreen = ({
   hubPath,
   arcadePath,
   biomesPath,
+  settingsPath,
+  leaderboardPath,
+  tutorialsPath,
   replayError,
   tutorialInstructions,
   uiPreferences,
+  dedicatedRoutesEnabled,
+  arcadeSplashV2Enabled,
   navigateTo,
   onSetColorMode,
   onSetMotionMode,
@@ -116,6 +126,7 @@ export const HubScreen = ({
         <ArcadeHub
           onBack={() => navigateTo(hubPath)}
           onLaunchArcade={onStartArcadeRun}
+          twoStepSelection={arcadeSplashV2Enabled}
         />
       ) : (
         <Hub
@@ -127,8 +138,13 @@ export const HubScreen = ({
           onSelectLoadout={onSelectLoadout}
           onStartRun={onStartRun}
           onOpenArcade={() => navigateTo(arcadePath)}
+          onOpenSettings={dedicatedRoutesEnabled ? (() => navigateTo(settingsPath)) : undefined}
+          onOpenLeaderboard={dedicatedRoutesEnabled ? (() => navigateTo(leaderboardPath)) : undefined}
+          onOpenTutorials={dedicatedRoutesEnabled ? (() => navigateTo(tutorialsPath)) : undefined}
           onLoadScenario={onLoadScenario}
           onStartReplay={onStartReplay}
+          dedicatedRoutesEnabled={dedicatedRoutesEnabled}
+          hubTrainingOnly={dedicatedRoutesEnabled}
         />
       )}
       <ReplayErrorOverlay replayError={replayError} />

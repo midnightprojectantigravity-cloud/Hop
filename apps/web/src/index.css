@@ -40,6 +40,9 @@
 
   --motion-fast: 140ms;
   --motion-medium: 180ms;
+
+  --surface-texture: none;
+  --surface-vignette: none;
 }
 
 :root[data-theme='dark'] {
@@ -72,6 +75,25 @@
   --overlay-defeat: rgba(28, 9, 6, 0.86);
   --overlay-victory: rgba(24, 15, 10, 0.82);
   --overlay-veil: rgba(14, 9, 6, 0.6);
+
+}
+
+:root[data-ui-material='v2'] {
+  --surface-texture: image-set(
+    url('./assets/ui/parchment-light-placeholder.avif') type('image/avif'),
+    url('./assets/ui/parchment-light-placeholder.webp') type('image/webp'),
+    url('./assets/ui/parchment-light-placeholder.jpg') type('image/jpeg')
+  );
+  --surface-vignette: radial-gradient(circle at 50% 42%, rgba(255, 244, 220, 0.1), rgba(70, 40, 18, 0.18));
+}
+
+:root[data-theme='dark'][data-ui-material='v2'] {
+  --surface-texture: image-set(
+    url('./assets/ui/parchment-dark-placeholder.avif') type('image/avif'),
+    url('./assets/ui/parchment-dark-placeholder.webp') type('image/webp'),
+    url('./assets/ui/parchment-dark-placeholder.jpg') type('image/jpeg')
+  );
+  --surface-vignette: radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.55));
 }
 
 :root[data-motion='reduced'] {
@@ -90,9 +112,13 @@
 
 body {
   background:
+    var(--surface-vignette),
     radial-gradient(circle at 12% 10%, rgba(180, 141, 80, 0.15), transparent 24%),
     radial-gradient(circle at 88% 18%, rgba(150, 106, 50, 0.1), transparent 28%),
-    linear-gradient(180deg, var(--surface-app), var(--surface-board));
+    linear-gradient(180deg, var(--surface-app), var(--surface-board)),
+    var(--surface-texture);
+  background-blend-mode: normal, normal, normal, normal, multiply;
+  background-size: cover, cover, cover, cover, 256px 256px;
   color: var(--text-primary);
   margin: 0;
   font-family: var(--font-body);
@@ -138,6 +164,50 @@ body::after {
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.03"/></svg>');
   mix-blend-mode: multiply;
   opacity: 0.55;
+}
+
+.arcade-splash-layer {
+  animation:
+    arcadeKenBurns 11s ease-out forwards,
+    arcadeIgnition 4s ease-in-out infinite;
+  transform-origin: center;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+.arcade-ready-pulse {
+  animation: arcadeReadyPulse 1100ms ease-in-out infinite;
+}
+
+@keyframes arcadeKenBurns {
+  0% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes arcadeIgnition {
+  0%,
+  100% {
+    filter: brightness(0.94) saturate(1.02);
+  }
+
+  50% {
+    filter: brightness(1.03) saturate(1.08);
+  }
+}
+
+@keyframes arcadeReadyPulse {
+  0%,
+  100% {
+    opacity: 0.86;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 /* ============================================
@@ -1051,4 +1121,44 @@ body::after {
 
 .synapse-thread-line {
   animation: synapseThreadDash 2.2s linear infinite;
+}
+
+.visual-echo-layer {
+  opacity: 0.62;
+}
+
+.visual-echo-layer-enhanced {
+  opacity: 0.82;
+}
+
+.visual-echo-ring {
+  animation: visualEchoPulse 220ms ease-out forwards;
+}
+
+.visual-echo-core {
+  animation: visualEchoCore 220ms ease-out forwards;
+}
+
+@keyframes visualEchoPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes visualEchoCore {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

@@ -67,3 +67,6 @@ npm --workspace @hop/engine run bench:runtime:candidate
 - [Status](./docs/STATUS.md)
 - [Turn Stack Contract](./docs/TURN_STACK_CONTRACT.md)
 - [UI/UX Great Refactor Wrap-Up](./docs/UI_UX_GREAT_REFACTOR_WRAPUP_2026-03-03.md)
+- [UI Spec Current (Build Law)](./docs/UI_SPEC_CURRENT.md)
+- [UI Spec Aspirational (North Star)](./docs/UI_SPEC_ASPIRATIONAL.md)
+- [UI/UX Comprehensive Guide (Legacy Combined Snapshot)](./docs/UI_UX_COMPREHENSIVE_GUIDE.md)

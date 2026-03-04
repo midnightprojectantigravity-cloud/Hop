@@ -14,8 +14,13 @@ interface HubProps {
   onSelectLoadout: (loadout: Loadout) => void;
   onStartRun: (mode: 'normal' | 'daily') => void;
   onOpenArcade: () => void;
+  onOpenSettings?: () => void;
+  onOpenLeaderboard?: () => void;
+  onOpenTutorials?: () => void;
   onLoadScenario: (state: GameState, instructions: string) => void;
   onStartReplay: (r: ReplayRecord) => void;
+  dedicatedRoutesEnabled?: boolean;
+  hubTrainingOnly?: boolean;
 }
 
 export const Hub: React.FC<HubProps> = ({
@@ -27,8 +32,13 @@ export const Hub: React.FC<HubProps> = ({
   onSelectLoadout,
   onStartRun,
   onOpenArcade,
+  onOpenSettings,
+  onOpenLeaderboard,
+  onOpenTutorials,
   onLoadScenario,
-  onStartReplay
+  onStartReplay,
+  dedicatedRoutesEnabled = false,
+  hubTrainingOnly = false
 }) => {
   return (
     <div className="w-full h-full flex flex-col bg-[var(--surface-app)] relative">
@@ -99,13 +109,15 @@ export const Hub: React.FC<HubProps> = ({
                   <span>Start Run</span>
                   <span className="hidden sm:block text-[9px] opacity-70 tracking-[0.2em]">One More Run</span>
                 </button>
-                <button
-                  onClick={() => onStartRun('daily')}
-                  className="px-4 sm:px-6 py-2.5 sm:py-3 bg-[var(--accent-royal)] hover:brightness-105 text-[var(--text-inverse)] rounded-xl font-black uppercase text-xs sm:text-sm tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-[0_0_30px_rgba(39,82,146,0.25)] flex flex-col items-center justify-center leading-tight"
-                >
-                  <span>Daily</span>
-                  <span className="hidden sm:block text-[9px] opacity-70 tracking-[0.2em]">Seeded Challenge</span>
-                </button>
+                {!hubTrainingOnly && (
+                  <button
+                    onClick={() => onStartRun('daily')}
+                    className="px-4 sm:px-6 py-2.5 sm:py-3 bg-[var(--accent-royal)] hover:brightness-105 text-[var(--text-inverse)] rounded-xl font-black uppercase text-xs sm:text-sm tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-[0_0_30px_rgba(39,82,146,0.25)] flex flex-col items-center justify-center leading-tight"
+                  >
+                    <span>Daily</span>
+                    <span className="hidden sm:block text-[9px] opacity-70 tracking-[0.2em]">Seeded Challenge</span>
+                  </button>
+                )}
               </div>
             )}
             <details className="sm:hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
@@ -158,13 +170,35 @@ export const Hub: React.FC<HubProps> = ({
               </button>
               <h2 className="text-xl sm:text-2xl lg:text-3xl font-black uppercase tracking-tighter mb-2 font-[var(--font-heading)]">Select Your <span className="text-[var(--accent-royal)]">Archetype</span></h2>
               <p className="text-sm sm:text-base text-[var(--text-muted)] max-w-xl">Two taps: choose archetype, start run. Optional systems stay available without blocking run start.</p>
+              {dedicatedRoutesEnabled && (
+                <div className="mt-5 grid grid-cols-3 gap-2 sm:w-[480px]">
+                  <button
+                    onClick={onOpenSettings}
+                    className="min-h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[10px] font-black uppercase tracking-widest"
+                  >
+                    Settings
+                  </button>
+                  <button
+                    onClick={onOpenLeaderboard}
+                    className="min-h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[10px] font-black uppercase tracking-widest"
+                  >
+                    Leaderboard
+                  </button>
+                  <button
+                    onClick={onOpenTutorials}
+                    className="min-h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[10px] font-black uppercase tracking-widest"
+                  >
+                    Tutorials
+                  </button>
+                </div>
+              )}
             </div>
             <ArchetypeSelector onSelect={onSelectLoadout} selectedLoadoutId={gameState.selectedLoadoutId} />
           </div>
         </main>
 
         {/* Mobile Secondary Panels */}
-        <section className="lg:hidden border-t border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm p-4 sm:p-6 space-y-4">
+        <section className={`lg:hidden border-t border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm p-4 sm:p-6 space-y-4 ${dedicatedRoutesEnabled ? 'hidden' : ''}`}>
           <details className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
             <summary className="cursor-pointer list-none flex items-center justify-between">
               <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Historical Replay</span>
@@ -222,19 +256,21 @@ export const Hub: React.FC<HubProps> = ({
           <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-black mb-2">
             Ready: {gameState.selectedLoadoutId}
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid gap-2 ${hubTrainingOnly ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <button
               onClick={() => onStartRun('normal')}
               className="min-h-12 px-4 py-2 rounded-xl bg-[var(--accent-brass)] text-[var(--text-inverse)] font-black uppercase tracking-widest text-xs"
             >
               Start Run
             </button>
-            <button
-              onClick={() => onStartRun('daily')}
-              className="min-h-12 px-4 py-2 rounded-xl bg-[var(--accent-royal)] text-[var(--text-inverse)] font-black uppercase tracking-widest text-xs"
-            >
-              Daily
-            </button>
+            {!hubTrainingOnly && (
+              <button
+                onClick={() => onStartRun('daily')}
+                className="min-h-12 px-4 py-2 rounded-xl bg-[var(--accent-royal)] text-[var(--text-inverse)] font-black uppercase tracking-widest text-xs"
+              >
+                Daily
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-﻿type MobileToast = {
+type MobileToast = {
   id: string;
   text: string;
   tone: 'damage' | 'heal' | 'status' | 'system';
@@ -82,13 +82,16 @@ export const MobileToastsOverlay = ({ mobileToasts }: { mobileToasts: MobileToas
 export const RunLostOverlay = ({
   visible,
   onQuickRestart,
-  onViewReplay
+  onViewReplay,
+  onActionsReady
 }: {
   visible: boolean;
   onQuickRestart: () => void;
   onViewReplay: () => void;
+  onActionsReady?: () => void;
 }) => {
   if (!visible) return null;
+  onActionsReady?.();
   return (
     <div className="fixed inset-0 bg-[color:var(--overlay-defeat)] backdrop-blur-xl flex flex-col items-center justify-center z-[200] transition-opacity duration-300 px-6">
       <div className="w-[min(92vw,34rem)] rounded-3xl border border-[var(--accent-danger-border)] bg-[color:var(--surface-panel)] p-8 text-center">
@@ -162,6 +165,8 @@ export const ReplayControlsOverlay = ({
   replayActive,
   onToggleReplay,
   onStepReplay,
+  onJumpReplay,
+  markerIndices,
   onCloseReplay,
 }: {
   isReplayMode: boolean;
@@ -170,9 +175,20 @@ export const ReplayControlsOverlay = ({
   replayActive: boolean;
   onToggleReplay: () => void;
   onStepReplay: () => void;
+  onJumpReplay?: (index: number) => void;
+  markerIndices?: number[];
   onCloseReplay: () => void;
 }) => {
   if (!isReplayMode) return null;
+  const pipTargets = (() => {
+    if (markerIndices && markerIndices.length > 0) {
+      return Array.from(new Set(markerIndices.filter((index) => index >= 0 && index <= replayLength))).sort((a, b) => a - b);
+    }
+    const pipCount = replayLength <= 0 ? 0 : Math.min(8, replayLength + 1);
+    if (pipCount <= 1) return [0];
+    return Array.from({ length: pipCount }, (_, index) => Math.round((index / (pipCount - 1)) * replayLength));
+  })();
+
   return (
     <div className="fixed top-3 sm:top-auto sm:bottom-12 left-1/2 -translate-x-1/2 w-[min(94vw,40rem)] sm:w-auto bg-[color:var(--surface-panel)] border border-[var(--accent-royal)] p-4 sm:p-6 rounded-3xl backdrop-blur-2xl shadow-[0_0_50px_rgba(79,70,229,0.15)] z-[250] flex flex-col sm:flex-row items-center gap-4 sm:gap-8 animate-in slide-in-from-bottom-8 duration-300">
       <div className="flex flex-col">
@@ -206,7 +222,21 @@ export const ReplayControlsOverlay = ({
       >
         Close
       </button>
+      <div className={`w-full sm:w-auto items-center justify-center gap-1.5 ${onJumpReplay ? 'flex' : 'hidden'}`}>
+        {pipTargets.map((index) => (
+          <button
+            key={`replay-pip-${index}`}
+            onClick={() => onJumpReplay?.(index)}
+            disabled={replayActive}
+            className={`h-2.5 rounded-full transition-all disabled:opacity-30 ${
+              replayIndex === index
+                ? 'w-6 bg-[var(--accent-royal)]'
+                : 'w-2.5 bg-[var(--border-subtle)] hover:bg-[var(--accent-royal-soft)]'
+            }`}
+            title={`Jump to ${index}`}
+          />
+        ))}
+      </div>
     </div>
   );
 };
-

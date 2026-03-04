@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect, Suspense } from 'react';
+import { useRef, useState, useCallback, useEffect, Suspense, useMemo } from 'react';
 import { hexEquals } from '@hop/engine';
 import type { Point, Action, GameState } from '@hop/engine';
 import { useAssetManifest } from './app/use-asset-manifest';
@@ -16,13 +16,21 @@ import { buildStartRunPayload } from './app/start-run-overrides';
 import { getUiCapabilityRollout, setUiCapabilityRollout } from './app/capability-rollout';
 import { emitUiMetric } from './app/ui-telemetry';
 import { useUiPreferences } from './app/ui-preferences';
+import { readUiFeatureFlags } from './app/ui-feature-flags';
+import { dispatchSensoryEvent } from './app/sensory-dispatcher';
 import {
   LazyBiomeSandbox,
   LazyGameScreen,
   LazyHubScreen,
+  LazyLeaderboardScreen,
+  LazySettingsScreen,
+  LazyTutorialReplayScreen,
   prefetchBiomeSandbox,
   prefetchGameScreen,
-  prefetchHubScreen
+  prefetchHubScreen,
+  prefetchLeaderboardScreen,
+  prefetchSettingsScreen,
+  prefetchTutorialReplayScreen
 } from './app/lazy-screens';
 import {
   buildRunResumeContext,
@@ -36,6 +44,7 @@ import {
   type SynapsePulse,
   type SynapseSelection,
 } from './app/synapse';
+import splashPlaceholderImage from './assets/ui/splash-placeholder.jpg';
 
 const AppScreenFallback = ({ label }: { label: string }) => (
   <div className="w-screen h-screen flex items-center justify-center bg-[var(--surface-app)] text-[var(--text-muted)] text-xs font-black uppercase tracking-[0.28em]">
@@ -83,16 +92,100 @@ const summarizeActionPayload = (action: Action): Record<string, unknown> | undef
   return {};
 };
 
+const ArcadeSplashGate = ({
+  canEnter,
+  waitingForReady,
+  showDelayedPulse,
+  onEnterArcade,
+  onOpenHub
+}: {
+  canEnter: boolean;
+  waitingForReady: boolean;
+  showDelayedPulse: boolean;
+  onEnterArcade: () => void;
+  onOpenHub: () => void;
+}) => {
+  return (
+    <div className="w-screen h-screen relative overflow-hidden bg-[var(--surface-app)] text-[var(--text-inverse)]">
+      <div
+        className="absolute inset-0 bg-center bg-cover arcade-splash-layer"
+        style={{
+          backgroundImage: `url('${splashPlaceholderImage}')`
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/45 to-black/70" />
+      <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8 lg:p-12">
+        <div className="max-w-xl rounded-3xl border border-white/20 bg-black/45 backdrop-blur-md p-6 sm:p-8">
+          <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-tight font-[var(--font-heading)]">
+            Hop Arcade
+          </h1>
+          <p className="mt-2 text-xs sm:text-sm uppercase tracking-[0.24em] text-amber-100/80">
+            Daily Draft Entrance
+          </p>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={onEnterArcade}
+              disabled={waitingForReady && !canEnter}
+              className={`min-h-12 rounded-2xl border text-xs font-black uppercase tracking-[0.2em] ${
+                waitingForReady && !canEnter
+                  ? 'border-white/20 bg-white/10 text-white/60'
+                  : 'border-amber-300/50 bg-amber-100/20 text-amber-50 hover:bg-amber-100/28'
+              }`}
+            >
+              {waitingForReady && !canEnter ? 'Preparing...' : 'Tap To Enter'}
+            </button>
+            <button
+              type="button"
+              onClick={onOpenHub}
+              className="min-h-12 rounded-2xl border border-white/30 bg-white/10 text-xs font-black uppercase tracking-[0.2em] hover:bg-white/15"
+            >
+              Hub
+            </button>
+          </div>
+          {waitingForReady && (
+            <div
+              className={`mt-4 rounded-xl border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] ${
+                showDelayedPulse ? 'arcade-ready-pulse' : ''
+              }`}
+            >
+              Initializing engine...
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const { preferences: uiPreferences, patchPreferences: patchUiPreferences } = useUiPreferences();
   const {
+    pathname,
     hubPath,
     arcadePath,
     biomesPath,
+    settingsPath,
+    leaderboardPath,
+    tutorialsPath,
     isArcadeRoute,
     isBiomesRoute,
+    isSettingsRoute,
+    isLeaderboardRoute,
+    isTutorialsRoute,
     navigateTo
   } = useAppRouting();
+  const featureFlags = useMemo(() => readUiFeatureFlags(), []);
+  const arcadeSplashV2Enabled = featureFlags.ui_arcade_splash_v2;
+  const mobileDockV2Enabled = featureFlags.ui_mobile_dock_v2;
+  const defeatLoopV2Enabled = featureFlags.ui_defeat_loop_v2;
+  const sensoryDispatcherEnabled = featureFlags.ui_sensory_dispatcher_v1;
+  const dedicatedHubRoutesEnabled = featureFlags.ui_dedicated_hub_routes_v1;
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.dataset.uiMaterial = arcadeSplashV2Enabled ? 'v2' : 'v1';
+  }, [arcadeSplashV2Enabled]);
 
   const [gameState, dispatch] = usePersistedGameState();
   const [runResumeContext, setRunResumeContext] = useState<RunResumeContext | null>(() => readRunResumeContext());
@@ -100,6 +193,14 @@ function App() {
   const runStartedAtRef = useRef<number | null>(null);
   const firstActionMeasuredRef = useRef(false);
   const defeatAtRef = useRef<number | null>(null);
+  const runLostOverlayActionReadyRef = useRef(false);
+  const bootStartedAtRef = useRef(Date.now());
+  const bootMetricSentRef = useRef(false);
+  const delayedPulseMetricSentRef = useRef(false);
+  const [engineReady, setEngineReady] = useState(false);
+  const [arcadeSplashEntered, setArcadeSplashEntered] = useState(!arcadeSplashV2Enabled);
+  const [arcadeSplashWaitingForReady, setArcadeSplashWaitingForReady] = useState(false);
+  const [showArcadeDelayedPulse, setShowArcadeDelayedPulse] = useState(false);
 
   const isDebugQueryEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_QUERY);
   const assetManifest = useAssetManifest();
@@ -118,9 +219,42 @@ function App() {
     setReplayActive,
     resetReplayUi,
     startReplay,
-    stepReplay
+    stepReplay,
+    goToReplayIndex
   } = useReplayController({ dispatchWithTrace: dispatchReplayAction });
   useDebugPerfLogger([gameState.gameStatus, isReplayMode]);
+
+  const replayMarkerIndices = useMemo(() => {
+    if (replayActions.length === 0) return [0];
+    const markerSet = new Set<number>();
+    markerSet.add(0);
+    replayActions.forEach((action, index) => {
+      const type = (action as any)?.type;
+      if (
+        type === 'USE_SKILL'
+        || type === 'MOVE'
+        || type === 'ADVANCE_TURN'
+        || type === 'RESOLVE_PENDING'
+        || type === 'SELECT_UPGRADE'
+      ) {
+        markerSet.add(index + 1);
+      }
+    });
+    markerSet.add(replayActions.length);
+    const ordered = Array.from(markerSet).sort((a, b) => a - b);
+    if (ordered.length <= 12) return ordered;
+    const stride = Math.ceil(ordered.length / 12);
+    const sampled = ordered.filter((_, index) => index % stride === 0);
+    if (sampled[sampled.length - 1] !== replayActions.length) {
+      sampled.push(replayActions.length);
+    }
+    return sampled;
+  }, [replayActions]);
+
+  const dispatchSensory = useCallback((payload: Parameters<typeof dispatchSensoryEvent>[0]) => {
+    if (!sensoryDispatcherEnabled) return;
+    dispatchSensoryEvent(payload);
+  }, [sensoryDispatcherEnabled]);
 
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [showMovementRange, setShowMovementRange] = useState(false);
@@ -172,6 +306,85 @@ function App() {
   useRunRecording(gameState, isReplayMode);
 
   useEffect(() => {
+    if (engineReady) return;
+    if (!assetManifest) return;
+    setEngineReady(true);
+    if (!bootMetricSentRef.current) {
+      emitUiMetric('boot_ready_ms', Date.now() - bootStartedAtRef.current, {
+        hasAssetManifest: true
+      });
+      bootMetricSentRef.current = true;
+    }
+  }, [assetManifest, engineReady]);
+
+  useEffect(() => {
+    if (!arcadeSplashV2Enabled) {
+      setArcadeSplashEntered(true);
+      return;
+    }
+    if (!isArcadeRoute || gameState.gameStatus !== 'hub') return;
+    if (!arcadeSplashEntered && !arcadeSplashWaitingForReady) return;
+    if (engineReady) return;
+    setArcadeSplashEntered(false);
+    setArcadeSplashWaitingForReady(false);
+    setShowArcadeDelayedPulse(false);
+  }, [
+    arcadeSplashEntered,
+    arcadeSplashV2Enabled,
+    arcadeSplashWaitingForReady,
+    engineReady,
+    gameState.gameStatus,
+    isArcadeRoute
+  ]);
+
+  useEffect(() => {
+    if (!arcadeSplashWaitingForReady || engineReady) {
+      setShowArcadeDelayedPulse(false);
+      return;
+    }
+    const pulseTimeout = window.setTimeout(() => {
+      setShowArcadeDelayedPulse(true);
+      if (!delayedPulseMetricSentRef.current) {
+        emitUiMetric('splash_delayed_ready_pulse_shown', 1, { thresholdMs: 1500 });
+        delayedPulseMetricSentRef.current = true;
+      }
+    }, 1500);
+    return () => window.clearTimeout(pulseTimeout);
+  }, [arcadeSplashWaitingForReady, engineReady]);
+
+  useEffect(() => {
+    if (!arcadeSplashWaitingForReady || !engineReady) return;
+    setArcadeSplashEntered(true);
+    setArcadeSplashWaitingForReady(false);
+    setShowArcadeDelayedPulse(false);
+  }, [arcadeSplashWaitingForReady, engineReady]);
+
+  useEffect(() => {
+    const normalizedPath = pathname.toLowerCase().replace(/\/+$/, '');
+    const normalizedHubPath = hubPath.toLowerCase().replace(/\/+$/, '');
+    const isKnownRoute =
+      normalizedPath === normalizedHubPath
+      || isArcadeRoute
+      || isBiomesRoute
+      || (dedicatedHubRoutesEnabled && isSettingsRoute)
+      || (dedicatedHubRoutesEnabled && isLeaderboardRoute)
+      || (dedicatedHubRoutesEnabled && isTutorialsRoute);
+    if (isKnownRoute) return;
+    console.warn('[HOP_UI] Unknown route, redirecting to hub', { pathname });
+    navigateTo(hubPath);
+  }, [
+    hubPath,
+    dedicatedHubRoutesEnabled,
+    isArcadeRoute,
+    isBiomesRoute,
+    isLeaderboardRoute,
+    isSettingsRoute,
+    isTutorialsRoute,
+    navigateTo,
+    pathname
+  ]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     let cancelled = false;
 
@@ -181,6 +394,32 @@ function App() {
       if (isBiomesRoute) {
         void prefetchHubScreen();
         void prefetchGameScreen();
+        if (dedicatedHubRoutesEnabled) {
+          void prefetchSettingsScreen();
+          void prefetchLeaderboardScreen();
+          void prefetchTutorialReplayScreen();
+        }
+        return;
+      }
+
+      if (isSettingsRoute) {
+        void prefetchHubScreen();
+        void prefetchLeaderboardScreen();
+        void prefetchTutorialReplayScreen();
+        return;
+      }
+
+      if (isLeaderboardRoute) {
+        void prefetchHubScreen();
+        void prefetchSettingsScreen();
+        void prefetchTutorialReplayScreen();
+        return;
+      }
+
+      if (isTutorialsRoute) {
+        void prefetchHubScreen();
+        void prefetchSettingsScreen();
+        void prefetchLeaderboardScreen();
         return;
       }
 
@@ -189,10 +428,20 @@ function App() {
         if (!isArcadeRoute) {
           void prefetchBiomeSandbox();
         }
+        if (dedicatedHubRoutesEnabled) {
+          void prefetchSettingsScreen();
+          void prefetchLeaderboardScreen();
+          void prefetchTutorialReplayScreen();
+        }
         return;
       }
 
       void prefetchHubScreen();
+      if (dedicatedHubRoutesEnabled) {
+        void prefetchSettingsScreen();
+        void prefetchLeaderboardScreen();
+        void prefetchTutorialReplayScreen();
+      }
       if (!isArcadeRoute && gameState.gameStatus !== 'lost') {
         void prefetchBiomeSandbox();
       }
@@ -213,7 +462,15 @@ function App() {
       cancelled = true;
       window.clearTimeout(timeoutHandle);
     };
-  }, [gameState.gameStatus, isArcadeRoute, isBiomesRoute]);
+  }, [
+    dedicatedHubRoutesEnabled,
+    gameState.gameStatus,
+    isArcadeRoute,
+    isBiomesRoute,
+    isLeaderboardRoute,
+    isSettingsRoute,
+    isTutorialsRoute
+  ]);
 
   const clearSynapseContext = useCallback(() => {
     setSynapseSelection(EMPTY_SYNAPSE_SELECTION);
@@ -281,6 +538,12 @@ function App() {
     }
     if (selectedSkillId) {
       trackFirstActionMetric('USE_SKILL');
+      dispatchSensory({
+        id: 'haptic-action-medium',
+        intensity: 1.0,
+        priority: 'low',
+        context: 'run'
+      });
       armPostCommitLock();
       dispatchWithTrace({ type: 'USE_SKILL', payload: { skillId: selectedSkillId, target } }, 'player_use_skill');
       setSelectedSkillId(null);
@@ -291,6 +554,12 @@ function App() {
       return;
     }
     trackFirstActionMetric('MOVE');
+    dispatchSensory({
+      id: 'haptic-action-medium',
+      intensity: 1.0,
+      priority: 'low',
+      context: 'run'
+    });
     armPostCommitLock();
     dispatchWithTrace({ type: 'MOVE', payload: target }, 'player_move');
     setShowMovementRange(false);
@@ -308,6 +577,12 @@ function App() {
   };
 
   const handleReset = () => {
+    dispatchSensory({
+      id: 'haptic-nav-light',
+      intensity: 1.0,
+      priority: 'low',
+      context: 'run'
+    });
     dispatchWithTrace({ type: 'RESET' }, 'reset');
     setSelectedSkillId(null);
     setSynapseMode(false);
@@ -320,12 +595,24 @@ function App() {
       return;
     }
     trackFirstActionMetric('WAIT');
+    dispatchSensory({
+      id: 'haptic-action-medium',
+      intensity: 1.0,
+      priority: 'low',
+      context: 'run'
+    });
     armPostCommitLock();
     dispatchWithTrace({ type: 'WAIT' }, 'player_wait');
     setSelectedSkillId(null);
   };
 
   const stopReplay = () => {
+    dispatchSensory({
+      id: 'ui-parchment-slide',
+      intensity: 1.0,
+      priority: 'low',
+      context: 'run'
+    });
     handleExitToHub();
   };
 
@@ -400,6 +687,12 @@ function App() {
   };
 
   const handleStartArcadeRun = (loadoutId: string) => {
+    dispatchSensory({
+      id: 'ui-brass-clink',
+      intensity: 1.0,
+      priority: 'low',
+      context: 'hub'
+    });
     startRun({
       loadoutId,
       mode: 'daily',
@@ -407,6 +700,29 @@ function App() {
     });
     navigateTo(hubPath);
   };
+
+  const handleEnterArcadeSplash = useCallback(() => {
+    dispatchSensory({
+      id: 'ui-danger-drum',
+      intensity: 1.0,
+      priority: 'high',
+      context: 'hub'
+    });
+    if (engineReady) {
+      setArcadeSplashEntered(true);
+      setArcadeSplashWaitingForReady(false);
+      setShowArcadeDelayedPulse(false);
+      return;
+    }
+    setArcadeSplashWaitingForReady(true);
+  }, [dispatchSensory, engineReady]);
+
+  const handleOpenHubFromArcadeSplash = useCallback(() => {
+    setArcadeSplashEntered(false);
+    setArcadeSplashWaitingForReady(false);
+    setShowArcadeDelayedPulse(false);
+    navigateTo(hubPath);
+  }, [hubPath, navigateTo]);
 
   const handleQuickRestart = useCallback(() => {
     const restartPayload = deriveQuickRestartStartRunPayload({
@@ -428,6 +744,13 @@ function App() {
       });
     }
 
+    dispatchSensory({
+      id: 'haptic-outcome-impact',
+      intensity: 1.0,
+      priority: 'high',
+      context: 'run'
+    });
+
     resetReplayUi();
     setSelectedSkillId(null);
     setSynapseMode(false);
@@ -441,6 +764,7 @@ function App() {
     });
   }, [
     clearSynapseContext,
+    dispatchSensory,
     gameState.dailyRunDate,
     gameState.player.archetype,
     gameState.selectedLoadoutId,
@@ -454,24 +778,48 @@ function App() {
   const handleViewReplay = useCallback(() => {
     const record = buildReplayRecordFromGameState(gameState);
     if (!record) return;
+    dispatchSensory({
+      id: 'ui-parchment-slide',
+      intensity: 1.0,
+      priority: 'low',
+      context: 'run'
+    });
     startReplay(record);
-  }, [gameState, startReplay]);
+  }, [dispatchSensory, gameState, startReplay]);
+
+  const handleRunLostActionsReady = useCallback(() => {
+    if (!defeatLoopV2Enabled) return;
+    if (runLostOverlayActionReadyRef.current) return;
+    if (defeatAtRef.current === null) return;
+    runLostOverlayActionReadyRef.current = true;
+    emitUiMetric('run_lost_overlay_to_action_ms', Date.now() - defeatAtRef.current);
+  }, [defeatLoopV2Enabled]);
 
   useEffect(() => {
     if (gameState.gameStatus === 'lost') {
-      if (defeatAtRef.current === null) defeatAtRef.current = Date.now();
+      if (defeatAtRef.current === null) {
+        defeatAtRef.current = Date.now();
+        dispatchSensory({
+          id: 'haptic-threat-heavy',
+          intensity: 1.0,
+          priority: 'high',
+          context: 'run'
+        });
+      }
       return;
     }
     if (gameState.gameStatus === 'hub') {
       defeatAtRef.current = null;
+      runLostOverlayActionReadyRef.current = false;
       runStartedAtRef.current = null;
       firstActionMeasuredRef.current = false;
       return;
     }
     if (gameState.gameStatus === 'playing') {
       defeatAtRef.current = null;
+      runLostOverlayActionReadyRef.current = false;
     }
-  }, [gameState.gameStatus]);
+  }, [dispatchSensory, gameState.gameStatus]);
 
   useEffect(() => {
     if (gameState.gameStatus !== 'playing' || isReplayMode) return;
@@ -505,6 +853,63 @@ function App() {
   }
 
   if (gameState.gameStatus === 'hub') {
+    if (dedicatedHubRoutesEnabled && isSettingsRoute) {
+      return (
+        <Suspense fallback={<AppScreenFallback label="Loading Settings..." />}>
+          <LazySettingsScreen
+            uiPreferences={uiPreferences}
+            onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
+            onSetMotionMode={(motionMode) => patchUiPreferences({ motionMode })}
+            onSetHudDensity={(hudDensity) => patchUiPreferences({ hudDensity })}
+            onBack={() => navigateTo(hubPath)}
+          />
+        </Suspense>
+      );
+    }
+
+    if (dedicatedHubRoutesEnabled && isLeaderboardRoute) {
+      return (
+        <Suspense fallback={<AppScreenFallback label="Loading Leaderboard..." />}>
+          <LazyLeaderboardScreen
+            gameState={gameState}
+            onStartReplay={(record) => {
+              dispatchSensory({
+                id: 'ui-parchment-slide',
+                intensity: 1.0,
+                priority: 'low',
+                context: 'hub'
+              });
+              startReplay(record);
+            }}
+            onBack={() => navigateTo(hubPath)}
+          />
+        </Suspense>
+      );
+    }
+
+    if (dedicatedHubRoutesEnabled && isTutorialsRoute) {
+      return (
+        <Suspense fallback={<AppScreenFallback label="Loading Tutorials..." />}>
+          <LazyTutorialReplayScreen
+            onLoadScenario={handleLoadScenario}
+            onBack={() => navigateTo(hubPath)}
+          />
+        </Suspense>
+      );
+    }
+
+    if (isArcadeRoute && arcadeSplashV2Enabled && !arcadeSplashEntered) {
+      return (
+        <ArcadeSplashGate
+          canEnter={engineReady}
+          waitingForReady={arcadeSplashWaitingForReady}
+          showDelayedPulse={showArcadeDelayedPulse}
+          onEnterArcade={handleEnterArcadeSplash}
+          onOpenHub={handleOpenHubFromArcadeSplash}
+        />
+      );
+    }
+
     return (
       <Suspense fallback={<AppScreenFallback label="Loading Hub..." />}>
         <LazyHubScreen
@@ -513,9 +918,14 @@ function App() {
           hubPath={hubPath}
           arcadePath={arcadePath}
           biomesPath={biomesPath}
+          settingsPath={settingsPath}
+          leaderboardPath={leaderboardPath}
+          tutorialsPath={tutorialsPath}
           replayError={replayError}
           tutorialInstructions={tutorialInstructions}
           uiPreferences={uiPreferences}
+          dedicatedRoutesEnabled={dedicatedHubRoutesEnabled}
+          arcadeSplashV2Enabled={arcadeSplashV2Enabled}
           navigateTo={navigateTo}
           onStartArcadeRun={handleStartArcadeRun}
           onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
@@ -531,7 +941,15 @@ function App() {
           }}
           onStartRun={handleStartRun}
           onLoadScenario={handleLoadScenario}
-          onStartReplay={startReplay}
+          onStartReplay={(record) => {
+            dispatchSensory({
+              id: 'ui-parchment-slide',
+              intensity: 1.0,
+              priority: 'low',
+              context: 'hub'
+            });
+            startReplay(record);
+          }}
           onDismissTutorial={() => setTutorialInstructions(null)}
         />
       </Suspense>
@@ -570,12 +988,25 @@ function App() {
         onSynapseSelectSource={handleSynapseInspectEntity}
         onSynapseClearSelection={clearSynapseContext}
         onDismissTutorial={() => setTutorialInstructions(null)}
-        onToggleReplay={() => setReplayActive(!replayActive)}
+        onToggleReplay={() => {
+          dispatchSensory({
+            id: 'ui-parchment-slide',
+            intensity: 1.0,
+            priority: 'low',
+            context: 'run'
+          });
+          setReplayActive(!replayActive);
+        }}
         onStepReplay={stepReplay}
+        onJumpReplay={goToReplayIndex}
+        replayMarkerIndices={replayMarkerIndices}
         onCloseReplay={stopReplay}
         onQuickRestart={handleQuickRestart}
         onViewReplay={handleViewReplay}
+        onRunLostActionsReady={handleRunLostActionsReady}
         onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
+        mobileDockV2Enabled={mobileDockV2Enabled}
+        replayChronicleEnabled={defeatLoopV2Enabled}
       />
     </Suspense>
   );

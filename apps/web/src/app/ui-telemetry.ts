@@ -1,9 +1,14 @@
-﻿export type UiMetricName =
+export type UiMetricName =
   | 'hub_select_to_start_ms'
   | 'defeat_to_restart_ms'
-  | 'first_action_ms';
+  | 'first_action_ms'
+  | 'boot_ready_ms'
+  | 'splash_delayed_ready_pulse_shown'
+  | 'run_lost_overlay_to_action_ms'
+  | 'sensory_preemption_count'
+  | 'sensory_low_priority_dropped_count';
 
-interface UiMetricEnvelope {
+export interface UiMetricEnvelope {
   metric: UiMetricName;
   value: number;
   at: string;
@@ -26,3 +31,4 @@ export const emitUiMetric = (
 
   window.dispatchEvent(new CustomEvent<UiMetricEnvelope>('hop-ui-metric', { detail: payload }));
 };
+

@@ -5,10 +5,64 @@ export interface AppRoutingState {
   hubPath: string;
   arcadePath: string;
   biomesPath: string;
+  settingsPath: string;
+  leaderboardPath: string;
+  tutorialsPath: string;
   isArcadeRoute: boolean;
   isBiomesRoute: boolean;
+  isSettingsRoute: boolean;
+  isLeaderboardRoute: boolean;
+  isTutorialsRoute: boolean;
   navigateTo: (path: string) => void;
 }
+
+const normalizeRoute = (path: string): string => path.toLowerCase().replace(/\/+$/, '');
+
+export interface DerivedAppRouting {
+  hubPath: string;
+  arcadePath: string;
+  biomesPath: string;
+  settingsPath: string;
+  leaderboardPath: string;
+  tutorialsPath: string;
+  isArcadeRoute: boolean;
+  isBiomesRoute: boolean;
+  isSettingsRoute: boolean;
+  isLeaderboardRoute: boolean;
+  isTutorialsRoute: boolean;
+}
+
+export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
+  const hubBase = pathname.toLowerCase().startsWith('/hop') ? '/Hop' : '';
+  const hubPath = `${hubBase || ''}` || '/';
+  const arcadePath = `${hubBase}/Arcade` || '/Arcade';
+  const biomesPath = `${hubBase}/Biomes` || '/Biomes';
+  const settingsPath = `${hubBase}/Settings` || '/Settings';
+  const leaderboardPath = `${hubBase}/Leaderboard` || '/Leaderboard';
+  const tutorialsPath = `${hubBase}/Tutorials` || '/Tutorials';
+
+  const normalizedPathname = normalizeRoute(pathname);
+
+  const isArcadeRoute = normalizedPathname.endsWith('/arcade') || normalizedPathname.endsWith('/arcarde');
+  const isBiomesRoute = normalizedPathname.endsWith('/biomes');
+  const isSettingsRoute = normalizedPathname.endsWith('/settings');
+  const isLeaderboardRoute = normalizedPathname.endsWith('/leaderboard');
+  const isTutorialsRoute = normalizedPathname.endsWith('/tutorials');
+
+  return {
+    hubPath,
+    arcadePath,
+    biomesPath,
+    settingsPath,
+    leaderboardPath,
+    tutorialsPath,
+    isArcadeRoute,
+    isBiomesRoute,
+    isSettingsRoute,
+    isLeaderboardRoute,
+    isTutorialsRoute
+  };
+};
 
 export const useAppRouting = (): AppRoutingState => {
   const [pathname, setPathname] = useState(() => window.location.pathname);
@@ -26,28 +80,11 @@ export const useAppRouting = (): AppRoutingState => {
     setPathname(path);
   };
 
-  const derived = useMemo(() => {
-    const hubBase = pathname.toLowerCase().startsWith('/hop') ? '/Hop' : '';
-    const hubPath = `${hubBase || ''}` || '/';
-    const arcadePath = `${hubBase}/Arcade` || '/Arcade';
-    const biomesPath = `${hubBase}/Biomes` || '/Biomes';
-    const pathnameLower = pathname.toLowerCase();
-    const normalizedPathname = pathnameLower.replace(/\/+$/, '');
-    const isArcadeRoute = normalizedPathname.endsWith('/arcade') || normalizedPathname.endsWith('/arcarde');
-    const isBiomesRoute = normalizedPathname.endsWith('/biomes');
-
-    return {
-      hubPath,
-      arcadePath,
-      biomesPath,
-      isArcadeRoute,
-      isBiomesRoute,
-    };
-  }, [pathname]);
+  const derived = useMemo(() => deriveAppRouting(pathname), [pathname]);
 
   return {
     pathname,
     navigateTo,
-    ...derived,
+    ...derived
   };
 };

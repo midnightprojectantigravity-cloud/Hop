@@ -7,6 +7,7 @@ import {
 import { CameraZoomControls } from './game-board/CameraZoomControls';
 import { JuiceTraceOverlay } from './game-board/JuiceTraceOverlay';
 import { GameBoardSceneSvg } from './game-board/GameBoardSceneSvg';
+import type { VisualEchoEntry } from './game-board/VisualEchoLayer';
 import { useBoardInteractions } from './game-board/useBoardInteractions';
 import { useBoardCamera } from './game-board/useBoardCamera';
 import { useBoardDepthSprites } from './game-board/useBoardDepthSprites';
@@ -62,6 +63,7 @@ interface GameBoardProps {
     synapsePulse?: SynapsePulse;
     synapseDeltasByActorId?: Record<string, SynapseDeltaEntry>;
     onSynapseInspectEntity?: (actorId: string) => void;
+    visualEchoesEnabled?: boolean;
 }
 
 const getHexPoints = (size: number): string => {
@@ -90,11 +92,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     synapsePulse = null,
     synapseDeltasByActorId = {},
     onSynapseInspectEntity,
+    visualEchoesEnabled = false,
 }) => {
     type BoardDecal = { id: string; position: Point; href: string; createdAt: number };
     const [hoveredTile, setHoveredTile] = useState<Point | null>(null);
     const [juiceBusy, setJuiceBusy] = useState(false);
     const [decals, setDecals] = useState<BoardDecal[]>([]);
+    const [visualEchoes, setVisualEchoes] = useState<VisualEchoEntry[]>([]);
+    const prevActorPositionsRef = React.useRef<Map<string, Point> | null>(null);
     const playerPos = gameState.player.position;
 
     // Filter cells based on dynamic diamond geometry
@@ -303,6 +308,54 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     });
 
     useEffect(() => {
+        if (!visualEchoesEnabled) {
+            prevActorPositionsRef.current = null;
+            setVisualEchoes([]);
+            return;
+        }
+        const nextActorPositions = new Map<string, Point>();
+        nextActorPositions.set(gameState.player.id, gameState.player.position);
+        gameState.enemies.forEach((enemy) => {
+            nextActorPositions.set(enemy.id, enemy.position);
+        });
+        (gameState.companions || []).forEach((companion) => {
+            nextActorPositions.set(companion.id, companion.position);
+        });
+
+        const prevPositions = prevActorPositionsRef.current;
+        if (!prevPositions) {
+            prevActorPositionsRef.current = nextActorPositions;
+            return;
+        }
+
+        const nextEchoes: VisualEchoEntry[] = [];
+        nextActorPositions.forEach((position, actorId) => {
+            const prev = prevPositions.get(actorId);
+            if (!prev) return;
+            if (prev.q === position.q && prev.r === position.r && prev.s === position.s) return;
+            nextEchoes.push({
+                id: `${actorId}-${gameState.turnNumber}-${prev.q}-${prev.r}-${prev.s}`,
+                actorId,
+                position: prev,
+                expireTurn: gameState.turnNumber + 1
+            });
+        });
+
+        prevActorPositionsRef.current = nextActorPositions;
+        setVisualEchoes((existing) => {
+            const active = existing.filter((echo) => echo.expireTurn >= gameState.turnNumber);
+            return [...active, ...nextEchoes].slice(-48);
+        });
+    }, [
+        gameState.companions,
+        gameState.enemies,
+        gameState.player.id,
+        gameState.player.position,
+        gameState.turnNumber,
+        visualEchoesEnabled
+    ]);
+
+    useEffect(() => {
         onBusyStateChange?.(movementBusy || juiceBusy);
     }, [movementBusy, juiceBusy, onBusyStateChange]);
 
@@ -380,6 +433,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     synapseSelection={synapseSelection}
                     synapsePulse={synapsePulse}
                     synapseDeltasByActorId={synapseDeltasByActorId}
+                    visualEchoes={visualEchoesEnabled ? visualEchoes : []}
                     onSynapseInspectEntity={handleSynapseInspectEntity}
                     onTileClick={handleTileClick}
                     onTileHover={handleHoverTile}

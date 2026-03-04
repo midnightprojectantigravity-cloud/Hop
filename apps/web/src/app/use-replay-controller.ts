@@ -16,6 +16,27 @@ export interface ReplayPlaybackValidationResult {
   error?: string;
 }
 
+export const replayActionsToIndex = ({
+  initState,
+  actions,
+  targetIndex,
+  dispatchWithTrace
+}: {
+  initState: GameState;
+  actions: Action[];
+  targetIndex: number;
+  dispatchWithTrace: DispatchWithTrace;
+}): number => {
+  const clamped = Math.max(0, Math.min(targetIndex, actions.length));
+  dispatchWithTrace({ type: 'LOAD_STATE', payload: initState } as Action, 'replay_jump_reset');
+  for (let i = 0; i < clamped; i += 1) {
+    const action = actions[i];
+    if (!action) break;
+    dispatchWithTrace(action as Action, 'replay_jump');
+  }
+  return clamped;
+};
+
 export const validateReplayRecordForPlayback = (record: ReplayRecord): ReplayPlaybackValidationResult => {
   const validation = validateReplayEnvelopeV3(record.replay);
   if (!validation.valid || !validation.envelope) {
@@ -44,6 +65,7 @@ export const useReplayController = ({ dispatchWithTrace }: ReplayControllerOptio
   const [replayActive, setReplayActive] = useState(false);
   const [replayError, setReplayError] = useState<string | null>(null);
   const replayIndexRef = useRef(0);
+  const replayInitStateRef = useRef<GameState | null>(null);
 
   const resetReplayUi = useCallback(() => {
     setReplayActive(false);
@@ -51,6 +73,7 @@ export const useReplayController = ({ dispatchWithTrace }: ReplayControllerOptio
     setReplayError(null);
     setReplayActions([]);
     replayIndexRef.current = 0;
+    replayInitStateRef.current = null;
   }, []);
 
   const startReplay = useCallback((r: ReplayRecord) => {
@@ -70,6 +93,7 @@ export const useReplayController = ({ dispatchWithTrace }: ReplayControllerOptio
     setReplayActions(parsed.actions);
     setReplayActive(false);
     replayIndexRef.current = 0;
+    replayInitStateRef.current = parsed.initState;
     dispatchWithTrace({ type: 'LOAD_STATE', payload: parsed.initState } as Action, 'replay_start');
   }, [dispatchWithTrace]);
 
@@ -81,6 +105,16 @@ export const useReplayController = ({ dispatchWithTrace }: ReplayControllerOptio
     }
     dispatchWithTrace(replayActions[idx] as Action, 'replay_step');
     replayIndexRef.current = idx + 1;
+  }, [dispatchWithTrace, replayActions]);
+
+  const goToReplayIndex = useCallback((targetIndex: number) => {
+    if (!replayInitStateRef.current) return;
+    replayIndexRef.current = replayActionsToIndex({
+      initState: replayInitStateRef.current,
+      actions: replayActions,
+      targetIndex,
+      dispatchWithTrace
+    });
   }, [dispatchWithTrace, replayActions]);
 
   useEffect(() => {
@@ -98,6 +132,7 @@ export const useReplayController = ({ dispatchWithTrace }: ReplayControllerOptio
     setReplayActive,
     resetReplayUi,
     startReplay,
-    stepReplay
+    stepReplay,
+    goToReplayIndex
   };
 };

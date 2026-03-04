@@ -5,7 +5,29 @@ import type { Loadout } from '@hop/engine';
 interface ArcadeHubProps {
   onBack: () => void;
   onLaunchArcade: (loadoutId: string) => void;
+  twoStepSelection?: boolean;
 }
+
+export const resolveArcadeSelectionInteraction = ({
+  twoStepSelection,
+  selectedLoadoutId,
+  clickedLoadoutId
+}: {
+  twoStepSelection: boolean;
+  selectedLoadoutId: string | null;
+  clickedLoadoutId: string;
+}): { nextSelectedLoadoutId: string | null; launchLoadoutId: string | null } => {
+  if (twoStepSelection) {
+    return {
+      nextSelectedLoadoutId: clickedLoadoutId,
+      launchLoadoutId: null
+    };
+  }
+  return {
+    nextSelectedLoadoutId: selectedLoadoutId ?? clickedLoadoutId,
+    launchLoadoutId: clickedLoadoutId
+  };
+};
 
 const ARCHETYPE_ART: Record<string, string> = {
   VANGUARD: 'V',
@@ -43,10 +65,13 @@ const buildDailyPair = (loadouts: Loadout[], dateKey: string): [Loadout, Loadout
   return [first, second];
 };
 
-export const ArcadeHub: React.FC<ArcadeHubProps> = ({ onBack, onLaunchArcade }) => {
+export const ArcadeHub: React.FC<ArcadeHubProps> = ({ onBack, onLaunchArcade, twoStepSelection = false }) => {
   const allLoadouts = React.useMemo(() => Object.values(DEFAULT_LOADOUTS), []);
   const dateKey = React.useMemo(() => toDateKey(), []);
   const [left, right] = React.useMemo(() => buildDailyPair(allLoadouts, dateKey), [allLoadouts, dateKey]);
+  const pair = React.useMemo(() => [left, right], [left, right]);
+  const [selectedLoadoutId, setSelectedLoadoutId] = React.useState<string | null>(twoStepSelection ? null : left.id);
+  const selectedLoadout = pair.find((entry) => entry.id === selectedLoadoutId) || null;
 
   return (
     <div className="w-full h-full flex flex-col bg-[var(--surface-app)]">
@@ -75,14 +100,29 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({ onBack, onLaunchArcade }) 
           </div>
 
           <div className="flex flex-col gap-6">
-            {[left, right].map((loadout, idx) => {
+            {pair.map((loadout, idx) => {
               const mirrored = idx === 1;
               const glyph = ARCHETYPE_ART[loadout.id] || loadout.id.slice(0, 1);
+              const isSelected = selectedLoadoutId === loadout.id;
               return (
                 <button
                   key={loadout.id}
-                  onClick={() => onLaunchArcade(loadout.id)}
-                  className="w-full text-left group rounded-3xl border border-[var(--border-subtle)] bg-gradient-to-r from-[var(--surface-panel-hover)] to-[var(--surface-panel-muted)] hover:brightness-105 transition-all p-4 sm:p-6"
+                  onClick={() => {
+                    const interaction = resolveArcadeSelectionInteraction({
+                      twoStepSelection,
+                      selectedLoadoutId,
+                      clickedLoadoutId: loadout.id
+                    });
+                    setSelectedLoadoutId(interaction.nextSelectedLoadoutId);
+                    if (interaction.launchLoadoutId) {
+                      onLaunchArcade(interaction.launchLoadoutId);
+                    }
+                  }}
+                  className={`w-full text-left group rounded-3xl border transition-all p-4 sm:p-6 ${
+                    isSelected
+                      ? 'border-[var(--accent-royal)] bg-[var(--accent-royal-soft)]'
+                      : 'border-[var(--border-subtle)] bg-gradient-to-r from-[var(--surface-panel-hover)] to-[var(--surface-panel-muted)] hover:brightness-105'
+                  }`}
                 >
                   <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 ${mirrored ? 'sm:flex-row-reverse' : ''}`}>
                     <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -111,7 +151,7 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({ onBack, onLaunchArcade }) 
                     <div className="text-left sm:text-right sm:min-w-[150px]">
                       <div className="text-[10px] uppercase tracking-[0.25em] text-[var(--text-muted)]">Launch</div>
                       <div className="text-sm font-black uppercase tracking-widest text-[var(--accent-royal)] group-hover:opacity-85">
-                        Start Arcade Run
+                        {twoStepSelection ? (isSelected ? 'Selected' : 'Select') : 'Start Arcade Run'}
                       </div>
                     </div>
                   </div>
@@ -119,6 +159,43 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({ onBack, onLaunchArcade }) 
               );
             })}
           </div>
+
+          {twoStepSelection && (
+            <section className="mt-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4 sm:p-6">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-black mb-2">Selection Details</div>
+              {selectedLoadout ? (
+                <>
+                  <div className="text-xl font-black uppercase tracking-tight mb-2">{selectedLoadout.name}</div>
+                  <p className="text-[var(--text-secondary)] text-sm mb-4">
+                    Daily seeded run. You can switch archetypes before confirming launch.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {selectedLoadout.startingSkills.map(skill => (
+                      <span key={`sel-${skill}`} className="text-[10px] px-2 py-1 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] font-bold tracking-wide">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-[var(--text-muted)] mb-4">Select a daily archetype to inspect details and launch.</p>
+              )}
+              <button
+                disabled={!selectedLoadout}
+                onClick={() => {
+                  if (!selectedLoadout) return;
+                  onLaunchArcade(selectedLoadout.id);
+                }}
+                className={`w-full min-h-12 rounded-2xl text-xs font-black uppercase tracking-[0.2em] border ${
+                  selectedLoadout
+                    ? 'border-[var(--accent-brass)] bg-[var(--accent-brass-soft)] text-[var(--text-primary)]'
+                    : 'border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[var(--text-muted)] opacity-60'
+                }`}
+              >
+                Start
+              </button>
+            </section>
+          )}
         </div>
       </main>
     </div>
