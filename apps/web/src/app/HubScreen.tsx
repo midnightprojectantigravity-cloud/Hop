@@ -3,7 +3,13 @@ import type { ReplayRecord } from '../components/ReplayManager';
 import { Hub } from '../components/Hub';
 import { ArcadeHub } from '../components/ArcadeHub';
 import { ReplayErrorOverlay, TutorialInstructionsOverlay } from './AppOverlays';
-import type { UiColorMode, UiHudDensity, UiMotionMode, UiPreferencesV1 } from './ui-preferences';
+import {
+  UI_THEME_OPTIONS,
+  type UiColorMode,
+  type UiHudDensity,
+  type UiMotionMode,
+  type UiPreferencesV1
+} from './ui-preferences';
 
 interface HubScreenProps {
   gameState: GameState;
@@ -68,28 +74,19 @@ export const HubScreen = ({
     <div className="w-screen h-screen bg-[var(--surface-app)] overflow-hidden text-[var(--text-primary)] font-[var(--font-body)] relative">
       <div className="absolute top-4 left-4 z-40 hidden sm:flex flex-wrap gap-2 max-w-[min(92vw,40rem)]">
         <div className="flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
-          <button
-            type="button"
-            onClick={() => onSetColorMode('light')}
-            className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border transition-colors ${
-              uiPreferences.colorMode === 'light'
-                ? 'bg-[var(--accent-brass-soft)] border-[var(--accent-brass)] text-[var(--text-primary)]'
-                : 'bg-transparent border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-            }`}
+          <span className="px-1 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">Theme</span>
+          <select
+            aria-label="Theme"
+            value={uiPreferences.colorMode}
+            onChange={(event) => onSetColorMode(event.target.value as UiColorMode)}
+            className="min-h-8 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-primary)]"
           >
-            Light
-          </button>
-          <button
-            type="button"
-            onClick={() => onSetColorMode('dark')}
-            className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border transition-colors ${
-              uiPreferences.colorMode === 'dark'
-                ? 'bg-[var(--accent-danger-soft)] border-[var(--accent-danger)] text-[var(--text-primary)]'
-                : 'bg-transparent border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            Dark
-          </button>
+            {UI_THEME_OPTIONS.map((theme) => (
+              <option key={theme.id} value={theme.id}>
+                {theme.label}
+              </option>
+            ))}
+          </select>
         </div>
         <button
           type="button"
@@ -106,13 +103,20 @@ export const HubScreen = ({
           {uiPreferences.hudDensity === 'compact' ? 'Compact HUD' : 'Comfort HUD'}
         </button>
       </div>
-      <button
-        type="button"
-        onClick={() => onSetColorMode(uiPreferences.colorMode === 'light' ? 'dark' : 'light')}
-        className="absolute top-4 left-4 z-40 sm:hidden px-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-muted)]"
-      >
-        {uiPreferences.colorMode === 'light' ? 'Dark' : 'Light'}
-      </button>
+      <div className="absolute top-4 left-4 z-40 sm:hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2.5 py-2">
+        <select
+          aria-label="Theme"
+          value={uiPreferences.colorMode}
+          onChange={(event) => onSetColorMode(event.target.value as UiColorMode)}
+          className="min-h-8 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-2 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-primary)]"
+        >
+          {UI_THEME_OPTIONS.map((theme) => (
+            <option key={theme.id} value={theme.id}>
+              {theme.label}
+            </option>
+          ))}
+        </select>
+      </div>
       {!isArcadeRoute && (
         <button
           type="button"

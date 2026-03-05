@@ -11,6 +11,7 @@ interface UIProps {
   onExitToHub: () => void;
   intelMode: UiInformationRevealMode;
   onIntelModeChange: (mode: UiInformationRevealMode) => void;
+  showIntelControls?: boolean;
   inputLocked?: boolean;
   compact?: boolean;
   hideInitiativeQueue?: boolean;
@@ -24,6 +25,7 @@ export const UI: React.FC<UIProps> = ({
   onExitToHub,
   intelMode,
   onIntelModeChange,
+  showIntelControls = false,
   inputLocked = false,
   compact = false,
   hideInitiativeQueue = false,
@@ -40,6 +42,7 @@ export const UI: React.FC<UIProps> = ({
         onExitToHub={onExitToHub}
         intelMode={intelMode}
         onIntelModeChange={onIntelModeChange}
+        showIntelControls={showIntelControls}
         inputLocked={inputLocked}
         compact={compact}
         hideInitiativeQueue={hideInitiativeQueue}

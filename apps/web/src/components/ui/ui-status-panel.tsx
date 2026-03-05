@@ -18,6 +18,7 @@ interface UiStatusPanelProps {
   onExitToHub: () => void;
   intelMode: UiInformationRevealMode;
   onIntelModeChange: (mode: UiInformationRevealMode) => void;
+  showIntelControls?: boolean;
   inputLocked?: boolean;
   compact?: boolean;
   hideInitiativeQueue?: boolean;
@@ -30,6 +31,7 @@ export const UiStatusPanel: React.FC<UiStatusPanelProps> = ({
   onExitToHub,
   intelMode,
   onIntelModeChange,
+  showIntelControls = false,
   inputLocked = false,
   compact = false,
   hideInitiativeQueue = false
@@ -46,6 +48,7 @@ export const UiStatusPanel: React.FC<UiStatusPanelProps> = ({
         gameState={gameState}
         compact={compact}
         intelMode={intelMode}
+        showIntelControls={showIntelControls}
         onIntelModeChange={onIntelModeChange}
       />
       <UiDirectivesSection

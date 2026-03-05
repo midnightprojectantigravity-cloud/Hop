@@ -24,7 +24,6 @@ import type {
 import {
     type CameraInsetsPx,
     type CameraRect,
-    CAMERA_ZOOM_PRESETS,
 } from '../visual/camera';
 import { resolveSynapsePreview, type SynapseDeltaEntry, type SynapsePulse, type SynapseSelection } from '../app/synapse';
 
@@ -261,7 +260,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     });
 
     const {
-        handleResetView,
         handleTileClick,
         handleHoverTile,
         handleBoardPointerDown,
@@ -450,10 +448,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 <JuiceTraceOverlay entries={juiceDebugEntries} />
             )}
             <CameraZoomControls
-                presets={CAMERA_ZOOM_PRESETS}
                 activePreset={zoomPreset}
                 onSelectPreset={setZoomPresetAnimated}
-                onResetView={handleResetView}
             />
         </div>
     );

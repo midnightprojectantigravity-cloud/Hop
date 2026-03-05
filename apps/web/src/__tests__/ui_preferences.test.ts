@@ -25,7 +25,7 @@ describe('ui preferences v1', () => {
     const storage = new MemoryStorage();
     const prefs = readUiPreferences(storage);
     expect(prefs).toEqual({
-      colorMode: 'light',
+      colorMode: 'parchment',
       motionMode: 'snappy',
       hudDensity: 'compact',
       mobileLayout: 'portrait_primary'
@@ -35,7 +35,7 @@ describe('ui preferences v1', () => {
   it('writes and re-reads canonical preference keys', () => {
     const storage = new MemoryStorage();
     const prefs: UiPreferencesV1 = {
-      colorMode: 'dark',
+      colorMode: 'midnight',
       motionMode: 'reduced',
       hudDensity: 'comfortable',
       mobileLayout: 'portrait_primary'
@@ -44,17 +44,31 @@ describe('ui preferences v1', () => {
     writeUiPreferences(prefs, storage);
 
     expect(storage.getItem(UI_PREFERENCES_STORAGE_KEY)).toBeTruthy();
-    expect(storage.getItem(UI_THEME_STORAGE_KEY)).toBe('dark');
+    expect(storage.getItem(UI_THEME_STORAGE_KEY)).toBe('midnight');
 
     const roundTrip = readUiPreferences(storage);
     expect(roundTrip).toEqual(prefs);
+  });
+
+  it('maps legacy light and dark values to canonical themes', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(UI_PREFERENCES_STORAGE_KEY, JSON.stringify({
+      colorMode: 'light',
+      motionMode: 'snappy',
+      hudDensity: 'compact',
+      mobileLayout: 'portrait_primary'
+    }));
+    storage.setItem(UI_THEME_STORAGE_KEY, 'dark');
+
+    const prefs = readUiPreferences(storage);
+    expect(prefs.colorMode).toBe('midnight');
   });
 
   it('applies preference dataset attributes to root element', () => {
     const root = { dataset: {} as Record<string, string> } as unknown as HTMLElement;
     applyUiPreferencesToRoot(
       {
-        colorMode: 'dark',
+        colorMode: 'midnight',
         motionMode: 'reduced',
         hudDensity: 'comfortable',
         mobileLayout: 'portrait_primary'
@@ -62,7 +76,7 @@ describe('ui preferences v1', () => {
       root
     );
 
-    expect(root.dataset.theme).toBe('dark');
+    expect(root.dataset.theme).toBe('midnight');
     expect(root.dataset.motion).toBe('reduced');
     expect(root.dataset.hudDensity).toBe('comfortable');
     expect(root.dataset.mobileLayout).toBe('portrait_primary');

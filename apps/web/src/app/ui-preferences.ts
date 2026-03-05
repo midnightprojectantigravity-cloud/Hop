@@ -1,9 +1,30 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-export type UiColorMode = 'light' | 'dark';
+export const UI_THEME_IDS = [
+  'parchment',
+  'verdigris',
+  'glacial',
+  'rose',
+  'midnight',
+  'dusk',
+  'cinder',
+  'obsidian'
+] as const;
+export type UiColorMode = (typeof UI_THEME_IDS)[number];
 export type UiMotionMode = 'snappy' | 'reduced';
 export type UiHudDensity = 'compact' | 'comfortable';
 export type UiMobileLayout = 'portrait_primary';
+
+export const UI_THEME_OPTIONS: ReadonlyArray<{ id: UiColorMode; label: string }> = [
+  { id: 'parchment', label: 'Parchment' },
+  { id: 'verdigris', label: 'Verdigris' },
+  { id: 'glacial', label: 'Glacial' },
+  { id: 'rose', label: 'Rose' },
+  { id: 'midnight', label: 'Midnight' },
+  { id: 'dusk', label: 'Dusk' },
+  { id: 'cinder', label: 'Cinder' },
+  { id: 'obsidian', label: 'Obsidian' }
+];
 
 export interface UiPreferencesV1 {
   colorMode: UiColorMode;
@@ -16,7 +37,7 @@ export const UI_PREFERENCES_STORAGE_KEY = 'hop_ui_prefs_v1';
 export const UI_THEME_STORAGE_KEY = 'hop_ui_theme_v1';
 
 export const DEFAULT_UI_PREFERENCES: UiPreferencesV1 = {
-  colorMode: 'light',
+  colorMode: 'parchment',
   motionMode: 'snappy',
   hudDensity: 'compact',
   mobileLayout: 'portrait_primary'
@@ -24,7 +45,16 @@ export const DEFAULT_UI_PREFERENCES: UiPreferencesV1 = {
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
 
-const isColorMode = (value: unknown): value is UiColorMode => value === 'light' || value === 'dark';
+const resolveColorMode = (value: unknown): UiColorMode | null => {
+  if (value === 'light') return 'parchment';
+  if (value === 'dark') return 'midnight';
+  if (typeof value !== 'string') return null;
+  if ((UI_THEME_IDS as readonly string[]).includes(value)) {
+    return value as UiColorMode;
+  }
+  return null;
+};
+
 const isMotionMode = (value: unknown): value is UiMotionMode => value === 'snappy' || value === 'reduced';
 const isHudDensity = (value: unknown): value is UiHudDensity => value === 'compact' || value === 'comfortable';
 const isMobileLayout = (value: unknown): value is UiMobileLayout => value === 'portrait_primary';
@@ -37,7 +67,7 @@ const getBrowserStorage = (): Storage | null => {
 const normalizeUiPreferences = (input: unknown): UiPreferencesV1 => {
   const obj = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   return {
-    colorMode: isColorMode(obj.colorMode) ? obj.colorMode : DEFAULT_UI_PREFERENCES.colorMode,
+    colorMode: resolveColorMode(obj.colorMode) ?? DEFAULT_UI_PREFERENCES.colorMode,
     motionMode: isMotionMode(obj.motionMode) ? obj.motionMode : DEFAULT_UI_PREFERENCES.motionMode,
     hudDensity: isHudDensity(obj.hudDensity) ? obj.hudDensity : DEFAULT_UI_PREFERENCES.hudDensity,
     mobileLayout: isMobileLayout(obj.mobileLayout) ? obj.mobileLayout : DEFAULT_UI_PREFERENCES.mobileLayout
@@ -60,8 +90,9 @@ export const readUiPreferences = (storage: Pick<Storage, 'getItem'> | null = get
   // Theme key remains backward/forward-compatible as a dedicated preference key.
   try {
     const legacyTheme = storage.getItem(UI_THEME_STORAGE_KEY);
-    if (isColorMode(legacyTheme)) {
-      normalized.colorMode = legacyTheme;
+    const resolvedTheme = resolveColorMode(legacyTheme);
+    if (resolvedTheme) {
+      normalized.colorMode = resolvedTheme;
     }
   } catch {
     // ignore malformed storage for theme key and continue with normalized defaults

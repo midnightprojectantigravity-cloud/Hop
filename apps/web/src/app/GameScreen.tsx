@@ -6,7 +6,8 @@ import { UpgradeOverlay } from '../components/UpgradeOverlay';
 import { SkillTray } from '../components/SkillTray';
 import { SynapseBottomTray } from '../components/synapse/SynapseBottomTray';
 import type { VisualAssetManifest } from '../visual/asset-manifest';
-import type { UiColorMode, UiPreferencesV1 } from './ui-preferences';
+import { resolveBoardColorMode } from '../visual/biome-config';
+import { UI_THEME_OPTIONS, type UiColorMode, type UiPreferencesV1 } from './ui-preferences';
 import {
   getUiInformationRevealMode,
   setUiInformationRevealMode,
@@ -47,7 +48,12 @@ interface IntelModeToggleProps {
 
 const IntelModeToggle = ({ mode, onChange, compact = false }: IntelModeToggleProps) => (
   <div className={`rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] ${compact ? 'p-1.5' : 'p-2'} flex flex-col gap-1.5`}>
-    <span className={`text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] ${compact ? 'text-[9px]' : ''}`}>Intel</span>
+    <span
+      className="font-bold uppercase tracking-widest text-[var(--text-muted)]"
+      style={{ fontSize: compact ? 'var(--hud-label-font, 9px)' : '10px' }}
+    >
+      Intel
+    </span>
     <div className="grid grid-cols-2 gap-1.5">
       <button
         onClick={() => onChange('force_reveal')}
@@ -56,6 +62,7 @@ const IntelModeToggle = ({ mode, onChange, compact = false }: IntelModeTogglePro
             ? 'bg-[var(--accent-brass-soft)] border-[var(--accent-brass)] text-[var(--text-primary)]'
             : 'bg-[var(--surface-panel)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--surface-panel-hover)]'
         }`}
+        style={compact ? { minHeight: 'var(--hud-button-min-h, 40px)', fontSize: 'var(--hud-button-font, 10px)' } : undefined}
       >
         Force
       </button>
@@ -66,9 +73,33 @@ const IntelModeToggle = ({ mode, onChange, compact = false }: IntelModeTogglePro
             ? 'bg-[var(--accent-danger-soft)] border-[var(--accent-danger)] text-[var(--accent-danger)]'
             : 'bg-[var(--surface-panel)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--surface-panel-hover)]'
         }`}
+        style={compact ? { minHeight: 'var(--hud-button-min-h, 40px)', fontSize: 'var(--hud-button-font, 10px)' } : undefined}
       >
         Strict
       </button>
+    </div>
+  </div>
+);
+
+const InfoSettingsPanel = ({
+  intelMode,
+  onIntelModeChange,
+  compact = false
+}: {
+  intelMode: UiInformationRevealMode;
+  onIntelModeChange: (mode: UiInformationRevealMode) => void;
+  compact?: boolean;
+}) => (
+  <div className={`rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] ${compact ? 'p-2.5 space-y-2.5' : 'p-3 space-y-3'}`}>
+    <div className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: compact ? 'var(--hud-label-font, 9px)' : '10px' }}>
+      Info Settings
+    </div>
+    <IntelModeToggle mode={intelMode} onChange={onIntelModeChange} compact={compact} />
+    <div
+      className="rounded-lg border border-dashed border-[var(--border-subtle)] px-2.5 py-2 font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+      style={{ fontSize: compact ? 'var(--hud-label-font, 9px)' : '10px' }}
+    >
+      Future Settings
     </div>
   </div>
 );
@@ -122,9 +153,10 @@ interface GuardedActionButtonProps {
   onConfirm: () => void;
   label: string;
   className: string;
+  style?: React.CSSProperties;
 }
 
-const GuardedActionButton = ({ disabled, onConfirm, label, className }: GuardedActionButtonProps) => {
+const GuardedActionButton = ({ disabled, onConfirm, label, className, style }: GuardedActionButtonProps) => {
   const [holding, setHolding] = React.useState(false);
   const timerRef = React.useRef<number | null>(null);
 
@@ -157,6 +189,7 @@ const GuardedActionButton = ({ disabled, onConfirm, label, className }: GuardedA
       onTouchEnd={clearHold}
       onTouchCancel={clearHold}
       className={`${className} ${holding ? 'brightness-110' : ''}`}
+      style={style}
       title={`${label} (hold)`}
     >
       {holding ? `${label}...` : label}
@@ -172,6 +205,20 @@ export const resolveLayoutMode = (
   if (width >= 768) return 'tablet';
   if (height > width) return 'mobile_portrait';
   return 'tablet';
+};
+
+const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
+
+export const resolveHudScale = (width: number, height: number): number => {
+  const shortestViewportEdge = Math.max(1, Math.min(width, height));
+  return clamp(shortestViewportEdge / 390, 0.82, 1.24);
+};
+
+export const resolveBottomDockHeightPx = (width: number, height: number): number => {
+  const safeWidth = Math.max(1, width);
+  const ratio = height / safeWidth;
+  const percent = ratio > 1.8 ? 0.27 : 0.24;
+  return clamp(Math.round(height * percent), 176, 320);
 };
 
 export const GameScreen = ({
@@ -218,6 +265,10 @@ export const GameScreen = ({
   replayChronicleEnabled = false,
 }: GameScreenProps) => {
   const [intelMode, setIntelMode] = React.useState<UiInformationRevealMode>(() => getUiInformationRevealMode());
+  const [viewportSize, setViewportSize] = React.useState(() => {
+    if (typeof window === 'undefined') return { width: 390, height: 844 };
+    return { width: window.innerWidth, height: window.innerHeight };
+  });
   const [layoutMode, setLayoutMode] = React.useState<'mobile_portrait' | 'tablet' | 'desktop_command_center'>(() => {
     if (typeof window === 'undefined') return 'desktop_command_center';
     return resolveLayoutMode(window.innerWidth, window.innerHeight);
@@ -234,12 +285,15 @@ export const GameScreen = ({
   }, []);
   React.useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    const syncLayoutMode = () => {
-      setLayoutMode(resolveLayoutMode(window.innerWidth, window.innerHeight));
+    const syncViewport = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      setLayoutMode(resolveLayoutMode(width, height));
+      setViewportSize({ width, height });
     };
-    window.addEventListener('resize', syncLayoutMode);
-    syncLayoutMode();
-    return () => window.removeEventListener('resize', syncLayoutMode);
+    window.addEventListener('resize', syncViewport);
+    syncViewport();
+    return () => window.removeEventListener('resize', syncViewport);
   }, []);
   const handleIntelModeChange = React.useCallback((mode: UiInformationRevealMode) => {
     setIntelMode(mode);
@@ -259,6 +313,54 @@ export const GameScreen = ({
   }, [synapsePreview]);
   const hpProjectionDelta = Number((gameState as any)?.intentPreview?.playerHpDelta || 0);
   const projectedHp = Math.max(0, Math.min(gameState.player.maxHp, gameState.player.hp + hpProjectionDelta));
+  const boardColorMode = React.useMemo(() => resolveBoardColorMode(gameState.theme), [gameState.theme]);
+  const hudScale = React.useMemo(
+    () => resolveHudScale(viewportSize.width, viewportSize.height),
+    [viewportSize.height, viewportSize.width]
+  );
+  const bottomDockHeightPx = React.useMemo(
+    () => resolveBottomDockHeightPx(viewportSize.width, viewportSize.height),
+    [viewportSize.height, viewportSize.width]
+  );
+  const buttonMinHeightPx = React.useMemo(
+    () => clamp(Math.round(44 * hudScale), 40, 62),
+    [hudScale]
+  );
+  const buttonFontPx = React.useMemo(
+    () => clamp(10 * hudScale, 9, 14),
+    [hudScale]
+  );
+  const labelFontPx = React.useMemo(
+    () => clamp(9 * hudScale, 8.5, 12.5),
+    [hudScale]
+  );
+  const valueFontPx = React.useMemo(
+    () => clamp(18 * hudScale, 16, 28),
+    [hudScale]
+  );
+  const hudCssVars = React.useMemo(
+    () => ({
+      '--hud-button-min-h': `${buttonMinHeightPx}px`,
+      '--hud-button-font': `${buttonFontPx}px`,
+      '--hud-label-font': `${labelFontPx}px`,
+      '--hud-value-font': `${valueFontPx}px`,
+    } as React.CSSProperties),
+    [buttonFontPx, buttonMinHeightPx, labelFontPx, valueFontPx]
+  );
+  const bottomDockStyle = React.useMemo(
+    () => ({
+      ...hudCssVars,
+      height: `${bottomDockHeightPx}px`
+    } as React.CSSProperties),
+    [bottomDockHeightPx, hudCssVars]
+  );
+  const hudActionButtonStyle = React.useMemo(
+    () => ({
+      minHeight: 'var(--hud-button-min-h)',
+      fontSize: 'var(--hud-button-font)'
+    } as React.CSSProperties),
+    []
+  );
   const [synapseDeltasByActorId, setSynapseDeltasByActorId] = React.useState<Record<string, SynapseDeltaEntry>>({});
   const prevSynapseScoresRef = React.useRef<ReturnType<typeof buildSynapseScoreSnapshot> | null>(null);
 
@@ -308,48 +410,62 @@ export const GameScreen = ({
       data-layout-mode={layoutMode}
       className={`flex flex-col lg:flex-row w-screen h-screen bg-[var(--surface-app)] overflow-hidden text-[var(--text-primary)] font-[var(--font-body)] ${isSynapseMode ? 'synapse-vision-active' : ''}`}
     >
-      <div className="lg:hidden shrink-0 border-b border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm z-20">
-        <div className="px-4 py-3 grid grid-cols-2 items-center gap-2">
-          <div className="min-w-0">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold">Floor</div>
-            <div className="text-lg font-black text-[var(--text-primary)] leading-none">
+      <div
+        className="lg:hidden shrink-0 border-b border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm z-20"
+        style={hudCssVars}
+      >
+        <div className="px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <div className="min-w-0 text-left">
+            <div className="uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold" style={{ fontSize: 'var(--hud-label-font)' }}>Floor</div>
+            <div className="font-black text-[var(--text-primary)] leading-none" style={{ fontSize: 'var(--hud-value-font)' }}>
               {gameState.floor}
-              <span className="text-[var(--text-muted)] text-sm ml-1">/ 10</span>
+              <span className="text-[var(--text-muted)] ml-1" style={{ fontSize: 'calc(var(--hud-value-font) * 0.64)' }}>/ 10</span>
             </div>
           </div>
-          <div className="min-w-0 text-right">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold">HP</div>
-            <div className="text-lg font-black text-[var(--accent-danger)] leading-none">
+          <div className="min-w-0 text-center">
+            <div className="uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold" style={{ fontSize: 'var(--hud-label-font)' }}>HP</div>
+            <div className="font-black text-[var(--accent-danger)] leading-none" style={{ fontSize: 'var(--hud-value-font)' }}>
               {gameState.player.hp}
-              <span className="text-[var(--text-muted)] text-sm ml-1">/ {gameState.player.maxHp}</span>
+              <span className="text-[var(--text-muted)] ml-1" style={{ fontSize: 'calc(var(--hud-value-font) * 0.64)' }}>/ {gameState.player.maxHp}</span>
             </div>
             {mobileDockV2Enabled && hpProjectionDelta !== 0 && (
-              <div className={`text-[10px] font-black uppercase tracking-[0.16em] ${hpProjectionDelta < 0 ? 'text-[var(--accent-danger)]' : 'text-emerald-600'}`}>
+              <div
+                className={`font-black uppercase tracking-[0.16em] ${hpProjectionDelta < 0 ? 'text-[var(--accent-danger)]' : 'text-emerald-600'}`}
+                style={{ fontSize: 'var(--hud-label-font)' }}
+              >
                 {hpProjectionDelta > 0 ? '+' : ''}{hpProjectionDelta}{' -> '}{projectedHp}
               </div>
             )}
           </div>
-          <IntelModeToggle mode={intelMode} onChange={handleIntelModeChange} compact />
-          <button
-            onClick={onToggleSynapseMode}
-            className={`h-full rounded-lg border text-[10px] font-black uppercase tracking-[0.16em] transition-colors ${isSynapseMode
-              ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
-              : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] active:bg-[var(--surface-panel-hover)]'
+          <div className="flex justify-end">
+            <button
+              onClick={onToggleSynapseMode}
+              style={hudActionButtonStyle}
+              className={`px-3 rounded-lg border font-black uppercase tracking-[0.16em] transition-colors ${isSynapseMode
+                ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
+                : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] active:bg-[var(--surface-panel-hover)]'
               }`}
-          >
-            Synapse
-          </button>
-          {mobileDockV2Enabled && (
-            <>
-              <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                Wait: {isInputLocked ? 'Resolving' : 'Ready'}
-              </div>
-              <div className={`rounded-lg border px-2 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] ${Math.abs(sigmaValue) >= 2 ? 'border-[var(--accent-danger)] text-[var(--accent-danger)] bg-[var(--accent-danger-soft)]' : 'border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--surface-panel-muted)]'}`}>
-                Sigma {sigmaValue >= 0 ? '+' : ''}{sigmaValue.toFixed(1)}
-              </div>
-            </>
-          )}
+            >
+              Info
+            </button>
+          </div>
         </div>
+        {mobileDockV2Enabled && (
+          <div className="px-4 pb-3 grid grid-cols-2 gap-1.5">
+            <div
+              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
+              style={{ fontSize: 'var(--hud-label-font)' }}
+            >
+              Wait: {isInputLocked ? 'Resolving' : 'Ready'}
+            </div>
+            <div
+              className={`rounded-lg border px-2 py-1.5 font-black uppercase tracking-[0.16em] ${Math.abs(sigmaValue) >= 2 ? 'border-[var(--accent-danger)] text-[var(--accent-danger)] bg-[var(--accent-danger-soft)]' : 'border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--surface-panel-muted)]'}`}
+              style={{ fontSize: 'var(--hud-label-font)' }}
+            >
+              Sigma {sigmaValue >= 0 ? '+' : ''}{sigmaValue.toFixed(1)}
+            </div>
+          </div>
+        )}
       </div>
 
       <aside className="hidden lg:flex w-80 border-r border-[var(--border-subtle)] bg-[var(--surface-panel)] flex-col z-20 overflow-y-auto">
@@ -360,21 +476,30 @@ export const GameScreen = ({
           onExitToHub={onExitToHub}
           intelMode={intelMode}
           onIntelModeChange={handleIntelModeChange}
+          showIntelControls={isSynapseMode}
           inputLocked={isInputLocked}
         />
       </aside>
 
-      <main className="flex-1 min-h-0 relative flex items-center justify-center bg-[var(--surface-board)] overflow-hidden">
+      <main
+        data-board-theme={boardColorMode}
+        className="board-theme-shell flex-1 min-h-0 relative flex items-center justify-center bg-[var(--surface-board)] overflow-hidden"
+      >
         <div className="hidden lg:flex absolute top-5 right-5 z-30 items-start gap-2.5">
-          <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-1">
-            <button
-              onClick={() => onSetColorMode(uiPreferences.colorMode === 'light' ? 'dark' : 'light')}
-              className="px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
+            <select
+              aria-label="Theme"
+              value={uiPreferences.colorMode}
+              onChange={(event) => onSetColorMode(event.target.value as UiColorMode)}
+              className="min-h-8 rounded border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-2 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-primary)]"
             >
-              {uiPreferences.colorMode === 'light' ? 'Dark' : 'Light'}
-            </button>
+              {UI_THEME_OPTIONS.map((theme) => (
+                <option key={theme.id} value={theme.id}>
+                  {theme.label}
+                </option>
+              ))}
+            </select>
           </div>
-          <IntelModeToggle mode={intelMode} onChange={handleIntelModeChange} />
           <button
             onClick={onToggleSynapseMode}
             className={`px-3 py-2 rounded-lg border text-[10px] font-black uppercase tracking-[0.16em] transition-colors ${isSynapseMode
@@ -382,7 +507,7 @@ export const GameScreen = ({
               : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--surface-panel-hover)]'
               }`}
           >
-            Synapse (I)
+            Info (I)
           </button>
         </div>
         <div className="w-full h-full p-0 sm:p-3 lg:p-8 flex items-center justify-center">
@@ -404,7 +529,12 @@ export const GameScreen = ({
               visualEchoesEnabled={mobileDockV2Enabled}
             />
             {isSynapseMode && (
-              <div className="hidden lg:block">
+              <div className="hidden lg:block absolute bottom-3 left-1/2 -translate-x-1/2 z-40 w-[min(92vw,34rem)] pointer-events-auto space-y-2">
+                <InfoSettingsPanel
+                  intelMode={intelMode}
+                  onIntelModeChange={handleIntelModeChange}
+                  compact
+                />
                 <SynapseBottomTray
                   gameState={gameState}
                   synapsePreview={synapsePreview}
@@ -413,6 +543,7 @@ export const GameScreen = ({
                   deltasByActorId={synapseDeltasByActorId}
                   onSelectSource={onSynapseSelectSource}
                   onClearSelection={onSynapseClearSelection}
+                  docked
                 />
               </div>
             )}
@@ -423,18 +554,22 @@ export const GameScreen = ({
 
       <MobileToastsOverlay mobileToasts={gameState.gameStatus === 'playing' ? mobileToasts : []} />
 
-      <aside className="lg:hidden shrink-0 h-[25svh] min-h-[176px] max-h-[280px] border-t border-[var(--border-subtle)] bg-[var(--surface-panel)] z-20 overflow-y-auto">
-        <div className={`${uiPreferences.hudDensity === 'compact' ? 'p-3 gap-3' : 'p-4 gap-4'} flex flex-col h-full`}>
-          {!mobileDockV2Enabled && (
+      <aside
+        className="lg:hidden shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-panel)] z-20 overflow-y-auto"
+        style={bottomDockStyle}
+      >
+        <div className={`${uiPreferences.hudDensity === 'compact' ? 'p-3 gap-3' : 'p-4 gap-4'} flex flex-col h-full`} style={hudCssVars}>
+          {!isSynapseMode && !mobileDockV2Enabled && (
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                {isSynapseMode ? 'Synapse' : 'Skills'}
+              <h3 className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
+                Skills
               </h3>
-              <div className="grid grid-cols-4 gap-1.5 w-full sm:w-auto">
+              <div className="grid grid-cols-3 gap-1.5 w-full sm:w-auto">
                 <button
                   disabled={isInputLocked}
                   onClick={onWait}
-                  className={`w-full px-2 min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isInputLocked
+                  style={hudActionButtonStyle}
+                  className={`w-full px-2 rounded-lg border font-black uppercase tracking-widest ${isInputLocked
                     ? 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] opacity-50'
                     : 'bg-[var(--surface-panel-hover)] border-[var(--border-subtle)] text-[var(--text-primary)] active:bg-[var(--surface-panel)]'
                     }`}
@@ -442,37 +577,31 @@ export const GameScreen = ({
                   Wait
                 </button>
                 <button
-                  onClick={onToggleSynapseMode}
-                  className={`w-full px-2 min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isSynapseMode
-                    ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
-                    : 'border-[var(--synapse-border)] bg-[var(--synapse-soft)] text-[var(--synapse-text)] active:opacity-90'
-                    }`}
-                >
-                  Synapse
-                </button>
-                <button
                   onClick={onExitToHub}
-                  className="w-full px-2 min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)] active:bg-[var(--surface-panel)]"
+                  style={hudActionButtonStyle}
+                  className="w-full px-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] font-black uppercase tracking-widest text-[var(--text-primary)] active:bg-[var(--surface-panel)]"
                 >
                   Hub
                 </button>
                 <button
                   onClick={onReset}
-                  className="w-full px-2 min-h-11 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] text-[10px] font-black uppercase tracking-widest text-[var(--accent-danger)] active:opacity-90"
+                  style={hudActionButtonStyle}
+                  className="w-full px-2 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] font-black uppercase tracking-widest text-[var(--accent-danger)] active:opacity-90"
                 >
                   Reset
                 </button>
               </div>
             </div>
           )}
-          {mobileDockV2Enabled && (
+          {!isSynapseMode && mobileDockV2Enabled && (
             <>
               <div className="flex items-center justify-between gap-2">
                 <div className="grid grid-cols-3 gap-1.5">
                   <button
                     disabled={isInputLocked}
                     onClick={onWait}
-                    className={`px-2 min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isInputLocked
+                    style={hudActionButtonStyle}
+                    className={`px-2 rounded-lg border font-black uppercase tracking-widest ${isInputLocked
                       ? 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] opacity-50'
                       : 'bg-[var(--surface-panel-hover)] border-[var(--border-subtle)] text-[var(--text-primary)] active:bg-[var(--surface-panel)]'
                     }`}
@@ -483,28 +612,19 @@ export const GameScreen = ({
                     disabled={false}
                     onConfirm={onExitToHub}
                     label="Hub"
-                    className="px-2 min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]"
+                    style={hudActionButtonStyle}
+                    className="px-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] font-black uppercase tracking-widest text-[var(--text-primary)]"
                   />
                   <GuardedActionButton
                     disabled={false}
                     onConfirm={onReset}
                     label="Reset"
-                    className="px-2 min-h-11 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] text-[10px] font-black uppercase tracking-widest text-[var(--accent-danger)]"
+                    style={hudActionButtonStyle}
+                    className="px-2 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] font-black uppercase tracking-widest text-[var(--accent-danger)]"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                    {isSynapseMode ? 'Synapse' : 'Skills'}
-                  </div>
-                  <button
-                    onClick={onToggleSynapseMode}
-                    className={`px-3 min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isSynapseMode
-                      ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
-                      : 'border-[var(--synapse-border)] bg-[var(--synapse-soft)] text-[var(--synapse-text)] active:opacity-90'
-                      }`}
-                  >
-                    Synapse
-                  </button>
+                <div className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
+                  Skills
                 </div>
               </div>
             </>
@@ -521,16 +641,26 @@ export const GameScreen = ({
             />
           )}
           {isSynapseMode && (
-            <SynapseBottomTray
-              gameState={gameState}
-              synapsePreview={synapsePreview}
-              synapseSelection={synapseSelection}
-              intelMode={intelMode}
-              deltasByActorId={synapseDeltasByActorId}
-              onSelectSource={onSynapseSelectSource}
-              onClearSelection={onSynapseClearSelection}
-              docked
-            />
+            <div className="space-y-2.5">
+              <div className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
+                Info
+              </div>
+              <InfoSettingsPanel
+                intelMode={intelMode}
+                onIntelModeChange={handleIntelModeChange}
+                compact
+              />
+              <SynapseBottomTray
+                gameState={gameState}
+                synapsePreview={synapsePreview}
+                synapseSelection={synapseSelection}
+                intelMode={intelMode}
+                deltasByActorId={synapseDeltasByActorId}
+                onSelectSource={onSynapseSelectSource}
+                onClearSelection={onSynapseClearSelection}
+                docked
+              />
+            </div>
           )}
         </div>
       </aside>

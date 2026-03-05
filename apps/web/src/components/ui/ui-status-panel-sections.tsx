@@ -172,10 +172,14 @@ export const UiIntelToggleSection: React.FC<IntelToggleProps> = ({ intelMode, on
   </div>
 );
 
-export const UiRulesetSection: React.FC<StatusIntelProps & { onIntelModeChange: (mode: UiInformationRevealMode) => void }> = ({
+export const UiRulesetSection: React.FC<StatusIntelProps & {
+  onIntelModeChange: (mode: UiInformationRevealMode) => void;
+  showIntelControls: boolean;
+}> = ({
   gameState,
   compact,
   intelMode,
+  showIntelControls,
   onIntelModeChange
 }) => {
   const { acaeEnabled, sharedVectorCarryEnabled, capabilityPassivesEnabled, movementRuntimeEnabled, intelStrict } = getUiRulesetFlags(gameState, intelMode);
@@ -187,8 +191,8 @@ export const UiRulesetSection: React.FC<StatusIntelProps & { onIntelModeChange: 
         <UiRulesetItem label="Shared Vector Carry" value={sharedVectorCarryEnabled} />
         <UiRulesetItem label="Capability Passives" value={capabilityPassivesEnabled} />
         <UiRulesetItem label="Movement Runtime" value={movementRuntimeEnabled} />
-        <UiRulesetItem label="Intel Strict" value={intelStrict} />
-        <UiIntelToggleSection intelMode={intelMode} onIntelModeChange={onIntelModeChange} />
+        {showIntelControls && <UiRulesetItem label="Intel Strict" value={intelStrict} />}
+        {showIntelControls && <UiIntelToggleSection intelMode={intelMode} onIntelModeChange={onIntelModeChange} />}
       </div>
     </div>
   );

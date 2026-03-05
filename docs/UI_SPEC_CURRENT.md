@@ -5,7 +5,7 @@
 **Status Taxonomy:** `[SHIP]` = Shipped, `[DEV]` = In Development, `[SPEC]` = Finalized Specification  
 **RFC Process:** Changes to this law require a corresponding PR update and an audit against Aspirational SLOs.
 
-Last updated: March 4, 2026  
+Last updated: March 5, 2026  
 Authority: Canonical for shipped `apps/web` behavior.  
 Companion vision doc: `docs/UI_SPEC_ASPIRATIONAL.md`.
 
@@ -44,8 +44,8 @@ Law boundary:
 ## 2. Product Posture (Current)
 
 1. Visual identity:
-   - Medieval parchment default theme (`light`).
-   - Secondary medieval-apocalypse dark theme (`dark`).
+   - Medieval parchment default theme (`parchment`).
+   - Alternate themes available in runtime selector: `verdigris`, `glacial`, `rose`, `midnight`, `dusk`, `cinder`, `obsidian`.
 2. Device posture:
    - Mobile-first, portrait-primary.
 3. UX posture:
@@ -69,11 +69,13 @@ Primary implementation anchor: `apps/web/src/index.css`.
 ## 3.2 Theme Tokens
 
 1. Runtime theming uses root dataset attributes:
-   - `data-theme='light' | 'dark'`
+   - `data-theme='parchment' | 'verdigris' | 'glacial' | 'rose' | 'midnight' | 'dusk' | 'cinder' | 'obsidian'`
    - `data-motion='snappy' | 'reduced'`
    - `data-hud-density='compact' | 'comfortable'`
    - `data-mobile-layout='portrait_primary'`
-2. Current token groups in use:
+2. Board theme scope uses `data-board-theme='light' | 'dark'` on the gameplay board shell and is map/theme-driven (not user preference-driven).
+3. Global `data-theme` affects app shell/HUD surfaces, but board visuals are decoupled and resolved from map theme.
+4. Current token groups in use:
    - surface, text, border, accent, synapse, overlay, motion.
 
 ## 3.3 Motion
@@ -98,7 +100,7 @@ Implementation anchors:
 ## 4.1 Preferences Contract
 
 `UiPreferencesV1`:
-1. `colorMode: 'light' | 'dark'`
+1. `colorMode: 'parchment' | 'verdigris' | 'glacial' | 'rose' | 'midnight' | 'dusk' | 'cinder' | 'obsidian'`
 2. `motionMode: 'snappy' | 'reduced'`
 3. `hudDensity: 'compact' | 'comfortable'`
 4. `mobileLayout: 'portrait_primary'`
@@ -144,12 +146,17 @@ Primary implementation anchor: `apps/web/src/app/GameScreen.tsx`.
 ## 5.3 In-Run Shell (Current)
 
 Mobile portrait:
-1. Top strip: floor, HP, intel/synapse controls.
+1. Top strip: floor (left), HP (center), `INFO` toggle (right).
 2. Center: board.
 3. Bottom dock:
-   - `h-[25svh]`, `min-h-[176px]`, `max-h-[280px]`.
-   - action row with `Wait`, `Synapse`, `Hub`, `Reset`.
-   - skill tray or synapse tray in the same footprint.
+   - viewport-derived height with hard clamp range `176px` to `320px`.
+   - viewport-derived shared scaling for tray fonts/buttons (`resolveHudScale`, `resolveBottomDockHeightPx`).
+   - `INFO` OFF:
+     - action row with `Wait`, `Hub`, `Reset`.
+     - skill tray.
+   - `INFO` ON:
+     - action row hidden.
+     - `INFO` heading + intel settings + placeholder future settings + info tray content.
 
 Desktop command center:
 1. Left status/control rail.
@@ -199,7 +206,7 @@ Test anchors:
 1. Skill tray states:
    - ready, selected, cooldown, disabled.
 2. Input lock blocks commit actions.
-3. Synapse mode swaps tray footprint in mobile.
+3. `INFO` mode swaps tray footprint in mobile and gates intel controls.
 
 ## 6.3 Replay and Defeat
 
@@ -228,7 +235,7 @@ Implementation anchor: `apps/web/src/app/run-resume-context.ts`.
 3. If payload cannot be derived:
    - fallback to Hub exit.
 
-## 6.5 Synapse Intel Policy (Current Law)
+## 6.5 Info Intel Policy (Current Law)
 
 Always visible:
 1. `UPS`
@@ -239,6 +246,7 @@ Capability-gated:
 1. name
 2. intent badge
 3. detailed reveal-bound intel fields
+4. intel mode toggles (`Force`, `Strict`) are shown only while `INFO` mode is active.
 
 ## 7. Current Telemetry Contract
 
@@ -277,7 +285,7 @@ Current law:
 
 1. Mobile frequent controls target >= 44px touch height.
 2. Reduced motion mode is implemented.
-3. Keyboard shortcut exists for Synapse toggle (`I` / `Escape` behavior).
+3. Keyboard shortcut exists for `INFO` toggle (`I` / `Escape` behavior).
 4. Full keyboard parity and WCAG audit remain outside current-law completeness.
 
 ## 10. Merge Gates (Current)

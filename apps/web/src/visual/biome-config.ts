@@ -44,6 +44,14 @@ export const THEME_TO_BIOME: Record<string, BiomeColor> = {
   throne: 'green'
 };
 
+const THEME_TO_BOARD_COLOR_MODE: Record<string, 'light' | 'dark'> = {
+  catacombs: 'light',
+  frozen: 'light',
+  inferno: 'dark',
+  throne: 'dark',
+  void: 'dark'
+};
+
 const asBiomeColor = (value: unknown): BiomeColor | undefined => {
   if (typeof value !== 'string') return undefined;
   const normalized = value.toLowerCase() as BiomeColor;
@@ -62,3 +70,7 @@ export const resolveBiomeColor = (theme?: string): BiomeColor => {
   return THEME_TO_BIOME[normalized] || 'white';
 };
 
+export const resolveBoardColorMode = (theme?: string): 'light' | 'dark' => {
+  const normalized = String(theme || '').toLowerCase();
+  return THEME_TO_BOARD_COLOR_MODE[normalized] || 'dark';
+};

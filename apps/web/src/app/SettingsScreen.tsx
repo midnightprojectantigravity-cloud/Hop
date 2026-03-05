@@ -1,4 +1,4 @@
-import type { UiColorMode, UiHudDensity, UiMotionMode, UiPreferencesV1 } from './ui-preferences';
+import { UI_THEME_OPTIONS, type UiColorMode, type UiHudDensity, type UiMotionMode, type UiPreferencesV1 } from './ui-preferences';
 
 interface SettingsScreenProps {
   uiPreferences: UiPreferencesV1;
@@ -29,29 +29,19 @@ export const SettingsScreen = ({
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-5">
         <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
-          <h2 className="text-[11px] uppercase tracking-[0.2em] font-black text-[var(--text-muted)] mb-3">Color Mode</h2>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => onSetColorMode('light')}
-              className={`min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${
-                uiPreferences.colorMode === 'light'
-                  ? 'bg-[var(--accent-brass-soft)] border-[var(--accent-brass)]'
-                  : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)]'
-              }`}
-            >
-              Light
-            </button>
-            <button
-              onClick={() => onSetColorMode('dark')}
-              className={`min-h-11 rounded-lg border text-[10px] font-black uppercase tracking-widest ${
-                uiPreferences.colorMode === 'dark'
-                  ? 'bg-[var(--accent-danger-soft)] border-[var(--accent-danger)]'
-                  : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)]'
-              }`}
-            >
-              Dark
-            </button>
-          </div>
+          <h2 className="text-[11px] uppercase tracking-[0.2em] font-black text-[var(--text-muted)] mb-3">Theme</h2>
+          <select
+            aria-label="Theme"
+            value={uiPreferences.colorMode}
+            onChange={(event) => onSetColorMode(event.target.value as UiColorMode)}
+            className="w-full min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-primary)]"
+          >
+            {UI_THEME_OPTIONS.map((theme) => (
+              <option key={theme.id} value={theme.id}>
+                {theme.label}
+              </option>
+            ))}
+          </select>
         </section>
 
         <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
@@ -77,4 +67,3 @@ export const SettingsScreen = ({
     </div>
   );
 };
-
