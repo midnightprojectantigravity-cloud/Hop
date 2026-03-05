@@ -1,3 +1,5 @@
+import React from 'react';
+import { getUiInformationRevealMode, setUiInformationRevealMode, type UiInformationRevealMode } from './information-reveal';
 import { UI_THEME_OPTIONS, type UiColorMode, type UiHudDensity, type UiMotionMode, type UiPreferencesV1 } from './ui-preferences';
 
 interface SettingsScreenProps {
@@ -15,6 +17,13 @@ export const SettingsScreen = ({
   onSetHudDensity,
   onBack
 }: SettingsScreenProps) => {
+  const [intelMode, setIntelMode] = React.useState<UiInformationRevealMode>(() => getUiInformationRevealMode());
+
+  const handleIntelModeChange = (mode: UiInformationRevealMode) => {
+    setIntelMode(mode);
+    setUiInformationRevealMode(mode);
+  };
+
   return (
     <div className="w-screen h-screen bg-[var(--surface-app)] text-[var(--text-primary)] font-[var(--font-body)] flex flex-col">
       <header className="border-b border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-3 flex items-center justify-between">
@@ -62,6 +71,22 @@ export const SettingsScreen = ({
           >
             {uiPreferences.hudDensity === 'compact' ? 'Compact' : 'Comfortable'}
           </button>
+        </section>
+
+        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
+          <h2 className="text-[11px] uppercase tracking-[0.2em] font-black text-[var(--text-muted)] mb-3">Intel Policy (Debug)</h2>
+          <select
+            aria-label="Intel Policy"
+            value={intelMode}
+            onChange={(event) => handleIntelModeChange(event.target.value as UiInformationRevealMode)}
+            className="w-full min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-primary)]"
+          >
+            <option value="force_reveal">Force Reveal</option>
+            <option value="strict">Strict</option>
+          </select>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+            Debug control for capability-gated info reveal.
+          </p>
         </section>
       </main>
     </div>

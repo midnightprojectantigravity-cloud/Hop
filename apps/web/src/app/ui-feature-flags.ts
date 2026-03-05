@@ -1,5 +1,4 @@
 export interface UiFeatureFlags {
-  ui_arcade_splash_v2: boolean;
   ui_mobile_dock_v2: boolean;
   ui_defeat_loop_v2: boolean;
   ui_sensory_dispatcher_v1: boolean;
@@ -9,7 +8,6 @@ export interface UiFeatureFlags {
 export const UI_FEATURE_FLAGS_STORAGE_KEY = 'hop_ui_feature_flags_v1';
 
 const DEFAULT_UI_FEATURE_FLAGS: UiFeatureFlags = {
-  ui_arcade_splash_v2: false,
   ui_mobile_dock_v2: false,
   ui_defeat_loop_v2: false,
   ui_sensory_dispatcher_v1: false,
@@ -36,7 +34,6 @@ const normalizeFlags = (value: unknown): UiFeatureFlags => {
   if (!value || typeof value !== 'object') return { ...DEFAULT_UI_FEATURE_FLAGS };
   const source = value as Record<string, unknown>;
   return {
-    ui_arcade_splash_v2: parseBoolean(source.ui_arcade_splash_v2) ?? DEFAULT_UI_FEATURE_FLAGS.ui_arcade_splash_v2,
     ui_mobile_dock_v2: parseBoolean(source.ui_mobile_dock_v2) ?? DEFAULT_UI_FEATURE_FLAGS.ui_mobile_dock_v2,
     ui_defeat_loop_v2: parseBoolean(source.ui_defeat_loop_v2) ?? DEFAULT_UI_FEATURE_FLAGS.ui_defeat_loop_v2,
     ui_sensory_dispatcher_v1: parseBoolean(source.ui_sensory_dispatcher_v1) ?? DEFAULT_UI_FEATURE_FLAGS.ui_sensory_dispatcher_v1,
@@ -91,4 +88,3 @@ export const writeUiFeatureFlags = (
   }
   return normalized;
 };
-

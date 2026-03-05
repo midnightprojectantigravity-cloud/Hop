@@ -257,17 +257,17 @@ describe('synapse threat preview', () => {
         expect(deadlyTile).toBeDefined();
     });
 
-    it('keeps occupied tiles out of synapse heatmap overlay', () => {
+    it('keeps non-player occupied tiles out of synapse heatmap overlay and includes player tile', () => {
         const state = generateInitialState(1, 'synapse-occupied-filter-seed');
         const preview = buildSynapseThreatPreview(state);
-        const occupiedKeys = new Set<string>([
-            pointToKey(state.player.position),
+        const nonPlayerOccupiedKeys = new Set<string>([
             ...state.enemies.filter(enemy => enemy.hp > 0).map(enemy => pointToKey(enemy.position)),
             ...(state.companions || []).filter(companion => companion.hp > 0).map(companion => pointToKey(companion.position))
         ]);
         for (const tile of preview.tiles) {
-            expect(occupiedKeys.has(pointToKey(tile.tile))).toBe(false);
+            expect(nonPlayerOccupiedKeys.has(pointToKey(tile.tile))).toBe(false);
         }
+        expect(preview.tiles.some(tile => pointToKey(tile.tile) === pointToKey(state.player.position))).toBe(true);
     });
 
     it('projects archer threat as axial only and outside range-1', () => {

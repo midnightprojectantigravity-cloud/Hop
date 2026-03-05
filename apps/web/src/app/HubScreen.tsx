@@ -24,7 +24,6 @@ interface HubScreenProps {
   tutorialInstructions: string | null;
   uiPreferences: UiPreferencesV1;
   dedicatedRoutesEnabled: boolean;
-  arcadeSplashV2Enabled: boolean;
   navigateTo: (path: string) => void;
   onSetColorMode: (mode: UiColorMode) => void;
   onSetMotionMode: (mode: UiMotionMode) => void;
@@ -54,7 +53,6 @@ export const HubScreen = ({
   tutorialInstructions,
   uiPreferences,
   dedicatedRoutesEnabled,
-  arcadeSplashV2Enabled,
   navigateTo,
   onSetColorMode,
   onSetMotionMode,
@@ -130,7 +128,7 @@ export const HubScreen = ({
         <ArcadeHub
           onBack={() => navigateTo(hubPath)}
           onLaunchArcade={onStartArcadeRun}
-          twoStepSelection={arcadeSplashV2Enabled}
+          twoStepSelection
         />
       ) : (
         <Hub

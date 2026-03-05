@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { pointToKey, type GameState, type Point, type SynapseThreatPreview } from '@hop/engine';
+import { pointToKey, type Actor, type GameState, type Point, type SynapseThreatPreview } from '@hop/engine';
 import { getUiActorInformation, type UiInformationRevealMode } from '../../app/information-reveal';
 import { DELTA_VISUAL_THRESHOLD, type SynapseDeltaEntry, type SynapseSelection } from '../../app/synapse';
 
@@ -22,6 +22,15 @@ const formatSignedStateDelta = (value: number): string => `${value >= 0 ? '+' : 
 const resolveActorById = (state: GameState, actorId: string) => {
     if (state.player.id === actorId) return state.player;
     return state.enemies.find(enemy => enemy.id === actorId) || state.companions?.find(companion => companion.id === actorId);
+};
+
+const resolveActorAtTile = (state: GameState, tile: Point): Actor | null => {
+    const tileKey = pointToKey(tile);
+    if (pointToKey(state.player.position) === tileKey) return state.player;
+    const enemy = state.enemies.find(candidate => candidate.hp > 0 && pointToKey(candidate.position) === tileKey);
+    if (enemy) return enemy;
+    const companion = (state.companions || []).find(candidate => candidate.hp > 0 && pointToKey(candidate.position) === tileKey);
+    return companion || null;
 };
 
 const DeltaBadge: React.FC<{ value: number; label: string; threshold?: number; formatter?: (value: number) => string }> = ({
@@ -58,9 +67,11 @@ const TileModeTray: React.FC<{
     tile: Point;
     preview: SynapseThreatPreview;
     intelMode: UiInformationRevealMode;
+    deltasByActorId: Record<string, SynapseDeltaEntry>;
     onSelectSource: (actorId: string) => void;
-}> = ({ gameState, tile, preview, intelMode, onSelectSource }) => {
+}> = ({ gameState, tile, preview, intelMode, deltasByActorId, onSelectSource }) => {
     const tileEntry = preview.tiles.find(entry => pointToKey(entry.tile) === pointToKey(tile));
+    const occupiedActor = resolveActorAtTile(gameState, tile);
     const sources = (tileEntry?.sourceActorIds || [])
         .map(actorId => {
             const source = preview.sources.find(item => item.actorId === actorId);
@@ -111,6 +122,18 @@ const TileModeTray: React.FC<{
                     );
                 })}
             </div>
+            {occupiedActor && (
+                <div className="mt-1 border-t border-[var(--border-subtle)] pt-2">
+                    <EntityModeTray
+                        gameState={gameState}
+                        actorId={occupiedActor.id}
+                        preview={preview}
+                        intelMode={intelMode}
+                        deltasByActorId={deltasByActorId}
+                        hideTileIntel
+                    />
+                </div>
+            )}
         </div>
     );
 };
@@ -121,17 +144,31 @@ const EntityModeTray: React.FC<{
     preview: SynapseThreatPreview | null;
     intelMode: UiInformationRevealMode;
     deltasByActorId: Record<string, SynapseDeltaEntry>;
-}> = ({ gameState, actorId, preview, intelMode, deltasByActorId }) => {
+    hideTileIntel?: boolean;
+}> = ({ gameState, actorId, preview, intelMode, deltasByActorId, hideTileIntel = false }) => {
     const actor = resolveActorById(gameState, actorId);
     if (!actor) {
         return <EmptyTray />;
     }
     const info = getUiActorInformation(gameState, gameState.player.id, actor.id, intelMode);
     const score = preview?.unitScores.find(entry => entry.actorId === actor.id);
+    const tileEntry = preview?.tiles.find(entry => pointToKey(entry.tile) === pointToKey(actor.position));
     const delta = deltasByActorId[actor.id] || { upsDelta: 0, stateDelta: 0 };
 
     return (
         <div className="flex flex-col gap-2.5 min-w-0">
+            {!hideTileIntel && (
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
+                    <div className="flex items-center justify-between text-[10px] uppercase font-bold text-[var(--text-secondary)]">
+                        <span>Tile Intel</span>
+                        <span>{actor.position.q},{actor.position.r}</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-[11px] text-[var(--text-primary)]">
+                        <span className="font-black">Heat {round1(tileEntry?.heat || 0)}</span>
+                        <span className="font-bold text-[var(--text-secondary)]">Sources {tileEntry?.sourceActorIds.length || 0}</span>
+                    </div>
+                </div>
+            )}
             <div className="flex items-center justify-between">
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Entity Intel</div>
                 <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">{actor.id}</div>
@@ -197,6 +234,7 @@ export const SynapseBottomTray: React.FC<SynapseBottomTrayProps> = ({
                                 tile={synapseSelection.tile}
                                 preview={synapsePreview}
                                 intelMode={intelMode}
+                                deltasByActorId={deltasByActorId}
                                 onSelectSource={onSelectSource}
                             />
                         )}

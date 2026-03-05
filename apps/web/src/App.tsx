@@ -176,7 +176,6 @@ function App() {
     navigateTo
   } = useAppRouting();
   const featureFlags = useMemo(() => readUiFeatureFlags(), []);
-  const arcadeSplashV2Enabled = featureFlags.ui_arcade_splash_v2;
   const mobileDockV2Enabled = featureFlags.ui_mobile_dock_v2;
   const defeatLoopV2Enabled = featureFlags.ui_defeat_loop_v2;
   const sensoryDispatcherEnabled = featureFlags.ui_sensory_dispatcher_v1;
@@ -184,8 +183,8 @@ function App() {
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    document.documentElement.dataset.uiMaterial = arcadeSplashV2Enabled ? 'v2' : 'v1';
-  }, [arcadeSplashV2Enabled]);
+    document.documentElement.dataset.uiMaterial = 'v2';
+  }, []);
 
   const [gameState, dispatch] = usePersistedGameState();
   const [runResumeContext, setRunResumeContext] = useState<RunResumeContext | null>(() => readRunResumeContext());
@@ -198,7 +197,7 @@ function App() {
   const bootMetricSentRef = useRef(false);
   const delayedPulseMetricSentRef = useRef(false);
   const [engineReady, setEngineReady] = useState(false);
-  const [arcadeSplashEntered, setArcadeSplashEntered] = useState(!arcadeSplashV2Enabled);
+  const [arcadeSplashEntered, setArcadeSplashEntered] = useState(false);
   const [arcadeSplashWaitingForReady, setArcadeSplashWaitingForReady] = useState(false);
   const [showArcadeDelayedPulse, setShowArcadeDelayedPulse] = useState(false);
 
@@ -318,10 +317,6 @@ function App() {
   }, [assetManifest, engineReady]);
 
   useEffect(() => {
-    if (!arcadeSplashV2Enabled) {
-      setArcadeSplashEntered(true);
-      return;
-    }
     if (!isArcadeRoute || gameState.gameStatus !== 'hub') return;
     if (!arcadeSplashEntered && !arcadeSplashWaitingForReady) return;
     if (engineReady) return;
@@ -330,7 +325,6 @@ function App() {
     setShowArcadeDelayedPulse(false);
   }, [
     arcadeSplashEntered,
-    arcadeSplashV2Enabled,
     arcadeSplashWaitingForReady,
     engineReady,
     gameState.gameStatus,
@@ -898,7 +892,7 @@ function App() {
       );
     }
 
-    if (isArcadeRoute && arcadeSplashV2Enabled && !arcadeSplashEntered) {
+    if (isArcadeRoute && !arcadeSplashEntered) {
       return (
         <ArcadeSplashGate
           canEnter={engineReady}
@@ -925,7 +919,6 @@ function App() {
           tutorialInstructions={tutorialInstructions}
           uiPreferences={uiPreferences}
           dedicatedRoutesEnabled={dedicatedHubRoutesEnabled}
-          arcadeSplashV2Enabled={arcadeSplashV2Enabled}
           navigateTo={navigateTo}
           onStartArcadeRun={handleStartArcadeRun}
           onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}

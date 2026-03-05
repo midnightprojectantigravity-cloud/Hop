@@ -1,12 +1,10 @@
 import React from 'react';
 import { hexToPixel, TILE_SIZE, type GameState } from '@hop/engine';
 import type { SynapseSelection } from '../../app/synapse';
-import type { CameraRect } from '../../visual/camera';
 
 interface SynapseThreadOverlayProps {
     enabled: boolean;
     gameState: GameState;
-    renderedViewBox: CameraRect;
     selection: SynapseSelection;
 }
 
@@ -28,46 +26,39 @@ const resolveSelectionPoint = (
 export const SynapseThreadOverlay: React.FC<SynapseThreadOverlayProps> = ({
     enabled,
     gameState,
-    renderedViewBox,
     selection
 }) => {
-    const gradientId = React.useId();
     if (!enabled || selection.mode === 'empty') return null;
 
     const point = resolveSelectionPoint(gameState, selection);
     if (!point) return null;
 
-    const start = hexToPixel(point, TILE_SIZE);
-    const end = {
-        x: renderedViewBox.x + renderedViewBox.width / 2,
-        y: renderedViewBox.y + renderedViewBox.height - 12
-    };
-    const control = {
-        x: (start.x + end.x) / 2,
-        y: start.y + (end.y - start.y) * 0.62
-    };
-    const d = `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`;
+    const center = hexToPixel(point, TILE_SIZE);
+    const edgeSize = TILE_SIZE - 1;
+    const hexPoints = Array.from({ length: 6 }, (_, i) => {
+        const angle = (Math.PI / 180) * (60 * i);
+        const x = center.x + edgeSize * Math.cos(angle);
+        const y = center.y + edgeSize * Math.sin(angle);
+        return `${x},${y}`;
+    }).join(' ');
 
     return (
         <g data-layer="synapse-thread" pointerEvents="none">
-            <defs>
-                <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="rgba(34,211,238,0.95)" />
-                    <stop offset="100%" stopColor="rgba(59,130,246,0.2)" />
-                </linearGradient>
-            </defs>
-            <path
-                d={d}
+            <polygon
+                points={hexPoints}
                 fill="none"
-                stroke={`url(#${gradientId})`}
-                strokeWidth={1.8}
-                strokeDasharray="5 4"
-                className="synapse-thread-line"
+                stroke="rgba(34, 211, 238, 0.34)"
+                strokeWidth={5.5}
+                strokeLinejoin="round"
+            />
+            <polygon
+                points={hexPoints}
+                fill="none"
+                stroke="rgba(34, 211, 238, 0.95)"
+                strokeWidth={2.2}
+                strokeLinejoin="round"
                 data-synapse-thread="active"
             />
-            <circle cx={start.x} cy={start.y} r={2.2} fill="rgba(125,211,252,0.9)" />
-            <circle cx={end.x} cy={end.y} r={2.6} fill="rgba(56,189,248,0.85)" />
         </g>
     );
 };
-

@@ -77,9 +77,14 @@ const resolveMaxSkillRange = (actor: Actor): number => {
     return Math.max(...ranges);
 };
 
-const buildOccupiedTileKeySet = (state: GameState): Set<string> => {
+const buildOccupiedTileKeySet = (
+    state: GameState,
+    options?: { includePlayer?: boolean }
+): Set<string> => {
     const occupied = new Set<string>();
-    occupied.add(pointToKey(state.player.position));
+    if (options?.includePlayer !== false) {
+        occupied.add(pointToKey(state.player.position));
+    }
     for (const enemy of state.enemies) {
         if (enemy.hp <= 0) continue;
         occupied.add(pointToKey(enemy.position));
@@ -92,7 +97,9 @@ const buildOccupiedTileKeySet = (state: GameState): Set<string> => {
 };
 
 const buildPlayableCells = (state: GameState): Point[] => {
-    const occupiedTileKeys = buildOccupiedTileKeySet(state);
+    // Keep the player's current tile in the heatmap so Synapse/INFO always reflects
+    // the danger state of the tile the player is standing on.
+    const occupiedTileKeys = buildOccupiedTileKeySet(state, { includePlayer: false });
     const roomHexes = state.rooms?.[0]?.hexes || [];
     const raw = roomHexes.length > 0
         ? roomHexes

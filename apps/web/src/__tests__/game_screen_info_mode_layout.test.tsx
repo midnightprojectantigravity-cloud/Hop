@@ -72,7 +72,10 @@ describe('game screen info mode layout', () => {
     expect(html).not.toContain('>Hub<');
     expect(html).not.toContain('>Reset<');
     expect(html).toContain('Info Settings');
-    expect(html).toContain('Future Settings');
+    expect(html).not.toContain('Future Settings');
+    expect(html).not.toContain('Intel controls moved to Settings');
+    expect(html).not.toContain('>Force<');
+    expect(html).not.toContain('>Strict<');
     expect(html).toContain('Info');
   });
 

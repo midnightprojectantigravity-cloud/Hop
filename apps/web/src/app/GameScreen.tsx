@@ -1,4 +1,4 @@
-﻿import type { GameState, Point, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
+import { pointToKey, type GameState, type Point, type SimulationEvent, type StateMirrorSnapshot } from '@hop/engine';
 import React from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { UI } from '../components/UI';
@@ -40,66 +40,14 @@ type MobileToast = {
 
 type FloorIntroState = { floor: number; theme: string } | null;
 
-interface IntelModeToggleProps {
-  mode: UiInformationRevealMode;
-  onChange: (mode: UiInformationRevealMode) => void;
-  compact?: boolean;
-}
-
-const IntelModeToggle = ({ mode, onChange, compact = false }: IntelModeToggleProps) => (
-  <div className={`rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] ${compact ? 'p-1.5' : 'p-2'} flex flex-col gap-1.5`}>
-    <span
-      className="font-bold uppercase tracking-widest text-[var(--text-muted)]"
-      style={{ fontSize: compact ? 'var(--hud-label-font, 9px)' : '10px' }}
-    >
-      Intel
-    </span>
-    <div className="grid grid-cols-2 gap-1.5">
-      <button
-        onClick={() => onChange('force_reveal')}
-        className={`${compact ? 'px-2 py-1' : 'px-2.5 py-1.5'} rounded border text-[10px] font-black uppercase tracking-widest transition-colors ${
-          mode === 'force_reveal'
-            ? 'bg-[var(--accent-brass-soft)] border-[var(--accent-brass)] text-[var(--text-primary)]'
-            : 'bg-[var(--surface-panel)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--surface-panel-hover)]'
-        }`}
-        style={compact ? { minHeight: 'var(--hud-button-min-h, 40px)', fontSize: 'var(--hud-button-font, 10px)' } : undefined}
-      >
-        Force
-      </button>
-      <button
-        onClick={() => onChange('strict')}
-        className={`${compact ? 'px-2 py-1' : 'px-2.5 py-1.5'} rounded border text-[10px] font-black uppercase tracking-widest transition-colors ${
-          mode === 'strict'
-            ? 'bg-[var(--accent-danger-soft)] border-[var(--accent-danger)] text-[var(--accent-danger)]'
-            : 'bg-[var(--surface-panel)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--surface-panel-hover)]'
-        }`}
-        style={compact ? { minHeight: 'var(--hud-button-min-h, 40px)', fontSize: 'var(--hud-button-font, 10px)' } : undefined}
-      >
-        Strict
-      </button>
-    </div>
-  </div>
-);
-
 const InfoSettingsPanel = ({
-  intelMode,
-  onIntelModeChange,
   compact = false
 }: {
-  intelMode: UiInformationRevealMode;
-  onIntelModeChange: (mode: UiInformationRevealMode) => void;
   compact?: boolean;
 }) => (
-  <div className={`rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] ${compact ? 'p-2.5 space-y-2.5' : 'p-3 space-y-3'}`}>
+  <div className={`rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] ${compact ? 'p-2.5' : 'p-3'}`}>
     <div className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: compact ? 'var(--hud-label-font, 9px)' : '10px' }}>
       Info Settings
-    </div>
-    <IntelModeToggle mode={intelMode} onChange={onIntelModeChange} compact={compact} />
-    <div
-      className="rounded-lg border border-dashed border-[var(--border-subtle)] px-2.5 py-2 font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]"
-      style={{ fontSize: compact ? 'var(--hud-label-font, 9px)' : '10px' }}
-    >
-      Future Settings
     </div>
   </div>
 );
@@ -397,13 +345,26 @@ export const GameScreen = ({
   React.useEffect(() => {
     if (!isSynapseMode || synapseSelection.mode !== 'tile' || !synapsePreview) return;
     const tile = synapseSelection.tile;
+    const tileKey = pointToKey(tile);
     const exists = synapsePreview.tiles.some(entry =>
       entry.tile.q === tile.q && entry.tile.r === tile.r && entry.tile.s === tile.s
     );
-    if (!exists) {
+    const occupiedByActor =
+      pointToKey(gameState.player.position) === tileKey
+      || gameState.enemies.some(enemy => enemy.hp > 0 && pointToKey(enemy.position) === tileKey)
+      || (gameState.companions || []).some(companion => companion.hp > 0 && pointToKey(companion.position) === tileKey);
+    if (!exists && !occupiedByActor) {
       onSynapseClearSelection();
     }
-  }, [isSynapseMode, onSynapseClearSelection, synapsePreview, synapseSelection]);
+  }, [
+    gameState.companions,
+    gameState.enemies,
+    gameState.player.position,
+    isSynapseMode,
+    onSynapseClearSelection,
+    synapsePreview,
+    synapseSelection
+  ]);
 
   return (
     <div
@@ -476,7 +437,7 @@ export const GameScreen = ({
           onExitToHub={onExitToHub}
           intelMode={intelMode}
           onIntelModeChange={handleIntelModeChange}
-          showIntelControls={isSynapseMode}
+          showIntelControls={false}
           inputLocked={isInputLocked}
         />
       </aside>
@@ -530,11 +491,6 @@ export const GameScreen = ({
             />
             {isSynapseMode && (
               <div className="hidden lg:block absolute bottom-3 left-1/2 -translate-x-1/2 z-40 w-[min(92vw,34rem)] pointer-events-auto space-y-2">
-                <InfoSettingsPanel
-                  intelMode={intelMode}
-                  onIntelModeChange={handleIntelModeChange}
-                  compact
-                />
                 <SynapseBottomTray
                   gameState={gameState}
                   synapsePreview={synapsePreview}
@@ -544,6 +500,9 @@ export const GameScreen = ({
                   onSelectSource={onSynapseSelectSource}
                   onClearSelection={onSynapseClearSelection}
                   docked
+                />
+                <InfoSettingsPanel
+                  compact
                 />
               </div>
             )}
@@ -645,11 +604,6 @@ export const GameScreen = ({
               <div className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
                 Info
               </div>
-              <InfoSettingsPanel
-                intelMode={intelMode}
-                onIntelModeChange={handleIntelModeChange}
-                compact
-              />
               <SynapseBottomTray
                 gameState={gameState}
                 synapsePreview={synapsePreview}
@@ -659,6 +613,9 @@ export const GameScreen = ({
                 onSelectSource={onSynapseSelectSource}
                 onClearSelection={onSynapseClearSelection}
                 docked
+              />
+              <InfoSettingsPanel
+                compact
               />
             </div>
           )}
@@ -719,4 +676,3 @@ export const GameScreen = ({
     </div>
   );
 };
-

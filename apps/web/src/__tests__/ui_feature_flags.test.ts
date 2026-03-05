@@ -21,7 +21,6 @@ describe('ui feature flags', () => {
   it('reads defaults as all disabled', () => {
     const flags = readUiFeatureFlags(null);
     expect(flags).toEqual({
-      ui_arcade_splash_v2: false,
       ui_mobile_dock_v2: false,
       ui_defeat_loop_v2: false,
       ui_sensory_dispatcher_v1: false,
@@ -33,7 +32,6 @@ describe('ui feature flags', () => {
     const storage = new MemoryStorage();
     writeUiFeatureFlags(
       {
-        ui_arcade_splash_v2: true,
         ui_mobile_dock_v2: true,
         ui_defeat_loop_v2: false,
         ui_sensory_dispatcher_v1: true,
@@ -44,11 +42,9 @@ describe('ui feature flags', () => {
 
     expect(storage.getItem(UI_FEATURE_FLAGS_STORAGE_KEY)).toBeTruthy();
     const readBack = readUiFeatureFlags(storage);
-    expect(readBack.ui_arcade_splash_v2).toBe(true);
     expect(readBack.ui_mobile_dock_v2).toBe(true);
     expect(readBack.ui_defeat_loop_v2).toBe(false);
     expect(readBack.ui_sensory_dispatcher_v1).toBe(true);
     expect(readBack.ui_dedicated_hub_routes_v1).toBe(false);
   });
 });
-

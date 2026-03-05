@@ -211,7 +211,6 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
         <SynapseThreadOverlay
             enabled={isSynapseMode}
             gameState={gameState}
-            renderedViewBox={renderedViewBox}
             selection={synapseSelection}
         />
         <VisualEchoLayer

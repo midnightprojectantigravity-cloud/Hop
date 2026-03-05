@@ -259,7 +259,7 @@ export const useBoardInteractions = ({
     }, [endPointerInteraction]);
 
     const handleBoardWheel = useCallback((e: WheelEvent<SVGSVGElement>) => {
-        if (e.ctrlKey || e.deltaY !== 0) {
+        if ((e.ctrlKey || e.deltaY !== 0) && e.cancelable) {
             e.preventDefault();
         }
         if (Math.abs(e.deltaY) < 0.1) return;

@@ -43,6 +43,9 @@
 
   --surface-texture: none;
   --surface-vignette: none;
+  --surface-texture-overlay-opacity: 0;
+  --surface-texture-overlay-blend: multiply;
+  --surface-texture-overlay-size: 320px 320px;
 }
 
 :root[data-theme='midnight'],
@@ -332,6 +335,9 @@
     url('./assets/ui/parchment-light-placeholder.jpg') type('image/jpeg')
   );
   --surface-vignette: radial-gradient(circle at 50% 42%, rgba(255, 244, 220, 0.1), rgba(70, 40, 18, 0.18));
+  --surface-texture-overlay-opacity: 0.22;
+  --surface-texture-overlay-blend: multiply;
+  --surface-texture-overlay-size: 320px 320px;
 }
 
 :root[data-theme='verdigris'][data-ui-material='v2'] {
@@ -356,6 +362,8 @@
     url('./assets/ui/parchment-dark-placeholder.jpg') type('image/jpeg')
   );
   --surface-vignette: radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.55));
+  --surface-texture-overlay-opacity: 0.16;
+  --surface-texture-overlay-blend: screen;
 }
 
 :root[data-theme='cinder'][data-ui-material='v2'] {
@@ -365,6 +373,8 @@
     url('./assets/ui/parchment-dark-placeholder.jpg') type('image/jpeg')
   );
   --surface-vignette: radial-gradient(circle at 50% 45%, rgba(176, 86, 46, 0.2), rgba(0, 0, 0, 0.62));
+  --surface-texture-overlay-opacity: 0.14;
+  --surface-texture-overlay-blend: screen;
 }
 
 :root[data-motion='reduced'] {
@@ -382,6 +392,7 @@
 }
 
 body {
+  position: relative;
   background:
     var(--surface-vignette),
     radial-gradient(circle at 12% 10%, rgba(180, 141, 80, 0.15), transparent 24%),
@@ -393,6 +404,20 @@ body {
   color: var(--text-primary);
   margin: 0;
   font-family: var(--font-body);
+}
+
+/* Global parchment veil so texture reads across app panels/surfaces. */
+body::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background-image: var(--surface-texture);
+  background-size: var(--surface-texture-overlay-size);
+  background-repeat: repeat;
+  mix-blend-mode: var(--surface-texture-overlay-blend);
+  opacity: var(--surface-texture-overlay-opacity);
+  z-index: 1;
 }
 
 html,
@@ -435,6 +460,7 @@ body::after {
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.03"/></svg>');
   mix-blend-mode: multiply;
   opacity: 0.55;
+  z-index: 2;
 }
 
 .arcade-splash-layer {

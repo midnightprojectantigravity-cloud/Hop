@@ -83,6 +83,8 @@ describe('synapse bottom tray', () => {
     expect(html).toContain('Threat Sources');
     expect(html).toContain('UPS 6420');
     expect(html).toContain('z 1.4');
+    expect(html).toContain('Entity Intel');
+    expect(html).toContain(gameState.player.id);
   });
 
   it('renders entity mode with UPS and delta fields', () => {
@@ -128,6 +130,7 @@ describe('synapse bottom tray', () => {
     );
 
     expect(html).toContain('Entity Intel');
+    expect(html).toContain('Tile Intel');
     expect(html).toContain('UPS');
     expect(html).toContain('Sigma');
     expect(html).toContain('UPS D v -70');

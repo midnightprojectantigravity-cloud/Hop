@@ -26,15 +26,13 @@ Storage/loader anchor:
 1. `apps/web/src/app/ui-feature-flags.ts`
 
 Experimental flags:
-1. `ui_arcade_splash_v2`:
-   - splash gate, delayed-ready pulse, two-step arcade flow.
-2. `ui_mobile_dock_v2`:
+1. `ui_mobile_dock_v2`:
    - mobile dock v2 layout and guarded destructive controls.
-3. `ui_defeat_loop_v2`:
+2. `ui_defeat_loop_v2`:
    - replay chronicle marker plumbing and run-lost action-ready telemetry.
-4. `ui_sensory_dispatcher_v1`:
+3. `ui_sensory_dispatcher_v1`:
    - semantic sensory dispatch, reduced-motion clamp, priority preemption.
-5. `ui_dedicated_hub_routes_v1`:
+4. `ui_dedicated_hub_routes_v1`:
    - dedicated `Settings`, `Leaderboard`, `Tutorials` route skeletons.
 
 Law boundary:
@@ -156,7 +154,7 @@ Mobile portrait:
      - skill tray.
    - `INFO` ON:
      - action row hidden.
-     - `INFO` heading + intel settings + placeholder future settings + info tray content.
+     - `INFO` heading + placeholder settings panel + info tray content.
 
 Desktop command center:
 1. Left status/control rail.
@@ -246,7 +244,7 @@ Capability-gated:
 1. name
 2. intent badge
 3. detailed reveal-bound intel fields
-4. intel mode toggles (`Force`, `Strict`) are shown only while `INFO` mode is active.
+4. intel mode toggles (`Force`, `Strict`) are debug controls surfaced in `Settings` (not on gameplay board surfaces).
 
 ## 7. Current Telemetry Contract
 
