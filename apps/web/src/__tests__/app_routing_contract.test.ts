@@ -7,6 +7,7 @@ describe('app routing contract', () => {
     expect(routed.hubPath).toBe('/Hop');
     expect(routed.arcadePath).toBe('/Hop/Arcade');
     expect(routed.biomesPath).toBe('/Hop/Biomes');
+    expect(routed.themeLabPath).toBe('/Hop/ThemeLab');
     expect(routed.settingsPath).toBe('/Hop/Settings');
     expect(routed.leaderboardPath).toBe('/Hop/Leaderboard');
     expect(routed.tutorialsPath).toBe('/Hop/Tutorials');
@@ -19,6 +20,12 @@ describe('app routing contract', () => {
     expect(arcade.hubPath).toBe('/');
     expect(arcade.isArcadeRoute).toBe(true);
     expect(arcade.isBiomesRoute).toBe(false);
+    expect(arcade.isThemeLabRoute).toBe(false);
+  });
+
+  it('recognizes the theme manager route aliases', () => {
+    expect(deriveAppRouting('/ThemeLab').isThemeLabRoute).toBe(true);
+    expect(deriveAppRouting('/theme-manager').isThemeLabRoute).toBe(true);
+    expect(deriveAppRouting('/style-guide').isThemeLabRoute).toBe(true);
   });
 });
-

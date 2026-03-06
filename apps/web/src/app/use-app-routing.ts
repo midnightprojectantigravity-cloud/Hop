@@ -5,11 +5,13 @@ export interface AppRoutingState {
   hubPath: string;
   arcadePath: string;
   biomesPath: string;
+  themeLabPath: string;
   settingsPath: string;
   leaderboardPath: string;
   tutorialsPath: string;
   isArcadeRoute: boolean;
   isBiomesRoute: boolean;
+  isThemeLabRoute: boolean;
   isSettingsRoute: boolean;
   isLeaderboardRoute: boolean;
   isTutorialsRoute: boolean;
@@ -22,11 +24,13 @@ export interface DerivedAppRouting {
   hubPath: string;
   arcadePath: string;
   biomesPath: string;
+  themeLabPath: string;
   settingsPath: string;
   leaderboardPath: string;
   tutorialsPath: string;
   isArcadeRoute: boolean;
   isBiomesRoute: boolean;
+  isThemeLabRoute: boolean;
   isSettingsRoute: boolean;
   isLeaderboardRoute: boolean;
   isTutorialsRoute: boolean;
@@ -37,6 +41,7 @@ export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
   const hubPath = `${hubBase || ''}` || '/';
   const arcadePath = `${hubBase}/Arcade` || '/Arcade';
   const biomesPath = `${hubBase}/Biomes` || '/Biomes';
+  const themeLabPath = `${hubBase}/ThemeLab` || '/ThemeLab';
   const settingsPath = `${hubBase}/Settings` || '/Settings';
   const leaderboardPath = `${hubBase}/Leaderboard` || '/Leaderboard';
   const tutorialsPath = `${hubBase}/Tutorials` || '/Tutorials';
@@ -45,6 +50,10 @@ export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
 
   const isArcadeRoute = normalizedPathname.endsWith('/arcade') || normalizedPathname.endsWith('/arcarde');
   const isBiomesRoute = normalizedPathname.endsWith('/biomes');
+  const isThemeLabRoute =
+    normalizedPathname.endsWith('/themelab')
+    || normalizedPathname.endsWith('/theme-manager')
+    || normalizedPathname.endsWith('/style-guide');
   const isSettingsRoute = normalizedPathname.endsWith('/settings');
   const isLeaderboardRoute = normalizedPathname.endsWith('/leaderboard');
   const isTutorialsRoute = normalizedPathname.endsWith('/tutorials');
@@ -53,11 +62,13 @@ export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
     hubPath,
     arcadePath,
     biomesPath,
+    themeLabPath,
     settingsPath,
     leaderboardPath,
     tutorialsPath,
     isArcadeRoute,
     isBiomesRoute,
+    isThemeLabRoute,
     isSettingsRoute,
     isLeaderboardRoute,
     isTutorialsRoute

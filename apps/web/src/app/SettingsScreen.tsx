@@ -25,8 +25,8 @@ export const SettingsScreen = ({
   };
 
   return (
-    <div className="w-screen h-screen bg-[var(--surface-app)] text-[var(--text-primary)] font-[var(--font-body)] flex flex-col">
-      <header className="border-b border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-3 flex items-center justify-between">
+    <div className="surface-app-material w-screen h-screen bg-[var(--surface-app)] text-[var(--text-primary)] font-[var(--font-body)] flex flex-col">
+      <header className="surface-panel-material torn-edge-shell border-b border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-3 flex items-center justify-between">
         <h1 className="text-sm font-black uppercase tracking-[0.2em] font-[var(--font-heading)]">Settings</h1>
         <button
           onClick={onBack}
@@ -37,7 +37,7 @@ export const SettingsScreen = ({
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-5">
-        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
+        <section className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
           <h2 className="text-[11px] uppercase tracking-[0.2em] font-black text-[var(--text-muted)] mb-3">Theme</h2>
           <select
             aria-label="Theme"
@@ -53,7 +53,7 @@ export const SettingsScreen = ({
           </select>
         </section>
 
-        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
+        <section className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
           <h2 className="text-[11px] uppercase tracking-[0.2em] font-black text-[var(--text-muted)] mb-3">Motion</h2>
           <button
             onClick={() => onSetMotionMode(uiPreferences.motionMode === 'snappy' ? 'reduced' : 'snappy')}
@@ -63,7 +63,7 @@ export const SettingsScreen = ({
           </button>
         </section>
 
-        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
+        <section className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
           <h2 className="text-[11px] uppercase tracking-[0.2em] font-black text-[var(--text-muted)] mb-3">HUD Density</h2>
           <button
             onClick={() => onSetHudDensity(uiPreferences.hudDensity === 'compact' ? 'comfortable' : 'compact')}
@@ -73,7 +73,7 @@ export const SettingsScreen = ({
           </button>
         </section>
 
-        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
+        <section className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
           <h2 className="text-[11px] uppercase tracking-[0.2em] font-black text-[var(--text-muted)] mb-3">Intel Policy (Debug)</h2>
           <select
             aria-label="Intel Policy"

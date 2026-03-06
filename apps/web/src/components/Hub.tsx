@@ -41,9 +41,9 @@ export const Hub: React.FC<HubProps> = ({
   hubTrainingOnly = false
 }) => {
   return (
-    <div className="w-full h-full flex flex-col bg-[var(--surface-app)] relative">
+    <div className="surface-app-material w-full h-full flex flex-col bg-[var(--surface-app)] relative">
       {/* Header */}
-      <header className="border-b border-[var(--border-subtle)] px-4 sm:px-6 lg:px-12 py-3 sm:py-4 bg-[color:var(--surface-panel)] backdrop-blur-xl z-30">
+      <header className="surface-panel-material torn-edge-shell border-b border-[var(--border-subtle)] px-4 sm:px-6 lg:px-12 py-3 sm:py-4 bg-[color:var(--surface-panel)] backdrop-blur-xl z-30">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[var(--accent-brass)] rounded-lg flex items-center justify-center font-black text-lg sm:text-xl text-[var(--text-inverse)] shadow-[0_0_20px_rgba(180,141,80,0.35)]">H</div>
@@ -55,7 +55,7 @@ export const Hub: React.FC<HubProps> = ({
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 lg:gap-8">
             <div className="hidden sm:flex sm:items-center gap-3 sm:gap-4">
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
+              <div className="surface-panel-material torn-edge-shell rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">Capability Passives</div>
@@ -75,7 +75,7 @@ export const Hub: React.FC<HubProps> = ({
                   </button>
                 </div>
               </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
+              <div className="surface-panel-material torn-edge-shell rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">Movement Runtime</div>
@@ -96,7 +96,7 @@ export const Hub: React.FC<HubProps> = ({
                 </div>
               </div>
             </div>
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2 sm:bg-transparent sm:border-0 sm:p-0">
+            <div className="surface-panel-material torn-edge-shell rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2 sm:bg-transparent sm:border-0 sm:p-0">
               <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">Current Loadout</div>
               <div className="text-sm font-bold text-[var(--accent-royal)] truncate">{gameState.selectedLoadoutId || 'Select Archetype'}</div>
             </div>
@@ -120,7 +120,7 @@ export const Hub: React.FC<HubProps> = ({
                 )}
               </div>
             )}
-            <details className="sm:hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
+            <details className="surface-panel-material torn-edge-shell sm:hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
               <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
                 <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-black">Run Options</span>
                 <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Advanced</span>
@@ -198,8 +198,8 @@ export const Hub: React.FC<HubProps> = ({
         </main>
 
         {/* Mobile Secondary Panels */}
-        <section className={`lg:hidden border-t border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm p-4 sm:p-6 space-y-4 ${dedicatedRoutesEnabled ? 'hidden' : ''}`}>
-          <details className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
+        <section className={`surface-panel-material torn-edge-shell lg:hidden border-t border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm p-4 sm:p-6 space-y-4 ${dedicatedRoutesEnabled ? 'hidden' : ''}`}>
+          <details className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
             <summary className="cursor-pointer list-none flex items-center justify-between">
               <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Historical Replay</span>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Optional</span>
@@ -209,7 +209,7 @@ export const Hub: React.FC<HubProps> = ({
             </div>
           </details>
 
-          <details className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
+          <details className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
             <summary className="cursor-pointer list-none flex items-center justify-between">
               <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Training Simulations</span>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Optional</span>
@@ -221,7 +221,7 @@ export const Hub: React.FC<HubProps> = ({
         </section>
 
         {/* Right Sidebar: Intel & Simulations (desktop) */}
-        <aside className="hidden lg:flex w-[450px] border-l border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-md flex-col z-20">
+        <aside className="surface-panel-material torn-edge-shell hidden lg:flex w-[450px] border-l border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-md flex-col z-20">
           <div className="p-8 flex flex-col gap-12 h-full overflow-y-auto custom-scrollbar">
 
             <section>
@@ -229,7 +229,7 @@ export const Hub: React.FC<HubProps> = ({
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Historical Replay</h3>
                 <div className="w-2 h-2 rounded-full bg-[var(--accent-danger)] animate-pulse" />
               </div>
-              <div className="bg-[var(--surface-panel-muted)] border border-[var(--border-subtle)] rounded-2xl p-4 overflow-hidden">
+              <div className="surface-panel-material torn-edge-shell bg-[var(--surface-panel-muted)] border border-[var(--border-subtle)] rounded-2xl p-4 overflow-hidden">
                 <ReplayManager gameState={gameState} onStartReplay={onStartReplay} />
               </div>
             </section>
@@ -239,7 +239,7 @@ export const Hub: React.FC<HubProps> = ({
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Training Simulations</h3>
                 <div className="w-2 h-2 rounded-full bg-[var(--accent-royal)] animate-pulse" />
               </div>
-              <div className="bg-[var(--surface-panel-muted)] border border-[var(--border-subtle)] rounded-2xl p-4 overflow-hidden">
+              <div className="surface-panel-material torn-edge-shell bg-[var(--surface-panel-muted)] border border-[var(--border-subtle)] rounded-2xl p-4 overflow-hidden">
                 <TutorialManager onLoadScenario={onLoadScenario} />
               </div>
             </section>
@@ -252,7 +252,7 @@ export const Hub: React.FC<HubProps> = ({
       </div>
 
       {gameState.selectedLoadoutId && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 py-3">
+        <div className="surface-panel-material torn-edge-shell sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 py-3">
           <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-black mb-2">
             Ready: {gameState.selectedLoadoutId}
           </div>

@@ -15,6 +15,7 @@ const createCachedLoader = <T>(loader: ModuleLoader<T>): ModuleLoader<T> => {
 const loadBiomeSandboxModule = createCachedLoader(() => import('../components/BiomeSandbox'));
 const loadHubScreenModule = createCachedLoader(() => import('./HubScreen'));
 const loadGameScreenModule = createCachedLoader(() => import('./GameScreen'));
+const loadThemeManagerScreenModule = createCachedLoader(() => import('./ThemeManagerScreen'));
 const loadSettingsScreenModule = createCachedLoader(() => import('./SettingsScreen'));
 const loadLeaderboardScreenModule = createCachedLoader(() => import('./LeaderboardScreen'));
 const loadTutorialReplayScreenModule = createCachedLoader(() => import('./TutorialReplayScreen'));
@@ -32,6 +33,11 @@ export const LazyHubScreen = lazy(async () => {
 export const LazyGameScreen = lazy(async () => {
   const module = await loadGameScreenModule();
   return { default: module.GameScreen };
+});
+
+export const LazyThemeManagerScreen = lazy(async () => {
+  const module = await loadThemeManagerScreenModule();
+  return { default: module.ThemeManagerScreen };
 });
 
 export const LazySettingsScreen = lazy(async () => {
@@ -52,7 +58,7 @@ export const LazyTutorialReplayScreen = lazy(async () => {
 export const prefetchBiomeSandbox = (): Promise<void> => loadBiomeSandboxModule().then(() => undefined);
 export const prefetchHubScreen = (): Promise<void> => loadHubScreenModule().then(() => undefined);
 export const prefetchGameScreen = (): Promise<void> => loadGameScreenModule().then(() => undefined);
+export const prefetchThemeManagerScreen = (): Promise<void> => loadThemeManagerScreenModule().then(() => undefined);
 export const prefetchSettingsScreen = (): Promise<void> => loadSettingsScreenModule().then(() => undefined);
 export const prefetchLeaderboardScreen = (): Promise<void> => loadLeaderboardScreenModule().then(() => undefined);
 export const prefetchTutorialReplayScreen = (): Promise<void> => loadTutorialReplayScreenModule().then(() => undefined);
-

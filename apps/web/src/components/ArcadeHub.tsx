@@ -74,8 +74,8 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({ onBack, onLaunchArcade, tw
   const selectedLoadout = pair.find((entry) => entry.id === selectedLoadoutId) || null;
 
   return (
-    <div className="w-full h-full flex flex-col bg-[var(--surface-app)]">
-      <header className="border-b border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-8 lg:px-12 py-3 bg-[color:var(--surface-panel)] backdrop-blur-xl z-30">
+    <div className="surface-app-material w-full h-full flex flex-col bg-[var(--surface-app)]">
+      <header className="surface-panel-material torn-edge-shell border-b border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-8 lg:px-12 py-3 bg-[color:var(--surface-panel)] backdrop-blur-xl z-30">
         <div className="min-w-0">
           <h1 className="text-lg sm:text-xl font-black uppercase tracking-tight font-[var(--font-heading)]">
             Hop <span className="text-[var(--accent-royal)]">Arcade</span>
@@ -161,7 +161,7 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({ onBack, onLaunchArcade, tw
           </div>
 
           {twoStepSelection && (
-            <section className="mt-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4 sm:p-6">
+            <section className="surface-panel-material torn-edge-shell mt-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4 sm:p-6">
               <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-black mb-2">Selection Details</div>
               {selectedLoadout ? (
                 <>

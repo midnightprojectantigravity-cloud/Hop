@@ -10,8 +10,8 @@ interface LeaderboardScreenProps {
 
 export const LeaderboardScreen = ({ gameState, onStartReplay, onBack }: LeaderboardScreenProps) => {
   return (
-    <div className="w-screen h-screen bg-[var(--surface-app)] text-[var(--text-primary)] font-[var(--font-body)] flex flex-col">
-      <header className="border-b border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-3 flex items-center justify-between">
+    <div className="surface-app-material w-screen h-screen bg-[var(--surface-app)] text-[var(--text-primary)] font-[var(--font-body)] flex flex-col">
+      <header className="surface-panel-material torn-edge-shell border-b border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-3 flex items-center justify-between">
         <h1 className="text-sm font-black uppercase tracking-[0.2em] font-[var(--font-heading)]">Leaderboard</h1>
         <button
           onClick={onBack}
@@ -26,4 +26,3 @@ export const LeaderboardScreen = ({ gameState, onStartReplay, onBack }: Leaderbo
     </div>
   );
 };
-

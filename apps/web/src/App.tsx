@@ -24,11 +24,13 @@ import {
   LazyHubScreen,
   LazyLeaderboardScreen,
   LazySettingsScreen,
+  LazyThemeManagerScreen,
   LazyTutorialReplayScreen,
   prefetchBiomeSandbox,
   prefetchGameScreen,
   prefetchHubScreen,
   prefetchLeaderboardScreen,
+  prefetchThemeManagerScreen,
   prefetchSettingsScreen,
   prefetchTutorialReplayScreen
 } from './app/lazy-screens';
@@ -47,7 +49,7 @@ import {
 import splashPlaceholderImage from './assets/ui/splash-placeholder.jpg';
 
 const AppScreenFallback = ({ label }: { label: string }) => (
-  <div className="w-screen h-screen flex items-center justify-center bg-[var(--surface-app)] text-[var(--text-muted)] text-xs font-black uppercase tracking-[0.28em]">
+  <div className="surface-app-material w-screen h-screen flex items-center justify-center bg-[var(--surface-app)] text-[var(--text-muted)] text-xs font-black uppercase tracking-[0.28em]">
     {label}
   </div>
 );
@@ -165,11 +167,13 @@ function App() {
     hubPath,
     arcadePath,
     biomesPath,
+    themeLabPath,
     settingsPath,
     leaderboardPath,
     tutorialsPath,
     isArcadeRoute,
     isBiomesRoute,
+    isThemeLabRoute,
     isSettingsRoute,
     isLeaderboardRoute,
     isTutorialsRoute,
@@ -360,6 +364,7 @@ function App() {
       normalizedPath === normalizedHubPath
       || isArcadeRoute
       || isBiomesRoute
+      || isThemeLabRoute
       || (dedicatedHubRoutesEnabled && isSettingsRoute)
       || (dedicatedHubRoutesEnabled && isLeaderboardRoute)
       || (dedicatedHubRoutesEnabled && isTutorialsRoute);
@@ -371,6 +376,7 @@ function App() {
     dedicatedHubRoutesEnabled,
     isArcadeRoute,
     isBiomesRoute,
+    isThemeLabRoute,
     isLeaderboardRoute,
     isSettingsRoute,
     isTutorialsRoute,
@@ -388,6 +394,19 @@ function App() {
       if (isBiomesRoute) {
         void prefetchHubScreen();
         void prefetchGameScreen();
+        void prefetchThemeManagerScreen();
+        if (dedicatedHubRoutesEnabled) {
+          void prefetchSettingsScreen();
+          void prefetchLeaderboardScreen();
+          void prefetchTutorialReplayScreen();
+        }
+        return;
+      }
+
+      if (isThemeLabRoute) {
+        void prefetchHubScreen();
+        void prefetchGameScreen();
+        void prefetchBiomeSandbox();
         if (dedicatedHubRoutesEnabled) {
           void prefetchSettingsScreen();
           void prefetchLeaderboardScreen();
@@ -419,6 +438,7 @@ function App() {
 
       if (gameState.gameStatus === 'hub') {
         void prefetchGameScreen();
+        void prefetchThemeManagerScreen();
         if (!isArcadeRoute) {
           void prefetchBiomeSandbox();
         }
@@ -436,6 +456,7 @@ function App() {
         void prefetchLeaderboardScreen();
         void prefetchTutorialReplayScreen();
       }
+      void prefetchThemeManagerScreen();
       if (!isArcadeRoute && gameState.gameStatus !== 'lost') {
         void prefetchBiomeSandbox();
       }
@@ -461,6 +482,7 @@ function App() {
     gameState.gameStatus,
     isArcadeRoute,
     isBiomesRoute,
+    isThemeLabRoute,
     isLeaderboardRoute,
     isSettingsRoute,
     isTutorialsRoute
@@ -511,6 +533,20 @@ function App() {
     if (isInputLocked) return;
     if (skillId && isSynapseMode) {
       setSynapseMode(false);
+    }
+    if (skillId) {
+      dispatchSensory({
+        id: 'haptic-action-medium',
+        intensity: 1.0,
+        priority: 'low',
+        context: 'run'
+      });
+      dispatchSensory({
+        id: 'ui-synapse-chime',
+        intensity: 1.0,
+        priority: 'low',
+        context: 'run'
+      });
     }
     setSelectedSkillId(skillId);
   };
@@ -846,6 +882,20 @@ function App() {
     );
   }
 
+  if (isThemeLabRoute) {
+    return (
+      <Suspense fallback={<AppScreenFallback label="Loading Theme Lab..." />}>
+        <LazyThemeManagerScreen
+          uiPreferences={uiPreferences}
+          onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
+          onSetMotionMode={(motionMode) => patchUiPreferences({ motionMode })}
+          onSetHudDensity={(hudDensity) => patchUiPreferences({ hudDensity })}
+          onBack={() => navigateTo(hubPath)}
+        />
+      </Suspense>
+    );
+  }
+
   if (gameState.gameStatus === 'hub') {
     if (dedicatedHubRoutesEnabled && isSettingsRoute) {
       return (
@@ -912,6 +962,7 @@ function App() {
           hubPath={hubPath}
           arcadePath={arcadePath}
           biomesPath={biomesPath}
+          themeLabPath={themeLabPath}
           settingsPath={settingsPath}
           leaderboardPath={leaderboardPath}
           tutorialsPath={tutorialsPath}

@@ -44,17 +44,22 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
               disabled={cannotUse}
               onClick={() => onSelectSkill(isSelected ? null : skill.id)}
               className={`
+                skill-card
                 relative w-full ${compact ? 'h-20 rounded-xl gap-0.5' : 'h-24 rounded-2xl gap-1'} flex flex-col items-center justify-center
-                border transition-all transform hover:translate-x-1
+                border transition-all transform hover:-translate-y-0.5
                 ${isSelected
-                  ? 'bg-[var(--accent-royal)] border-[var(--accent-royal)] text-[var(--text-inverse)] shadow-[0_0_20px_rgba(59,130,246,0.25)]'
-                  : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] hover:border-[var(--accent-royal)]'}
+                  ? 'skill-card-selected border-[var(--accent-royal)] text-[var(--text-primary)]'
+                  : 'border-[var(--border-subtle)] hover:border-[var(--accent-royal)]'}
                 ${cannotUse ? 'opacity-40 grayscale pointer-events-none' : 'cursor-pointer'}
               `}
             >
-              <span className={compact ? 'text-2xl' : 'text-3xl'}>{displayIcon}</span>
               <span
-                className={`${compact ? 'text-[9px] tracking-[0.12em]' : 'text-[10px] tracking-widest'} uppercase font-bold ${isSelected ? 'text-[var(--text-inverse)]' : 'text-[var(--text-muted)]'} text-center px-2 leading-tight`}
+                className={`skill-icon-stain ${compact ? 'text-2xl' : 'text-3xl'}`}
+              >
+                {displayIcon}
+              </span>
+              <span
+                className={`skill-wax-label ${compact ? 'text-[9px] tracking-[0.12em]' : 'text-[10px] tracking-widest'} uppercase font-bold ${isSelected ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'} text-center px-2 leading-tight`}
               >
                 {displayName}
               </span>
@@ -68,12 +73,6 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                   </span>
                 </div>
               )}
-
-              <div
-                className={`absolute ${compact ? '-top-1 left-2 px-1.5' : '-top-2 left-4 px-2'} py-0.5 bg-[var(--surface-panel)] rounded-full border border-[var(--border-subtle)] text-[8px] uppercase font-black tracking-widest text-[var(--text-muted)]`}
-              >
-                {slot}
-              </div>
             </button>
           );
         });

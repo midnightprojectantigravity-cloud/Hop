@@ -259,6 +259,15 @@ export const GameScreen = ({
       return Math.abs(z) > Math.abs(peak) ? z : peak;
     }, 0);
   }, [synapsePreview]);
+  const hostilePeakZ = React.useMemo(() => {
+    const scores = (synapsePreview?.unitScores || []) as Array<{ isHostileToPlayer?: boolean; zScore?: number }>;
+    return scores.reduce((peak, entry) => {
+      if (!entry.isHostileToPlayer) return peak;
+      const z = Number(entry.zScore || 0);
+      return z > peak ? z : peak;
+    }, 0);
+  }, [synapsePreview]);
+  const dangerThreatActive = hostilePeakZ >= 2;
   const hpProjectionDelta = Number((gameState as any)?.intentPreview?.playerHpDelta || 0);
   const projectedHp = Math.max(0, Math.min(gameState.player.maxHp, gameState.player.hp + hpProjectionDelta));
   const boardColorMode = React.useMemo(() => resolveBoardColorMode(gameState.theme), [gameState.theme]);
@@ -369,10 +378,10 @@ export const GameScreen = ({
   return (
     <div
       data-layout-mode={layoutMode}
-      className={`flex flex-col lg:flex-row w-screen h-screen bg-[var(--surface-app)] overflow-hidden text-[var(--text-primary)] font-[var(--font-body)] ${isSynapseMode ? 'synapse-vision-active' : ''}`}
+      className={`surface-app-material flex flex-col lg:flex-row w-screen h-screen bg-[var(--surface-app)] overflow-hidden text-[var(--text-primary)] font-[var(--font-body)] ${isSynapseMode ? 'synapse-vision-active' : ''}`}
     >
       <div
-        className="lg:hidden shrink-0 border-b border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm z-20"
+        className="surface-panel-material torn-edge-shell lg:hidden shrink-0 border-b border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm z-20"
         style={hudCssVars}
       >
         <div className="px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -429,7 +438,7 @@ export const GameScreen = ({
         )}
       </div>
 
-      <aside className="hidden lg:flex w-80 border-r border-[var(--border-subtle)] bg-[var(--surface-panel)] flex-col z-20 overflow-y-auto">
+      <aside className="surface-panel-material torn-edge-shell hidden lg:flex w-96 border-r border-[var(--border-subtle)] bg-[var(--surface-panel)] flex-col z-20 overflow-y-auto">
         <UI
           gameState={gameState}
           onReset={onReset}
@@ -444,7 +453,7 @@ export const GameScreen = ({
 
       <main
         data-board-theme={boardColorMode}
-        className="board-theme-shell flex-1 min-h-0 relative flex items-center justify-center bg-[var(--surface-board)] overflow-hidden"
+        className={`board-theme-shell surface-board-material flex-1 min-h-0 relative flex items-center justify-center bg-[var(--surface-board)] overflow-hidden ${dangerThreatActive ? 'grim-filter-active' : ''}`}
       >
         <div className="hidden lg:flex absolute top-5 right-5 z-30 items-start gap-2.5">
           <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
@@ -472,7 +481,7 @@ export const GameScreen = ({
           </button>
         </div>
         <div className="w-full h-full p-0 sm:p-3 lg:p-8 flex items-center justify-center">
-          <div className={`w-full h-full relative border border-[var(--border-subtle)] bg-[color:var(--surface-panel)] rounded-none sm:rounded-3xl lg:rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.2)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
+          <div className={`surface-panel-material torn-edge-shell w-full h-full relative border border-[var(--border-subtle)] bg-[color:var(--surface-panel)] rounded-none sm:rounded-3xl lg:rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.2)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
             <GameBoard
               gameState={gameState}
               onMove={onTileClick}
@@ -514,7 +523,7 @@ export const GameScreen = ({
       <MobileToastsOverlay mobileToasts={gameState.gameStatus === 'playing' ? mobileToasts : []} />
 
       <aside
-        className="lg:hidden shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-panel)] z-20 overflow-y-auto"
+        className="surface-panel-material torn-edge-shell lg:hidden shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-panel)] z-20 overflow-y-auto"
         style={bottomDockStyle}
       >
         <div className={`${uiPreferences.hudDensity === 'compact' ? 'p-3 gap-3' : 'p-4 gap-4'} flex flex-col h-full`} style={hudCssVars}>
@@ -622,7 +631,7 @@ export const GameScreen = ({
         </div>
       </aside>
 
-      <aside className="hidden lg:flex w-80 border-l border-[var(--border-subtle)] bg-[var(--surface-panel)] flex-col z-20 overflow-y-auto">
+      <aside className="surface-panel-material torn-edge-shell hidden lg:flex w-72 border-l border-[var(--border-subtle)] bg-[var(--surface-panel)] flex-col z-20 overflow-y-auto">
         <div className="p-6 flex flex-col gap-8 h-full">
           <div className="flex-1">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-6">Tactical Skills</h3>

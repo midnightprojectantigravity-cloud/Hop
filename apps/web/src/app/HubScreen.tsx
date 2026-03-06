@@ -17,6 +17,7 @@ interface HubScreenProps {
   hubPath: string;
   arcadePath: string;
   biomesPath: string;
+  themeLabPath: string;
   settingsPath: string;
   leaderboardPath: string;
   tutorialsPath: string;
@@ -46,6 +47,7 @@ export const HubScreen = ({
   hubPath,
   arcadePath,
   biomesPath,
+  themeLabPath,
   settingsPath,
   leaderboardPath,
   tutorialsPath,
@@ -69,9 +71,9 @@ export const HubScreen = ({
   onDismissTutorial,
 }: HubScreenProps) => {
   return (
-    <div className="w-screen h-screen bg-[var(--surface-app)] overflow-hidden text-[var(--text-primary)] font-[var(--font-body)] relative">
+    <div className="surface-app-material w-screen h-screen bg-[var(--surface-app)] overflow-hidden text-[var(--text-primary)] font-[var(--font-body)] relative">
       <div className="absolute top-4 left-4 z-40 hidden sm:flex flex-wrap gap-2 max-w-[min(92vw,40rem)]">
-        <div className="flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
+        <div className="surface-panel-material torn-edge-shell flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
           <span className="px-1 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">Theme</span>
           <select
             aria-label="Theme"
@@ -101,7 +103,7 @@ export const HubScreen = ({
           {uiPreferences.hudDensity === 'compact' ? 'Compact HUD' : 'Comfort HUD'}
         </button>
       </div>
-      <div className="absolute top-4 left-4 z-40 sm:hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2.5 py-2">
+      <div className="surface-panel-material torn-edge-shell absolute top-4 left-4 z-40 sm:hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2.5 py-2">
         <select
           aria-label="Theme"
           value={uiPreferences.colorMode}
@@ -116,13 +118,22 @@ export const HubScreen = ({
         </select>
       </div>
       {!isArcadeRoute && (
-        <button
-          type="button"
-          onClick={() => navigateTo(biomesPath)}
-          className="absolute top-4 right-4 z-40 px-4 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--accent-royal-soft)] hover:bg-[var(--accent-royal-soft-hover)] text-[10px] font-black uppercase tracking-[0.2em]"
-        >
-          Biome Sandbox
-        </button>
+        <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigateTo(themeLabPath)}
+            className="px-4 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] hover:bg-[var(--surface-panel-hover)] text-[10px] font-black uppercase tracking-[0.2em]"
+          >
+            Theme Lab
+          </button>
+          <button
+            type="button"
+            onClick={() => navigateTo(biomesPath)}
+            className="px-4 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--accent-royal-soft)] hover:bg-[var(--accent-royal-soft-hover)] text-[10px] font-black uppercase tracking-[0.2em]"
+          >
+            Biome Sandbox
+          </button>
+        </div>
       )}
       {isArcadeRoute ? (
         <ArcadeHub
