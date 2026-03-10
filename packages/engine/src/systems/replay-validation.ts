@@ -1,4 +1,4 @@
-import type { Action } from '../types';
+import type { Action, GridSize, MapShape } from '../types';
 
 export const REPLAYABLE_ACTION_TYPES = new Set<Action['type']>([
     'MOVE',
@@ -19,6 +19,8 @@ export interface ReplayRunV3 {
     initialSeed?: string;
     loadoutId?: string;
     startFloor?: number;
+    mapSize?: GridSize;
+    mapShape?: MapShape;
     mode?: 'normal' | 'daily';
     date?: string;
 }
@@ -136,6 +138,23 @@ export const validateReplayEnvelopeV3 = (
         }
         if (run.startFloor !== undefined && (!Number.isInteger(run.startFloor) || Number(run.startFloor) < 1)) {
             errors.push('Replay run.startFloor must be a positive integer when provided.');
+        }
+        if (run.mapSize !== undefined) {
+            if (!isObject(run.mapSize)) {
+                errors.push('Replay run.mapSize must be an object when provided.');
+            } else {
+                const width = Number((run.mapSize as Record<string, unknown>).width);
+                const height = Number((run.mapSize as Record<string, unknown>).height);
+                if (!Number.isInteger(width) || width <= 0) {
+                    errors.push('Replay run.mapSize.width must be a positive integer when provided.');
+                }
+                if (!Number.isInteger(height) || height <= 0) {
+                    errors.push('Replay run.mapSize.height must be a positive integer when provided.');
+                }
+            }
+        }
+        if (run.mapShape !== undefined && run.mapShape !== 'diamond' && run.mapShape !== 'rectangle') {
+            errors.push('Replay run.mapShape must be "diamond" or "rectangle" when provided.');
         }
         if (run.mode !== undefined && run.mode !== 'normal' && run.mode !== 'daily') {
             errors.push('Replay run.mode must be "normal" or "daily" when provided.');

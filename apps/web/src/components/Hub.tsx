@@ -2,8 +2,26 @@
 import { ArchetypeSelector } from './ArchetypeSelector';
 import ReplayManager from './ReplayManager';
 import { TutorialManager } from './TutorialManager';
-import type { GameState, Loadout } from '@hop/engine';
+import type { GameState, GridSize, Loadout, MapShape } from '@hop/engine';
 import type { ReplayRecord } from './ReplayManager';
+import {
+  DEFAULT_START_RUN_MAP_SHAPE,
+  DEFAULT_START_RUN_MAP_SIZE
+} from '../app/start-run-overrides';
+
+const MAP_SIZE_PRESETS: Array<{ id: string; label: string; size: GridSize }> = [
+  { id: '7x9', label: 'Small (7 x 9)', size: { width: 7, height: 9 } },
+  { id: '9x11', label: 'Standard (9 x 11)', size: { width: 9, height: 11 } },
+  { id: '11x13', label: 'Large (11 x 13)', size: { width: 11, height: 13 } },
+  { id: '13x15', label: 'XL (13 x 15)', size: { width: 13, height: 15 } },
+  { id: '20x45', label: 'XXL (20 x 45)', size: { width: 20, height: 45 } },
+  { id: '40x130', label: 'XXXL (40 x 130)', size: { width: 40, height: 130 } }
+];
+
+const MAP_SHAPE_OPTIONS: Array<{ value: MapShape; label: string }> = [
+  { value: 'diamond', label: 'Diamond' },
+  { value: 'rectangle', label: 'Rectangle' }
+];
 
 interface HubProps {
   gameState: GameState;
@@ -11,6 +29,10 @@ interface HubProps {
   onCapabilityPassivesEnabledChange: (enabled: boolean) => void;
   movementRuntimeEnabled: boolean;
   onMovementRuntimeEnabledChange: (enabled: boolean) => void;
+  mapShape?: MapShape;
+  onMapShapeChange?: (shape: MapShape) => void;
+  mapSize?: GridSize;
+  onMapSizeChange?: (size: GridSize) => void;
   onSelectLoadout: (loadout: Loadout) => void;
   onStartRun: (mode: 'normal' | 'daily') => void;
   onOpenArcade: () => void;
@@ -29,6 +51,10 @@ export const Hub: React.FC<HubProps> = ({
   onCapabilityPassivesEnabledChange,
   movementRuntimeEnabled,
   onMovementRuntimeEnabledChange,
+  mapShape = DEFAULT_START_RUN_MAP_SHAPE,
+  onMapShapeChange = () => {},
+  mapSize = DEFAULT_START_RUN_MAP_SIZE,
+  onMapSizeChange = () => {},
   onSelectLoadout,
   onStartRun,
   onOpenArcade,
@@ -40,6 +66,11 @@ export const Hub: React.FC<HubProps> = ({
   dedicatedRoutesEnabled = false,
   hubTrainingOnly = false
 }) => {
+  const selectedSizePreset = MAP_SIZE_PRESETS.find(
+    (preset) => preset.size.width === mapSize.width && preset.size.height === mapSize.height
+  );
+  const selectedSizeValue = selectedSizePreset?.id ?? `custom-${mapSize.width}x${mapSize.height}`;
+
   return (
     <div className="surface-app-material w-full h-full flex flex-col bg-[var(--surface-app)] relative">
       {/* Header */}
@@ -168,6 +199,53 @@ export const Hub: React.FC<HubProps> = ({
               >
                 Arcade Mode
               </button>
+              <div className="surface-panel-material torn-edge-shell mb-4 sm:mb-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3 sm:p-4 max-w-xl">
+                <div className="text-[10px] uppercase tracking-[0.24em] font-black text-[var(--text-muted)]">Standard Run Map (Playable)</div>
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Shape</span>
+                    <select
+                      aria-label="Standard run map shape"
+                      value={mapShape}
+                      onChange={(event) => onMapShapeChange(event.target.value as MapShape)}
+                      className="min-h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 text-[11px] font-black uppercase tracking-[0.14em] text-[var(--text-primary)]"
+                    >
+                      {MAP_SHAPE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Size</span>
+                    <select
+                      aria-label="Standard run map size"
+                      value={selectedSizeValue}
+                      onChange={(event) => {
+                        const nextPreset = MAP_SIZE_PRESETS.find((preset) => preset.id === event.target.value);
+                        if (!nextPreset) return;
+                        onMapSizeChange(nextPreset.size);
+                      }}
+                      className="min-h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 text-[11px] font-black uppercase tracking-[0.14em] text-[var(--text-primary)]"
+                    >
+                      {!selectedSizePreset && (
+                        <option value={selectedSizeValue}>
+                          {`Custom (${mapSize.width} x ${mapSize.height})`}
+                        </option>
+                      )}
+                      {MAP_SIZE_PRESETS.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  Rectangle uses shape math to derive internal grid bounds automatically.
+                </p>
+              </div>
               <h2 className="text-xl sm:text-2xl lg:text-3xl font-black uppercase tracking-tighter mb-2 font-[var(--font-heading)]">Select Your <span className="text-[var(--accent-royal)]">Archetype</span></h2>
               <p className="text-sm sm:text-base text-[var(--text-muted)] max-w-xl">Two taps: choose archetype, start run. Optional systems stay available without blocking run start.</p>
               {dedicatedRoutesEnabled && (

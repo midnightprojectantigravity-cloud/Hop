@@ -162,7 +162,7 @@ export const getSkillAoE = (
             r: target.r + Math.round(dr * i),
             s: target.s + Math.round(ds * i)
         };
-        if (isHexInRectangularGrid(projection, state.gridWidth, state.gridHeight)) {
+        if (isHexInRectangularGrid(projection, state.gridWidth, state.gridHeight, state.mapShape)) {
             const key = `${projection.q},${projection.r}`;
             if (!seen.has(key)) {
                 seen.add(key);

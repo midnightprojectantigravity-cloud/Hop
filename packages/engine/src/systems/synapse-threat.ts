@@ -9,7 +9,7 @@ import type {
     SynapseThreatTile,
     UnifiedPowerScoreEntry
 } from '../types';
-import { hexDistance, isTileInDiamond, pointToKey } from '../hex';
+import { hexDistance, isHexInRectangularGrid, pointToKey } from '../hex';
 import { SkillRegistry } from '../skillRegistry';
 import { computeRelativeThreatScores } from './threat-scoring';
 
@@ -115,7 +115,7 @@ const buildPlayableCells = (state: GameState): Point[] => {
 
     const deduped = new Map<string, Point>();
     for (const tile of raw) {
-        if (!isTileInDiamond(tile.q, tile.r, state.gridWidth, state.gridHeight)) continue;
+        if (!isHexInRectangularGrid(tile, state.gridWidth, state.gridHeight, state.mapShape)) continue;
         const key = pointToKey(tile);
         if (occupiedTileKeys.has(key)) continue;
         deduped.set(key, tile);

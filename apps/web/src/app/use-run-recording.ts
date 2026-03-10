@@ -18,6 +18,11 @@ export const buildReplayRecordFromGameState = (gameState: GameState): ReplayReco
       initialSeed: gameState.initialSeed ?? seed,
       loadoutId: gameState.player.archetype,
       startFloor: 1,
+      mapSize: {
+        width: gameState.gridWidth,
+        height: gameState.gridHeight
+      },
+      mapShape: gameState.mapShape || 'diamond',
       mode: gameState.dailyRunDate ? 'daily' : 'normal',
       date: gameState.dailyRunDate
     },
@@ -86,8 +91,14 @@ export const useRunRecording = (gameState: GameState, isReplayMode: boolean): vo
   useEffect(() => {
     if (isReplayMode) return;
 
-    if ((gameState.gameStatus === 'won' || gameState.gameStatus === 'lost') && lastRecordedRunRef.current !== gameState.initialSeed) {
-      lastRecordedRunRef.current = gameState.initialSeed || 'default';
+    const runIdentity = [
+      gameState.initialSeed || gameState.rngSeed || 'default',
+      gameState.mapShape || 'diamond',
+      `${gameState.gridWidth}x${gameState.gridHeight}`
+    ].join('|');
+
+    if ((gameState.gameStatus === 'won' || gameState.gameStatus === 'lost') && lastRecordedRunRef.current !== runIdentity) {
+      lastRecordedRunRef.current = runIdentity;
       const replayRecord = buildReplayRecordFromGameState(gameState);
       if (!replayRecord) return;
       persistReplayRecord(replayRecord);
@@ -100,6 +111,9 @@ export const useRunRecording = (gameState: GameState, isReplayMode: boolean): vo
     gameState.gameStatus,
     gameState.initialSeed,
     gameState.rngSeed,
+    gameState.mapShape,
+    gameState.gridWidth,
+    gameState.gridHeight,
     gameState.completedRun?.score,
     gameState.floor,
     gameState.player.hp,

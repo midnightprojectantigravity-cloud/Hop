@@ -53,7 +53,7 @@ export const UnifiedTileService = {
         const pos = tile.position;
 
         // 1. Perimeter Check
-        const inBounds = isHexInRectangularGrid(pos, state.gridWidth, state.gridHeight);
+        const inBounds = isHexInRectangularGrid(pos, state.gridWidth, state.gridHeight, state.mapShape);
         if (!inBounds) {
             traits.add('BLOCKS_MOVEMENT');
             traits.add('BLOCKS_LOS');

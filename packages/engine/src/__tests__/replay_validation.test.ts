@@ -53,6 +53,8 @@ describe('replay envelope v3 validation', () => {
                 seed: 'seed-123',
                 loadoutId: 'VANGUARD',
                 startFloor: 1,
+                mapSize: { width: 9, height: 11 },
+                mapShape: 'diamond',
                 mode: 'normal'
             },
             actions: [
@@ -70,6 +72,8 @@ describe('replay envelope v3 validation', () => {
         expect(result.errors).toHaveLength(0);
         expect(result.envelope?.version).toBe(3);
         expect(result.envelope?.actions).toHaveLength(2);
+        expect(result.envelope?.run.mapSize).toEqual({ width: 9, height: 11 });
+        expect(result.envelope?.run.mapShape).toBe('diamond');
     });
 
     it('rejects non-v3 replay payloads', () => {
@@ -94,5 +98,37 @@ describe('replay envelope v3 validation', () => {
         const result = validateReplayEnvelopeV3(payload as any);
         expect(result.valid).toBe(false);
         expect(result.errors.some(e => e.includes('not replayable'))).toBe(true);
+    });
+
+    it('rejects envelopes with invalid run.mapSize values', () => {
+        const payload = {
+            version: 3,
+            run: {
+                seed: 'seed-789',
+                mapSize: { width: 0, height: 11 }
+            },
+            actions: [{ type: 'WAIT' }],
+            meta: { recordedAt: '2026-03-03T09:00:00.000Z' }
+        };
+
+        const result = validateReplayEnvelopeV3(payload as any);
+        expect(result.valid).toBe(false);
+        expect(result.errors.some(e => e.includes('run.mapSize.width'))).toBe(true);
+    });
+
+    it('rejects envelopes with invalid run.mapShape values', () => {
+        const payload = {
+            version: 3,
+            run: {
+                seed: 'seed-790',
+                mapShape: 'triangle'
+            },
+            actions: [{ type: 'WAIT' }],
+            meta: { recordedAt: '2026-03-03T09:00:00.000Z' }
+        };
+
+        const result = validateReplayEnvelopeV3(payload as any);
+        expect(result.valid).toBe(false);
+        expect(result.errors.some(e => e.includes('run.mapShape'))).toBe(true);
     });
 });

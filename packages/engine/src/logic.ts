@@ -3,7 +3,7 @@
  * Follows the Command Pattern & Immutable State.
  * resolveEnemyActions and gameReducer are the primary entry points.
  */
-import type { GameState, Action, AtomicEffect } from './types';
+import type { GameState, Action, AtomicEffect, GridSize, MapShape } from './types';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
 import { generateDungeon, generateEnemies, getFloorTheme } from './systems/map';
 import { createDefaultSkills } from './skillRegistry';
@@ -32,6 +32,25 @@ import { isReplayRecordableAction } from './systems/replay-validation';
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
 const TURN_STACK_WARN = ENGINE_DEBUG || ENGINE_WARN;
+
+const resolveRunMapConfig = (mapSize?: GridSize, mapShape?: MapShape): GridSize & { mapShape: MapShape } => {
+    const width = Number(mapSize?.width);
+    const height = Number(mapSize?.height);
+    const resolvedMapShape: MapShape = mapShape === 'rectangle' ? 'rectangle' : 'diamond';
+    const normalizedWidth = Number.isInteger(width) && width > 0 ? width : GRID_WIDTH;
+    const normalizedHeight = Number.isInteger(height) && height > 0 ? height : GRID_HEIGHT;
+    const widthWithShapeConstraint = resolvedMapShape === 'diamond' && normalizedWidth % 2 === 0
+        ? normalizedWidth + 1
+        : normalizedWidth;
+    const heightWithShapeConstraint = resolvedMapShape === 'diamond' && normalizedHeight % 2 === 0
+        ? normalizedHeight + 1
+        : normalizedHeight;
+    return {
+        width: widthWithShapeConstraint,
+        height: heightWithShapeConstraint,
+        mapShape: resolvedMapShape
+    };
+};
 
 const warnTurnStackInvariant = (message: string, payload?: Record<string, unknown>) => {
     if (!TURN_STACK_WARN) return;
@@ -65,18 +84,26 @@ export const generateInitialState = (
     seed?: string,
     initialSeed?: string,
     preservePlayer?: { hp: number; maxHp: number; upgrades: string[]; activeSkills?: any[] },
-    loadout?: Loadout
+    loadout?: Loadout,
+    mapSize?: GridSize,
+    mapShape?: MapShape
 ): GameState => {
     ensureTacticalDataBootstrapped();
 
     // If no seed provided, we MUST generate one, but this should be rare in strict mode.
     const actualSeed = seed || String(Date.now());
 
+    const resolvedMapConfig = resolveRunMapConfig(mapSize, mapShape);
+
     // Determine floor theme
     const theme = getFloorTheme(floor);
 
     // Use tactical arena generation for all floors
-    const dungeon = generateDungeon(floor, actualSeed);
+    const dungeon = generateDungeon(floor, actualSeed, {
+        gridWidth: resolvedMapConfig.width,
+        gridHeight: resolvedMapConfig.height,
+        mapShape: resolvedMapConfig.mapShape
+    });
     // dungeon.spawnPositions is valid if we kept it in map.ts
     const enemies = generateEnemies(floor, (dungeon as any).spawnPositions || [], actualSeed);
 
@@ -123,8 +150,9 @@ export const generateInitialState = (
             statusEffects: e.statusEffects || [],
             temporaryArmor: e.temporaryArmor || 0
         })),
-        gridWidth: GRID_WIDTH,
-        gridHeight: GRID_HEIGHT,
+        gridWidth: resolvedMapConfig.width,
+        gridHeight: resolvedMapConfig.height,
+        mapShape: resolvedMapConfig.mapShape,
         gameStatus: 'playing',
         message: floor === 1
             ? [appendTaggedMessage([], 'Welcome to the arena. Survive.', 'INFO', 'SYSTEM')[0]]
@@ -253,7 +281,15 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
             const currentArchetype = state.player.archetype;
             const loadoutId = currentArchetype === 'SKIRMISHER' ? 'SKIRMISHER' : 'VANGUARD';
             const loadout = DEFAULT_LOADOUTS[loadoutId];
-            return generateInitialState(1, action.payload?.seed || String(Date.now()), undefined, undefined, loadout);
+            return generateInitialState(
+                1,
+                action.payload?.seed || String(Date.now()),
+                undefined,
+                undefined,
+                loadout,
+                { width: state.gridWidth, height: state.gridHeight },
+                state.mapShape
+            );
         }
 
         case 'EXIT_TO_HUB': {
@@ -333,6 +369,9 @@ export const fingerprintFromState = (state: GameState): string => {
         },
         enemies,
         floor: state.floor,
+        gridWidth: state.gridWidth,
+        gridHeight: state.gridHeight,
+        mapShape: state.mapShape || 'diamond',
         turnNumber: state.turnNumber,
         kills: state.kills,
         rngCounter: state.rngCounter

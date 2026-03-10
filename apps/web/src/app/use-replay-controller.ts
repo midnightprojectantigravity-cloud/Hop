@@ -50,7 +50,7 @@ export const validateReplayRecordForPlayback = (record: ReplayRecord): ReplayPla
   const seed = run.seed;
   const loadout = run.loadoutId ? (DEFAULT_LOADOUTS as any)[run.loadoutId] : undefined;
   const startFloor = run.startFloor ?? 1;
-  const init = generateInitialState(startFloor, seed, run.initialSeed || seed, undefined, loadout);
+  const init = generateInitialState(startFloor, seed, run.initialSeed || seed, undefined, loadout, run.mapSize, run.mapShape);
 
   return {
     ok: true,

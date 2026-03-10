@@ -170,7 +170,7 @@ export const SpatialSystem = {
      * Grid bounds check
      */
     isWithinBounds(state: GameState, p: Point): boolean {
-        return isHexInRectangularGrid(p, state.gridWidth, state.gridHeight);
+        return isHexInRectangularGrid(p, state.gridWidth, state.gridHeight, state.mapShape);
     },
 
     /** Legacy Alias */

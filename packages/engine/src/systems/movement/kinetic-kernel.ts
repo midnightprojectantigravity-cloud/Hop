@@ -86,7 +86,7 @@ export function processKineticPulse(state: GameState, request: KineticPulseReque
                 const nextIdx = leadUnit.pos1D + 1;
                 const nextHex = lineHexes[nextIdx];
 
-                if (!nextHex || !isHexInRectangularGrid(nextHex, state.gridWidth, state.gridHeight) || isWall(state, nextHex)) {
+                if (!nextHex || !isHexInRectangularGrid(nextHex, state.gridWidth, state.gridHeight, state.mapShape) || isWall(state, nextHex)) {
                     const blockedDamage = Math.max(0, remaining - i);
                     effects.push(...resolveBlockedCollisionEffects(leadUnit.id, collisionPolicy, blockedDamage));
                     if (collisionPolicy.onBlocked === 'crush_damage') {
@@ -133,7 +133,7 @@ export function processKineticPulse(state: GameState, request: KineticPulseReque
         const nextTileHex = lineHexes[nextTileIndex];
 
         // Wall or Map Edge check (Fatal obstructions)
-        if (!nextTileHex || !isHexInRectangularGrid(nextTileHex, state.gridWidth, state.gridHeight) || isWall(state, nextTileHex)) {
+        if (!nextTileHex || !isHexInRectangularGrid(nextTileHex, state.gridWidth, state.gridHeight, state.mapShape) || isWall(state, nextTileHex)) {
             effects.push(...resolveBlockedCollisionEffects(leadUnit.id, collisionPolicy, Math.max(1, energyPool)));
 
             // JUICE: Wall impact effects

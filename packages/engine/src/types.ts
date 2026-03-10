@@ -18,6 +18,13 @@ export interface Point {
     s: number;
 }
 
+export interface GridSize {
+    width: number;
+    height: number;
+}
+
+export type MapShape = 'diamond' | 'rectangle';
+
 export type WeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
 
 // (Actor model introduced below; `Entity` is now an alias to `Actor`)
@@ -713,6 +720,7 @@ export interface GameState {
     companions?: Entity[];
     gridWidth: number;
     gridHeight: number;
+    mapShape?: MapShape;
     gameStatus: 'hub' | 'playing' | 'won' | 'lost' | 'choosing_upgrade';
     message: string[];
     hasSpear: boolean;
@@ -834,7 +842,7 @@ export type Action =
     | { type: 'USE_SKILL'; payload: { skillId: string; target?: Point } }
     | { type: 'ADVANCE_TURN' }
     | { type: 'LOAD_STATE'; payload: GameState }
-    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string; mode?: 'normal' | 'daily'; date?: string; rulesetOverrides?: RunRulesetOverrides } }
+    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string; mode?: 'normal' | 'daily'; date?: string; mapSize?: GridSize; mapShape?: MapShape; rulesetOverrides?: RunRulesetOverrides } }
     | { type: 'APPLY_LOADOUT'; payload: any }
     | { type: 'EXIT_TO_HUB' }
     | { type: 'RESOLVE_PENDING' };

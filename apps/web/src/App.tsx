@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect, Suspense, useMemo } from 'react';
 import { hexEquals } from '@hop/engine';
-import type { Point, Action, GameState } from '@hop/engine';
+import type { Point, Action, GameState, GridSize, MapShape } from '@hop/engine';
 import { useAssetManifest } from './app/use-asset-manifest';
 import { useDebugPerfLogger } from './app/use-debug-perf-logger';
 import { useDebugQueryBridge } from './app/use-debug-query-bridge';
@@ -12,7 +12,11 @@ import { useSimulationFeedback } from './app/use-simulation-feedback';
 import { useTurnFlowCoordinator } from './app/use-turn-flow-coordinator';
 import { useTurnDriverTrace } from './app/use-turn-driver-trace';
 import { useAppRouting } from './app/use-app-routing';
-import { buildStartRunPayload } from './app/start-run-overrides';
+import {
+  buildStartRunPayload,
+  DEFAULT_START_RUN_MAP_SIZE,
+  DEFAULT_START_RUN_MAP_SHAPE
+} from './app/start-run-overrides';
 import { getUiCapabilityRollout, setUiCapabilityRollout } from './app/capability-rollout';
 import { emitUiMetric } from './app/ui-telemetry';
 import { useUiPreferences } from './app/ui-preferences';
@@ -273,6 +277,8 @@ function App() {
   const [hubMovementRuntimeEnabled, setHubMovementRuntimeEnabled] = useState(
     initialCapabilityRolloutRef.current.movementRuntimeEnabled
   );
+  const [hubMapShape, setHubMapShape] = useState<MapShape>(DEFAULT_START_RUN_MAP_SHAPE);
+  const [hubMapSize, setHubMapSize] = useState<GridSize>(() => ({ ...DEFAULT_START_RUN_MAP_SIZE }));
   const {
     turnDriver,
     isInputLocked,
@@ -667,12 +673,18 @@ function App() {
     source: string;
     seed?: string;
     date?: string;
+    mapSize?: GridSize;
+    mapShape?: MapShape;
+    mapSizeInputMode?: 'usable' | 'grid';
   }) => {
     const payload = buildStartRunPayload({
       loadoutId: params.loadoutId,
       mode: params.mode,
       seed: params.seed,
       date: params.date,
+      mapSize: params.mapSize || DEFAULT_START_RUN_MAP_SIZE,
+      mapShape: params.mapShape || DEFAULT_START_RUN_MAP_SHAPE,
+      mapSizeInputMode: params.mapSizeInputMode || 'usable',
       capabilityPassivesEnabled: hubCapabilityPassivesEnabled,
       movementRuntimeEnabled: hubMovementRuntimeEnabled
     });
@@ -712,6 +724,11 @@ function App() {
     startRun({
       loadoutId: id,
       mode,
+      ...(mode === 'normal' ? {
+        mapSize: hubMapSize,
+        mapShape: hubMapShape,
+        mapSizeInputMode: 'usable' as const
+      } : {}),
       source: 'hub_start_run'
     });
   };
@@ -790,12 +807,18 @@ function App() {
       mode: restartPayload.mode,
       seed: restartPayload.seed,
       date: restartPayload.date,
+      mapSize: { width: gameState.gridWidth, height: gameState.gridHeight },
+      mapShape: gameState.mapShape || DEFAULT_START_RUN_MAP_SHAPE,
+      mapSizeInputMode: 'grid',
       source: 'quick_restart'
     });
   }, [
     clearSynapseContext,
     dispatchSensory,
     gameState.dailyRunDate,
+    gameState.gridHeight,
+    gameState.gridWidth,
+    gameState.mapShape,
     gameState.player.archetype,
     gameState.selectedLoadoutId,
     handleExitToHub,
@@ -979,6 +1002,10 @@ function App() {
           onCapabilityPassivesEnabledChange={handleCapabilityPassivesEnabledChange}
           movementRuntimeEnabled={hubMovementRuntimeEnabled}
           onMovementRuntimeEnabledChange={handleMovementRuntimeEnabledChange}
+          mapShape={hubMapShape}
+          onMapShapeChange={setHubMapShape}
+          mapSize={hubMapSize}
+          onMapSizeChange={setHubMapSize}
           onSelectLoadout={(l) => {
             hubLoadoutSelectionAtRef.current = Date.now();
             dispatchWithTrace({ type: 'APPLY_LOADOUT', payload: l }, 'hub_select_loadout');

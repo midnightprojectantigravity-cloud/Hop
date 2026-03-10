@@ -30,20 +30,27 @@ const findElements = (
 describe('camera zoom controls', () => {
   it('renders only icon plus/minus controls', () => {
     const html = renderToStaticMarkup(
-      <CameraZoomControls activePreset={11} onSelectPreset={() => {}} />
+      <CameraZoomControls
+        activePreset={15}
+        tacticalPreset={15}
+        actionPreset={9}
+        onSelectPreset={() => {}}
+      />
     );
 
-    expect(html).toContain('Zoom out to 11 tiles wide');
-    expect(html).toContain('Zoom in to 7 tiles wide');
+    expect(html).toContain('Zoom out to tactical view (15 tiles wide)');
+    expect(html).toContain('Zoom in to action view (9 tiles wide)');
     expect(html).not.toContain('Fit');
     expect(html).not.toContain('zoom-7');
     expect(html).not.toContain('zoom-11');
   });
 
-  it('maps minus to 11 and plus to 7 presets', () => {
+  it('maps minus to tactical and plus to action presets', () => {
     const onSelectPreset = vi.fn();
     const tree = CameraZoomControls({
-      activePreset: 11,
+      activePreset: 15,
+      tacticalPreset: 15,
+      actionPreset: 9,
       onSelectPreset
     });
 
@@ -60,7 +67,7 @@ describe('camera zoom controls', () => {
     (minus?.props?.onClick as () => void)();
     (plus?.props?.onClick as () => void)();
     expect(onSelectPreset).toHaveBeenCalledTimes(2);
-    expect(onSelectPreset.mock.calls[0][0]).toBe(11);
-    expect(onSelectPreset.mock.calls[1][0]).toBe(7);
+    expect(onSelectPreset.mock.calls[0][0]).toBe(15);
+    expect(onSelectPreset.mock.calls[1][0]).toBe(9);
   });
 });

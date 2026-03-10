@@ -3,7 +3,10 @@ import { gameReducer, generateInitialState } from '@hop/engine';
 import {
   buildCapabilityRulesetOverrides,
   buildCapabilityPassivesRulesetOverrides,
-  buildStartRunPayload
+  buildStartRunPayload,
+  DEFAULT_START_RUN_MAP_SHAPE,
+  DEFAULT_START_RUN_MAP_SIZE,
+  resolveEngineGridSizeFromInput
 } from '../app/start-run-overrides';
 
 describe('hub capability-passives start-run bridge', () => {
@@ -23,14 +26,52 @@ describe('hub capability-passives start-run bridge', () => {
     expect(buildStartRunPayload({
       loadoutId: 'VANGUARD',
       mode: 'normal',
+      mapSize: DEFAULT_START_RUN_MAP_SIZE,
+      mapShape: DEFAULT_START_RUN_MAP_SHAPE,
       capabilityPassivesEnabled: true,
       movementRuntimeEnabled: true
     })).toEqual({
       loadoutId: 'VANGUARD',
       mode: 'normal',
+      mapSize: DEFAULT_START_RUN_MAP_SIZE,
+      mapShape: DEFAULT_START_RUN_MAP_SHAPE,
       rulesetOverrides: {
         capabilities: { loadoutPassivesEnabled: true, movementRuntimeEnabled: true }
       }
+    });
+  });
+
+  it('converts usable rectangle map size to engine grid size', () => {
+    expect(resolveEngineGridSizeFromInput({ width: 13, height: 15 }, 'rectangle', 'usable')).toEqual({
+      width: 13,
+      height: 21
+    });
+
+    expect(buildStartRunPayload({
+      loadoutId: 'VANGUARD',
+      mode: 'normal',
+      mapShape: 'rectangle',
+      mapSize: { width: 13, height: 15 },
+      capabilityPassivesEnabled: false,
+      movementRuntimeEnabled: false
+    }).mapSize).toEqual({
+      width: 13,
+      height: 21
+    });
+  });
+
+  it('keeps explicit grid map size unchanged when mode is grid', () => {
+    expect(buildStartRunPayload({
+      loadoutId: 'VANGUARD',
+      mode: 'normal',
+      mapShape: 'rectangle',
+      mapSize: { width: 13, height: 21 },
+      mapSizeInputMode: 'grid',
+      capabilityPassivesEnabled: false,
+      movementRuntimeEnabled: false
+    }).mapSize).toEqual({
+      width: 13,
+      height: 21
     });
   });
 

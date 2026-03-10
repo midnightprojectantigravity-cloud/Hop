@@ -1,5 +1,5 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import type { Point } from '@hop/engine';
+import type { MapShape, Point } from '@hop/engine';
 import type { CameraInsetsPx, CameraRect, CameraVec2, CameraZoomPreset } from '../../visual/camera';
 
 export type CameraViewState = {
@@ -27,6 +27,9 @@ export interface UseBoardCameraArgs {
     baseViewBox: CameraRect;
     playerWorld: { x: number; y: number };
     playerPosition: Point;
+    mapShape?: MapShape;
+    tacticalZoomPreset: CameraZoomPreset;
+    actionZoomPreset: CameraZoomPreset;
     floor: number | undefined;
     cameraSafeInsetsPx?: Partial<CameraInsetsPx>;
 }
@@ -49,6 +52,7 @@ export interface UseBoardCameraResult {
         panOffset?: CameraVec2;
         zoomPreset?: CameraZoomPreset;
         durationMs?: number;
+        softFollow?: boolean;
     }) => void;
     updatePanFromWorldDelta: (deltaWorld: CameraVec2) => void;
     setZoomPresetAnimated: (nextPreset: CameraZoomPreset) => void;

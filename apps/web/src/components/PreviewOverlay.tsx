@@ -66,7 +66,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                 { q: playerPos.q - 1, r: playerPos.r + 1, s: playerPos.s },
                 { q: playerPos.q, r: playerPos.r + 1, s: playerPos.s - 1 }
             ];
-            return neighbors.filter(n => isHexInRectangularGrid(n, gameState.gridWidth, gameState.gridHeight));
+            return neighbors.filter(n => isHexInRectangularGrid(n, gameState.gridWidth, gameState.gridHeight, gameState.mapShape));
         }
 
         return results;
@@ -95,7 +95,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
             for (let d = 0; d < 6; d++) {
                 for (let i = 1; i <= range; i++) {
                     const p = hexAdd(playerPos, scaleVector(d, i));
-                    if (!isHexInRectangularGrid(p, gameState.gridWidth, gameState.gridHeight)) break;
+                    if (!isHexInRectangularGrid(p, gameState.gridWidth, gameState.gridHeight, gameState.mapShape)) break;
 
                     // FIXED: Use UnifiedTileService trait check instead of wallPositions array
                     const isWall = UnifiedTileService.isLosBlocking(gameState, p);

@@ -31,6 +31,8 @@ describe('replay v3 contract', () => {
     const record = buildReplayRecordFromGameState(state);
     expect(record).toBeTruthy();
     expect(record?.replay.version).toBe(3);
+    expect(record?.replay.run.mapSize).toEqual({ width: state.gridWidth, height: state.gridHeight });
+    expect(record?.replay.run.mapShape).toBe(state.mapShape || 'diamond');
 
     const storage = new MemoryStorage();
     persistReplayRecord(record as ReplayRecord, storage);

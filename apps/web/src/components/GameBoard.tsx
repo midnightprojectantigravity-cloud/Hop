@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useLayoutEffect } from 'react';
 import type { GameState, Point, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
 import {
-    isTileInDiamond, hexToPixel,
+    isHexInRectangularGrid, hexToPixel,
     TILE_SIZE
 } from '@hop/engine';
 import { CameraZoomControls } from './game-board/CameraZoomControls';
@@ -24,6 +24,7 @@ import type {
 import {
     type CameraInsetsPx,
     type CameraRect,
+    resolveBinaryZoomLevels,
 } from '../visual/camera';
 import { resolveSynapsePreview, type SynapseDeltaEntry, type SynapsePulse, type SynapseSelection } from '../app/synapse';
 
@@ -100,6 +101,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const [visualEchoes, setVisualEchoes] = useState<VisualEchoEntry[]>([]);
     const prevActorPositionsRef = React.useRef<Map<string, Point> | null>(null);
     const playerPos = gameState.player.position;
+    const movementRange = useMemo(
+        () => Math.max(1, Math.floor(Number(gameState.player.speed) || 0)),
+        [gameState.player.speed]
+    );
+    const zoomLevels = useMemo(
+        () => resolveBinaryZoomLevels({
+            mapWidth: gameState.gridWidth,
+            mapHeight: gameState.gridHeight,
+            movementRange
+        }),
+        [gameState.gridWidth, gameState.gridHeight, movementRange]
+    );
 
     // Filter cells based on dynamic diamond geometry
     const cells = useMemo(() => {
@@ -116,9 +129,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         }
 
         return hexes.filter(h =>
-            isTileInDiamond(h.q, h.r, gameState.gridWidth, gameState.gridHeight)
+            isHexInRectangularGrid(h, gameState.gridWidth, gameState.gridHeight, gameState.mapShape)
         );
-    }, [gameState.rooms, gameState.gridWidth, gameState.gridHeight]);
+    }, [gameState.rooms, gameState.gridWidth, gameState.gridHeight, gameState.mapShape]);
 
     const {
         isShaking,
@@ -188,6 +201,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         baseViewBox,
         playerWorld,
         playerPosition: playerPos,
+        mapShape: gameState.mapShape,
+        tacticalZoomPreset: zoomLevels.tactical,
+        actionZoomPreset: zoomLevels.action,
         floor: gameState.floor,
         cameraSafeInsetsPx,
     });
@@ -271,6 +287,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         svgRef,
         onMove,
         zoomPreset,
+        tacticalZoomPreset: zoomLevels.tactical,
+        actionZoomPreset: zoomLevels.action,
         setHoveredTile,
         setIsCameraPanning,
         cameraPanOffsetRef,
@@ -449,6 +467,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             )}
             <CameraZoomControls
                 activePreset={zoomPreset}
+                tacticalPreset={zoomLevels.tactical}
+                actionPreset={zoomLevels.action}
                 onSelectPreset={setZoomPresetAnimated}
             />
         </div>

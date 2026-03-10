@@ -8,6 +8,7 @@ import {
     computeEffectiveScale,
     computeFitScale,
     computePresetScale,
+    resolveSoftFollowCenter,
     computeViewBoxFromCamera,
     computeVisibleWorldSize,
     expandRect,
@@ -26,10 +27,13 @@ export const useBoardCamera = ({
     baseViewBox,
     playerWorld,
     playerPosition,
+    mapShape = 'diamond',
+    tacticalZoomPreset,
+    actionZoomPreset,
     floor,
     cameraSafeInsetsPx,
 }: UseBoardCameraArgs): UseBoardCameraResult => {
-    const [zoomPreset, setZoomPreset] = useState<CameraZoomPreset>(11);
+    const [zoomPreset, setZoomPreset] = useState<CameraZoomPreset>(tacticalZoomPreset);
     const [viewportSizePx, setViewportSizePx] = useState({ width: 0, height: 0 });
     const [isCameraPanning, setIsCameraPanning] = useState(false);
 
@@ -55,8 +59,17 @@ export const useBoardCamera = ({
     const didInitCameraRef = useRef(false);
     const lastViewportSignatureRef = useRef('');
     const lastBoundsSignatureRef = useRef('');
-    const lastZoomPresetRef = useRef<CameraZoomPreset>(11);
+    const lastZoomPresetRef = useRef<CameraZoomPreset>(tacticalZoomPreset);
     const isAnimatingCameraRef = useRef(false);
+
+    useEffect(() => {
+        setZoomPreset(prev => {
+            if (prev === tacticalZoomPreset || prev === actionZoomPreset) return prev;
+            const distanceToTactical = Math.abs(prev - tacticalZoomPreset);
+            const distanceToAction = Math.abs(prev - actionZoomPreset);
+            return distanceToAction <= distanceToTactical ? actionZoomPreset : tacticalZoomPreset;
+        });
+    }, [actionZoomPreset, tacticalZoomPreset]);
 
     const cancelCameraAnimation = useCallback(() => {
         if (cameraAnimFrameRef.current !== null) {
@@ -80,6 +93,12 @@ export const useBoardCamera = ({
     const getCameraTarget = useCallback((options?: {
         panOffset?: CameraVec2;
         zoomPreset?: CameraZoomPreset;
+        softFollow?: {
+            currentCenter: CameraVec2;
+            deadZoneRatio?: number;
+            followStrength?: number;
+            maxStepRatio?: number;
+        };
     }): CameraViewState => {
         const viewportWidth = Math.max(1, viewportSizePx.width);
         const viewportHeight = Math.max(1, viewportSizePx.height);
@@ -93,8 +112,16 @@ export const useBoardCamera = ({
             insets: safeInsets
         };
 
-        const paddingWorld = TILE_SIZE * 0.75;
+        const isActionView = Math.abs(preset - actionZoomPreset) <= Math.abs(preset - tacticalZoomPreset);
+        const basePaddingTiles = mapShape === 'rectangle' ? 0.34 : 0.58;
+        const paddingTiles = Math.max(0.16, basePaddingTiles + (isActionView ? -0.12 : 0));
+        const paddingWorld = TILE_SIZE * paddingTiles;
         const paddedBounds = expandRect(baseViewBox, paddingWorld);
+        // Clamp against a near-tight bounds box so edge camera behavior minimizes empty space.
+        const clampPaddingTiles = mapShape === 'rectangle'
+            ? (isActionView ? 0.03 : 0.05)
+            : (isActionView ? 0.06 : 0.08);
+        const clampBounds = expandRect(baseViewBox, TILE_SIZE * clampPaddingTiles);
         const presetScale = computePresetScale(viewport, preset, TILE_SIZE, TILE_SIZE * 0.2);
         const fitScale = computeFitScale(viewport, paddedBounds);
         const scale = computeEffectiveScale(fitScale, presetScale);
@@ -104,12 +131,32 @@ export const useBoardCamera = ({
             x: playerWorld.x + panOffset.x,
             y: playerWorld.y + panOffset.y,
         };
-
-        const center = clampCameraCenter(desiredCenter, visibleWorld, paddedBounds);
+        const center = options?.softFollow
+            ? resolveSoftFollowCenter({
+                currentCenter: options.softFollow.currentCenter,
+                desiredCenter,
+                visibleWorldSize: visibleWorld,
+                bounds: clampBounds,
+                deadZoneRatio: options.softFollow.deadZoneRatio,
+                followStrength: options.softFollow.followStrength,
+                maxStepRatio: options.softFollow.maxStepRatio,
+            })
+            : clampCameraCenter(desiredCenter, visibleWorld, clampBounds);
         const viewBox = computeViewBoxFromCamera(center, visibleWorld);
 
         return { center, scale, viewBox };
-    }, [viewportSizePx.width, viewportSizePx.height, zoomPreset, cameraSafeInsetsPx, baseViewBox, playerWorld.x, playerWorld.y]);
+    }, [
+        viewportSizePx.width,
+        viewportSizePx.height,
+        zoomPreset,
+        cameraSafeInsetsPx,
+        baseViewBox,
+        playerWorld.x,
+        playerWorld.y,
+        mapShape,
+        actionZoomPreset,
+        tacticalZoomPreset
+    ]);
 
     const animateCameraTo = useCallback((target: CameraViewState, durationMs = 220) => {
         const current = cameraViewRef.current;
@@ -126,11 +173,11 @@ export const useBoardCamera = ({
         const startedAt = performance.now();
         isAnimatingCameraRef.current = true;
 
-        const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+        const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
 
         const step = (now: number) => {
             const rawT = Math.min(1, (now - startedAt) / Math.max(1, durationMs));
-            const t = easeOutCubic(rawT);
+            const t = easeInOutSine(rawT);
             const scale = startScale + (targetScale - startScale) * t;
             const center = {
                 x: startCenter.x + (targetCenter.x - startCenter.x) * t,
@@ -170,8 +217,25 @@ export const useBoardCamera = ({
         panOffset?: CameraVec2;
         zoomPreset?: CameraZoomPreset;
         durationMs?: number;
+        softFollow?: boolean;
     }) => {
-        const target = getCameraTarget(options);
+        const current = cameraViewRef.current;
+        const target = getCameraTarget({
+            panOffset: options?.panOffset,
+            zoomPreset: options?.zoomPreset
+        });
+
+        if (current) {
+            const delta = Math.hypot(target.center.x - current.center.x, target.center.y - current.center.y);
+            const scaleDelta = Math.abs(target.scale - current.scale);
+            if (delta < 0.6 && scaleDelta < 1e-4) return;
+            if (options?.softFollow) {
+                const dynamicDurationMs = Math.max(260, Math.min(420, Math.round(220 + delta * 0.22)));
+                animateCameraTo(target, options?.durationMs ?? dynamicDurationMs);
+                return;
+            }
+        }
+
         animateCameraTo(target, options?.durationMs ?? 220);
     }, [animateCameraTo, getCameraTarget]);
 
@@ -255,9 +319,7 @@ export const useBoardCamera = ({
         }
 
         if (syncDecision.action === 'animate-player') {
-            const zeroPan = { x: 0, y: 0 };
-            cameraPanOffsetRef.current = zeroPan;
-            animateCameraToTarget({ panOffset: zeroPan, durationMs: 210 });
+            animateCameraToTarget({ durationMs: 320, softFollow: true });
         }
     }, [
         viewportSizePx.width,
@@ -287,7 +349,8 @@ export const useBoardCamera = ({
     }, [cancelCameraAnimation, commitCameraView, getCameraTarget]);
 
     const setZoomPresetAnimated = useCallback((nextPreset: CameraZoomPreset) => {
-        setZoomPreset(prev => (prev === nextPreset ? prev : nextPreset));
+        const normalized = Math.max(1, Math.round(Number(nextPreset) || 1));
+        setZoomPreset(prev => (prev === normalized ? prev : normalized));
     }, []);
 
     const renderedViewBox = cameraViewRef.current?.viewBox || baseViewBox;

@@ -41,8 +41,12 @@ export const verifyReplayEnvelope = (replay) => {
     const seed = run.seed;
     const initialSeed = run.initialSeed || seed;
     const loadout = run.loadoutId ? DEFAULT_LOADOUTS[run.loadoutId] : undefined;
+    const mapSize = isObject(run.mapSize)
+      ? { width: Number(run.mapSize.width), height: Number(run.mapSize.height) }
+      : undefined;
+    const mapShape = run.mapShape === 'rectangle' ? 'rectangle' : 'diamond';
 
-    let state = generateInitialState(startFloor, seed, initialSeed, undefined, loadout);
+    let state = generateInitialState(startFloor, seed, initialSeed, undefined, loadout, mapSize, mapShape);
     for (const action of replay.actions) {
       state = gameReducer(state, action);
     }

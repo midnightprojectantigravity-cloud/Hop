@@ -91,9 +91,17 @@ const server = http.createServer((req, res) => {
         }
 
         const list = readJson();
+        const runMapSize = validated.replay.run.mapSize || null;
+        const runMapShape = validated.replay.run.mapShape || 'diamond';
+        const runKey = runMapSize
+          ? `${validated.replay.run.seed}|${runMapShape}|${runMapSize.width}x${runMapSize.height}`
+          : `${validated.replay.run.seed}|${runMapShape}`;
         const entry = {
           id: String(Date.now()),
+          runKey,
           seed: validated.replay.run.seed,
+          mapShape: runMapShape,
+          mapSize: runMapSize,
           score: verification.score,
           floor: verification.floor,
           fingerprint: verification.computedFingerprint,

@@ -12,7 +12,7 @@ export const getAxialTargets = (state: GameState, origin: Point, range: number, 
             const coord = hexAdd(origin, scaleVector(d, i));
 
             // Grid bounds
-            if (!isHexInRectangularGrid(coord, state.gridWidth, state.gridHeight)) break;
+            if (!isHexInRectangularGrid(coord, state.gridWidth, state.gridHeight, state.mapShape)) break;
 
             const isWall = state.tiles.get(pointToKey(coord))?.baseId === 'WALL';
             if (includeWalls) {

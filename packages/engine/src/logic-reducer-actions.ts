@@ -1,4 +1,4 @@
-import type { Action, GameState, RunRulesetOverrides } from './types';
+import type { Action, GameState, GridSize, MapShape, RunRulesetOverrides } from './types';
 import { hexEquals } from './hex';
 import { getEnemyAt } from './helpers';
 import { SkillRegistry } from './skillRegistry';
@@ -19,7 +19,9 @@ type ReducerDeps = {
         seed?: string,
         initialSeed?: string,
         preservePlayer?: any,
-        loadout?: Loadout
+        loadout?: Loadout,
+        mapSize?: GridSize,
+        mapShape?: MapShape
     ) => GameState;
     generateHubState: () => GameState;
     warnTurnStackInvariant: (message: string, payload?: Record<string, unknown>) => void;
@@ -211,13 +213,13 @@ export const resolveGameStateAction = (
         }
 
         case 'START_RUN': {
-            const { loadoutId, seed, mode, date, rulesetOverrides } = a.payload;
+            const { loadoutId, seed, mode, date, mapSize, mapShape, rulesetOverrides } = a.payload;
             const loadout = DEFAULT_LOADOUTS[loadoutId];
             if (!loadout) return s;
             if (mode === 'daily') {
                 const dateKey = toDateKey(date);
                 const dailySeed = createDailySeed(dateKey);
-                const next = deps.generateInitialState(1, seed || dailySeed, undefined, undefined, loadout);
+                const next = deps.generateInitialState(1, seed || dailySeed, undefined, undefined, loadout, mapSize, mapShape);
                 const mergedRuleset = resolveAcaeRuleset({
                     ...next,
                     ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)
@@ -238,7 +240,7 @@ export const resolveGameStateAction = (
                     hazardBreaches: 0
                 };
             }
-            const next = deps.generateInitialState(1, seed, undefined, undefined, loadout);
+            const next = deps.generateInitialState(1, seed, undefined, undefined, loadout, mapSize, mapShape);
             const mergedRuleset = resolveAcaeRuleset({
                 ...next,
                 ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)

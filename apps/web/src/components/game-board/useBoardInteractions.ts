@@ -21,6 +21,8 @@ interface UseBoardInteractionsArgs {
     svgRef: MutableRefObject<SVGSVGElement | null>;
     onMove: (hex: Point) => void;
     zoomPreset: CameraZoomPreset;
+    tacticalZoomPreset: CameraZoomPreset;
+    actionZoomPreset: CameraZoomPreset;
     setHoveredTile: Dispatch<SetStateAction<Point | null>>;
     setIsCameraPanning: Dispatch<SetStateAction<boolean>>;
     cameraPanOffsetRef: MutableRefObject<CameraVec2>;
@@ -39,6 +41,8 @@ export const useBoardInteractions = ({
     svgRef,
     onMove,
     zoomPreset,
+    tacticalZoomPreset,
+    actionZoomPreset,
     setHoveredTile,
     setIsCameraPanning,
     cameraPanOffsetRef,
@@ -151,8 +155,8 @@ export const useBoardInteractions = ({
                 } else {
                     const ratio = distance / Math.max(1, pinchStateRef.current.startDistance);
                     let nextPreset = pinchStateRef.current.startPreset;
-                    if (ratio > 1.08) nextPreset = 7;
-                    if (ratio < 0.92) nextPreset = 11;
+                    if (ratio > 1.08) nextPreset = actionZoomPreset;
+                    if (ratio < 0.92) nextPreset = tacticalZoomPreset;
                     if (nextPreset !== pinchStateRef.current.appliedPreset) {
                         pinchStateRef.current.appliedPreset = nextPreset;
                         setZoomPresetAnimated(nextPreset);
@@ -204,7 +208,9 @@ export const useBoardInteractions = ({
         setZoomPresetAnimated,
         suppressTileClickUntilRef,
         updatePanFromWorldDelta,
-        zoomPreset
+        zoomPreset,
+        actionZoomPreset,
+        tacticalZoomPreset
     ]);
 
     const endPointerInteraction = useCallback((pointerId: number) => {
@@ -263,10 +269,10 @@ export const useBoardInteractions = ({
             e.preventDefault();
         }
         if (Math.abs(e.deltaY) < 0.1) return;
-        const nextPreset: CameraZoomPreset = e.deltaY < 0 ? 7 : 11;
+        const nextPreset: CameraZoomPreset = e.deltaY < 0 ? actionZoomPreset : tacticalZoomPreset;
         setZoomPresetAnimated(nextPreset);
         suppressTileClickUntilRef.current = Date.now() + 120;
-    }, [setZoomPresetAnimated, suppressTileClickUntilRef]);
+    }, [actionZoomPreset, tacticalZoomPreset, setZoomPresetAnimated, suppressTileClickUntilRef]);
 
     return {
         handleResetView,

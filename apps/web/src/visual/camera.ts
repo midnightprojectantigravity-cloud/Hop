@@ -1,4 +1,4 @@
-export type CameraZoomPreset = 7 | 11;
+export type CameraZoomPreset = number;
 
 export type CameraVec2 = { x: number; y: number };
 
@@ -22,7 +22,43 @@ export type CameraViewportPx = {
     insets?: Partial<CameraInsetsPx>;
 };
 
-export const CAMERA_ZOOM_PRESETS: readonly CameraZoomPreset[] = [7, 11] as const;
+export const ACTION_VIEW_MIN_HEX_DIAMETER = 9;
+export const TACTICAL_VIEW_MIN_HEX_DIAMETER = 15;
+
+export interface ResolveBinaryZoomLevelsOptions {
+    mapWidth: number;
+    mapHeight: number;
+    movementRange: number;
+    tacticalMinHexDiameter?: number;
+    actionMinHexDiameter?: number;
+}
+
+export const resolveBinaryZoomLevels = ({
+    mapWidth,
+    mapHeight,
+    movementRange,
+    tacticalMinHexDiameter = TACTICAL_VIEW_MIN_HEX_DIAMETER,
+    actionMinHexDiameter = ACTION_VIEW_MIN_HEX_DIAMETER
+}: ResolveBinaryZoomLevelsOptions): { tactical: CameraZoomPreset; action: CameraZoomPreset } => {
+    const safeMapWidth = Math.max(1, Math.floor(Number(mapWidth) || 0));
+    const safeMapHeight = Math.max(1, Math.floor(Number(mapHeight) || 0));
+    const safeMovementRange = Math.max(1, Math.floor(Number(movementRange) || 0));
+
+    // LoS is not yet available, so tactical view uses a map-wide upper bound.
+    const tacticalUpperBound = (Math.max(safeMapWidth, safeMapHeight) * 2) + 1;
+    const tactical = Math.max(
+        Math.max(1, Math.floor(tacticalMinHexDiameter)),
+        tacticalUpperBound
+    );
+
+    const actionUpperBound = (safeMovementRange * 2) + 3;
+    const action = Math.min(
+        tactical,
+        Math.max(Math.max(1, Math.floor(actionMinHexDiameter)), actionUpperBound)
+    );
+
+    return { tactical, action };
+};
 
 const clamp = (value: number, min: number, max: number): number => {
     if (value < min) return min;
@@ -131,3 +167,44 @@ export const computeViewBoxFromCamera = (
     height: visibleWorldSize.height,
 });
 
+export interface ResolveSoftFollowCenterOptions {
+    currentCenter: CameraVec2;
+    desiredCenter: CameraVec2;
+    visibleWorldSize: { width: number; height: number };
+    bounds: CameraRect;
+    deadZoneRatio?: number;
+    followStrength?: number;
+    maxStepRatio?: number;
+}
+
+export const resolveSoftFollowCenter = ({
+    currentCenter,
+    desiredCenter,
+    visibleWorldSize,
+    bounds,
+    deadZoneRatio = 0.22,
+    followStrength = 0.5,
+    maxStepRatio = 0.14
+}: ResolveSoftFollowCenterOptions): CameraVec2 => {
+    const safeDeadZoneRatio = clamp(deadZoneRatio, 0, 0.8);
+    const safeFollowStrength = clamp(followStrength, 0.05, 1);
+    const safeMaxStepRatio = clamp(maxStepRatio, 0.02, 1);
+    const clampedDesired = clampCameraCenter(desiredCenter, visibleWorldSize, bounds);
+    const dx = clampedDesired.x - currentCenter.x;
+    const dy = clampedDesired.y - currentCenter.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance <= 1e-4) return currentCenter;
+
+    const referenceSize = Math.max(1, Math.min(visibleWorldSize.width, visibleWorldSize.height));
+    const deadZone = referenceSize * safeDeadZoneRatio;
+    if (distance <= deadZone) return currentCenter;
+
+    const stepFromDistance = (distance - deadZone) * safeFollowStrength;
+    const maxStep = referenceSize * safeMaxStepRatio;
+    const step = clamp(stepFromDistance, 0, maxStep);
+    if (step <= 1e-4) return currentCenter;
+
+    const nx = currentCenter.x + (dx / distance) * step;
+    const ny = currentCenter.y + (dy / distance) * step;
+    return clampCameraCenter({ x: nx, y: ny }, visibleWorldSize, bounds);
+};

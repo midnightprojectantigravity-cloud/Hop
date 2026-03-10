@@ -98,4 +98,48 @@ describe('hub start journey wiring', () => {
     expect(onStartRun).toHaveBeenNthCalledWith(1, 'normal');
     expect(onStartRun).toHaveBeenNthCalledWith(2, 'daily');
   });
+
+  it('routes map shape and size controls to hub callbacks', () => {
+    const onMapShapeChange = vi.fn();
+    const onMapSizeChange = vi.fn();
+
+    const tree = Hub({
+      gameState: generateHubState(),
+      capabilityPassivesEnabled: false,
+      onCapabilityPassivesEnabledChange: vi.fn(),
+      movementRuntimeEnabled: false,
+      onMovementRuntimeEnabledChange: vi.fn(),
+      mapShape: 'diamond',
+      onMapShapeChange,
+      mapSize: { width: 9, height: 11 },
+      onMapSizeChange,
+      onSelectLoadout: vi.fn(),
+      onStartRun: vi.fn(),
+      onOpenArcade: vi.fn(),
+      onLoadScenario: vi.fn(),
+      onStartReplay: vi.fn()
+    });
+
+    const shapeSelect = findElements(
+      tree,
+      (element) => element.type === 'select' && element.props?.['aria-label'] === 'Standard run map shape'
+    )[0];
+    const sizeSelect = findElements(
+      tree,
+      (element) => element.type === 'select' && element.props?.['aria-label'] === 'Standard run map size'
+    )[0];
+
+    expect(shapeSelect).toBeTruthy();
+    expect(sizeSelect).toBeTruthy();
+
+    (shapeSelect.props?.onChange as ((event: { target: { value: string } }) => void))({
+      target: { value: 'rectangle' }
+    });
+    (sizeSelect.props?.onChange as ((event: { target: { value: string } }) => void))({
+      target: { value: '11x13' }
+    });
+
+    expect(onMapShapeChange).toHaveBeenCalledWith('rectangle');
+    expect(onMapSizeChange).toHaveBeenCalledWith({ width: 11, height: 13 });
+  });
 });

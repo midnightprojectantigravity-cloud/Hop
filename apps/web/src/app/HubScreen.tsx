@@ -1,4 +1,4 @@
-import type { GameState, Loadout } from '@hop/engine';
+import type { GameState, GridSize, Loadout, MapShape } from '@hop/engine';
 import type { ReplayRecord } from '../components/ReplayManager';
 import { Hub } from '../components/Hub';
 import { ArcadeHub } from '../components/ArcadeHub';
@@ -34,6 +34,10 @@ interface HubScreenProps {
   onCapabilityPassivesEnabledChange: (enabled: boolean) => void;
   movementRuntimeEnabled: boolean;
   onMovementRuntimeEnabledChange: (enabled: boolean) => void;
+  mapShape: MapShape;
+  onMapShapeChange: (shape: MapShape) => void;
+  mapSize: GridSize;
+  onMapSizeChange: (size: GridSize) => void;
   onSelectLoadout: (loadout: Loadout) => void;
   onStartRun: (mode: 'normal' | 'daily') => void;
   onLoadScenario: (state: GameState, instructions: string) => void;
@@ -64,6 +68,10 @@ export const HubScreen = ({
   onCapabilityPassivesEnabledChange,
   movementRuntimeEnabled,
   onMovementRuntimeEnabledChange,
+  mapShape,
+  onMapShapeChange,
+  mapSize,
+  onMapSizeChange,
   onSelectLoadout,
   onStartRun,
   onLoadScenario,
@@ -148,6 +156,10 @@ export const HubScreen = ({
           onCapabilityPassivesEnabledChange={onCapabilityPassivesEnabledChange}
           movementRuntimeEnabled={movementRuntimeEnabled}
           onMovementRuntimeEnabledChange={onMovementRuntimeEnabledChange}
+          mapShape={mapShape}
+          onMapShapeChange={onMapShapeChange}
+          mapSize={mapSize}
+          onMapSizeChange={onMapSizeChange}
           onSelectLoadout={onSelectLoadout}
           onStartRun={onStartRun}
           onOpenArcade={() => navigateTo(arcadePath)}

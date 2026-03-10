@@ -1,4 +1,4 @@
-import type { AtomicEffect, Entity, GameState, PendingFrameType } from './types';
+import type { AtomicEffect, Entity, GameState, GridSize, MapShape, PendingFrameType } from './types';
 import { hexEquals, getNeighbors } from './hex';
 import { checkShrine, checkStairs } from './helpers';
 import { SkillRegistry } from './skillRegistry';
@@ -29,7 +29,9 @@ type GenerateInitialStateFn = (
     seed?: string,
     initialSeed?: string,
     preservePlayer?: any,
-    loadout?: any
+    loadout?: any,
+    mapSize?: GridSize,
+    mapShape?: MapShape
 ) => GameState;
 
 export const hydrateLoadedState = (loaded: GameState): GameState => {
@@ -58,6 +60,7 @@ export const hydrateLoadedState = (loaded: GameState): GameState => {
 
     const hydratedState: GameState = {
         ...loaded,
+        mapShape: loaded.mapShape === 'rectangle' ? 'rectangle' : 'diamond',
         tiles: hydratedTiles,
         player: hydratedPlayer,
         enemies: hydratedEnemies,
@@ -148,11 +151,19 @@ export const resolvePendingStateAction = (
         const migratingSummons = s.enemies
             .filter(e => e.hp > 0 && e.factionId === 'player' && e.companionOf === s.player.id)
             .sort((a, b) => a.id.localeCompare(b.id));
-        const next = deps.generateInitialState(s.floor + 1, nextSeed, baseSeed, {
-            ...s.player,
-            hp: Math.min(s.player.maxHp, s.player.hp + 1),
-            upgrades: s.upgrades,
-        });
+        const next = deps.generateInitialState(
+            s.floor + 1,
+            nextSeed,
+            baseSeed,
+            {
+                ...s.player,
+                hp: Math.min(s.player.maxHp, s.player.hp + 1),
+                upgrades: s.upgrades,
+            },
+            undefined,
+            { width: s.gridWidth, height: s.gridHeight },
+            s.mapShape
+        );
         next.ruleset = resolveAcaeRuleset({
             ...next,
             ruleset: s.ruleset || next.ruleset

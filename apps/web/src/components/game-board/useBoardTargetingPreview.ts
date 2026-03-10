@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import {
     buildAilmentDeltaSummary,
     getHexLine,
-    isTileInDiamond,
+    isHexInRectangularGrid,
     pointToKey,
     previewActionOutcome,
     SkillRegistry,
@@ -102,12 +102,12 @@ export const useBoardTargetingPreview = ({
         ];
         const set = new Set<string>();
         for (const n of neighbors) {
-            if (isTileInDiamond(n.q, n.r, gameState.gridWidth, gameState.gridHeight)) {
+            if (isHexInRectangularGrid(n, gameState.gridWidth, gameState.gridHeight, gameState.mapShape)) {
                 set.add(pointToKey(n));
             }
         }
         return set;
-    }, [playerPos, gameState.gridWidth, gameState.gridHeight]);
+    }, [playerPos, gameState.gridWidth, gameState.gridHeight, gameState.mapShape]);
 
     const selectedSkillTargetSet = useMemo(() => {
         const set = new Set<string>();

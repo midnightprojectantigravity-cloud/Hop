@@ -2,9 +2,13 @@
  * HEX GEOMETRY ENGINE
  * Axiomatic hex math implementation. Pure functions only.
  */
-import type { Point } from './types';
+import type { MapShape, Point } from './types';
 
 export const createHex = (q: number, r: number): Point => ({ q, r, s: -q - r });
+export const DEFAULT_MAP_SHAPE: MapShape = 'diamond';
+
+export const isMapShape = (shape: unknown): shape is MapShape =>
+    shape === 'diamond' || shape === 'rectangle';
 
 /**
  * Single source of truth for coordinate keys.
@@ -121,31 +125,97 @@ export function scaleVector(dirIdx: number, mag: number): Point {
     return { q: dir.q * mag, r: dir.r * mag, s: -(dir.q * mag) - (dir.r * mag) };
 }
 
-/**
- * Dynamic Coordinate Mask for "Stretched Diamond" geometry.
- * Shaves top-left and bottom-right corners of the W x H parallelogram.
- */
+const getDiamondSumBounds = (
+    width: number,
+    height: number
+): { minSum: number; maxSum: number } => {
+    const maxSum = (width - 1) + (height - 1);
+    const topLimit = Math.floor(width / 2);
+    return {
+        minSum: topLimit,
+        maxSum: maxSum - topLimit
+    };
+};
+
+const getRectangleRowBounds = (
+    q: number,
+    width: number,
+    height: number
+): { minR: number; maxR: number } | null => {
+    if (q < 0 || q >= width || width <= 0 || height <= 0) return null;
+    const offset = Math.floor((width - 1) / 2);
+    const qOffset = Math.floor(q / 2);
+    const minR = offset - qOffset;
+    const maxR = (height - 1) - qOffset;
+    if (minR < 0 || maxR < 0 || minR > maxR) return null;
+    return { minR, maxR };
+};
+
+export const getMapRowBoundsForColumn = (
+    q: number,
+    width: number,
+    height: number,
+    mapShape: MapShape = DEFAULT_MAP_SHAPE
+): { minR: number; maxR: number } | null => {
+    if (mapShape === 'rectangle') {
+        return getRectangleRowBounds(q, width, height);
+    }
+
+    if (q < 0 || q >= width || height <= 0) return null;
+    const { minSum, maxSum } = getDiamondSumBounds(width, height);
+    const minR = Math.max(0, minSum - q);
+    const maxR = Math.min(height - 1, maxSum - q);
+    return minR > maxR ? null : { minR, maxR };
+};
+
 export const isTileInDiamond = (q: number, r: number, width: number, height: number): boolean => {
     if (q < 0 || q >= width || r < 0 || r >= height) return false;
-
     const sum = q + r;
+    const bounds = getDiamondSumBounds(width, height);
+    return sum >= bounds.minSum && sum <= bounds.maxSum;
+};
 
-    // For the 9x11 Tutorial Standard: q+r must be between 4 and 14
-    // This shaves the corners of the axial parallelogram to create a balanced diamond.
-    const topLimit = Math.floor(width / 2); // e.g., 4 for width 9
-    const bottomLimit = (width - 1) + (height - 1) - topLimit; // e.g., 8 + 10 - 4 = 14 for 9x11
+/**
+ * Rectangle shape mask in positive-only axial coordinates.
+ * Clips top-left and bottom-right corners by column index so every column
+ * has the same count of playable rows.
+ */
+export const isTileInRectangle = (q: number, r: number, width: number, height: number): boolean => {
+    if (q < 0 || q >= width || r < 0 || r >= height) return false;
+    const bounds = getRectangleRowBounds(q, width, height);
+    if (!bounds) return false;
+    return r >= bounds.minR && r <= bounds.maxR;
+};
 
-    return sum >= topLimit && sum <= bottomLimit;
+export const isTileInMapShape = (
+    q: number,
+    r: number,
+    width: number,
+    height: number,
+    mapShape: MapShape = DEFAULT_MAP_SHAPE
+): boolean => {
+    if (mapShape === 'rectangle') {
+        return isTileInRectangle(q, r, width, height);
+    }
+    return isTileInDiamond(q, r, width, height);
 };
 
 /**
  * Generate a diamond-shaped grid (shaved axial parallelogram)
  */
 export const getDiamondGrid = (width: number, height: number): Point[] => {
+    return getGridForShape(width, height, 'diamond');
+};
+
+export const getGridForShape = (
+    width: number,
+    height: number,
+    mapShape: MapShape = DEFAULT_MAP_SHAPE
+): Point[] => {
     const cells: Point[] = [];
     for (let q = 0; q < width; q++) {
         for (let r = 0; r < height; r++) {
-            if (isTileInDiamond(q, r, width, height)) {
+            if (isTileInMapShape(q, r, width, height, mapShape)) {
                 cells.push(createHex(q, r));
             }
         }
@@ -156,6 +226,11 @@ export const getDiamondGrid = (width: number, height: number): Point[] => {
 /**
  * Bounds check for the "Stretched Diamond" geometry
  */
-export const isHexInRectangularGrid = (hex: Point, width: number, height: number): boolean => {
-    return isTileInDiamond(hex.q, hex.r, width, height);
+export const isHexInRectangularGrid = (
+    hex: Point,
+    width: number,
+    height: number,
+    mapShape: MapShape = DEFAULT_MAP_SHAPE
+): boolean => {
+    return isTileInMapShape(hex.q, hex.r, width, height, mapShape);
 };

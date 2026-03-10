@@ -4,10 +4,10 @@
  * Optimized for mobile portrait (diamond grid).
  * TODO: Implement "Hazard Generation" (e.g. dynamic spikes or traps) using the same RNG seed.
  */
-import type { Point, Room, FloorTheme, Entity } from '../types';
+import type { Point, Room, FloorTheme, Entity, MapShape } from '../types';
 import type { Tile } from './tiles/tile-types';
 import { BASE_TILES } from './tiles/tile-registry';
-import { createHex, hexEquals, hexDistance, getDiamondGrid } from '../hex';
+import { createHex, hexEquals, hexDistance, getGridForShape, getMapRowBoundsForColumn } from '../hex';
 import { createRng, stableIdFromSeed } from './rng';
 import {
     FLOOR_THEMES,
@@ -32,28 +32,46 @@ export interface DungeonResult {
     tiles: Map<string, Tile>;
 }
 
+export interface DungeonGenerationOptions {
+    gridWidth?: number;
+    gridHeight?: number;
+    mapShape?: MapShape;
+}
+
 /**
  * Generate a single tactical arena floor
  */
 export const generateDungeon = (
     floor: number,
-    seed: string
+    seed: string,
+    options?: DungeonGenerationOptions
 ): DungeonResult => {
     const rng = createRng(seed);
+    const gridWidth = Number.isInteger(options?.gridWidth) && Number(options?.gridWidth) > 0
+        ? Number(options?.gridWidth)
+        : GRID_WIDTH;
+    const gridHeight = Number.isInteger(options?.gridHeight) && Number(options?.gridHeight) > 0
+        ? Number(options?.gridHeight)
+        : GRID_HEIGHT;
+    const mapShape: MapShape = options?.mapShape === 'rectangle' ? 'rectangle' : 'diamond';
 
-    // 1. Generate the base diamond grid
-    const allHexes = getDiamondGrid(GRID_WIDTH, GRID_HEIGHT);
+    // 1. Generate the base grid
+    const allHexes = getGridForShape(gridWidth, gridHeight, mapShape);
 
     // 4. MVP map shape is directly playable (no perimeter wall ring)
     const wallPositions: Point[] = [];
     const playableHexes: Point[] = allHexes;
-    const centerQ = Math.floor(GRID_WIDTH / 2);
+    const centerQ = Math.floor(gridWidth / 2);
+    const centerColumnBounds = getMapRowBoundsForColumn(centerQ, gridWidth, gridHeight, mapShape);
+    const centerTopR = centerColumnBounds?.minR ?? 0;
+    const centerBottomR = centerColumnBounds?.maxR ?? (gridHeight - 1);
+    const centerR = Math.floor((centerTopR + centerBottomR) / 2);
 
-    // 5. Determine Player Spawn (bottom-center edge)
-    const playerSpawn = createHex(centerQ, GRID_HEIGHT - 1);
+    // 5. Determine Player Spawn (shape-aware bottom-center edge)
+    const playerSpawn = createHex(centerQ, centerBottomR);
 
-    // 6. Place Stairs (top-center edge)
-    const stairsPosition = createHex(centerQ, 0);
+    // 6. Place Stairs (shape-aware top-center edge)
+    const stairsPosition = createHex(centerQ, centerTopR);
 
     // 7. Place Shrine (if applicable)
     let shrinePosition: Point | undefined;
@@ -107,7 +125,7 @@ export const generateDungeon = (
     const mainRoom: Room = {
         id: 'arena',
         type: 'combat',
-        center: createHex(Math.floor(GRID_WIDTH / 2), Math.floor(GRID_HEIGHT / 2)),
+        center: createHex(centerQ, centerR),
         hexes: allHexes,
         connections: []
     };

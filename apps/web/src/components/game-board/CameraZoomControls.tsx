@@ -2,11 +2,15 @@ import type { CameraZoomPreset } from '../../visual/camera';
 
 interface CameraZoomControlsProps {
   activePreset: CameraZoomPreset;
+  tacticalPreset: CameraZoomPreset;
+  actionPreset: CameraZoomPreset;
   onSelectPreset: (preset: CameraZoomPreset) => void;
 }
 
 export const CameraZoomControls: React.FC<CameraZoomControlsProps> = ({
   activePreset,
+  tacticalPreset,
+  actionPreset,
   onSelectPreset
 }) => (
   <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-30 flex items-center gap-1.5 pointer-events-auto">
@@ -20,24 +24,24 @@ export const CameraZoomControls: React.FC<CameraZoomControlsProps> = ({
       <button
         type="button"
         onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => onSelectPreset(11)}
-        className={`h-7 w-7 rounded-md text-sm font-black transition-colors ${activePreset === 11
+        onClick={() => onSelectPreset(tacticalPreset)}
+        className={`h-7 w-7 rounded-md text-sm font-black transition-colors ${activePreset === tacticalPreset
           ? 'bg-white text-black'
           : 'bg-white/5 text-white/80 hover:bg-white/10'
           }`}
-        aria-label="Zoom out to 11 tiles wide"
+        aria-label={`Zoom out to tactical view (${tacticalPreset} tiles wide)`}
       >
         -
       </button>
       <button
         type="button"
         onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => onSelectPreset(7)}
-        className={`h-7 w-7 rounded-md text-sm font-black transition-colors ${activePreset === 7
+        onClick={() => onSelectPreset(actionPreset)}
+        className={`h-7 w-7 rounded-md text-sm font-black transition-colors ${activePreset === actionPreset
           ? 'bg-white text-black'
           : 'bg-white/5 text-white/80 hover:bg-white/10'
           }`}
-        aria-label="Zoom in to 7 tiles wide"
+        aria-label={`Zoom in to action view (${actionPreset} tiles wide)`}
       >
         +
       </button>

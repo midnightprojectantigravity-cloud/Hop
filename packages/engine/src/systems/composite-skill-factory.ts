@@ -197,7 +197,7 @@ const getSortedTargets = (state: GameState, origin: Point, range: number, sortMo
     for (let q = 0; q < state.gridWidth; q++) {
         for (let r = 0; r < state.gridHeight; r++) {
             const hex = createHex(q, r);
-            if (!isHexInRectangularGrid(hex, state.gridWidth, state.gridHeight)) continue;
+            if (!isHexInRectangularGrid(hex, state.gridWidth, state.gridHeight, state.mapShape)) continue;
             if (hexDistance(origin, hex) <= range) points.push(hex);
         }
     }
