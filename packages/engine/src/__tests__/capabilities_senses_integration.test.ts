@@ -50,10 +50,10 @@ describe('capabilities senses integration', () => {
         expect(observerAware).toEqual(legacy);
     });
 
-    it('applies STANDARD_VISION range scaling with cap', () => {
+    it('applies STANDARD_VISION weighted range scaling with vision tiers', () => {
         const state = generateInitialState(1, 'sense-standard-vision-seed');
-        const origin = createHex(1, 8);
-        const farTarget = createHex(1, 4); // distance 4
+        const origin = createHex(1, 10);
+        const farTarget = createHex(1, 4); // distance 6
 
         state.player = {
             ...state.player,
@@ -75,6 +75,9 @@ describe('capabilities senses integration', () => {
                 weightClass: 'Standard'
             })
         ];
+        for (let r = 5; r <= 9; r++) {
+            placeTile(state, createHex(1, r), 'STONE');
+        }
 
         const lowMind = validateLineOfSight(state, origin, farTarget, {
             observerActor: state.player,
@@ -82,17 +85,23 @@ describe('capabilities senses integration', () => {
         });
         expect(lowMind.isValid).toBe(false);
 
+        const visionSkill = state.player.activeSkills.find(skill => skill.id === 'STANDARD_VISION');
         state.player = {
             ...state.player,
+            activeSkills: state.player.activeSkills.map(skill =>
+                skill.id === 'STANDARD_VISION'
+                    ? { ...skill, activeUpgrades: [...(visionSkill?.activeUpgrades || []), 'VISION_TIER_2', 'VISION_TIER_3'] }
+                    : skill
+            ),
             components: new Map([
-                ['trinity', { type: 'trinity', body: 0, mind: 30, instinct: 0 }]
+                ['trinity', { type: 'trinity', body: 0, mind: 0, instinct: 0 }]
             ])
         };
-        const highMind = validateLineOfSight(state, origin, farTarget, {
+        const tierBoosted = validateLineOfSight(state, origin, farTarget, {
             observerActor: state.player,
             excludeActorId: state.player.id
         });
-        expect(highMind.isValid).toBe(true);
+        expect(tierBoosted.isValid).toBe(true);
     });
 
     it('allows VIBRATION_SENSE through walls only when target moved last turn', () => {

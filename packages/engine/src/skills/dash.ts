@@ -97,7 +97,10 @@ export const DASH: SkillDefinition = {
                     path: dashPath,
                     simulatePath: movementPolicy.simulatePath,
                     ignoreGroundHazards: true,
-                    animationDuration: dashPath.length * 60  // 60ms per tile (fast dash)
+                    animationDuration: dashPath.length * 60,  // 60ms per tile (fast dash)
+                    presentationKind: 'dash',
+                    pathStyle: 'hex_step',
+                    presentationSequenceId: `${attacker.id}:DASH:${stopPos.q},${stopPos.r},${stopPos.s}:${state.turnNumber}`
                 }
             ];
             // We apply it here to a tempState just to calculate kinetic pulses accurately
@@ -145,7 +148,10 @@ export const DASH: SkillDefinition = {
                 path: dashPath,
                 simulatePath: movementPolicy.simulatePath,
                 ignoreGroundHazards: true,
-                animationDuration: dashPath.length * 60  // 60ms per tile
+                animationDuration: dashPath.length * 60,  // 60ms per tile
+                presentationKind: 'dash',
+                pathStyle: 'hex_step',
+                presentationSequenceId: `${attacker.id}:DASH:${stopPos.q},${stopPos.r},${stopPos.s}:${state.turnNumber}`
             };
 
             return {

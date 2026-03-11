@@ -9,14 +9,9 @@ interface EntityRenderShellProps {
   entity: EntityType;
   x: number;
   y: number;
-  waapiControlled: boolean;
-  segmentDurationMs: number;
-  segmentEasing: string;
   isDying?: boolean;
   poseTransform?: string;
-  stretchTransform: string;
   isFlashing: boolean;
-  teleportPhase: 'none' | 'out' | 'in';
   isInvisible: boolean;
   visualOpacity: number;
   isPlayer: boolean;
@@ -40,14 +35,9 @@ export const EntityRenderShell: React.FC<EntityRenderShellProps> = ({
   entity,
   x,
   y,
-  waapiControlled,
-  segmentDurationMs,
-  segmentEasing,
   isDying,
   poseTransform,
-  stretchTransform,
   isFlashing,
-  teleportPhase,
   isInvisible,
   visualOpacity,
   isPlayer,
@@ -71,36 +61,37 @@ export const EntityRenderShell: React.FC<EntityRenderShellProps> = ({
       data-actor-node={entity.id}
       data-synapse-pulse={synapsePulseActive ? 'active' : undefined}
       style={{
-        transition: waapiControlled ? 'none' : `transform ${segmentDurationMs}ms ${segmentEasing}`,
         transform: `translate(${x}px, ${y}px)`
       }}
       className={`${isDying ? 'animate-lava-sink' : ''} ${interactive ? 'entity-synapse-inspectable' : ''} ${synapsePulseActive ? 'entity-synapse-pulse' : ''}`}
       onClick={interactive ? onInspect : undefined}
     >
-      <g transform={poseTransform}>
-        <g
-          transform={stretchTransform}
-          className={`${isFlashing ? 'entity-damaged' : ''} ${!isDying && !stunned ? 'animate-idle' : ''} ${teleportPhase === 'out' ? 'entity-teleport-out' : ''} ${teleportPhase === 'in' ? 'entity-teleport-in' : ''}`}
-          opacity={isInvisible ? 0.3 : visualOpacity}
-          style={{ filter: isInvisible ? 'blur(1px)' : 'none' }}
-        >
-          <EntityTeamPad isPlayer={isPlayer} isFlying={isFlying} />
+      <g data-actor-pad-node={entity.id}>
+        <EntityTeamPad isPlayer={isPlayer} isFlying={isFlying} />
+      </g>
+      <g data-actor-motion-node={entity.id}>
+        <g transform={poseTransform}>
+          <g
+            className={`${isFlashing ? 'entity-damaged' : ''} ${!isDying && !stunned ? 'animate-idle' : ''}`}
+            opacity={isInvisible ? 0.3 : visualOpacity}
+            style={{ filter: isInvisible ? 'blur(1px)' : 'none' }}
+          >
+            <g transform={`translate(0,${unitIconYOffset}) scale(${unitIconScale})`}>
+              {renderEntityIcon(entity, isPlayer, unitIconSize, resolvedAssetHref, handleAssetError, contrastBoost)}
+            </g>
 
-          <g transform={`translate(0,${unitIconYOffset}) scale(${unitIconScale})`}>
-            {renderEntityIcon(entity, isPlayer, unitIconSize, resolvedAssetHref, handleAssetError, contrastBoost)}
+            <EntityStatusOverlays
+              stunned={stunned}
+              blinded={blinded}
+              showFacing={showFacing}
+              facing={entity.facing}
+              borderColor={borderColor}
+            />
+
+            <EntityAilmentBadges entity={entity} />
+
+            <title>{`${entity.subtype || entity.type}`}</title>
           </g>
-
-          <EntityStatusOverlays
-            stunned={stunned}
-            blinded={blinded}
-            showFacing={showFacing}
-            facing={entity.facing}
-            borderColor={borderColor}
-          />
-
-          <EntityAilmentBadges entity={entity} />
-
-          <title>{`${entity.subtype || entity.type}`}</title>
         </g>
       </g>
     </g>

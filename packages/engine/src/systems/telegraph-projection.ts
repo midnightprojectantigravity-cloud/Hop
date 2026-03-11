@@ -62,9 +62,15 @@ const collectDangerTiles = (state: GameState, intent: Intent, effects: AtomicEff
 
 export const buildIntentPreview = (state: GameState): IntentPreview => {
     const entries: TelegraphProjectionEntry[] = [];
+    const visibleActorIds = new Set(state.visibility?.playerFog?.visibleActorIds || []);
+    const enforceVisibilityGate = state.gameStatus === 'playing' && !!state.visibility;
 
     // Project only hostile actors so UI can draw "incoming danger" tiles.
-    const hostiles = state.enemies.filter(e => e.hp > 0 && e.factionId !== state.player.factionId);
+    const hostiles = state.enemies.filter(e =>
+        e.hp > 0
+        && e.factionId !== state.player.factionId
+        && (!enforceVisibilityGate || visibleActorIds.has(e.id))
+    );
 
     hostiles.forEach(actor => {
         const strategy = StrategyRegistry.resolve(actor);

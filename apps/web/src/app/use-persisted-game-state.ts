@@ -68,7 +68,7 @@ const hydrateSavedState = (): GameState => {
     parsed.player = ensurePlayerLoadoutIntegrity(normalizeActor(parsed.player));
     parsed.enemies = Array.isArray(parsed.enemies) ? parsed.enemies.map(normalizeActor) : [];
 
-    return parsed as GameState;
+    return gameReducer(generateHubState(), { type: 'LOAD_STATE', payload: parsed as GameState });
   } catch (e) {
     console.error('Failed to hydrate Map state:', e);
     return generateHubState();

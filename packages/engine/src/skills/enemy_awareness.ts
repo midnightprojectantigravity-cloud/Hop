@@ -3,30 +3,37 @@ import { extractTrinityStats } from '../systems/combat/combat-calculator';
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
-const getVisionTier = (observer: Actor): number => {
-    const visionSkill = observer.activeSkills?.find(skill => skill.id === 'STANDARD_VISION');
-    const activeUpgrades = new Set(visionSkill?.activeUpgrades || []);
-    return 1
-        + (activeUpgrades.has('VISION_TIER_2') ? 1 : 0)
-        + (activeUpgrades.has('VISION_TIER_3') ? 1 : 0)
-        + (activeUpgrades.has('VISION_TIER_4') ? 1 : 0);
-};
-
-export const computeStandardVisionRange = (observer: Actor): number => {
+export const computeEnemyAwarenessScore = (observer: Actor): number => {
     const trinity = extractTrinityStats(observer);
-    const statPool = Math.max(0, trinity.body) + Math.max(0, trinity.mind) + Math.max(0, trinity.instinct);
-    const tier = getVisionTier(observer);
-    return clamp(3 + tier + Math.floor(statPool / 10), 5, 11);
+    return (0.60 * Math.max(0, trinity.instinct))
+        + (0.25 * Math.max(0, trinity.mind))
+        + (0.15 * Math.max(0, trinity.body));
 };
 
-export const STANDARD_VISION: SkillDefinition = {
-    id: 'STANDARD_VISION',
-    name: 'Standard Vision',
-    description: 'Visual line-of-sight for fog reveal. Range scales by vision tier and total core stats.',
+export const computeEnemyAwarenessDetectRange = (observer: Actor): number => {
+    const awarenessScore = computeEnemyAwarenessScore(observer);
+    return clamp(4 + Math.floor(awarenessScore * 1.5), 4, 9);
+};
+
+export const computeEnemyButcherFactor = (observer: Actor): number => {
+    const awarenessScore = computeEnemyAwarenessScore(observer);
+    return clamp(1 + Math.floor(awarenessScore), 1, 4);
+};
+
+export const computeEnemyAwarenessMemoryTurns = (observer: Actor): number =>
+    2 + computeEnemyButcherFactor(observer);
+
+export const computeEnemyAwarenessSearchRadius = (observer: Actor): number =>
+    1 + computeEnemyButcherFactor(observer);
+
+export const ENEMY_AWARENESS: SkillDefinition = {
+    id: 'ENEMY_AWARENESS',
+    name: 'Enemy Awareness',
+    description: 'Hostile perception package for detection, chase memory, and butcher pressure.',
     slot: 'passive',
-    icon: 'SV',
+    icon: 'EA',
     baseVariables: {
-        range: 5,
+        range: 4,
         cost: 0,
         cooldown: 0
     },
@@ -38,65 +45,61 @@ export const STANDARD_VISION: SkillDefinition = {
     capabilities: {
         senses: [{
             domain: 'senses',
-            providerId: 'standard_vision.los',
+            providerId: 'enemy_awareness.los',
             priority: 10,
             resolve: (query) => {
+                if (query.observer.type !== 'enemy') {
+                    return {
+                        decision: 'neutral',
+                        channelId: 'enemy_awareness'
+                    };
+                }
+
                 const context = query.context || {};
                 if (context.statusBlind === true || context.smokeBlind === true) {
                     return {
                         decision: 'block',
                         blockKind: 'hard',
                         reason: 'status_blind',
-                        channelId: 'standard_vision',
+                        channelId: 'enemy_awareness',
                         maxRange: 0
                     };
                 }
-                const range = computeStandardVisionRange(query.observer);
+
+                const range = computeEnemyAwarenessDetectRange(query.observer);
                 if (query.distance > range) {
                     return {
                         decision: 'neutral',
-                        channelId: 'standard_vision',
+                        channelId: 'enemy_awareness',
                         maxRange: range
                     };
                 }
+
                 const los = query.evaluateLegacyLineOfSight({
                     stopAtWalls: query.stopAtWalls,
                     stopAtActors: query.stopAtActors,
                     stopAtLava: query.stopAtLava,
                     excludeActorId: query.excludeActorId
                 });
+
                 if (los.isValid) {
                     return {
                         decision: 'allow',
-                        channelId: 'standard_vision',
+                        channelId: 'enemy_awareness',
                         maxRange: range
                     };
                 }
+
                 return {
                     decision: 'block',
                     blockKind: 'soft',
                     reason: 'line_of_sight_blocked',
-                    channelId: 'standard_vision',
+                    channelId: 'enemy_awareness',
                     maxRange: range
                 };
             }
         }]
     },
-    upgrades: {
-        VISION_TIER_2: {
-            id: 'VISION_TIER_2',
-            name: 'Vision Tier II',
-            description: 'Increase visual tier by 1.'
-        },
-        VISION_TIER_3: {
-            id: 'VISION_TIER_3',
-            name: 'Vision Tier III',
-            description: 'Increase visual tier by 1.'
-        },
-        VISION_TIER_4: {
-            id: 'VISION_TIER_4',
-            name: 'Vision Tier IV',
-            description: 'Increase visual tier by 1.'
-        }
-    }
+    upgrades: {}
 };
+

@@ -44,6 +44,11 @@ export interface BaseEntityConfig {
 
 export type CompanionType = 'falcon' | 'skeleton';
 
+const ensureEnemyAwarenessSkill = (skills: Skill[] = []): Skill[] => {
+    if (skills.some(skill => skill.id === 'ENEMY_AWARENESS')) return skills;
+    return [...skills, ...buildSkillLoadout(['ENEMY_AWARENESS'])];
+};
+
 const cloneTrinity = (trinity: TrinityStats): TrinityStats => ({
     body: trinity.body,
     mind: trinity.mind,
@@ -75,11 +80,15 @@ const resolveDefaultTrinity = (config: BaseEntityConfig): TrinityStats => {
 };
 
 export const ensureActorTrinity = (actor: Actor): Actor => {
+    const normalizedSkills = actor.type === 'enemy'
+        ? ensureEnemyAwarenessSkill(actor.activeSkills || [])
+        : (actor.activeSkills || []);
+
     const components = new Map(actor.components || []);
     const hasTrinity = components.has('trinity');
     const hasCombatProfile = components.has('combat_profile');
     const hasAilmentProfile = components.has('ailment_profile');
-    if (hasTrinity && hasCombatProfile && hasAilmentProfile) return actor;
+    if (hasTrinity && hasCombatProfile && hasAilmentProfile && normalizedSkills === actor.activeSkills) return actor;
 
     const resolved = resolveDefaultTrinity({
         id: actor.id,
@@ -121,10 +130,12 @@ export const ensureActorTrinity = (actor: Actor): Actor => {
         });
     }
 
-    return {
+    const normalizedActor: Actor = {
         ...actor,
         components,
+        activeSkills: normalizedSkills
     };
+    return normalizedActor;
 };
 
 /**
@@ -150,9 +161,12 @@ export function buildSkillLoadout(skillIds: string[]): Skill[] {
  */
 export function createEntity(config: BaseEntityConfig): Actor {
     // Build skill loadout
-    const activeSkills: Skill[] = config.activeSkills
+    let activeSkills: Skill[] = config.activeSkills
         ? [...config.activeSkills]
         : buildSkillLoadout(config.skills || []);
+    if (config.type === 'enemy') {
+        activeSkills = ensureEnemyAwarenessSkill(activeSkills);
+    }
 
     // Build components map
     const components = new Map(config.components || []);

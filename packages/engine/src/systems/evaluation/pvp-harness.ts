@@ -1,7 +1,12 @@
 import type { GameState, Actor, Point } from '../../types';
 import type { ArchetypeLoadoutId, BotPolicy } from './harness-types';
 import { generateInitialState } from '../../logic';
-import { DEFAULT_LOADOUTS, applyLoadoutToPlayer } from '../loadout';
+import {
+    DEFAULT_LOADOUTS,
+    applyLoadoutToPlayer,
+    ensureMobilitySkill,
+    ensurePlayerCoreVisionSkill
+} from '../loadout';
 import { createEntity, ensureActorTrinity } from '../entities/entity-factory';
 import { SkillRegistry } from '../../skillRegistry';
 import { applyEffects } from '../effect-engine';
@@ -15,6 +20,7 @@ import {
     incrementHistogram,
 } from './harness-core';
 import { runHarnessSimulationBatch } from './harness-batch';
+import { recomputeVisibility } from '../visibility';
 export { summarizePvpBatch } from './pvp-harness-summary';
 
 type DuelSide = 'left' | 'right';
@@ -126,6 +132,29 @@ const cloneActor = (actor: Actor): Actor => {
     };
 };
 
+const cloneVisibility = (visibility: GameState['visibility']): GameState['visibility'] => {
+    if (!visibility) return visibility;
+    return {
+        playerFog: {
+            visibleTileKeys: [...(visibility.playerFog.visibleTileKeys || [])],
+            exploredTileKeys: [...(visibility.playerFog.exploredTileKeys || [])],
+            visibleActorIds: [...(visibility.playerFog.visibleActorIds || [])],
+            detectedActorIds: [...(visibility.playerFog.detectedActorIds || [])]
+        },
+        enemyAwarenessById: Object.fromEntries(
+            Object.entries(visibility.enemyAwarenessById || {}).map(([enemyId, awareness]) => [
+                enemyId,
+                {
+                    ...awareness,
+                    lastKnownPlayerPosition: awareness.lastKnownPlayerPosition
+                        ? clonePoint(awareness.lastKnownPlayerPosition)
+                        : null
+                }
+            ])
+        )
+    };
+};
+
 const cloneGameStateForSimulation = (state: GameState): GameState => {
     const tiles = new Map(
         Array.from(state.tiles.entries()).map(([key, tile]) => [
@@ -151,7 +180,8 @@ const cloneGameStateForSimulation = (state: GameState): GameState => {
         message: [...(state.message || [])],
         visualEvents: [...(state.visualEvents || [])],
         timelineEvents: [...(state.timelineEvents || [])],
-        tiles
+        tiles,
+        visibility: cloneVisibility(state.visibility)
     };
 };
 
@@ -195,6 +225,7 @@ const applyDuelAction = (state: GameState, actorId: string, action: DuelAction):
     const ticked = tickActorSkills(tickStatuses(actorAfter));
     cur = setActorById(cur, ticked);
     cur.occupancyMask = SpatialSystem.refreshOccupancyMask(cur);
+    cur = recomputeVisibility(cur);
     return cur;
 };
 
@@ -328,7 +359,7 @@ const buildDuelState = (seed: string, leftLoadoutId: ArchetypeLoadoutId, rightLo
         maxHp: left.maxHp,
         speed: left.speed || 1,
         factionId: 'player',
-        activeSkills: leftApplied.activeSkills,
+        activeSkills: ensurePlayerCoreVisionSkill(ensureMobilitySkill(leftApplied.activeSkills)),
         archetype: leftLoadout.id as any,
         weightClass: 'Standard',
     }));
@@ -377,7 +408,7 @@ const buildDuelState = (seed: string, leftLoadoutId: ArchetypeLoadoutId, rightLo
         initiativeQueue: undefined
     };
     state.occupancyMask = SpatialSystem.refreshOccupancyMask(state);
-    return state;
+    return recomputeVisibility(state);
 };
 
 export const simulatePvpRun = (

@@ -5,6 +5,7 @@ import { getNeighbors, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
 import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { SpatialSystem } from '../systems/spatial-system';
+import { resolveEnemyTrackingTarget } from '../systems/visibility';
 
 export class WildStrategy implements IStrategyProvider {
     private getFalconIntent(gameState: GameState, actor: Actor): Intent {
@@ -144,7 +145,7 @@ export class WildStrategy implements IStrategyProvider {
             };
         }
 
-        const playerPos = gameState.player.position;
+        const playerPos = resolveEnemyTrackingTarget(gameState, actor);
         return decideEnemyIntent(
             actor,
             playerPos,

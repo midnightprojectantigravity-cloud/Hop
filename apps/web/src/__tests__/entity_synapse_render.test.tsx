@@ -22,12 +22,7 @@ describe('entity synapse render shell', () => {
           } as any}
           x={0}
           y={0}
-          waapiControlled={true}
-          segmentDurationMs={0}
-          segmentEasing="linear"
-          stretchTransform=""
           isFlashing={false}
-          teleportPhase="none"
           isInvisible={false}
           visualOpacity={1}
           isPlayer={false}
@@ -53,4 +48,3 @@ describe('entity synapse render shell', () => {
     expect(html).toContain('data-synapse-pulse="active"');
   });
 });
-

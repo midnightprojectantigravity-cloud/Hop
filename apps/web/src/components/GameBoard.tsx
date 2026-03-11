@@ -1,7 +1,10 @@
 import React, { useMemo, useState, useEffect, useLayoutEffect } from 'react';
 import type { GameState, Point, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
 import {
-    isHexInRectangularGrid, hexToPixel,
+    hexDistance,
+    isHexInRectangularGrid,
+    hexToPixel,
+    pointToKey,
     TILE_SIZE
 } from '@hop/engine';
 import { CameraZoomControls } from './game-board/CameraZoomControls';
@@ -9,14 +12,13 @@ import { JuiceTraceOverlay } from './game-board/JuiceTraceOverlay';
 import { GameBoardSceneSvg } from './game-board/GameBoardSceneSvg';
 import type { VisualEchoEntry } from './game-board/VisualEchoLayer';
 import { useBoardInteractions } from './game-board/useBoardInteractions';
-import { useBoardCamera } from './game-board/useBoardCamera';
 import { useBoardDepthSprites } from './game-board/useBoardDepthSprites';
 import { useBoardBiomeVisuals } from './game-board/useBoardBiomeVisuals';
 import { useBoardTargetingPreview } from './game-board/useBoardTargetingPreview';
 import { useBoardEventEffects } from './game-board/useBoardEventEffects';
 import { useBoardActorVisuals } from './game-board/useBoardActorVisuals';
 import { useBoardJuicePresentation } from './game-board/useBoardJuicePresentation';
-import { useMovementTracePlayback } from './game-board/useMovementTracePlayback';
+import { useBoardPresentationController } from './game-board/useBoardPresentationController';
 import type {
     VisualAssetManifest,
     VisualBlendMode
@@ -24,7 +26,6 @@ import type {
 import {
     type CameraInsetsPx,
     type CameraRect,
-    resolveBinaryZoomLevels,
 } from '../visual/camera';
 import { resolveSynapsePreview, type SynapseDeltaEntry, type SynapsePulse, type SynapseSelection } from '../app/synapse';
 
@@ -100,19 +101,24 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const [decals, setDecals] = useState<BoardDecal[]>([]);
     const [visualEchoes, setVisualEchoes] = useState<VisualEchoEntry[]>([]);
     const prevActorPositionsRef = React.useRef<Map<string, Point> | null>(null);
+    const resetPresentationRef = React.useRef<() => void>(() => undefined);
     const playerPos = gameState.player.position;
     const movementRange = useMemo(
         () => Math.max(1, Math.floor(Number(gameState.player.speed) || 0)),
         [gameState.player.speed]
     );
-    const zoomLevels = useMemo(
-        () => resolveBinaryZoomLevels({
-            mapWidth: gameState.gridWidth,
-            mapHeight: gameState.gridHeight,
-            movementRange
-        }),
-        [gameState.gridWidth, gameState.gridHeight, movementRange]
-    );
+    const lineOfSightRange = useMemo(() => {
+        const visibleTileKeys = gameState.visibility?.playerFog?.visibleTileKeys || [];
+        if (visibleTileKeys.length === 0) return undefined;
+
+        const visibleSet = new Set(visibleTileKeys);
+        let maxDistance = 0;
+        for (const tile of gameState.tiles.values()) {
+            if (!visibleSet.has(pointToKey(tile.position))) continue;
+            maxDistance = Math.max(maxDistance, hexDistance(playerPos, tile.position));
+        }
+        return Math.max(1, Math.floor(maxDistance));
+    }, [gameState.tiles, gameState.visibility?.playerFog?.visibleTileKeys, playerPos]);
 
     // Filter cells based on dynamic diamond geometry
     const cells = useMemo(() => {
@@ -179,37 +185,37 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         width: bounds.width,
         height: bounds.height
     }), [bounds.minX, bounds.minY, bounds.width, bounds.height]);
-    const {
-        svgRef,
-        boardViewportRef,
-        zoomPreset,
-        isCameraPanning,
-        setIsCameraPanning,
-        cameraPanOffsetRef,
-        isCameraPanningRef,
-        isPinchingRef,
-        suppressTileClickUntilRef,
-        activePointersRef,
-        dragStateRef,
-        pinchStateRef,
-        cancelCameraAnimation,
-        animateCameraToTarget,
-        updatePanFromWorldDelta,
-        setZoomPresetAnimated,
-        renderedViewBox,
-    } = useBoardCamera({
-        baseViewBox,
-        playerWorld,
-        playerPosition: playerPos,
-        mapShape: gameState.mapShape,
-        tacticalZoomPreset: zoomLevels.tactical,
-        actionZoomPreset: zoomLevels.action,
-        floor: gameState.floor,
-        cameraSafeInsetsPx,
-    });
+    const visibleTileBounds = useMemo<CameraRect | null>(() => {
+        const visibleTileKeys = gameState.visibility?.playerFog?.visibleTileKeys || [];
+        if (visibleTileKeys.length === 0) return null;
 
+        let minX = Number.POSITIVE_INFINITY;
+        let minY = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
+
+        for (const key of visibleTileKeys) {
+            const tile = gameState.tiles.get(key);
+            if (!tile) continue;
+            const { x, y } = hexToPixel(tile.position, TILE_SIZE);
+            minX = Math.min(minX, x - TILE_SIZE);
+            minY = Math.min(minY, y - TILE_SIZE);
+            maxX = Math.max(maxX, x + TILE_SIZE);
+            maxY = Math.max(maxY, y + TILE_SIZE);
+        }
+
+        if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+            return null;
+        }
+
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }, [gameState.tiles, gameState.visibility?.playerFog?.visibleTileKeys]);
     const {
-        latestTraceByActor,
         movementTargetSet,
         hasPrimaryMovementSkills,
         stairsKey,
@@ -276,34 +282,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     });
 
     const {
-        handleTileClick,
-        handleHoverTile,
-        handleBoardPointerDown,
-        handleBoardPointerMove,
-        handleBoardPointerUp,
-        handleBoardPointerCancel,
-        handleBoardWheel,
-    } = useBoardInteractions({
-        svgRef,
-        onMove,
-        zoomPreset,
-        tacticalZoomPreset: zoomLevels.tactical,
-        actionZoomPreset: zoomLevels.action,
-        setHoveredTile,
-        setIsCameraPanning,
-        cameraPanOffsetRef,
-        isCameraPanningRef,
-        isPinchingRef,
-        suppressTileClickUntilRef,
-        activePointersRef,
-        dragStateRef,
-        pinchStateRef,
-        animateCameraToTarget,
-        updatePanFromWorldDelta,
-        setZoomPresetAnimated,
-    });
-
-    const {
         actorPositionById,
         juiceActorSnapshots,
         entityVisualPoseById,
@@ -314,13 +292,51 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         entityPoseNowMs,
         onMirrorSnapshot,
     });
-
-    const { movementBusy, resetMovementPlayback } = useMovementTracePlayback({
-        visualEvents: gameState.visualEvents,
-        turnNumber: gameState.turnNumber,
-        actorPositionById,
+    const {
         svgRef,
-        cancelCameraAnimation,
+        boardViewportRef,
+        presentationBusy,
+        cameraState,
+        beginManualPan,
+        panByWorldDelta,
+        endManualPan,
+        selectZoomMode,
+        recenter,
+        resetPresentation,
+    } = useBoardPresentationController({
+        gameState,
+        baseViewBox,
+        visibleTileBounds,
+        actorPositionById,
+        playerWorld,
+        movementRange,
+        lineOfSightRange,
+        cameraSafeInsetsPx,
+    });
+
+    useEffect(() => {
+        resetPresentationRef.current = resetPresentation;
+    }, [resetPresentation]);
+
+    const {
+        isCameraPanning,
+        handleTileClick,
+        handleHoverTile,
+        handleBoardPointerDown,
+        handleBoardPointerMove,
+        handleBoardPointerUp,
+        handleBoardPointerCancel,
+        handleBoardWheel,
+    } = useBoardInteractions({
+        svgRef,
+        onMove,
+        zoomMode: cameraState.zoomMode,
+        setHoveredTile,
+        beginManualPan,
+        panByWorldDelta,
+        endManualPan,
+        selectZoomMode,
+        recenter,
     });
 
     useEffect(() => {
@@ -372,17 +388,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     ]);
 
     useEffect(() => {
-        onBusyStateChange?.(movementBusy || juiceBusy);
-    }, [movementBusy, juiceBusy, onBusyStateChange]);
+        onBusyStateChange?.(presentationBusy || juiceBusy);
+    }, [presentationBusy, juiceBusy, onBusyStateChange]);
 
     useLayoutEffect(() => {
         // Floor transitions remount board data in one reducer step; clear any in-flight
         // animation side-effects so actor visuals always rebind to new floor positions.
-        cancelCameraAnimation();
-        resetMovementPlayback();
+        resetPresentationRef.current();
         resetBoardEventEffects();
         resetBoardJuicePresentation();
-    }, [gameState.floor, cancelCameraAnimation, resetMovementPlayback, resetBoardEventEffects, resetBoardJuicePresentation]);
+    }, [gameState.floor, resetBoardEventEffects, resetBoardJuicePresentation]);
     const gridPoints = useMemo(() => getHexPoints(TILE_SIZE - 1), []);
     const synapsePreview = useMemo(() => resolveSynapsePreview(gameState.intentPreview), [gameState.intentPreview]);
     const handleSynapseInspectEntity = React.useCallback((actorId: string) => {
@@ -414,7 +429,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 )}
                 <GameBoardSceneSvg
                     svgRef={svgRef}
-                    renderedViewBox={renderedViewBox}
                     cells={cells}
                     gameState={gameState}
                     selectedSkillId={selectedSkillId}
@@ -437,7 +451,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     manifestUnitToBoardScale={manifestUnitToBoardScale}
                     mountainSettingsByAssetId={mountainSettingsByAssetId}
                     resolveMountainSettings={resolveMountainSettings}
-                    latestTraceByActor={latestTraceByActor}
                     entityVisualPoseById={entityVisualPoseById}
                     biomeThemeKey={biomeThemeKey}
                     juiceActorSnapshots={juiceActorSnapshots}
@@ -466,10 +479,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 <JuiceTraceOverlay entries={juiceDebugEntries} />
             )}
             <CameraZoomControls
-                activePreset={zoomPreset}
-                tacticalPreset={zoomLevels.tactical}
-                actionPreset={zoomLevels.action}
-                onSelectPreset={setZoomPresetAnimated}
+                activeMode={cameraState.zoomMode}
+                isDetached={cameraState.isDetached}
+                onSelectMode={selectZoomMode}
+                onRecenter={recenter}
             />
         </div>
     );

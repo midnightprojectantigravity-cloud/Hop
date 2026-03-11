@@ -91,6 +91,12 @@ export const deriveMobileToastsFromSimulationEvents = (
   return out;
 };
 
+const mirrorActorIdSignature = (snapshot: StateMirrorSnapshot): string =>
+  snapshot.actors
+    .map(actor => actor.id)
+    .sort((a, b) => a.localeCompare(b))
+    .join('|');
+
 interface UseSimulationFeedbackArgs {
   gameState: GameState;
   appendTurnTrace: (event: string, details?: Record<string, unknown>) => void;
@@ -100,12 +106,14 @@ export const useSimulationFeedback = ({ gameState, appendTurnTrace }: UseSimulat
   const simulationEventLogRef = useRef<SimulationEvent[]>([]);
   const latestUiMirrorSnapshotRef = useRef<StateMirrorSnapshot | null>(null);
   const lastMirrorValidationKeyRef = useRef('');
+  const mobileToastSequenceRef = useRef(0);
   const [mobileToasts, setMobileToasts] = useState<MobileToast[]>([]);
 
   const pushMobileToast = useCallback((toast: Omit<MobileToast, 'createdAt'>) => {
     const now = Date.now();
+    const sequence = ++mobileToastSequenceRef.current;
     setMobileToasts(prev => {
-      const next = [...prev, { ...toast, createdAt: now }];
+      const next = [...prev, { ...toast, id: `${toast.id}:${sequence}`, createdAt: now }];
       return next.slice(-4);
     });
   }, []);
@@ -166,9 +174,11 @@ export const useSimulationFeedback = ({ gameState, appendTurnTrace }: UseSimulat
     const uiSnapshot = latestUiMirrorSnapshotRef.current;
     if (!uiSnapshot) return;
     if (uiSnapshot.turn !== engineSnapshot.turn || uiSnapshot.stackTick !== engineSnapshot.stackTick) return;
+    if (uiSnapshot.floor !== engineSnapshot.floor || uiSnapshot.frame !== engineSnapshot.frame) return;
+    if (mirrorActorIdSignature(uiSnapshot) !== mirrorActorIdSignature(engineSnapshot)) return;
 
     const result = validateStateMirrorSnapshot(engineSnapshot, uiSnapshot);
-    const key = `${engineSnapshot.turn}:${engineSnapshot.stackTick}:${result.ok ? 'ok' : result.mismatches.length}`;
+    const key = `${engineSnapshot.floor}:${engineSnapshot.turn}:${engineSnapshot.stackTick}:${engineSnapshot.frame}:${result.ok ? 'ok' : result.mismatches.length}`;
     if (key === lastMirrorValidationKeyRef.current) return;
     lastMirrorValidationKeyRef.current = key;
 

@@ -6,11 +6,19 @@ import { appendTaggedMessage } from './systems/engine-messages';
 import { StrategyRegistry } from './systems/ai/strategy-registry';
 import { isPlayerTurn } from './systems/initiative';
 import { resolveAcaeRuleset } from './systems/ailments/runtime';
-import { applyLoadoutToPlayer, DEFAULT_LOADOUTS, type Loadout } from './systems/loadout';
+import {
+    applyLoadoutToPlayer,
+    DEFAULT_LOADOUTS,
+    ensureMobilitySkill,
+    ensurePlayerCoreVisionSkill,
+    type Loadout
+} from './systems/loadout';
 import { createDailyObjectives, createDailySeed, toDateKey } from './systems/run-objectives';
 import { ManualStrategy } from './strategy/manual';
 import { resolvePendingStateAction, resolveSelectUpgradeAction } from './logic-rules';
 import type { Intent } from './types/intent';
+import { recomputeVisibility } from './systems/visibility';
+import { buildIntentPreview } from './systems/telegraph-projection';
 
 type ReducerDeps = {
     processNextTurn: (state: GameState, isResuming?: boolean) => GameState;
@@ -227,17 +235,24 @@ export const resolveGameStateAction = (
                 const reconciledLoadout = applyLoadoutToPlayer(loadout, {
                     capabilityPassivesEnabled: mergedRuleset.capabilities?.loadoutPassivesEnabled === true
                 });
-                return {
+                const nextState: GameState = {
                     ...next,
                     player: {
                         ...next.player,
-                        activeSkills: reconciledLoadout.activeSkills,
+                        activeSkills: ensurePlayerCoreVisionSkill(
+                            ensureMobilitySkill(reconciledLoadout.activeSkills)
+                        ),
                         archetype: reconciledLoadout.archetype
                     },
                     ruleset: mergedRuleset,
                     dailyRunDate: dateKey,
                     runObjectives: createDailyObjectives(dailySeed),
                     hazardBreaches: 0
+                };
+                const withVisibility = recomputeVisibility(nextState);
+                return {
+                    ...withVisibility,
+                    intentPreview: buildIntentPreview(withVisibility)
                 };
             }
             const next = deps.generateInitialState(1, seed, undefined, undefined, loadout, mapSize, mapShape);
@@ -248,14 +263,21 @@ export const resolveGameStateAction = (
             const reconciledLoadout = applyLoadoutToPlayer(loadout, {
                 capabilityPassivesEnabled: mergedRuleset.capabilities?.loadoutPassivesEnabled === true
             });
-            return {
+            const nextState: GameState = {
                 ...next,
                 player: {
                     ...next.player,
-                    activeSkills: reconciledLoadout.activeSkills,
+                    activeSkills: ensurePlayerCoreVisionSkill(
+                        ensureMobilitySkill(reconciledLoadout.activeSkills)
+                    ),
                     archetype: reconciledLoadout.archetype
                 },
                 ruleset: mergedRuleset
+            };
+            const withVisibility = recomputeVisibility(nextState);
+            return {
+                ...withVisibility,
+                intentPreview: buildIntentPreview(withVisibility)
             };
         }
 

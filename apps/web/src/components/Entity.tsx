@@ -1,10 +1,9 @@
 import React from 'react';
-import { isStunned, hexToPixel, getDirectionFromTo, hexEquals, TILE_SIZE, getEntityVisual, isEntityFlying } from '@hop/engine';
+import { isStunned, hexToPixel, TILE_SIZE, getEntityVisual, isEntityFlying } from '@hop/engine';
 import { computeEntityContrastBoost } from './entity/entity-icon';
 import { areEntityPropsEqual } from './entity/entity-props-comparator';
 import { EntityRenderShell } from './entity/entity-render-shell';
 import { EntitySpear } from './entity/entity-spear';
-import { useEntityMotion } from './entity/use-entity-motion';
 import { useEntityVisualState } from './entity/use-entity-visual-state';
 import type { EntityProps } from './entity/entity-types';
 import { SYNAPSE_PULSE_DURATION_MS } from '../app/synapse';
@@ -15,8 +14,6 @@ const EntityBase: React.FC<EntityProps> = ({
     entity,
     isSpear,
     isDying,
-    movementTrace,
-    waapiControlled = false,
     assetHref,
     fallbackAssetHref,
     floorTheme,
@@ -26,20 +23,6 @@ const EntityBase: React.FC<EntityProps> = ({
     synapsePulseToken,
 }) => {
     const isPlayer = entity.type === 'player';
-    const movementDebugEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_MOVEMENT);
-    const {
-        displayPos,
-        displayPixel,
-        animationPrevPos,
-        segmentDurationMs,
-        segmentEasing,
-        teleportPhase
-    } = useEntityMotion({
-        entity,
-        movementTrace,
-        waapiControlled,
-        movementDebugEnabled
-    });
     const {
         resolvedAssetHref,
         handleAssetError,
@@ -58,18 +41,7 @@ const EntityBase: React.FC<EntityProps> = ({
         return () => clearTimeout(timeoutId);
     }, [synapsePulseToken]);
 
-    const { x, y } = displayPixel || hexToPixel(displayPos, TILE_SIZE);
-
-    // Calculate movement stretch based on the animating previous position
-    let stretchTransform = '';
-    const movePrev = animationPrevPos;
-    if (movePrev && !hexEquals(displayPos, movePrev)) {
-        const dir = getDirectionFromTo(movePrev, displayPos);
-        if (dir !== -1) {
-            const angle = dir * 60;
-            stretchTransform = `rotate(${angle}) scale(1.15, 0.85) rotate(${-angle})`;
-        }
-    }
+    const { x, y } = hexToPixel(entity.position, TILE_SIZE);
 
     // Handle invisibility (assassin)
     const isInvisible = entity.isVisible === false;
@@ -110,14 +82,9 @@ const EntityBase: React.FC<EntityProps> = ({
             entity={entity}
             x={x}
             y={y}
-            waapiControlled={waapiControlled}
-            segmentDurationMs={segmentDurationMs}
-            segmentEasing={segmentEasing}
             isDying={isDying}
             poseTransform={poseTransform}
-            stretchTransform={stretchTransform}
             isFlashing={isFlashing}
-            teleportPhase={teleportPhase}
             isInvisible={isInvisible}
             visualOpacity={visual.opacity || 1}
             isPlayer={isPlayer}

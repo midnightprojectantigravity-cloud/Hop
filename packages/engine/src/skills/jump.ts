@@ -94,9 +94,14 @@ export const JUMP: SkillDefinition = {
             type: 'Displacement',
             target: 'self',
             destination: target,
+            source: attacker.position,
+            path: [attacker.position, target],
             ignoreCollision: true,
             ignoreGroundHazards: movementPolicy.ignoreGroundHazards,
-            simulatePath: movementPolicy.simulatePath
+            simulatePath: movementPolicy.simulatePath,
+            presentationKind: 'jump',
+            pathStyle: 'arc',
+            presentationSequenceId: `${attacker.id}:JUMP:${target.q},${target.r},${target.s}:${state.turnNumber}`
         });
 
         // 5. AoE Landing Effect: Stun adjacent enemies

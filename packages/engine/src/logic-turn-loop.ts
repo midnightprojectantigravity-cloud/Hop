@@ -22,6 +22,7 @@ import { StrategyRegistry } from './systems/ai/strategy-registry';
 import { processIntent } from './systems/intent-middleware';
 import { TacticalEngine } from './systems/tactical-engine';
 import { applyAutoAttack } from './skills/auto_attack';
+import { recomputeVisibility } from './systems/visibility';
 
 type ExecuteStatusWindowFn = (
     state: GameState,
@@ -96,10 +97,10 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                     { reason: 'GLOBAL_DEATH_CHECK' }
                 );
             }
-            curState = {
+            curState = recomputeVisibility({
                 ...curState,
                 occupancyMask: SpatialSystem.refreshOccupancyMask(curState)
-            };
+            });
             let actorIndex = buildActorIndex(curState);
 
             let actorId: string | undefined;
@@ -233,12 +234,13 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 }
 
                 if (intentOrPromise instanceof Promise) {
-                    const intentPreview = buildIntentPreview(curState);
+                    const withVisibility = recomputeVisibility(curState);
+                    const intentPreview = buildIntentPreview(withVisibility);
                     return {
-                        ...curState,
+                        ...withVisibility,
                         intentPreview,
-                        message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
-                        dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
+                        message: appendTaggedMessages(withVisibility.message, messages, 'INFO', 'SYSTEM'),
+                        dyingEntities: [...(withVisibility.dyingEntities || []), ...dyingEntities]
                     };
                 }
 
@@ -374,18 +376,23 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 const playerTurnRules = deps.applyPlayerEndOfTurnRules(curState, actorStepId, { withPendingFrame: deps.withPendingFrame });
                 curState = playerTurnRules.state;
                 if (playerTurnRules.haltTurnLoop) {
-                    return curState;
+                    const withVisibility = recomputeVisibility(curState);
+                    return {
+                        ...withVisibility,
+                        intentPreview: buildIntentPreview(withVisibility)
+                    };
                 }
                 messages.push(...playerTurnRules.messages);
             }
         }
 
-        const intentPreview = buildIntentPreview(curState);
+        const withVisibility = recomputeVisibility(curState);
+        const intentPreview = buildIntentPreview(withVisibility);
         return {
-            ...curState,
+            ...withVisibility,
             intentPreview,
-            message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
-            dyingEntities: [...(curState.dyingEntities || []), ...dyingEntities]
+            message: appendTaggedMessages(withVisibility.message, messages, 'INFO', 'SYSTEM'),
+            dyingEntities: [...(withVisibility.dyingEntities || []), ...dyingEntities]
         };
     };
 

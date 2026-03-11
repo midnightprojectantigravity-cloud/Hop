@@ -2,8 +2,10 @@ import type { GameState, Point } from '../types';
 import { pointToKey } from '../hex';
 
 export interface StateMirrorSnapshot {
+    floor: number;
     turn: number;
     stackTick: number;
+    frame: number;
     actors: Array<{
         id: string;
         position: Point;
@@ -33,8 +35,10 @@ export const buildEngineMirrorSnapshot = (state: GameState): StateMirrorSnapshot
     ];
 
     return {
+        floor: state.floor || 0,
         turn: state.turnNumber || 0,
         stackTick: state.stackTrace?.length || 0,
+        frame: state.commandLog?.length || 0,
         actors: actors.map(actor => ({
             id: actor.id,
             position: clonePoint(actor.position)
@@ -72,4 +76,3 @@ export const validateStateMirrorSnapshot = (
         mismatches
     };
 };
-

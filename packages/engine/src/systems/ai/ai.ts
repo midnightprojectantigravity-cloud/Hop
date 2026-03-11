@@ -10,6 +10,7 @@ import {
     type EnemyPlannerResult,
 } from './enemy/policies';
 import type { EnemyAiContext } from './enemy/types';
+import { resolveEnemyTrackingTarget } from '../visibility';
 
 /**
  * Get the direction from one hex to another (0-5)
@@ -49,9 +50,10 @@ export const registerEnemySubtypeAiHandler = (subtype: string, handler: EnemyAiH
  * Returns a new Entity instance (do not mutate input).
  */
 export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: GameState & { occupiedCurrentTurn?: Point[] }): EnemyActionResult => {
+    const trackedPlayerPos = state.visibility ? resolveEnemyTrackingTarget(state, bt) : playerMovedTo;
     const context: EnemyAiContext = {
         enemy: bt,
-        playerPos: playerMovedTo,
+        playerPos: trackedPlayerPos,
         state
     };
     const selected = selectEnemyDecision(context);
@@ -63,9 +65,10 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
 };
 
 export const decideEnemyIntent = (bt: Entity, playerMovedTo: Point, state: GameState & { occupiedCurrentTurn?: Point[] }) => {
+    const trackedPlayerPos = state.visibility ? resolveEnemyTrackingTarget(state, bt) : playerMovedTo;
     const context: EnemyAiContext = {
         enemy: bt,
-        playerPos: playerMovedTo,
+        playerPos: trackedPlayerPos,
         state
     };
     return decideEnemyIntentFromSelector(context);

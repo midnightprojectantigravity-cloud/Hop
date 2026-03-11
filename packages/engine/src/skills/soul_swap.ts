@@ -34,8 +34,22 @@ export const SOUL_SWAP: SkillDefinition = {
         }
 
         // SWAP!
-        effects.push({ type: 'Displacement', target: attacker.id, destination: target });
-        effects.push({ type: 'Displacement', target: minion.id, destination: attacker.position });
+        effects.push({
+            type: 'Displacement',
+            target: attacker.id,
+            destination: target,
+            presentationKind: 'teleport',
+            pathStyle: 'blink',
+            presentationSequenceId: `${attacker.id}:SOUL_SWAP:${target.q},${target.r},${target.s}:${state.turnNumber}`
+        });
+        effects.push({
+            type: 'Displacement',
+            target: minion.id,
+            destination: attacker.position,
+            presentationKind: 'teleport',
+            pathStyle: 'blink',
+            presentationSequenceId: `${minion.id}:SOUL_SWAP:${attacker.position.q},${attacker.position.r},${attacker.position.s}:${state.turnNumber}`
+        });
 
         effects.push({
             type: 'Juice',

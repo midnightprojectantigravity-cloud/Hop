@@ -32,12 +32,27 @@ export type WeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWa
 // Skill slot types
 export type SkillSlot = 'offensive' | 'defensive' | 'utility' | 'passive';
 
+export type MovementPresentationKind =
+    | 'walk'
+    | 'dash'
+    | 'jump'
+    | 'teleport'
+    | 'forced_slide';
+
+export type MovementPathStyle =
+    | 'hex_step'
+    | 'arc'
+    | 'blink';
+
 export interface MovementTrace {
     actorId: string;
     origin: Point;      // Start Hex
     path: Point[];      // Every hex touched during the slide/fling
     destination: Point; // Final landing hex
     movementType?: 'slide' | 'teleport';
+    presentationKind?: MovementPresentationKind;
+    pathStyle?: MovementPathStyle;
+    sequenceId?: string;
     durationMs?: number;
     startDelayMs?: number;
     interruptedBy?: 'WALL' | 'ACTOR' | 'BOUNDARY' | 'LAVA';
@@ -112,6 +127,9 @@ export type AtomicEffect =
         ignoreCollision?: boolean;
         simulatePath?: boolean;
         ignoreGroundHazards?: boolean;
+        presentationKind?: MovementPresentationKind;
+        pathStyle?: MovementPathStyle;
+        presentationSequenceId?: string;
     }
     | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string; source?: Point; scoreEvent?: CombatScoreEvent }
     | { type: 'Heal'; target: 'targetActor' | string; amount: number }
@@ -713,6 +731,28 @@ export interface Room {
 // Floor themes
 export type FloorTheme = 'catacombs' | 'inferno' | 'throne' | 'frozen' | 'void';
 
+export type FogState = 'unseen' | 'explored' | 'visible';
+
+export interface FogOfWarState {
+    visibleTileKeys: string[];
+    exploredTileKeys: string[];
+    visibleActorIds: string[];
+    detectedActorIds: string[];
+}
+
+export interface EnemyAwarenessState {
+    enemyId: string;
+    lastKnownPlayerPosition: Point | null;
+    lastSeenTurn: number | null;
+    memoryTurnsRemaining: number;
+    butcherFactor: number;
+}
+
+export interface VisibilityState {
+    playerFog: FogOfWarState;
+    enemyAwarenessById: Record<string, EnemyAwarenessState>;
+}
+
 export interface GameState {
     turnNumber: number;
     player: Entity;
@@ -793,6 +833,8 @@ export interface GameState {
             version: 'capabilities-v1';
         };
     };
+
+    visibility?: VisibilityState;
 
     // Score
     kills: number;

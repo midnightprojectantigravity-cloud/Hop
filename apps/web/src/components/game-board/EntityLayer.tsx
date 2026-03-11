@@ -17,7 +17,6 @@ type JuiceActorSnapshot = {
 
 interface EntityLayerProps {
     gameState: GameState;
-    latestTraceByActor: Record<string, any>;
     entityVisualPoseById: Map<string, EntityVisualPose>;
     assetById: Map<string, VisualAssetEntry>;
     biomeThemeKey: string;
@@ -31,7 +30,6 @@ interface EntityLayerProps {
 
 export const EntityLayer: React.FC<EntityLayerProps> = ({
     gameState,
-    latestTraceByActor,
     entityVisualPoseById,
     assetById,
     biomeThemeKey,
@@ -42,6 +40,16 @@ export const EntityLayer: React.FC<EntityLayerProps> = ({
     synapsePulse,
     onSynapseInspectEntity,
 }) => {
+    const visibleActorIds = new Set(gameState.visibility?.playerFog?.visibleActorIds || []);
+    const detectedActorIds = new Set(gameState.visibility?.playerFog?.detectedActorIds || []);
+    const hasFogVisibility = !!gameState.visibility;
+    const renderedEnemies = hasFogVisibility
+        ? gameState.enemies.filter(enemy => visibleActorIds.has(enemy.id))
+        : gameState.enemies;
+    const detectedOnlyEnemies = hasFogVisibility
+        ? gameState.enemies.filter(enemy => !visibleActorIds.has(enemy.id) && detectedActorIds.has(enemy.id))
+        : [];
+
     return (
         <g>
             {gameState.lastSpearPath && gameState.lastSpearPath.length >= 2 && (() => {
@@ -68,8 +76,6 @@ export const EntityLayer: React.FC<EntityLayerProps> = ({
             <Entity
                 key={`player-${gameState.floor}`}
                 entity={gameState.player}
-                movementTrace={latestTraceByActor[gameState.player.id]}
-                waapiControlled={true}
                 visualPose={entityVisualPoseById.get(gameState.player.id)}
                 assetHref={assetById.get(resolveUnitAssetId(gameState.player))?.path}
                 fallbackAssetHref={resolveUnitFallbackAssetHref(gameState.player)}
@@ -78,12 +84,10 @@ export const EntityLayer: React.FC<EntityLayerProps> = ({
                 onSynapseInspect={onSynapseInspectEntity}
                 synapsePulseToken={synapsePulse?.actorId === gameState.player.id ? synapsePulse.token : undefined}
             />
-            {gameState.enemies.map(e => (
+            {renderedEnemies.map(e => (
                 <Entity
                     key={`${e.id}-${gameState.floor}`}
                     entity={e}
-                    movementTrace={latestTraceByActor[e.id]}
-                    waapiControlled={true}
                     visualPose={entityVisualPoseById.get(e.id)}
                     assetHref={assetById.get(resolveUnitAssetId(e))?.path}
                     fallbackAssetHref={resolveUnitFallbackAssetHref(e)}
@@ -93,13 +97,20 @@ export const EntityLayer: React.FC<EntityLayerProps> = ({
                     synapsePulseToken={synapsePulse?.actorId === e.id ? synapsePulse.token : undefined}
                 />
             ))}
+            {detectedOnlyEnemies.map(enemy => {
+                const { x, y } = hexToPixel(enemy.position, TILE_SIZE);
+                return (
+                    <g key={`detected-only-${enemy.id}-${gameState.floor}`} pointerEvents="none">
+                        <circle cx={x} cy={y} r={TILE_SIZE * 0.18} fill="rgba(24, 196, 255, 0.45)" />
+                        <circle cx={x} cy={y} r={TILE_SIZE * 0.08} fill="rgba(130, 239, 255, 0.9)" />
+                    </g>
+                );
+            })}
             {gameState.dyingEntities?.map(e => (
                 <Entity
                     key={`dying-${e.id}-${gameState.floor}-${gameState.turnNumber}`}
                     entity={e}
                     isDying={true}
-                    movementTrace={latestTraceByActor[e.id]}
-                    waapiControlled={true}
                     visualPose={entityVisualPoseById.get(e.id)}
                     assetHref={assetById.get(resolveUnitAssetId(e))?.path}
                     fallbackAssetHref={resolveUnitFallbackAssetHref(e)}

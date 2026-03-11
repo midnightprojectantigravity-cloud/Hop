@@ -11,11 +11,12 @@ import { UnifiedTileService } from './systems/tiles/unified-tile-service';
 import { appendTaggedMessage } from './systems/engine-messages';
 import { resetCooldownsForFreeMove } from './systems/free-move';
 import { ensureActorTrinity } from './systems/entities/entity-factory';
-import { ensurePlayerLoadoutIntegrity } from './systems/loadout';
+import { ensurePlayerLoadoutIntegrity, ensurePlayingPlayerLoadoutIntegrity } from './systems/loadout';
 import { buildInitiativeQueue } from './systems/initiative';
 import { SpatialSystem } from './systems/spatial-system';
 import { resolveAcaeRuleset } from './systems/ailments/runtime';
 import { buildIntentPreview } from './systems/telegraph-projection';
+import { recomputeVisibility } from './systems/visibility';
 
 type PendingFrameStateBuilder = (
     state: GameState,
@@ -54,7 +55,10 @@ export const hydrateLoadedState = (loaded: GameState): GameState => {
         hydratedTiles = new Map();
     }
 
-    const hydratedPlayer = ensurePlayerLoadoutIntegrity(ensureActorTrinity(loaded.player));
+    const baseHydratedPlayer = ensurePlayerLoadoutIntegrity(ensureActorTrinity(loaded.player));
+    const hydratedPlayer = loaded.gameStatus === 'playing'
+        ? ensurePlayingPlayerLoadoutIntegrity(baseHydratedPlayer)
+        : baseHydratedPlayer;
     const hydratedEnemies = (loaded.enemies || []).map(actor => ensureActorTrinity(actor));
     const hydratedCompanions = loaded.companions?.map(actor => ensureActorTrinity(actor));
 
@@ -72,9 +76,11 @@ export const hydrateLoadedState = (loaded: GameState): GameState => {
         ruleset: resolveAcaeRuleset(hydratedState)
     };
 
+    const withVisibility = recomputeVisibility(withRuleset);
+
     return {
-        ...withRuleset,
-        intentPreview: buildIntentPreview(withRuleset)
+        ...withVisibility,
+        intentPreview: buildIntentPreview(withVisibility)
     };
 };
 
@@ -110,9 +116,9 @@ export const resolveSelectUpgradeAction = (s: GameState, upgradeId: string): Gam
         };
     }
 
-    return {
+    const nextState: GameState = {
         ...s,
-        player,
+        player: ensurePlayingPlayerLoadoutIntegrity(player),
         upgrades: s.upgrades.includes(upgradeId) ? s.upgrades : [...s.upgrades, upgradeId],
         gameStatus: 'playing',
         shrinePosition: undefined,
@@ -120,6 +126,12 @@ export const resolveSelectUpgradeAction = (s: GameState, upgradeId: string): Gam
         pendingStatus: undefined,
         pendingFrames: undefined,
         message: appendTaggedMessage(s.message, `Gained ${upgradeDef?.name || upgradeId}!`, 'INFO', 'OBJECTIVE')
+    };
+
+    const withVisibility = recomputeVisibility(nextState);
+    return {
+        ...withVisibility,
+        intentPreview: buildIntentPreview(withVisibility)
     };
 };
 
@@ -197,8 +209,15 @@ export const resolvePendingStateAction = (
             next.initiativeQueue = buildInitiativeQueue(next);
             next.occupancyMask = SpatialSystem.refreshOccupancyMask(next);
         }
+
+        const withVisibility = recomputeVisibility(next);
+        const withPreview = {
+            ...withVisibility,
+            intentPreview: buildIntentPreview(withVisibility)
+        };
+
         return {
-            ...next,
+            ...withPreview,
             actionLog: [...(s.actionLog || [])],
             dailyRunDate: s.dailyRunDate,
             runObjectives: s.runObjectives,

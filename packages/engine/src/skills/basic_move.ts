@@ -4,7 +4,7 @@ import { getActorAt } from '../helpers';
 import { SpatialSystem } from '../systems/spatial-system';
 import { getSkillScenarios } from '../scenarios';
 import { isBlockedByActor } from '../systems/validation';
-import { isFreeMoveMode } from '../systems/free-move';
+import { isFreeMoveMode, resolveFreeMoveInterruption } from '../systems/free-move';
 import {
     resolveSkillMovementPolicy,
     validateMovementDestination,
@@ -155,6 +155,7 @@ export const BASIC_MOVE: SkillDefinition = {
     execute: (state: GameState, attacker: Actor, target?: Point): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
+        const freeMove = isFreeMoveMode(state);
 
         if (!target) return { effects, messages, consumesTurn: false };
 
@@ -162,30 +163,48 @@ export const BASIC_MOVE: SkillDefinition = {
         const range = movementPolicy.range;
         const validTargets = getSafeMovementRange(state, attacker, attacker.position, range, movementPolicy);
         const isTargetValid = validTargets.some((p: Point) => hexEquals(p, target));
-        const path = findSafePath(state, attacker, attacker.position, target, range, movementPolicy);
+        let path = findSafePath(state, attacker, attacker.position, target, range, movementPolicy);
 
         if (!isTargetValid || !path || path.length < 2) {
             messages.push('Target out of reach or blocked!');
             return { effects, messages, consumesTurn: false };
         }
 
+        let destination = target;
+        if (freeMove && attacker.id === state.player.id) {
+            const interruption = resolveFreeMoveInterruption(state, path);
+            if (interruption.interrupted) {
+                destination = interruption.destination;
+                const destinationIndex = path.findIndex(point => hexEquals(point, destination));
+                if (destinationIndex > 0) {
+                    path = path.slice(0, destinationIndex + 1);
+                }
+                const spottingEnemy = state.enemies.find(enemy => enemy.id === interruption.spottedByEnemyId);
+                const enemyLabel = spottingEnemy?.subtype || interruption.spottedByEnemyId || 'an enemy';
+                messages.push(`Spotted by ${enemyLabel}. Free Move interrupted.`);
+            }
+        }
+
         effects.push({
             type: 'Displacement',
             target: 'self',
-            destination: target,
+            destination,
             source: attacker.position,
             path,
             simulatePath: movementPolicy.simulatePath,
             // Validation/pathfinding allows passing through allies for free movement.
             // Runtime simulation must match that contract to avoid short-stops.
             ignoreCollision: true,
-            ignoreGroundHazards: movementPolicy.ignoreGroundHazards || movementPolicy.pathing === 'flight' || movementPolicy.pathing === 'teleport'
+            ignoreGroundHazards: movementPolicy.ignoreGroundHazards || movementPolicy.pathing === 'flight' || movementPolicy.pathing === 'teleport',
+            presentationKind: 'walk',
+            pathStyle: 'hex_step',
+            presentationSequenceId: `${attacker.id}:BASIC_MOVE:${destination.q},${destination.r},${destination.s}:${state.turnNumber}`
         });
 
         const actorLabel = attacker.id === state.player.id
             ? 'You'
             : `${attacker.subtype || 'enemy'}#${attacker.id}`;
-        messages.push(`${actorLabel} moved to (${target.q}, ${target.r}). [Range ${range}]`);
+        messages.push(`${actorLabel} moved to (${destination.q}, ${destination.r}). [Range ${range}]`);
 
         return { effects, messages, consumesTurn: true };
     },

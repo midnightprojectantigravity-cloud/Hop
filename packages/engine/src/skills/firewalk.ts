@@ -63,7 +63,10 @@ export const FIREWALK: SkillDefinition = {
             destination: target,
             source: attacker.position,
             simulatePath: movementPolicy.simulatePath,
-            ignoreGroundHazards: movementPolicy.ignoreGroundHazards
+            ignoreGroundHazards: movementPolicy.ignoreGroundHazards,
+            presentationKind: 'teleport',
+            pathStyle: 'blink',
+            presentationSequenceId: `${attacker.id}:FIREWALK:${target.q},${target.r},${target.s}:${state.turnNumber}`
         });
 
         // Grant Immunity

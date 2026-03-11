@@ -57,7 +57,10 @@ export const SHADOW_STEP: SkillDefinition = {
             target: 'self',
             destination: target,
             simulatePath: movementPolicy.simulatePath,
-            ignoreGroundHazards: movementPolicy.ignoreGroundHazards
+            ignoreGroundHazards: movementPolicy.ignoreGroundHazards,
+            presentationKind: 'teleport',
+            pathStyle: 'blink',
+            presentationSequenceId: `${attacker.id}:SHADOW_STEP:${target.q},${target.r},${target.s}:${state.turnNumber}`
         });
         effects.push({ type: 'SetStealth', target: 'self', amount: 2 });
         effects.push({

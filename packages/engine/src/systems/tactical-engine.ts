@@ -9,6 +9,12 @@ import { isFreeMoveMode } from './free-move';
  * Pure & Deterministic execution of an Intent.
  */
 export class TacticalEngine {
+    private static resolveActorById(gameState: GameState, actorId?: string): Actor | undefined {
+        if (!actorId) return undefined;
+        if (gameState.player.id === actorId) return gameState.player;
+        return gameState.enemies.find(enemy => enemy.id === actorId) || gameState.companions?.find(companion => companion.id === actorId);
+    }
+
     static execute(intent: Intent, actor: Actor, gameState: GameState): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean; targetId?: string; kills?: number; stackReactions?: AtomicStackReactionHooks } {
         const result = this.resolveExecution(intent, actor, gameState);
         return result;
@@ -129,6 +135,25 @@ export class TacticalEngine {
         if (targetHex && !finalTargetId) {
             const found = getActorAt(gameState, targetHex);
             if (found) finalTargetId = found.id;
+        }
+
+        const finalTargetActor = this.resolveActorById(gameState, finalTargetId)
+            || (targetHex ? getActorAt(gameState, targetHex) : undefined);
+        if (
+            actor.id === gameState.player.id
+            && finalTargetActor
+            && finalTargetActor.factionId !== actor.factionId
+            && gameState.visibility
+        ) {
+            const visible = new Set(gameState.visibility.playerFog.visibleActorIds || []);
+            const detected = new Set(gameState.visibility.playerFog.detectedActorIds || []);
+            if (!visible.has(finalTargetActor.id) && !detected.has(finalTargetActor.id)) {
+                return {
+                    effects: [],
+                    messages: [`Target ${finalTargetActor.id} is outside your current perception.`],
+                    consumesTurn: false
+                };
+            }
         }
 
         // 3. Execution (Atomic Effects)

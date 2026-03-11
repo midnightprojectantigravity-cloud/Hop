@@ -1,6 +1,8 @@
 export type CameraZoomPreset = number;
+export type CameraZoomMode = 'tactical' | 'action';
 
 export type CameraVec2 = { x: number; y: number };
+export type CameraAnchorRatio = { x: number; y: number };
 
 export type CameraRect = {
     x: number;
@@ -22,13 +24,14 @@ export type CameraViewportPx = {
     insets?: Partial<CameraInsetsPx>;
 };
 
-export const ACTION_VIEW_MIN_HEX_DIAMETER = 9;
+export const ACTION_VIEW_MIN_HEX_DIAMETER = 7;
 export const TACTICAL_VIEW_MIN_HEX_DIAMETER = 15;
 
 export interface ResolveBinaryZoomLevelsOptions {
     mapWidth: number;
     mapHeight: number;
     movementRange: number;
+    losRange?: number;
     tacticalMinHexDiameter?: number;
     actionMinHexDiameter?: number;
 }
@@ -37,21 +40,26 @@ export const resolveBinaryZoomLevels = ({
     mapWidth,
     mapHeight,
     movementRange,
+    losRange,
     tacticalMinHexDiameter = TACTICAL_VIEW_MIN_HEX_DIAMETER,
     actionMinHexDiameter = ACTION_VIEW_MIN_HEX_DIAMETER
 }: ResolveBinaryZoomLevelsOptions): { tactical: CameraZoomPreset; action: CameraZoomPreset } => {
     const safeMapWidth = Math.max(1, Math.floor(Number(mapWidth) || 0));
     const safeMapHeight = Math.max(1, Math.floor(Number(mapHeight) || 0));
+    const safeMapMinAxis = Math.max(1, Math.min(safeMapWidth, safeMapHeight));
     const safeMovementRange = Math.max(1, Math.floor(Number(movementRange) || 0));
+    const hasLosRange = Number.isFinite(losRange);
+    const safeLosRange = hasLosRange ? Math.max(1, Math.floor(Number(losRange) || 0)) : null;
 
-    // LoS is not yet available, so tactical view uses a map-wide upper bound.
-    const tacticalUpperBound = (Math.max(safeMapWidth, safeMapHeight) * 2) + 1;
-    const tactical = Math.max(
-        Math.max(1, Math.floor(tacticalMinHexDiameter)),
-        tacticalUpperBound
-    );
+    const tacticalCandidate = safeLosRange !== null
+        ? (safeLosRange * 2) + 1
+        : Math.max(
+            Math.max(1, Math.floor(tacticalMinHexDiameter)),
+            safeMapMinAxis
+        );
+    const tactical = Math.min(safeMapMinAxis, tacticalCandidate);
 
-    const actionUpperBound = (safeMovementRange * 2) + 3;
+    const actionUpperBound = Math.min(safeMapMinAxis, (safeMovementRange * 2) + 3);
     const action = Math.min(
         tactical,
         Math.max(Math.max(1, Math.floor(actionMinHexDiameter)), actionUpperBound)
@@ -92,6 +100,18 @@ export const computePresetVisibleWidthWorld = (
     return ((clampedPreset - 1) * columnStep) + hexWidth + Math.max(0, extraPaddingWorld) * 2;
 };
 
+export const computePresetVisibleHeightWorld = (
+    preset: CameraZoomPreset,
+    tileSize: number,
+    extraPaddingWorld = 0
+): number => {
+    const safeTileSize = Math.max(1, tileSize);
+    const rowStep = Math.sqrt(3) * safeTileSize;
+    const hexHeight = Math.sqrt(3) * safeTileSize;
+    const clampedPreset = Math.max(1, preset);
+    return ((clampedPreset - 1) * rowStep) + hexHeight + Math.max(0, extraPaddingWorld) * 2;
+};
+
 export const computePresetScale = (
     viewport: CameraViewportPx,
     preset: CameraZoomPreset,
@@ -100,7 +120,10 @@ export const computePresetScale = (
 ): number => {
     const usable = getUsableViewportPx(viewport);
     const visibleWorldWidth = computePresetVisibleWidthWorld(preset, tileSize, extraPaddingWorld);
-    return usable.width / Math.max(1, visibleWorldWidth);
+    const visibleWorldHeight = computePresetVisibleHeightWorld(preset, tileSize, extraPaddingWorld);
+    const widthScale = usable.width / Math.max(1, visibleWorldWidth);
+    const heightScale = usable.height / Math.max(1, visibleWorldHeight);
+    return Math.min(widthScale, heightScale);
 };
 
 export const computeFitScale = (
@@ -166,6 +189,138 @@ export const computeViewBoxFromCamera = (
     width: visibleWorldSize.width,
     height: visibleWorldSize.height,
 });
+
+const ensureMinimumRectSize = (
+    rect: CameraRect,
+    minWidth: number,
+    minHeight: number
+): CameraRect => {
+    const safeMinWidth = Math.max(1, minWidth);
+    const safeMinHeight = Math.max(1, minHeight);
+    if (rect.width >= safeMinWidth && rect.height >= safeMinHeight) return rect;
+    const centerX = rect.x + (rect.width / 2);
+    const centerY = rect.y + (rect.height / 2);
+    const nextWidth = Math.max(rect.width, safeMinWidth);
+    const nextHeight = Math.max(rect.height, safeMinHeight);
+    return {
+        x: centerX - (nextWidth / 2),
+        y: centerY - (nextHeight / 2),
+        width: nextWidth,
+        height: nextHeight
+    };
+};
+
+export const resolveCameraAnchorRatio = (
+    viewport: CameraViewportPx
+): CameraAnchorRatio => {
+    const insets = normalizeInsetsPx(viewport.insets);
+    const totalWidth = Math.max(1, Number(viewport.width || 0));
+    const totalHeight = Math.max(1, Number(viewport.height || 0));
+    const usableWidth = Math.max(1, totalWidth - insets.left - insets.right);
+    const usableHeight = Math.max(1, totalHeight - insets.top - insets.bottom);
+    return {
+        x: clamp((insets.left + (usableWidth / 2)) / totalWidth, 0, 1),
+        y: clamp((insets.top + (usableHeight / 2)) / totalHeight, 0, 1)
+    };
+};
+
+export const computeDesiredCenterForAnchor = (
+    targetWorld: CameraVec2,
+    visibleWorldSize: { width: number; height: number },
+    anchorRatio: CameraAnchorRatio
+): CameraVec2 => ({
+    x: targetWorld.x + ((0.5 - anchorRatio.x) * visibleWorldSize.width),
+    y: targetWorld.y + ((0.5 - anchorRatio.y) * visibleWorldSize.height)
+});
+
+export const computeActionZoomBounds = ({
+    playerWorld,
+    movementRange,
+    tileSize,
+    minHexDiameter = ACTION_VIEW_MIN_HEX_DIAMETER,
+    extraPaddingWorld = 0
+}: {
+    playerWorld: CameraVec2;
+    movementRange: number;
+    tileSize: number;
+    minHexDiameter?: number;
+    extraPaddingWorld?: number;
+}): CameraRect => {
+    const diameter = Math.max(
+        Math.max(1, Math.floor(minHexDiameter)),
+        (Math.max(1, Math.floor(movementRange || 0)) * 2) + 3
+    );
+    const width = computePresetVisibleWidthWorld(diameter, tileSize, extraPaddingWorld);
+    const height = computePresetVisibleHeightWorld(diameter, tileSize, extraPaddingWorld);
+    return {
+        x: playerWorld.x - (width / 2),
+        y: playerWorld.y - (height / 2),
+        width,
+        height
+    };
+};
+
+export const computeTacticalZoomBounds = ({
+    playerWorld,
+    mapBounds,
+    tileSize,
+    visibleTileBounds,
+    losRange,
+    minHexDiameter = TACTICAL_VIEW_MIN_HEX_DIAMETER,
+    extraPaddingWorld = 0
+}: {
+    playerWorld: CameraVec2;
+    mapBounds: CameraRect;
+    tileSize: number;
+    visibleTileBounds?: CameraRect | null;
+    losRange?: number;
+    minHexDiameter?: number;
+    extraPaddingWorld?: number;
+}): CameraRect => {
+    const diameter = losRange
+        ? Math.max(Math.max(1, Math.floor(minHexDiameter)), (Math.max(1, Math.floor(losRange)) * 2) + 1)
+        : Math.max(1, Math.floor(minHexDiameter));
+    const minWidth = computePresetVisibleWidthWorld(diameter, tileSize, extraPaddingWorld);
+    const minHeight = computePresetVisibleHeightWorld(diameter, tileSize, extraPaddingWorld);
+
+    if (visibleTileBounds) {
+        return ensureMinimumRectSize(expandRect(visibleTileBounds, extraPaddingWorld), minWidth, minHeight);
+    }
+
+    if (Number.isFinite(losRange)) {
+        return ensureMinimumRectSize({
+            x: playerWorld.x - (minWidth / 2),
+            y: playerWorld.y - (minHeight / 2),
+            width: minWidth,
+            height: minHeight
+        }, minWidth, minHeight);
+    }
+
+    return ensureMinimumRectSize(expandRect(mapBounds, extraPaddingWorld), minWidth, minHeight);
+};
+
+export const computeCameraViewFromBounds = (
+    viewport: CameraViewportPx,
+    bounds: CameraRect
+): {
+    center: CameraVec2;
+    scale: number;
+    visibleWorldSize: { width: number; height: number };
+    viewBox: CameraRect;
+} => {
+    const scale = computeFitScale(viewport, bounds);
+    const visibleWorldSize = computeVisibleWorldSize(viewport, scale);
+    const center = {
+        x: bounds.x + (bounds.width / 2),
+        y: bounds.y + (bounds.height / 2)
+    };
+    return {
+        center,
+        scale,
+        visibleWorldSize,
+        viewBox: computeViewBoxFromCamera(center, visibleWorldSize)
+    };
+};
 
 export interface ResolveSoftFollowCenterOptions {
     currentCenter: CameraVec2;

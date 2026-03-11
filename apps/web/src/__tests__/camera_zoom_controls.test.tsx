@@ -31,43 +31,48 @@ describe('camera zoom controls', () => {
   it('renders only icon plus/minus controls', () => {
     const html = renderToStaticMarkup(
       <CameraZoomControls
-        activePreset={15}
-        tacticalPreset={15}
-        actionPreset={9}
-        onSelectPreset={() => {}}
+        activeMode="tactical"
+        isDetached={false}
+        onSelectMode={() => {}}
+        onRecenter={() => {}}
       />
     );
 
-    expect(html).toContain('Zoom out to tactical view (15 tiles wide)');
-    expect(html).toContain('Zoom in to action view (9 tiles wide)');
+    expect(html).toContain('Zoom out to tactical view');
+    expect(html).toContain('Zoom in to action view');
     expect(html).not.toContain('Fit');
     expect(html).not.toContain('zoom-7');
     expect(html).not.toContain('zoom-11');
   });
 
-  it('maps minus to tactical and plus to action presets', () => {
-    const onSelectPreset = vi.fn();
+  it('maps minus to tactical, plus to action, and lens to recenter', () => {
+    const onSelectMode = vi.fn();
+    const onRecenter = vi.fn();
     const tree = CameraZoomControls({
-      activePreset: 15,
-      tacticalPreset: 15,
-      actionPreset: 9,
-      onSelectPreset
+      activeMode: 'tactical',
+      isDetached: true,
+      onSelectMode,
+      onRecenter
     });
 
     const buttons = findElements(
       tree,
       (element) => element.type === 'button' && typeof element.props?.onClick === 'function'
     );
+    const lens = buttons.find((button) => String(button.props?.['aria-label'] || '').includes('Recenter'));
     const minus = buttons.find((button) => String(button.props?.['aria-label'] || '').includes('Zoom out'));
     const plus = buttons.find((button) => String(button.props?.['aria-label'] || '').includes('Zoom in'));
 
+    expect(lens).toBeTruthy();
     expect(minus).toBeTruthy();
     expect(plus).toBeTruthy();
 
+    (lens?.props?.onClick as () => void)();
     (minus?.props?.onClick as () => void)();
     (plus?.props?.onClick as () => void)();
-    expect(onSelectPreset).toHaveBeenCalledTimes(2);
-    expect(onSelectPreset.mock.calls[0][0]).toBe(15);
-    expect(onSelectPreset.mock.calls[1][0]).toBe(9);
+    expect(onRecenter).toHaveBeenCalledTimes(1);
+    expect(onSelectMode).toHaveBeenCalledTimes(2);
+    expect(onSelectMode.mock.calls[0][0]).toBe('tactical');
+    expect(onSelectMode.mock.calls[1][0]).toBe('action');
   });
 });

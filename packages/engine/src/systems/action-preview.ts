@@ -23,6 +23,15 @@ export interface ActionPreviewResult {
     stackTrace: StackResolutionTick[];
 }
 
+export interface MovementPreviewPathResult {
+    ok: boolean;
+    reason?: string;
+    path: Point[];
+    destination: Point;
+    interrupted: boolean;
+    spottedByEnemyId?: string;
+}
+
 const clonePoint = (p: Point): Point => ({ q: p.q, r: p.r, s: p.s });
 
 const cloneComponents = (components: Actor['components'] | Record<string, any> | undefined): Actor['components'] | undefined => {
@@ -63,6 +72,30 @@ const cloneActor = (actor: Actor): Actor => ({
         : undefined
 });
 
+const cloneVisibility = (visibility: GameState['visibility']): GameState['visibility'] => {
+    if (!visibility) return visibility;
+    const enemyAwarenessById = Object.fromEntries(
+        Object.entries(visibility.enemyAwarenessById || {}).map(([enemyId, awareness]) => [
+            enemyId,
+            {
+                ...awareness,
+                lastKnownPlayerPosition: awareness.lastKnownPlayerPosition
+                    ? clonePoint(awareness.lastKnownPlayerPosition)
+                    : null
+            }
+        ])
+    );
+    return {
+        playerFog: {
+            visibleTileKeys: [...(visibility.playerFog.visibleTileKeys || [])],
+            exploredTileKeys: [...(visibility.playerFog.exploredTileKeys || [])],
+            visibleActorIds: [...(visibility.playerFog.visibleActorIds || [])],
+            detectedActorIds: [...(visibility.playerFog.detectedActorIds || [])]
+        },
+        enemyAwarenessById
+    };
+};
+
 const cloneStateForPreview = (state: GameState): GameState => ({
     ...state,
     player: cloneActor(state.player),
@@ -88,7 +121,8 @@ const cloneStateForPreview = (state: GameState): GameState => ({
     ),
     traps: state.traps?.map(t => ({ ...t, position: clonePoint(t.position) })),
     lastSpearPath: state.lastSpearPath?.map(clonePoint),
-    actionLog: state.actionLog ? [...state.actionLog] : undefined
+    actionLog: state.actionLog ? [...state.actionLog] : undefined,
+    visibility: cloneVisibility(state.visibility)
 });
 
 const resolveActorById = (state: GameState, actorId: string): Actor | undefined => {
@@ -122,6 +156,24 @@ export const previewActionOutcome = (
         }
     }
 
+    if (request.target && actor.id === state.player.id && state.visibility) {
+        const targetActor = getActorAt(state, request.target);
+        if (targetActor && targetActor.factionId !== actor.factionId) {
+            const visible = new Set(state.visibility.playerFog.visibleActorIds || []);
+            const detected = new Set(state.visibility.playerFog.detectedActorIds || []);
+            if (!visible.has(targetActor.id) && !detected.has(targetActor.id)) {
+                return {
+                    ok: false,
+                    reason: `Target ${targetActor.id} is outside current perception`,
+                    effects: [],
+                    messages: [],
+                    simulationEvents: [],
+                    stackTrace: []
+                };
+            }
+        }
+    }
+
     const previewState = cloneStateForPreview(state);
     const previewActor = resolveActorById(previewState, request.actorId) as Actor;
     const execution = skillDef.execute(
@@ -149,5 +201,64 @@ export const previewActionOutcome = (
         predictedState: resolvedState,
         simulationEvents: (resolvedState.simulationEvents || []).slice(beforeEvents),
         stackTrace: (resolvedState.stackTrace || []).slice(beforeTrace)
+    };
+};
+
+const cloneMovementPath = (path: Point[] | undefined, origin: Point, destination: Point): Point[] => {
+    if (Array.isArray(path) && path.length > 1) {
+        return path.map(clonePoint);
+    }
+    return [clonePoint(origin), clonePoint(destination)];
+};
+
+export const resolveMovementPreviewPath = (
+    state: GameState,
+    actor: Actor,
+    skillId: 'BASIC_MOVE' | 'DASH' | 'JUMP',
+    target: Point
+): MovementPreviewPathResult => {
+    const actorSkill = actor.activeSkills.find(skill => skill.id === skillId);
+    const preview = previewActionOutcome(state, {
+        actorId: actor.id,
+        skillId,
+        target,
+        activeUpgrades: actorSkill?.activeUpgrades || []
+    });
+
+    if (!preview.ok) {
+        return {
+            ok: false,
+            reason: preview.reason,
+            path: [clonePoint(actor.position)],
+            destination: clonePoint(actor.position),
+            interrupted: false
+        };
+    }
+
+    const displacement = preview.effects.find((effect): effect is Extract<AtomicEffect, { type: 'Displacement' }> => {
+        if (effect.type !== 'Displacement') return false;
+        if (effect.target === 'self') return true;
+        return typeof effect.target === 'string' && effect.target === actor.id;
+    });
+
+    if (!displacement) {
+        return {
+            ok: false,
+            reason: `No displacement effect produced by ${skillId}`,
+            path: [clonePoint(actor.position)],
+            destination: clonePoint(actor.position),
+            interrupted: false
+        };
+    }
+
+    const destination = clonePoint(displacement.destination);
+    const path = cloneMovementPath(displacement.path, actor.position, displacement.destination);
+    const interrupted = pointToKey(destination) !== pointToKey(target);
+
+    return {
+        ok: true,
+        path,
+        destination,
+        interrupted
     };
 };

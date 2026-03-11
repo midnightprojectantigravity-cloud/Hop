@@ -5,6 +5,7 @@ import {
     isHexInRectangularGrid,
     pointToKey,
     previewActionOutcome,
+    resolveMovementPreviewPath,
     SkillRegistry,
     type GameState,
     type Point,
@@ -40,16 +41,6 @@ export const useBoardTargetingPreview = ({
     hoveredTile,
     enginePreviewGhost,
 }: UseBoardTargetingPreviewArgs) => {
-    const latestTraceByActor = useMemo(() => {
-        const out: Record<string, any> = {};
-        for (const ev of gameState.visualEvents || []) {
-            if (ev.type !== 'kinetic_trace') continue;
-            const trace = ev.payload;
-            if (trace?.actorId) out[trace.actorId] = trace;
-        }
-        return out;
-    }, [gameState.visualEvents]);
-
     const movementTargets = useMemo(() => {
         if (!showMovementRange || selectedSkillId) return [] as Point[];
 
@@ -114,8 +105,26 @@ export const useBoardTargetingPreview = ({
         if (!selectedSkillId) return set;
         const def = SkillRegistry.get(selectedSkillId);
         if (!def?.getValidTargets) return set;
+        const visibleActorIds = new Set(gameState.visibility?.playerFog?.visibleActorIds || []);
+        const detectedActorIds = new Set(gameState.visibility?.playerFog?.detectedActorIds || []);
+        const enforceVisibility = !!gameState.visibility;
         const targets = def.getValidTargets(gameState, playerPos);
-        for (const t of targets) set.add(pointToKey(t));
+        for (const t of targets) {
+            const key = pointToKey(t);
+            if (!enforceVisibility) {
+                set.add(key);
+                continue;
+            }
+            const targetEnemy = gameState.enemies.find(enemy => pointToKey(enemy.position) === key && enemy.hp > 0);
+            if (
+                targetEnemy
+                && !visibleActorIds.has(targetEnemy.id)
+                && !detectedActorIds.has(targetEnemy.id)
+            ) {
+                continue;
+            }
+            set.add(key);
+        }
         return set;
     }, [selectedSkillId, gameState, playerPos]);
 
@@ -128,8 +137,11 @@ export const useBoardTargetingPreview = ({
             const isMoveTile = movementTargetSet.has(hoveredKey)
                 || (!hasPrimaryMovementSkills && fallbackNeighborSet.has(hoveredKey));
             if (!isMoveTile) return null;
+            const previewPath = gameState.player.activeSkills.some(skill => skill.id === 'BASIC_MOVE')
+                ? resolveMovementPreviewPath(gameState, gameState.player, 'BASIC_MOVE', hoveredTile)
+                : null;
             return {
-                path: getHexLine(playerPos, hoveredTile),
+                path: previewPath?.ok ? previewPath.path : getHexLine(playerPos, hoveredTile),
                 aoe: [],
                 hasEnemy: false,
                 target: hoveredTile,
@@ -140,6 +152,11 @@ export const useBoardTargetingPreview = ({
         if (!selectedSkillId) return null;
 
         const selectedSkill = gameState.player.activeSkills.find(skill => skill.id === selectedSkillId);
+        const selectedMovementSkill = selectedSkillId === 'BASIC_MOVE'
+            || selectedSkillId === 'DASH'
+            || selectedSkillId === 'JUMP'
+            ? selectedSkillId
+            : null;
         const preview = previewActionOutcome(gameState, {
             actorId: gameState.player.id,
             skillId: selectedSkillId,
@@ -162,9 +179,12 @@ export const useBoardTargetingPreview = ({
             && event.targetId !== gameState.player.id
         );
         const ailmentDeltaLines = extractAilmentDeltaLines(preview.simulationEvents);
+        const movementPreview = selectedMovementSkill
+            ? resolveMovementPreviewPath(gameState, gameState.player, selectedMovementSkill, hoveredTile)
+            : null;
 
         return {
-            path: getHexLine(playerPos, hoveredTile),
+            path: movementPreview?.ok ? movementPreview.path : getHexLine(playerPos, hoveredTile),
             aoe: [...aoeByKey.values()],
             hasEnemy,
             target: hoveredTile,
@@ -183,7 +203,6 @@ export const useBoardTargetingPreview = ({
     ]);
 
     return {
-        latestTraceByActor,
         movementTargetSet,
         hasPrimaryMovementSkills,
         stairsKey,

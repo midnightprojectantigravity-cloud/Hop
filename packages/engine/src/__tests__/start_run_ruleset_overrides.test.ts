@@ -222,7 +222,7 @@ describe('START_RUN ruleset overrides', () => {
 
         expect(run.ruleset?.capabilities?.loadoutPassivesEnabled).toBe(false);
         expect(run.ruleset?.capabilities?.version).toBe('capabilities-v1');
-        expect(run.player.activeSkills.some(skill => skill.id === 'STANDARD_VISION')).toBe(false);
+        expect(run.player.activeSkills.some(skill => skill.id === 'STANDARD_VISION')).toBe(true);
         expect(run.player.activeSkills.some(skill => skill.id === 'BASIC_AWARENESS')).toBe(false);
         expect(run.player.activeSkills.some(skill => skill.id === 'TACTICAL_INSIGHT')).toBe(false);
         expect(run.player.activeSkills.some(skill => skill.id === 'FLIGHT')).toBe(false);

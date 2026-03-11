@@ -42,6 +42,7 @@ export * from './systems/tactical-data-bootstrap';
 export * from './systems/capabilities';
 export * from './systems/threat-scoring';
 export * from './systems/synapse-threat';
+export * from './systems/visibility';
 
 // Juice & VFX
 

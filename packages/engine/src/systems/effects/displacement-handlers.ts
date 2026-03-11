@@ -184,12 +184,24 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
             : (isKineticTransfer ? Math.min(640, priorKineticSlides * 90) : 0);
         const traceStartDelayMs = Math.max(timelineDelayBeforeMoveMs, kineticChainDelayMs);
 
+        const presentationKind = effect.presentationKind
+            || (isTeleportMovement
+                ? 'teleport'
+                : (isKineticTransfer ? 'forced_slide' : 'walk'));
+        const pathStyle = effect.pathStyle
+            || (isTeleportMovement ? 'blink' : 'hex_step');
+        const sequenceId = effect.presentationSequenceId
+            || `${targetActorId}:${nextState.turnNumber}:${existingVisualEvents.length}:${presentationKind}`;
+
         const trace: MovementTrace = {
             actorId: targetActorId,
             origin,
             path: effect.path || (isTeleportMovement ? [origin, finalDestination] : getHexLine(origin, finalDestination)),
             destination: finalDestination,
             movementType: isTeleportMovement ? 'teleport' : 'slide',
+            presentationKind,
+            pathStyle,
+            sequenceId,
             durationMs: effect.animationDuration ?? (isTeleportMovement ? 180 : Math.max(120, (effect.path?.length || getHexLine(origin, finalDestination).length) * 110)),
             startDelayMs: traceStartDelayMs,
             wasLethal: nextState.tiles.get(pointToKey(finalDestination))?.traits.has('HAZARDOUS') || false
@@ -217,6 +229,9 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
                             durationMs: (prev.durationMs || 0) + (trace.durationMs || 0),
                             startDelayMs: Math.min(prev.startDelayMs ?? traceStartDelayMs, traceStartDelayMs),
                             movementType: 'slide' as const,
+                            presentationKind: prev.presentationKind || trace.presentationKind,
+                            pathStyle: prev.pathStyle || trace.pathStyle,
+                            sequenceId: prev.sequenceId || trace.sequenceId,
                             wasLethal: Boolean(prev.wasLethal || trace.wasLethal),
                         } as MovementTrace
                     };

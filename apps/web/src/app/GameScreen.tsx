@@ -7,6 +7,7 @@ import { SkillTray } from '../components/SkillTray';
 import { SynapseBottomTray } from '../components/synapse/SynapseBottomTray';
 import type { VisualAssetManifest } from '../visual/asset-manifest';
 import { resolveBoardColorMode } from '../visual/biome-config';
+import type { CameraInsetsPx } from '../visual/camera';
 import { UI_THEME_OPTIONS, type UiColorMode, type UiPreferencesV1 } from './ui-preferences';
 import {
   getUiInformationRevealMode,
@@ -49,6 +50,25 @@ const InfoSettingsPanel = ({
     <div className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: compact ? 'var(--hud-label-font, 9px)' : '10px' }}>
       Info Settings
     </div>
+  </div>
+);
+
+const EnemyAlertChip = ({
+  alerted
+}: {
+  alerted: boolean;
+}) => (
+  <div
+    className={`inline-flex items-center gap-2 rounded-lg border px-2.5 py-1 font-black uppercase tracking-[0.16em] ${
+      alerted
+        ? 'border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] text-[var(--accent-danger)]'
+        : 'border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[var(--text-muted)]'
+    }`}
+    style={{ fontSize: 'var(--hud-label-font, 10px)' }}
+    title="Binary enemy awareness state"
+  >
+    <span>Enemy Alert</span>
+    <span>{alerted ? 'On' : 'Off'}</span>
   </div>
 );
 
@@ -271,6 +291,23 @@ export const GameScreen = ({
   const hpProjectionDelta = Number((gameState as any)?.intentPreview?.playerHpDelta || 0);
   const projectedHp = Math.max(0, Math.min(gameState.player.maxHp, gameState.player.hp + hpProjectionDelta));
   const boardColorMode = React.useMemo(() => resolveBoardColorMode(gameState.theme), [gameState.theme]);
+  const hostileEnemies = React.useMemo(
+    () => gameState.enemies.filter(enemy => enemy.hp > 0 && enemy.factionId === 'enemy'),
+    [gameState.enemies]
+  );
+  const enemyAlertActive = React.useMemo(() => {
+    if (hostileEnemies.length === 0) return false;
+    const awarenessByEnemyId = gameState.visibility?.enemyAwarenessById;
+    if (!awarenessByEnemyId) return true;
+    return hostileEnemies.some(enemy => {
+      const awareness = awarenessByEnemyId[enemy.id];
+      return Boolean(
+        awareness
+        && awareness.memoryTurnsRemaining > 0
+        && awareness.lastKnownPlayerPosition
+      );
+    });
+  }, [gameState.visibility?.enemyAwarenessById, hostileEnemies]);
   const hudScale = React.useMemo(
     () => resolveHudScale(viewportSize.width, viewportSize.height),
     [viewportSize.height, viewportSize.width]
@@ -320,6 +357,10 @@ export const GameScreen = ({
   );
   const [synapseDeltasByActorId, setSynapseDeltasByActorId] = React.useState<Record<string, SynapseDeltaEntry>>({});
   const prevSynapseScoresRef = React.useRef<ReturnType<typeof buildSynapseScoreSnapshot> | null>(null);
+  const boardSurfaceRef = React.useRef<HTMLDivElement | null>(null);
+  const desktopUtilityRef = React.useRef<HTMLDivElement | null>(null);
+  const desktopSynapseTrayRef = React.useRef<HTMLDivElement | null>(null);
+  const [cameraSafeInsetsPx, setCameraSafeInsetsPx] = React.useState<Partial<CameraInsetsPx>>({});
 
   React.useEffect(() => {
     if (!synapsePreview) {
@@ -375,6 +416,55 @@ export const GameScreen = ({
     synapseSelection
   ]);
 
+  React.useLayoutEffect(() => {
+    const boardSurface = boardSurfaceRef.current;
+    if (!boardSurface || typeof ResizeObserver === 'undefined') return undefined;
+
+    const measureInsets = () => {
+      if (layoutMode !== 'desktop_command_center') {
+        setCameraSafeInsetsPx((prev) => (
+          (prev.top || 0) === 0
+          && (prev.right || 0) === 0
+          && (prev.bottom || 0) === 0
+          && (prev.left || 0) === 0
+        ) ? prev : {});
+        return;
+      }
+
+      const boardRect = boardSurface.getBoundingClientRect();
+      const nextInsets: CameraInsetsPx = { top: 0, right: 0, bottom: 0, left: 0 };
+      const utilityRect = desktopUtilityRef.current?.getBoundingClientRect();
+      if (utilityRect && utilityRect.width > 0 && utilityRect.height > 0) {
+        nextInsets.top = Math.max(nextInsets.top, Math.max(0, utilityRect.bottom - boardRect.top) + 12);
+        nextInsets.right = Math.max(nextInsets.right, Math.max(0, boardRect.right - utilityRect.left) + 12);
+      }
+
+      const trayRect = desktopSynapseTrayRef.current?.getBoundingClientRect();
+      if (trayRect && trayRect.width > 0 && trayRect.height > 0) {
+        nextInsets.bottom = Math.max(nextInsets.bottom, Math.max(0, boardRect.bottom - trayRect.top) + 16);
+      }
+
+      setCameraSafeInsetsPx((prev) => (
+        (prev.top || 0) === nextInsets.top
+        && (prev.right || 0) === nextInsets.right
+        && (prev.bottom || 0) === nextInsets.bottom
+        && (prev.left || 0) === nextInsets.left
+      ) ? prev : nextInsets);
+    };
+
+    measureInsets();
+    const observer = new ResizeObserver(measureInsets);
+    observer.observe(boardSurface);
+    if (desktopUtilityRef.current) observer.observe(desktopUtilityRef.current);
+    if (desktopSynapseTrayRef.current) observer.observe(desktopSynapseTrayRef.current);
+    window.addEventListener('resize', measureInsets);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measureInsets);
+    };
+  }, [layoutMode, isSynapseMode, synapseSelection.mode]);
+
   return (
     <div
       data-layout-mode={layoutMode}
@@ -420,6 +510,9 @@ export const GameScreen = ({
             </button>
           </div>
         </div>
+        <div className="px-4 pb-2 flex justify-center">
+          <EnemyAlertChip alerted={enemyAlertActive} />
+        </div>
         {mobileDockV2Enabled && (
           <div className="px-4 pb-3 grid grid-cols-2 gap-1.5">
             <div
@@ -439,23 +532,28 @@ export const GameScreen = ({
       </div>
 
       <aside className="surface-panel-material torn-edge-shell hidden lg:flex w-96 border-r border-[var(--border-subtle)] bg-[var(--surface-panel)] flex-col z-20 overflow-y-auto">
-        <UI
-          gameState={gameState}
-          onReset={onReset}
-          onWait={onWait}
-          onExitToHub={onExitToHub}
-          intelMode={intelMode}
-          onIntelModeChange={handleIntelModeChange}
-          showIntelControls={false}
-          inputLocked={isInputLocked}
-        />
+        <div className="px-4 pt-4 pb-3 border-b border-[var(--border-subtle)]">
+          <EnemyAlertChip alerted={enemyAlertActive} />
+        </div>
+        <div className="min-h-0 flex-1">
+          <UI
+            gameState={gameState}
+            onReset={onReset}
+            onWait={onWait}
+            onExitToHub={onExitToHub}
+            intelMode={intelMode}
+            onIntelModeChange={handleIntelModeChange}
+            showIntelControls={false}
+            inputLocked={isInputLocked}
+          />
+        </div>
       </aside>
 
       <main
         data-board-theme={boardColorMode}
         className={`board-theme-shell surface-board-material flex-1 min-h-0 relative flex items-center justify-center bg-[var(--surface-board)] overflow-hidden ${dangerThreatActive ? 'grim-filter-active' : ''}`}
       >
-        <div className="hidden lg:flex absolute top-5 right-5 z-30 items-start gap-2.5">
+        <div ref={desktopUtilityRef} className="hidden lg:flex absolute top-5 right-5 z-30 items-start gap-2.5">
           <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
             <select
               aria-label="Theme"
@@ -481,7 +579,7 @@ export const GameScreen = ({
           </button>
         </div>
         <div className="w-full h-full p-0 sm:p-3 lg:p-8 flex items-center justify-center">
-          <div className={`surface-panel-material torn-edge-shell w-full h-full relative border border-[var(--border-subtle)] bg-[color:var(--surface-panel)] rounded-none sm:rounded-3xl lg:rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.2)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
+          <div ref={boardSurfaceRef} className={`surface-panel-material torn-edge-shell w-full h-full relative border border-[var(--border-subtle)] bg-[color:var(--surface-panel)] rounded-none sm:rounded-3xl lg:rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.2)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
             <GameBoard
               gameState={gameState}
               onMove={onTileClick}
@@ -496,10 +594,11 @@ export const GameScreen = ({
               synapsePulse={synapsePulse}
               synapseDeltasByActorId={synapseDeltasByActorId}
               onSynapseInspectEntity={onSynapseInspectEntity}
+              cameraSafeInsetsPx={cameraSafeInsetsPx}
               visualEchoesEnabled={mobileDockV2Enabled}
             />
             {isSynapseMode && (
-              <div className="hidden lg:block absolute bottom-3 left-1/2 -translate-x-1/2 z-40 w-[min(92vw,34rem)] pointer-events-auto space-y-2">
+              <div ref={desktopSynapseTrayRef} className="hidden lg:block absolute bottom-3 left-1/2 -translate-x-1/2 z-40 w-[min(92vw,34rem)] pointer-events-auto space-y-2">
                 <SynapseBottomTray
                   gameState={gameState}
                   synapsePreview={synapsePreview}

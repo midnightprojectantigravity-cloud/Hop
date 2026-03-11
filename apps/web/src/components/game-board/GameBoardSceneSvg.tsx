@@ -1,9 +1,9 @@
 import React from 'react';
 import type { GameState, Point, SynapseThreatPreview } from '@hop/engine';
 import type { VisualAssetManifest } from '../../visual/asset-manifest';
-import type { CameraRect } from '../../visual/camera';
 import { BiomeBackdropLayer } from './BiomeBackdropLayer';
 import { InteractionTilesLayer } from './InteractionTilesLayer';
+import { FogOfWarLayer } from './FogOfWarLayer';
 import { ClutterObstaclesLayer } from './ClutterObstaclesLayer';
 import { EntityLayer } from './EntityLayer';
 import { UiGridLayer } from './UiGridLayer';
@@ -16,7 +16,6 @@ import { VisualEchoLayer, type VisualEchoEntry } from './VisualEchoLayer';
 
 interface GameBoardSceneSvgProps {
     svgRef: React.MutableRefObject<SVGSVGElement | null>;
-    renderedViewBox: CameraRect;
     cells: Point[];
     gameState: GameState;
     selectedSkillId: string | null;
@@ -57,7 +56,6 @@ interface GameBoardSceneSvgProps {
     manifestUnitToBoardScale: number;
     mountainSettingsByAssetId: Map<string, any>;
     resolveMountainSettings: (asset?: any) => any;
-    latestTraceByActor: Record<string, any>;
     entityVisualPoseById: Map<string, any>;
     biomeThemeKey: string;
     juiceActorSnapshots: Array<{
@@ -90,7 +88,6 @@ interface GameBoardSceneSvgProps {
 
 export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
     svgRef,
-    renderedViewBox,
     cells,
     gameState,
     selectedSkillId,
@@ -113,7 +110,6 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
     manifestUnitToBoardScale,
     mountainSettingsByAssetId,
     resolveMountainSettings,
-    latestTraceByActor,
     entityVisualPoseById,
     biomeThemeKey,
     juiceActorSnapshots,
@@ -141,7 +137,6 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
         ref={svgRef}
         width="100%"
         height="100%"
-        viewBox={`${renderedViewBox.x} ${renderedViewBox.y} ${renderedViewBox.width} ${renderedViewBox.height}`}
         preserveAspectRatio="xMidYMid meet"
         shapeRendering="geometricPrecision"
         className="max-h-full max-w-full"
@@ -178,6 +173,7 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
             onTileHover={onTileHover}
             decals={decals}
         />
+        <FogOfWarLayer gameState={gameState} cells={cells} />
         <ClutterObstaclesLayer
             sprites={depthSortedSprites}
             floor={gameState.floor}
@@ -191,7 +187,6 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
         />
         <EntityLayer
             gameState={gameState}
-            latestTraceByActor={latestTraceByActor}
             entityVisualPoseById={entityVisualPoseById}
             assetById={assetById}
             biomeThemeKey={biomeThemeKey}

@@ -1,6 +1,6 @@
-import { useCallback, type Dispatch, type MutableRefObject, type PointerEvent, type SetStateAction, type WheelEvent } from 'react';
+import { useCallback, useRef, useState, type Dispatch, type PointerEvent, type SetStateAction, type WheelEvent } from 'react';
 import type { Point } from '@hop/engine';
-import type { CameraVec2, CameraZoomPreset } from '../../visual/camera';
+import type { CameraVec2, CameraZoomMode } from '../../visual/camera';
 
 type PointerPoint = { x: number; y: number };
 
@@ -13,49 +13,44 @@ type DragPointerState = {
 
 type PinchPointerState = {
     startDistance: number;
-    startPreset: CameraZoomPreset;
-    appliedPreset: CameraZoomPreset;
+    appliedMode: CameraZoomMode;
 };
 
 interface UseBoardInteractionsArgs {
-    svgRef: MutableRefObject<SVGSVGElement | null>;
+    svgRef: React.MutableRefObject<SVGSVGElement | null>;
     onMove: (hex: Point) => void;
-    zoomPreset: CameraZoomPreset;
-    tacticalZoomPreset: CameraZoomPreset;
-    actionZoomPreset: CameraZoomPreset;
+    zoomMode: CameraZoomMode;
     setHoveredTile: Dispatch<SetStateAction<Point | null>>;
-    setIsCameraPanning: Dispatch<SetStateAction<boolean>>;
-    cameraPanOffsetRef: MutableRefObject<CameraVec2>;
-    isCameraPanningRef: MutableRefObject<boolean>;
-    isPinchingRef: MutableRefObject<boolean>;
-    suppressTileClickUntilRef: MutableRefObject<number>;
-    activePointersRef: MutableRefObject<Map<number, PointerPoint>>;
-    dragStateRef: MutableRefObject<DragPointerState>;
-    pinchStateRef: MutableRefObject<PinchPointerState | null>;
-    animateCameraToTarget: (opts: { panOffset: CameraVec2; durationMs: number }) => void;
-    updatePanFromWorldDelta: (deltaWorld: CameraVec2) => void;
-    setZoomPresetAnimated: (nextPreset: CameraZoomPreset) => void;
+    beginManualPan: () => void;
+    panByWorldDelta: (deltaWorld: CameraVec2) => void;
+    endManualPan: () => void;
+    selectZoomMode: (mode: CameraZoomMode) => void;
+    recenter: () => void;
 }
 
 export const useBoardInteractions = ({
     svgRef,
     onMove,
-    zoomPreset,
-    tacticalZoomPreset,
-    actionZoomPreset,
+    zoomMode,
     setHoveredTile,
-    setIsCameraPanning,
-    cameraPanOffsetRef,
-    isCameraPanningRef,
-    isPinchingRef,
-    suppressTileClickUntilRef,
-    activePointersRef,
-    dragStateRef,
-    pinchStateRef,
-    animateCameraToTarget,
-    updatePanFromWorldDelta,
-    setZoomPresetAnimated,
+    beginManualPan,
+    panByWorldDelta,
+    endManualPan,
+    selectZoomMode,
+    recenter,
 }: UseBoardInteractionsArgs) => {
+    const [isCameraPanning, setIsCameraPanning] = useState(false);
+    const suppressTileClickUntilRef = useRef(0);
+    const activePointersRef = useRef<Map<number, PointerPoint>>(new Map());
+    const isPinchingRef = useRef(false);
+    const dragStateRef = useRef<DragPointerState>({
+        activePointerId: null,
+        startClient: null,
+        lastWorld: null,
+        didPan: false
+    });
+    const pinchStateRef = useRef<PinchPointerState | null>(null);
+
     const clientToWorld = useCallback((clientX: number, clientY: number): CameraVec2 | null => {
         const svg = svgRef.current;
         if (!svg || !svg.getScreenCTM) return null;
@@ -68,77 +63,58 @@ export const useBoardInteractions = ({
         return { x: transformed.x, y: transformed.y };
     }, [svgRef]);
 
-    const handleResetView = useCallback(() => {
-        cameraPanOffsetRef.current = { x: 0, y: 0 };
-        animateCameraToTarget({ panOffset: { x: 0, y: 0 }, durationMs: 220 });
-    }, [animateCameraToTarget, cameraPanOffsetRef]);
-
     const handleTileClick = useCallback((hex: Point) => {
         if (Date.now() < suppressTileClickUntilRef.current) return;
         onMove(hex);
-    }, [onMove, suppressTileClickUntilRef]);
+    }, [onMove]);
 
     const handleHoverTile = useCallback((hex: Point) => {
-        if (isCameraPanningRef.current || isPinchingRef.current) return;
+        if (isCameraPanning || isPinchingRef.current) return;
         setHoveredTile(hex);
-    }, [isCameraPanningRef, isPinchingRef, setHoveredTile]);
+    }, [isCameraPanning, setHoveredTile]);
 
-    const getActivePointerList = useCallback(() => Array.from(activePointersRef.current.entries()), [activePointersRef]);
+    const getPointerEntries = useCallback(() => Array.from(activePointersRef.current.entries()), []);
 
-    const handleBoardPointerDown = useCallback((e: PointerEvent<SVGSVGElement>) => {
-        if (e.pointerType === 'mouse' && e.button !== 0) return;
-        activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        if (e.pointerType !== 'mouse') {
+    const handleBoardPointerDown = useCallback((event: PointerEvent<SVGSVGElement>) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (event.pointerType !== 'mouse') {
             try {
-                e.currentTarget.setPointerCapture(e.pointerId);
+                event.currentTarget.setPointerCapture(event.pointerId);
             } catch {
-                // Pointer capture is optional across browsers.
+                // pointer capture is optional
             }
         }
 
-        const pointers = getActivePointerList();
+        const pointers = getPointerEntries();
         if (pointers.length >= 2) {
             isPinchingRef.current = true;
-            isCameraPanningRef.current = false;
             setIsCameraPanning(false);
             dragStateRef.current.didPan = true;
             suppressTileClickUntilRef.current = Date.now() + 250;
-
             const [a, b] = pointers;
             const dx = a[1].x - b[1].x;
             const dy = a[1].y - b[1].y;
             pinchStateRef.current = {
-                startDistance: Math.hypot(dx, dy),
-                startPreset: zoomPreset,
-                appliedPreset: zoomPreset
+                startDistance: Math.max(1, Math.hypot(dx, dy)),
+                appliedMode: zoomMode
             };
             return;
         }
 
         dragStateRef.current = {
-            activePointerId: e.pointerId,
-            startClient: { x: e.clientX, y: e.clientY },
-            lastWorld: clientToWorld(e.clientX, e.clientY),
+            activePointerId: event.pointerId,
+            startClient: { x: event.clientX, y: event.clientY },
+            lastWorld: clientToWorld(event.clientX, event.clientY),
             didPan: false
         };
-    }, [
-        activePointersRef,
-        clientToWorld,
-        dragStateRef,
-        getActivePointerList,
-        isCameraPanningRef,
-        isPinchingRef,
-        pinchStateRef,
-        setIsCameraPanning,
-        suppressTileClickUntilRef,
-        zoomPreset
-    ]);
+    }, [clientToWorld, getPointerEntries, zoomMode]);
 
-    const handleBoardPointerMove = useCallback((e: PointerEvent<SVGSVGElement>) => {
-        if (!activePointersRef.current.has(e.pointerId)) return;
-        activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const handleBoardPointerMove = useCallback((event: PointerEvent<SVGSVGElement>) => {
+        if (!activePointersRef.current.has(event.pointerId)) return;
+        activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        const pointers = getPointerEntries();
 
-        const pointers = getActivePointerList();
         if (isPinchingRef.current || pointers.length >= 2) {
             if (pointers.length >= 2) {
                 isPinchingRef.current = true;
@@ -146,86 +122,60 @@ export const useBoardInteractions = ({
                 const dx = a[1].x - b[1].x;
                 const dy = a[1].y - b[1].y;
                 const distance = Math.max(1, Math.hypot(dx, dy));
-                if (!pinchStateRef.current) {
+                const ratio = distance / Math.max(1, pinchStateRef.current?.startDistance || distance);
+                let nextMode: CameraZoomMode = pinchStateRef.current?.appliedMode || zoomMode;
+                if (ratio > 1.08) nextMode = 'action';
+                if (ratio < 0.92) nextMode = 'tactical';
+                if (nextMode !== pinchStateRef.current?.appliedMode) {
                     pinchStateRef.current = {
-                        startDistance: distance,
-                        startPreset: zoomPreset,
-                        appliedPreset: zoomPreset
+                        startDistance: pinchStateRef.current?.startDistance || distance,
+                        appliedMode: nextMode
                     };
-                } else {
-                    const ratio = distance / Math.max(1, pinchStateRef.current.startDistance);
-                    let nextPreset = pinchStateRef.current.startPreset;
-                    if (ratio > 1.08) nextPreset = actionZoomPreset;
-                    if (ratio < 0.92) nextPreset = tacticalZoomPreset;
-                    if (nextPreset !== pinchStateRef.current.appliedPreset) {
-                        pinchStateRef.current.appliedPreset = nextPreset;
-                        setZoomPresetAnimated(nextPreset);
-                    }
+                    selectZoomMode(nextMode);
                 }
                 suppressTileClickUntilRef.current = Date.now() + 250;
-                e.preventDefault();
+                event.preventDefault();
             }
             return;
         }
 
         const drag = dragStateRef.current;
-        if (!drag.startClient || drag.activePointerId !== e.pointerId) return;
-
-        const dxPx = e.clientX - drag.startClient.x;
-        const dyPx = e.clientY - drag.startClient.y;
+        if (!drag.startClient || drag.activePointerId !== event.pointerId) return;
+        const dxPx = event.clientX - drag.startClient.x;
+        const dyPx = event.clientY - drag.startClient.y;
         const movedPx = Math.hypot(dxPx, dyPx);
-        const thresholdPx = 10;
 
-        if (!drag.didPan && movedPx > thresholdPx) {
+        if (!drag.didPan && movedPx > 10) {
             drag.didPan = true;
-            isCameraPanningRef.current = true;
             setIsCameraPanning(true);
+            beginManualPan();
             suppressTileClickUntilRef.current = Date.now() + 250;
             setHoveredTile(null);
         }
 
         if (!drag.didPan) return;
-
-        const currentWorld = clientToWorld(e.clientX, e.clientY);
+        const currentWorld = clientToWorld(event.clientX, event.clientY);
         if (!drag.lastWorld || !currentWorld) return;
-        const deltaWorld = {
+        panByWorldDelta({
             x: drag.lastWorld.x - currentWorld.x,
             y: drag.lastWorld.y - currentWorld.y
-        };
+        });
         drag.lastWorld = currentWorld;
-        updatePanFromWorldDelta(deltaWorld);
-        e.preventDefault();
-    }, [
-        activePointersRef,
-        clientToWorld,
-        dragStateRef,
-        getActivePointerList,
-        isCameraPanningRef,
-        isPinchingRef,
-        pinchStateRef,
-        setHoveredTile,
-        setIsCameraPanning,
-        setZoomPresetAnimated,
-        suppressTileClickUntilRef,
-        updatePanFromWorldDelta,
-        zoomPreset,
-        actionZoomPreset,
-        tacticalZoomPreset
-    ]);
+        event.preventDefault();
+    }, [beginManualPan, clientToWorld, getPointerEntries, panByWorldDelta, selectZoomMode, setHoveredTile, zoomMode]);
 
-    const endPointerInteraction = useCallback((pointerId: number) => {
+    const finishPointer = useCallback((pointerId: number) => {
         activePointersRef.current.delete(pointerId);
-        const pointers = getActivePointerList();
-
+        const pointers = getPointerEntries();
         if (pointers.length < 2) {
             isPinchingRef.current = false;
             pinchStateRef.current = null;
         }
-
         const drag = dragStateRef.current;
         if (drag.activePointerId === pointerId) {
             if (drag.didPan) {
                 suppressTileClickUntilRef.current = Date.now() + 250;
+                endManualPan();
             }
             dragStateRef.current = {
                 activePointerId: pointers[0]?.[0] ?? null,
@@ -234,48 +184,36 @@ export const useBoardInteractions = ({
                 didPan: false
             };
         }
-
         if (activePointersRef.current.size === 0) {
-            isCameraPanningRef.current = false;
             setIsCameraPanning(false);
         }
-    }, [
-        activePointersRef,
-        clientToWorld,
-        dragStateRef,
-        getActivePointerList,
-        isCameraPanningRef,
-        isPinchingRef,
-        pinchStateRef,
-        setIsCameraPanning,
-        suppressTileClickUntilRef
-    ]);
+    }, [clientToWorld, endManualPan, getPointerEntries]);
 
-    const handleBoardPointerUp = useCallback((e: PointerEvent<SVGSVGElement>) => {
-        endPointerInteraction(e.pointerId);
+    const handleBoardPointerUp = useCallback((event: PointerEvent<SVGSVGElement>) => {
+        finishPointer(event.pointerId);
         try {
-            e.currentTarget.releasePointerCapture(e.pointerId);
+            event.currentTarget.releasePointerCapture(event.pointerId);
         } catch {
             // no-op
         }
-    }, [endPointerInteraction]);
+    }, [finishPointer]);
 
-    const handleBoardPointerCancel = useCallback((e: PointerEvent<SVGSVGElement>) => {
-        endPointerInteraction(e.pointerId);
-    }, [endPointerInteraction]);
+    const handleBoardPointerCancel = useCallback((event: PointerEvent<SVGSVGElement>) => {
+        finishPointer(event.pointerId);
+    }, [finishPointer]);
 
-    const handleBoardWheel = useCallback((e: WheelEvent<SVGSVGElement>) => {
-        if ((e.ctrlKey || e.deltaY !== 0) && e.cancelable) {
-            e.preventDefault();
+    const handleBoardWheel = useCallback((event: WheelEvent<SVGSVGElement>) => {
+        if ((event.ctrlKey || event.deltaY !== 0) && event.cancelable) {
+            event.preventDefault();
         }
-        if (Math.abs(e.deltaY) < 0.1) return;
-        const nextPreset: CameraZoomPreset = e.deltaY < 0 ? actionZoomPreset : tacticalZoomPreset;
-        setZoomPresetAnimated(nextPreset);
+        if (Math.abs(event.deltaY) < 0.1) return;
+        selectZoomMode(event.deltaY < 0 ? 'action' : 'tactical');
         suppressTileClickUntilRef.current = Date.now() + 120;
-    }, [actionZoomPreset, tacticalZoomPreset, setZoomPresetAnimated, suppressTileClickUntilRef]);
+    }, [selectZoomMode]);
 
     return {
-        handleResetView,
+        isCameraPanning,
+        handleResetView: recenter,
         handleTileClick,
         handleHoverTile,
         handleBoardPointerDown,

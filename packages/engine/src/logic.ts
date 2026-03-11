@@ -18,7 +18,15 @@ import { createEntity } from './systems/entities/entity-factory';
 /**
  * Generate initial state with the new tactical arena generation
  */
-import { applyLoadoutToPlayer, type Loadout, DEFAULT_LOADOUTS, ensureMobilitySkill, ensurePlayerLoadoutIntegrity } from './systems/loadout';
+import {
+    applyLoadoutToPlayer,
+    type Loadout,
+    DEFAULT_LOADOUTS,
+    ensureMobilitySkill,
+    ensurePlayerCoreVisionSkill,
+    ensurePlayerLoadoutIntegrity,
+    ensurePlayingPlayerLoadoutIntegrity
+} from './systems/loadout';
 import { appendTaggedMessage } from './systems/engine-messages';
 import { ensureTacticalDataBootstrapped } from './systems/tactical-data-bootstrap';
 import { withPendingFrame } from './systems/pending-frame';
@@ -28,6 +36,7 @@ import { createProcessNextTurn } from './logic-turn-loop';
 import { resolveAcaeRuleset, tickActorAilments } from './systems/ailments/runtime';
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { isReplayRecordableAction } from './systems/replay-validation';
+import { recomputeVisibility } from './systems/visibility';
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
@@ -118,7 +127,9 @@ export const generateInitialState = (
 
     const upgrades = preservePlayer?.upgrades || (loadout ? loadout.startingUpgrades : []);
     const loadoutApplied = loadout ? applyLoadoutToPlayer(loadout) : { activeSkills: createDefaultSkills(), archetype: 'VANGUARD' as const };
-    const activeSkills = ensureMobilitySkill(preservePlayer?.activeSkills || loadoutApplied.activeSkills);
+    const activeSkills = ensurePlayerCoreVisionSkill(
+        ensureMobilitySkill(preservePlayer?.activeSkills || loadoutApplied.activeSkills)
+    );
     const archetype = (preservePlayer as any)?.archetype || loadoutApplied.archetype;
 
     // Unified Tile Service: Initialized directly from dungeon
@@ -138,7 +149,7 @@ export const generateInitialState = (
         components: new Map(),
     });
 
-    const tempState: GameState = {
+    let tempState: GameState = {
         turnNumber: 1,
         player: {
             ...basePlayer,
@@ -206,13 +217,16 @@ export const generateInitialState = (
         });
         tempState.player = {
             ...tempState.player,
-            activeSkills: ensureMobilitySkill(resolvedLoadout.activeSkills),
+            activeSkills: ensurePlayerCoreVisionSkill(
+                ensureMobilitySkill(resolvedLoadout.activeSkills)
+            ),
             archetype: resolvedLoadout.archetype
         };
     }
 
     tempState.initiativeQueue = buildInitiativeQueue(tempState);
     tempState.occupancyMask = SpatialSystem.refreshOccupancyMask(tempState);
+    tempState = recomputeVisibility(tempState);
     tempState.intentPreview = buildIntentPreview(tempState);
 
     return tempState;
@@ -256,7 +270,10 @@ export const processNextTurn = createProcessNextTurn({
 
 
 export const gameReducer = (state: GameState, action: Action): GameState => {
-    const normalizedPlayer = ensurePlayerLoadoutIntegrity(state.player);
+    const normalizedBasePlayer = ensurePlayerLoadoutIntegrity(state.player);
+    const normalizedPlayer = state.gameStatus === 'playing'
+        ? ensurePlayingPlayerLoadoutIntegrity(normalizedBasePlayer)
+        : normalizedBasePlayer;
     const normalizedState = normalizedPlayer === state.player
         ? state
         : { ...state, player: normalizedPlayer };

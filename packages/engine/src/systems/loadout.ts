@@ -176,13 +176,21 @@ export const applyLoadoutToPlayer = (
 const hasMovementSkill = (skills: Skill[]): boolean =>
     skills.some(s => s.id === 'BASIC_MOVE' || s.id === 'DASH');
 
+const ensureSkillInstance = (skills: Skill[], skillId: SkillID): Skill[] => {
+    if (skills.some(s => s.id === skillId)) return skills;
+    const created = createActiveSkill(skillId) as Skill | null;
+    return created ? [...skills, created] : skills;
+};
+
+export const ensurePlayerCoreVisionSkill = (skills: Skill[] = []): Skill[] =>
+    ensureSkillInstance(skills, 'STANDARD_VISION');
+
 /**
  * Guard against stale saves / migrations that accidentally strip movement passives.
  */
 export const ensureMobilitySkill = (skills: Skill[] = []): Skill[] => {
     if (hasMovementSkill(skills)) return skills;
-    const fallback = createActiveSkill('BASIC_MOVE') as Skill | null;
-    return fallback ? [fallback, ...skills] : skills;
+    return ensureSkillInstance(skills, 'BASIC_MOVE');
 };
 
 /**
@@ -198,5 +206,18 @@ export const ensurePlayerLoadoutIntegrity = (player: Actor): Actor => {
     return {
         ...player,
         activeSkills: normalizedSkills,
+    };
+};
+
+/**
+ * Runtime-only integrity for active runs: player must always retain core vision.
+ */
+export const ensurePlayingPlayerLoadoutIntegrity = (player: Actor): Actor => {
+    const withMobility = ensureMobilitySkill(player.activeSkills || []);
+    const withCoreVision = ensurePlayerCoreVisionSkill(withMobility);
+    if (withCoreVision === player.activeSkills) return player;
+    return {
+        ...player,
+        activeSkills: withCoreVision
     };
 };

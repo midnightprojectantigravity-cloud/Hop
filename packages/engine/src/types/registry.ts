@@ -39,6 +39,7 @@ export type SkillID =
     | 'BASIC_MOVE'
     | 'BASIC_ATTACK'
     | 'STANDARD_VISION'
+    | 'ENEMY_AWARENESS'
     | 'BASIC_AWARENESS'
     | 'COMBAT_ANALYSIS'
     | 'TACTICAL_INSIGHT'

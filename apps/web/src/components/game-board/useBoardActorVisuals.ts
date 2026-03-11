@@ -121,8 +121,10 @@ export const useBoardActorVisuals = ({
     useEffect(() => {
         if (!onMirrorSnapshot) return;
         const snapshot: StateMirrorSnapshot = {
+            floor: gameState.floor || 0,
             turn: gameState.turnNumber || 0,
             stackTick: gameState.stackTrace?.length || 0,
+            frame: gameState.commandLog?.length || 0,
             actors: [...actorPositionById.entries()].map(([id, position]) => ({
                 id,
                 position: { q: position.q, r: position.r, s: position.s }
