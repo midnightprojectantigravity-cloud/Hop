@@ -1,4 +1,4 @@
-import { pointToKey, type GameState, type Point, type SimulationEvent, type StateMirrorSnapshot } from '@hop/engine';
+import { isEnemyAlertActive, pointToKey, type GameState, type Point, type SimulationEvent, type StateMirrorSnapshot } from '@hop/engine';
 import React from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { UI } from '../components/UI';
@@ -299,23 +299,7 @@ export const GameScreen = ({
   const projectedHp = Math.max(0, Math.min(gameState.player.maxHp, gameState.player.hp + hpProjectionDelta));
   const waitLabel = React.useMemo(() => getWaitDirectiveLabel(gameState), [gameState]);
   const boardColorMode = React.useMemo(() => resolveBoardColorMode(gameState.theme), [gameState.theme]);
-  const hostileEnemies = React.useMemo(
-    () => gameState.enemies.filter(enemy => enemy.hp > 0 && enemy.factionId === 'enemy'),
-    [gameState.enemies]
-  );
-  const enemyAlertActive = React.useMemo(() => {
-    if (hostileEnemies.length === 0) return false;
-    const awarenessByEnemyId = gameState.visibility?.enemyAwarenessById;
-    if (!awarenessByEnemyId) return true;
-    return hostileEnemies.some(enemy => {
-      const awareness = awarenessByEnemyId[enemy.id];
-      return Boolean(
-        awareness
-        && awareness.memoryTurnsRemaining > 0
-        && awareness.lastKnownPlayerPosition
-      );
-    });
-  }, [gameState.visibility?.enemyAwarenessById, hostileEnemies]);
+  const enemyAlertActive = React.useMemo(() => isEnemyAlertActive(gameState), [gameState]);
   const hudScale = React.useMemo(
     () => resolveHudScale(viewportSize.width, viewportSize.height),
     [viewportSize.height, viewportSize.width]

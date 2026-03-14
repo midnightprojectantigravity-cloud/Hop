@@ -2,8 +2,10 @@ import type { Intent } from '../types/intent';
 import type { GameState, Actor, AtomicEffect, Point, AtomicStackReactionHooks, ActionResourcePreview } from '../types';
 import { SkillRegistry } from '../skillRegistry';
 import { getActorAt } from '../helpers';
-import { isFreeMoveMode } from './free-move';
-import { resolveIresActionPreview, resolveWaitPreview } from './ires';
+import { isFreeMoveMode, resolveCombatPressureMode } from './free-move';
+import { applyEffects } from './effect-engine';
+import { recomputeVisibility } from './visibility';
+import { ensureActorIres, resolveExhaustionState, resolveIresActionPreview, resolveIresRuleset, resolveSkillResourceProfile, resolveWaitPreview } from './ires';
 
 type TacticalResolution = {
     effects: AtomicEffect[];
@@ -21,6 +23,10 @@ type TacticalResolution = {
  * Pure & Deterministic execution of an Intent.
  */
 export class TacticalEngine {
+    private static clamp(value: number, min: number, max: number): number {
+        return Math.max(min, Math.min(max, value));
+    }
+
     private static ignoresPlayerPerception(skillId: string): boolean {
         return skillId === 'FALCON_COMMAND';
     }
@@ -45,6 +51,124 @@ export class TacticalEngine {
         return this.resolveExecution(intent, actor, gameState);
     }
 
+    private static adjustResourcePreviewForCombatPressure(
+        gameState: GameState,
+        actor: Actor,
+        skillDef: NonNullable<ReturnType<typeof SkillRegistry.get>>,
+        execution: {
+            effects: AtomicEffect[];
+            stackReactions?: AtomicStackReactionHooks;
+        },
+        basePreview: ActionResourcePreview,
+        targetId?: string
+    ): ActionResourcePreview {
+        const modeBefore = resolveCombatPressureMode(gameState);
+        const config = resolveIresRuleset(gameState.ruleset);
+        const hydratedActor = ensureActorIres(actor, config);
+        const current = hydratedActor.ires!;
+        const profile = skillDef.resourceProfile || resolveSkillResourceProfile(skillDef.id);
+        const isPureMovement = profile.countsAsMovement && !profile.countsAsAction;
+        const travelEligible =
+            config.travelModeEnabled
+            && hydratedActor.id === gameState.player.id
+            && (!config.travelMovementOnly || isPureMovement);
+
+        let modeAfter = modeBefore;
+        if (hydratedActor.id === gameState.player.id && profile.countsAsMovement) {
+            const predictedState = recomputeVisibility(applyEffects(gameState, execution.effects, {
+                sourceId: hydratedActor.id,
+                targetId,
+                stackReactions: execution.stackReactions
+            }));
+            modeAfter = resolveCombatPressureMode(predictedState);
+        }
+
+        if (!travelEligible) {
+            return {
+                ...basePreview,
+                modeBefore,
+                modeAfter,
+                travelRecoveryApplied: false,
+                travelRecoverySuppressedReason: modeBefore !== 'travel' ? 'not_travel' : 'not_pure_movement'
+            };
+        }
+
+        if (modeBefore !== 'travel') {
+            return {
+                ...basePreview,
+                modeBefore,
+                modeAfter,
+                travelRecoveryApplied: false,
+                travelRecoverySuppressedReason: 'not_travel'
+            };
+        }
+
+        if (modeAfter !== 'travel') {
+            return {
+                ...basePreview,
+                modeBefore,
+                modeAfter,
+                travelRecoveryApplied: false,
+                travelRecoverySuppressedReason: 'alert_triggered'
+            };
+        }
+
+        const sparkProjected = this.clamp(
+            current.spark + basePreview.sparkDelta + config.travelSparkRecovery,
+            0,
+            current.maxSpark
+        );
+        const manaProjected = this.clamp(
+            current.mana + basePreview.manaDelta + config.travelManaRecovery,
+            0,
+            current.maxMana
+        );
+        const exhaustionProjected = this.clamp(
+            current.exhaustion + basePreview.exhaustionDelta - config.travelExhaustionClear,
+            0,
+            100
+        );
+        const projectedState = resolveExhaustionState({
+            ...current,
+            spark: sparkProjected,
+            mana: manaProjected,
+            exhaustion: exhaustionProjected
+        }, config);
+
+        return {
+            ...basePreview,
+            sparkDelta: sparkProjected - current.spark,
+            manaDelta: manaProjected - current.mana,
+            exhaustionDelta: exhaustionProjected - current.exhaustion,
+            nextActionCount: 0,
+            bandAfter: projectedState.currentState,
+            modeBefore,
+            modeAfter,
+            travelRecoveryApplied: true,
+            travelRecoverySuppressedReason: undefined,
+            turnProjection: {
+                spark: {
+                    current: current.spark,
+                    projected: sparkProjected,
+                    delta: sparkProjected - current.spark
+                },
+                mana: {
+                    current: current.mana,
+                    projected: manaProjected,
+                    delta: manaProjected - current.mana
+                },
+                exhaustion: {
+                    current: current.exhaustion,
+                    projected: exhaustionProjected,
+                    delta: exhaustionProjected - current.exhaustion
+                },
+                stateAfter: projectedState.currentState,
+                actionCountAfter: 0,
+                wouldRest: false
+            }
+        };
+    }
+
     private static resolveExecution(intent: Intent, actor: Actor, gameState: GameState): TacticalResolution {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
@@ -63,7 +187,7 @@ export class TacticalEngine {
                 messages: [],
                 consumesTurn: true,
                 turnOutcome: 'end',
-                resourcePreview: resolveWaitPreview(actor)
+                resourcePreview: resolveWaitPreview(actor, gameState.ruleset, resolveCombatPressureMode(gameState))
             };
         }
 
@@ -185,14 +309,14 @@ export class TacticalEngine {
             }
         }
 
-        const resourcePreview = resolveIresActionPreview(actor, intent.skillId, skillDef?.resourceProfile);
-        if (resourcePreview.blockedReason) {
+        const baseResourcePreview = resolveIresActionPreview(actor, intent.skillId, skillDef?.resourceProfile, gameState.ruleset);
+        if (baseResourcePreview.blockedReason) {
             return {
                 effects: [],
-                messages: [resourcePreview.blockedReason],
+                messages: [baseResourcePreview.blockedReason],
                 consumesTurn: actor.id === gameState.player.id ? false : true,
                 turnOutcome: 'reject',
-                resourcePreview
+                resourcePreview: baseResourcePreview
             };
         }
 
@@ -201,6 +325,14 @@ export class TacticalEngine {
         const upgrades = actorSkill?.activeUpgrades || [];
 
         const execution = skillDef!.execute(gameState, actor, targetHex, upgrades);
+        const resourcePreview = this.adjustResourcePreviewForCombatPressure(
+            gameState,
+            actor,
+            skillDef!,
+            execution,
+            baseResourcePreview,
+            finalTargetId
+        );
         const turnOutcome = execution.turnOutcome
             || (execution.consumesTurn === false && execution.effects.length === 0 ? 'reject' : 'continue');
         if (turnOutcome === 'reject') {
@@ -217,19 +349,29 @@ export class TacticalEngine {
         }
 
         const executionEffects = [...effects];
-        if (resourcePreview.sparkDelta || resourcePreview.manaDelta || resourcePreview.exhaustionDelta || resourcePreview.nextActionCount) {
+        const actionCountDelta = resourcePreview.nextActionCount - (actor.ires?.actionCountThisTurn || 0);
+        if (
+            resourcePreview.sparkDelta
+            || resourcePreview.manaDelta
+            || resourcePreview.exhaustionDelta
+            || actionCountDelta
+            || resourcePreview.travelRecoveryApplied
+        ) {
             executionEffects.push({
                 type: 'ApplyResources',
                 target: actor.id,
                 sparkDelta: resourcePreview.sparkDelta,
                 manaDelta: resourcePreview.manaDelta,
                 exhaustionDelta: resourcePreview.exhaustionDelta,
-                actionCountDelta: resourcePreview.nextActionCount - (actor.ires?.actionCountThisTurn || 0),
-                movedThisTurn: skillDef?.resourceProfile?.countsAsMovement || false,
-                actedThisTurn: skillDef?.resourceProfile?.countsAsAction || false,
+                actionCountDelta,
+                movedThisTurn: resourcePreview.travelRecoveryApplied ? false : (skillDef?.resourceProfile?.countsAsMovement || false),
+                actedThisTurn: resourcePreview.travelRecoveryApplied ? false : (skillDef?.resourceProfile?.countsAsAction || false),
+                resetTurnFlags: resourcePreview.travelRecoveryApplied || undefined,
                 debug: {
                     skillId: intent.skillId,
-                    actionKind: skillDef?.resourceProfile?.countsAsMovement ? 'move' : 'action',
+                    actionKind: resourcePreview.travelRecoveryApplied
+                        ? 'travel'
+                        : (skillDef?.resourceProfile?.countsAsMovement ? 'move' : 'action'),
                     tax: resourcePreview.tax,
                     effectiveBfi: resourcePreview.effectiveBfi,
                     sparkBurnHpDelta: resourcePreview.sparkBurnHpDelta

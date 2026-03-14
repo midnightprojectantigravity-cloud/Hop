@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  resolveCombatPressureMode,
   resolveEffectiveBfi,
   resolveExhaustionTax,
   resolveIresWeightModifier,
@@ -115,6 +116,7 @@ export const UiTriResourceHeader: React.FC<StatusGameProps & { mobile?: boolean 
   const ires = gameState.player.ires;
   if (!ires) return null;
 
+  const combatPressureMode = resolveCombatPressureMode(gameState);
   const isSparkDeficit = ires.spark < 50;
   const stateLabel = ires.currentState === 'exhausted'
     ? 'Exhausted'
@@ -140,9 +142,24 @@ export const UiTriResourceHeader: React.FC<StatusGameProps & { mobile?: boolean 
             <>
               <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Metabolic Engine</div>
               <div className="text-xs font-bold text-[var(--text-secondary)]">Fuel and friction for the active turn.</div>
+              {combatPressureMode === 'travel' && (
+                <div className="mt-2 inline-flex flex-wrap items-center gap-2 rounded-full border border-emerald-400/35 bg-emerald-950/45 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100">
+                  <span>Travel Mode</span>
+                  {!compact && <span className="text-[9px] font-bold tracking-[0.12em] text-emerald-200/85">Movement auto-recovers while alert is off</span>}
+                </div>
+              )}
             </>
           )}
-          {mobile && <UiStateBadge stateLabel={stateLabel} />}
+          {mobile && (
+            <div className="flex flex-wrap items-center gap-2">
+              <UiStateBadge stateLabel={stateLabel} />
+              {combatPressureMode === 'travel' && (
+                <span className="inline-flex items-center rounded-full border border-emerald-400/35 bg-emerald-950/45 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-100">
+                  Travel Mode
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {ires.pendingRestedBonus && (

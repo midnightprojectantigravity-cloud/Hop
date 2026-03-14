@@ -1,5 +1,5 @@
 import React from 'react';
-import { getSkillDefinition, resolveIresActionPreview, type Skill, type SkillSlot, type GameState } from '@hop/engine';
+import { getSkillDefinition, resolveCombatPressureMode, resolveIresActionPreview, type Skill, type SkillSlot, type GameState } from '@hop/engine';
 
 interface SkillTrayProps {
   skills: Skill[];
@@ -31,6 +31,7 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
   compact = false,
 }) => {
   const slots: SkillSlot[] = ['offensive', 'defensive', 'utility'];
+  const combatPressureMode = resolveCombatPressureMode(gameState);
 
   return (
     <div className={compact ? 'grid grid-cols-3 gap-2 sm:grid-cols-4' : 'flex flex-col gap-4'}>
@@ -41,9 +42,12 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
           const isOnCooldown = skill.currentCooldown > 0;
           const isSpearSlot = skill.id === 'SPEAR_THROW';
           const def = getSkillDefinition(skill.id);
-          const resourcePreview = def ? resolveIresActionPreview(gameState.player, skill.id, def.resourceProfile) : undefined;
+          const resourcePreview = def ? resolveIresActionPreview(gameState.player, skill.id, def.resourceProfile, gameState.ruleset, combatPressureMode) : undefined;
           const resourceBlocked = !!resourcePreview?.blockedReason;
           const cannotUse = inputLocked || resourceBlocked || (isOnCooldown && !isSpearSlot) || (isSpearSlot && !hasSpear);
+          const showTravelPill = combatPressureMode === 'travel'
+            && !!def?.resourceProfile?.countsAsMovement
+            && !def.resourceProfile.countsAsAction;
 
           const rawName = def?.name || skill.name;
           const displayName = typeof rawName === 'function' ? rawName(gameState) : rawName;
@@ -88,6 +92,12 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                   {taxChip}
                 </span>
               </div>
+
+              {showTravelPill ? (
+                <div className="absolute top-1.5 right-1.5 rounded-full border border-emerald-400/35 bg-emerald-950/55 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-100">
+                  Travel
+                </div>
+              ) : null}
 
               {resourcePreview?.sparkBurnHpDelta ? (
                 <div className="absolute inset-x-2 bottom-1.5 rounded-md border border-rose-500/50 bg-rose-950/55 px-1.5 py-0.5 text-center text-[9px] font-black uppercase tracking-[0.14em] text-rose-100">

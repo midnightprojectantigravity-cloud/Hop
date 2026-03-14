@@ -107,4 +107,22 @@ describe('generation state persistence', () => {
         expect(compiledAfterHydrate.artifactDigest).toBe(compiledBeforeHydrate.artifactDigest);
         expect(compiledAfterHydrate.generationDelta.directorEntropyKey).toBe(compiledBeforeHydrate.generationDelta.directorEntropyKey);
     });
+
+    it('accumulates director redline band from IRES floor telemetry deltas', () => {
+        const base = generateInitialState(1, 'generation-redline-seed', 'generation-redline-seed');
+        const advanced = advanceGenerationStateFromCompletedFloor({
+            ...base,
+            runTelemetry: {
+                ...base.runTelemetry,
+                exhaustionGained: 60,
+                sparkBurnHpLost: 6,
+                redlineActions: 3,
+                exhaustedTurns: 2
+            }
+        });
+
+        expect(advanced.recentOutcomeQueue).toHaveLength(1);
+        expect(advanced.recentOutcomeQueue[0]?.bucketIds.resourceStress).toBe(2);
+        expect(advanced.directorState.redlineBand).toBe(4);
+    });
 });

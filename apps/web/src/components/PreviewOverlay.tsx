@@ -262,8 +262,13 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                         const burnLine = intentPreview.resourcePreview?.sparkBurnHpDelta
                             ? `Burn ${intentPreview.resourcePreview.sparkBurnHpDelta} HP`
                             : null;
+                        const travelLine = intentPreview.resourcePreview?.travelRecoveryApplied
+                            ? 'Travel recovery applies'
+                            : intentPreview.resourcePreview?.travelRecoverySuppressedReason === 'alert_triggered'
+                                ? 'Combat triggered'
+                                : null;
                         const panelWidth = 132;
-                        const panelHeight = burnLine ? 62 : 50;
+                        const panelHeight = 50 + (burnLine ? 12 : 0) + (travelLine ? 12 : 0);
                         return (
                             <g transform={`translate(${x + TILE_SIZE * 0.95},${y - TILE_SIZE * 1.15})`}>
                                 <rect
@@ -297,6 +302,17 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                                         style={{ fontWeight: 800 }}
                                     >
                                         {burnLine}
+                                    </text>
+                                )}
+                                {travelLine && (
+                                    <text
+                                        x={8}
+                                        y={burnLine ? 66 : 54}
+                                        fontSize={8.5}
+                                        fill={intentPreview.resourcePreview?.travelRecoveryApplied ? '#bbf7d0' : '#fde68a'}
+                                        style={{ fontWeight: 800 }}
+                                    >
+                                        {travelLine}
                                     </text>
                                 )}
                             </g>

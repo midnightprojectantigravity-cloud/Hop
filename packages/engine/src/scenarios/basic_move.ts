@@ -92,7 +92,10 @@ export const basicMoveScenarios: ScenarioCollection = {
                     attackLogs: attackMessageFound,
 
                     // 3. Verify the final state is correct (the second move worked)
-                    reachedDistantHex: hexEquals(state.player.position, { q: 7, r: 1, s: -8 })
+                    reachedDistantHex: hexEquals(state.player.position, { q: 7, r: 1, s: -8 }),
+                    travelMoveClearedActionCount: state.player.ires?.actionCountThisTurn === 0,
+                    travelMoveResetMovementFlag: state.player.ires?.movedThisTurn === false,
+                    travelMoveResetActionFlag: state.player.ires?.actedThisTurn === false
                 };
 
                 if (Object.values(checks).some(v => v === false)) {

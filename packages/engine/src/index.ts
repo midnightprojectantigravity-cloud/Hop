@@ -44,6 +44,7 @@ export * from './systems/threat-scoring';
 export * from './systems/synapse-threat';
 export * from './systems/visibility';
 export * from './systems/ires';
+export * from './systems/free-move';
 
 // Juice & VFX
 

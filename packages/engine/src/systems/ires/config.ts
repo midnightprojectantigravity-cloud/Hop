@@ -6,6 +6,11 @@ export const DEFAULT_IRES_RULESET: IresRulesetConfig = {
     sparkRecoveryPerTurn: 25,
     manaRecoveryPerTurn: 5,
     restExhaustionClear: 25,
+    travelModeEnabled: true,
+    travelMovementOnly: true,
+    travelSparkRecovery: 25,
+    travelManaRecovery: 5,
+    travelExhaustionClear: 25,
     enterExhaustedAt: 80,
     exitExhaustedBelow: 50,
     sparkBurnHpPct: 0.15,
@@ -16,11 +21,19 @@ export const DEFAULT_IRES_RULESET: IresRulesetConfig = {
 
 export const resolveIresRuleset = (
     ruleset?: GameState['ruleset']
-): IresRulesetConfig => ({
-    ...DEFAULT_IRES_RULESET,
-    ...(ruleset?.ires || {}),
-    fibonacciTable: [...(ruleset?.ires?.fibonacciTable || DEFAULT_IRES_RULESET.fibonacciTable)]
-});
+): IresRulesetConfig => {
+    const merged = {
+        ...DEFAULT_IRES_RULESET,
+        ...(ruleset?.ires || {})
+    };
+    return {
+        ...merged,
+        travelSparkRecovery: ruleset?.ires?.travelSparkRecovery ?? merged.sparkRecoveryPerTurn,
+        travelManaRecovery: ruleset?.ires?.travelManaRecovery ?? merged.manaRecoveryPerTurn,
+        travelExhaustionClear: ruleset?.ires?.travelExhaustionClear ?? merged.restExhaustionClear,
+        fibonacciTable: [...(ruleset?.ires?.fibonacciTable || DEFAULT_IRES_RULESET.fibonacciTable)]
+    };
+};
 
 export const withResolvedIresRuleset = <T extends Pick<GameState, 'ruleset'>>(state: T): T => ({
     ...state,

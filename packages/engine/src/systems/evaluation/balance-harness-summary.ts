@@ -143,6 +143,16 @@ export const summarizeBatch = (
         reachedFloor5Rate: results.length ? results.filter(r => (r.floor || 0) >= 5).length / results.length : 0,
         avgFinalPlayerHpRatio: average(results.map(r => r.finalPlayerHpRatio || 0)),
         avgFinalPlayerHpRatioWhenTimeout: average(timeouts.map(r => r.finalPlayerHpRatio || 0)),
+        avgFinalSpark: average(results.map(r => r.finalSpark || 0)),
+        avgFinalMana: average(results.map(r => r.finalMana || 0)),
+        avgFinalExhaustion: average(results.map(r => r.finalExhaustion || 0)),
+        avgPeakExhaustion: average(results.map(r => r.peakExhaustion || 0)),
+        avgRestTurns: average(results.map(r => r.restTurns || 0)),
+        avgRedlineActions: average(results.map(r => r.redlineActions || 0)),
+        avgSparkBurnDamage: average(results.map(r => r.sparkBurnDamage || 0)),
+        avgActionsPerPlayerTurn: average(results.map(r => r.avgActionsPerPlayerTurn || 0)),
+        avgDirectorRedlineBand: average(results.map(r => r.directorRedlineBand || 0)),
+        avgDirectorResourceStressBand: average(results.map(r => r.directorResourceStressBand || 0)),
         timeoutWithSafeHpRate: results.length
             ? results.filter(r => r.result === 'timeout' && (r.finalPlayerHpRatio || 0) >= 0.5).length / results.length
             : 0,

@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { generateInitialState } from '@hop/engine';
+import { generateInitialState, recomputeVisibility } from '@hop/engine';
 import { GameScreen } from '../app/GameScreen';
 
 const buildProps = (isSynapseMode: boolean) => {
-  const gameState = generateInitialState(1, `game-screen-info-mode-${isSynapseMode ? 'on' : 'off'}`);
+  const gameState = recomputeVisibility({
+    ...generateInitialState(1, `game-screen-info-mode-${isSynapseMode ? 'on' : 'off'}`),
+    enemies: []
+  });
   return {
     gameState,
     uiPreferences: {
@@ -63,6 +66,7 @@ describe('game screen info mode layout', () => {
     expect(html).toContain('Hub');
     expect(html).toContain('Reset');
     expect(html).toContain('Skills');
+    expect(html).toContain('Travel Mode');
   });
 
   it('hides bottom actions and shows info settings when info mode is on', () => {

@@ -19,6 +19,7 @@ export const simulateHarnessRunDetailed = (
     const {
         state,
         telemetry,
+        peakPlayerExhaustion,
         policyProfileVersion,
         terminalOverride
     } = runHarnessPlayerLoop({
@@ -38,6 +39,24 @@ export const simulateHarnessRunDetailed = (
         trinityContribution,
         combatProfileSignal
     } = summarizePlayerCombatSignals(state, state.player.id);
+    const totalPlayerActions = Object.entries(telemetry.playerActionCounts || {}).reduce(
+        (sum, [actionType, count]) => sum + (actionType === 'WAIT' ? 0 : count),
+        0
+    );
+    const observedPlayerTurns = Math.max(0, state.turnsSpent || 0)
+        + ((Number(state.player.ires?.actionCountThisTurn || 0) > 0 && totalPlayerActions > 0) ? 1 : 0);
+    const avgActionsPerPlayerTurn = observedPlayerTurns > 0
+        ? totalPlayerActions / observedPlayerTurns
+        : 0;
+    const finalSpark = Number(state.player.ires?.spark || 0);
+    const finalMana = Number(state.player.ires?.mana || 0);
+    const finalExhaustion = Number(state.player.ires?.exhaustion || 0);
+    const runTelemetry = state.runTelemetry || {
+        restTurns: 0,
+        redlineActions: 0,
+        sparkBurnHpLost: 0
+    };
+    const directorState = state.generationState?.directorState;
 
     const run: RunResult = {
         seed,
@@ -53,6 +72,16 @@ export const simulateHarnessRunDetailed = (
         finalPlayerHp: state.player.hp || 0,
         finalPlayerMaxHp: Math.max(1, state.player.maxHp || 1),
         finalPlayerHpRatio: (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1),
+        finalSpark,
+        finalMana,
+        finalExhaustion,
+        peakExhaustion: peakPlayerExhaustion,
+        restTurns: Number(runTelemetry.restTurns || 0),
+        redlineActions: Number(runTelemetry.redlineActions || 0),
+        sparkBurnDamage: Number(runTelemetry.sparkBurnHpLost || 0),
+        avgActionsPerPlayerTurn,
+        directorRedlineBand: Number(directorState?.redlineBand || 0),
+        directorResourceStressBand: Number(directorState?.resourceStressBand || 0),
         playerActionCounts: telemetry.playerActionCounts,
         playerSkillUsage: telemetry.playerSkillUsage,
         strategicIntentCounts: telemetry.strategicIntentCounts,

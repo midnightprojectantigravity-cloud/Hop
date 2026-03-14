@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileStandaloneFloor } from '../generation';
+import { compileStandaloneFloor, createGenerationState } from '../generation';
 
 const summarizeTiles = (tiles: Map<string, { baseId: string }>) =>
     Array.from(tiles.entries())
@@ -55,5 +55,52 @@ describe('world compiler facade', () => {
 
         expect(result.failure?.stage).toBe('embedSpatialPlan');
         expect(result.failure?.code).toBe('EMBED_SLOT_UNSAT');
+    });
+
+    it('biases non-authored pressure floors toward safe-reset recovery when director redline pressure is high', () => {
+        const generationState = createGenerationState('world-compiler-redline');
+        generationState.directorState = {
+            ...generationState.directorState,
+            resourceStressBand: 3,
+            redlineBand: 3
+        };
+
+        const result = compileStandaloneFloor(2, 'world-compiler-redline:2', { generationState });
+
+        expect(result.generationState.currentFloorSummary?.role).toBe('recovery');
+        expect(result.generationState.currentFloorSummary?.sceneSignature.motif).toBe('failed_escape');
+        expect(result.generationState.currentFloorSummary?.parTurnTarget).toBe(16);
+        expect(
+            result.generationState.currentFloorSummary?.moduleIds.some(id =>
+                id === 'inferno_reset_pocket' || id === 'inferno_cover_band'
+            )
+        ).toBe(true);
+    });
+
+    it('keeps authored floor roles authoritative over director recovery bias', () => {
+        const generationState = createGenerationState('world-compiler-authored-redline');
+        generationState.directorState = {
+            ...generationState.directorState,
+            resourceStressBand: 4,
+            redlineBand: 4
+        };
+
+        const result = compileStandaloneFloor(2, 'world-compiler-authored-redline:2', {
+            generationState,
+            generationSpec: {
+                authoredFloors: {
+                    2: {
+                        role: 'pressure_spike',
+                        theme: 'inferno',
+                        requiredTacticalTags: ['choke'],
+                        requiredNarrativeTags: ['siege_breach']
+                    }
+                }
+            }
+        });
+
+        expect(result.generationState.currentFloorSummary?.role).toBe('pressure_spike');
+        expect(result.generationState.currentFloorSummary?.sceneSignature.motif).toBe('siege_breach');
+        expect(result.generationState.currentFloorSummary?.moduleIds.some(id => id === 'inferno_reset_pocket')).toBe(false);
     });
 });

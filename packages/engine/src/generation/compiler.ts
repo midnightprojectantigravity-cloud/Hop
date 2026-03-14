@@ -352,19 +352,30 @@ const resolveFloorIntent = (
     options: { width: number; height: number; mapShape: MapShape; theme: string },
     authoredFloor?: AuthoredFloor
 ): FloorIntentRequest => {
-    const role = authoredFloor?.role
-        || (floor === 10 ? 'boss'
-            : floor === 1 ? 'onboarding'
-            : floor % 5 === 0 ? 'elite'
-                : floor % 2 === 0 ? 'pressure_spike'
-                    : 'recovery');
+    const directorState = generationState.directorState;
+    const redlinePressureBand = Math.max(
+        Number(directorState?.redlineBand || 0),
+        Number(directorState?.resourceStressBand || 0)
+    );
+    const scheduledRole = floor === 10 ? 'boss'
+        : floor === 1 ? 'onboarding'
+        : floor % 5 === 0 ? 'elite'
+            : floor % 2 === 0 ? 'pressure_spike'
+                : 'recovery';
+    const directorForcesRecovery = !authoredFloor?.role
+        && scheduledRole !== 'boss'
+        && scheduledRole !== 'elite'
+        && scheduledRole !== 'onboarding'
+        && redlinePressureBand >= 2;
+    const role = authoredFloor?.role || (directorForcesRecovery ? 'recovery' : scheduledRole);
+    const prefersSafeResetRecovery = role === 'recovery' && redlinePressureBand >= 2;
 
     const requiredTacticalTags = authoredFloor?.requiredTacticalTags
         ? [...authoredFloor.requiredTacticalTags].sort()
         : role === 'pressure_spike'
             ? ['choke']
             : role === 'recovery'
-                ? ['hazard_lure']
+                ? (prefersSafeResetRecovery ? ['safe_reset'] : ['hazard_lure'])
                 : role === 'elite'
                     ? ['perch']
                     : role === 'boss'
@@ -376,12 +387,32 @@ const resolveFloorIntent = (
         : role === 'pressure_spike'
             ? ['siege_breach']
             : role === 'recovery'
-                ? ['collapsed_crossing']
+                ? (prefersSafeResetRecovery ? ['failed_escape'] : ['collapsed_crossing'])
                 : role === 'elite'
                     ? ['watch_post']
                     : role === 'boss'
                         ? ['ritual_site']
                     : [];
+    const chokeRatioBps = role === 'pressure_spike'
+        ? Math.max(4500, 8000 - (redlinePressureBand * 1000))
+        : role === 'boss'
+            ? Math.max(8000, 9000 - (redlinePressureBand * 250))
+            : Math.max(1500, 3000 - (redlinePressureBand * 500));
+    const hazardLureDemand = role === 'boss'
+        ? 1
+        : role === 'recovery'
+            ? (prefersSafeResetRecovery ? 0 : 1)
+            : 0;
+    const resetBudget = role === 'recovery'
+        ? Math.min(4, 2 + redlinePressureBand)
+        : redlinePressureBand >= 3
+            ? 1
+            : 0;
+    const parTurnTarget = 8
+        + floor
+        + Number(directorState?.tensionBand || 0)
+        + Number(directorState?.resourceStressBand || 0)
+        + Number(directorState?.redlineBand || 0);
 
     return {
         floor,
@@ -395,12 +426,12 @@ const resolveFloorIntent = (
         requiredTacticalTags,
         forbiddenTacticalTags: [],
         requiredNarrativeTags,
-        chokeRatioBps: role === 'pressure_spike' ? 8000 : role === 'boss' ? 9000 : 3000,
+        chokeRatioBps,
         flankDemand: role === 'elite' ? 2 : 1,
         perchDemand: role === 'elite' || role === 'boss' ? 1 : 0,
-        hazardLureDemand: role === 'recovery' || role === 'boss' ? 1 : 0,
-        resetBudget: role === 'recovery' ? 2 : 0,
-        parTurnTarget: 8 + floor + generationState.directorState.tensionBand
+        hazardLureDemand,
+        resetBudget,
+        parTurnTarget
     };
 };
 

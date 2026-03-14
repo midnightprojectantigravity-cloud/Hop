@@ -33,6 +33,7 @@
     "report-enemy-ai-dynamic-bias-decision-diff": "npx tsx ./scripts/reportEnemyAiDynamicBiasDecisionDiff.ts",
     "report-enemy-ai-intent-bias-drift": "npx tsx ./scripts/reportEnemyAiIntentBiasDrift.ts",
     "report-enemy-ai-turn-mode-diff": "npx tsx ./scripts/reportEnemyAiTurnModeDiff.ts",
+    "report-ires-stress": "npx tsx ./scripts/runIresStressReport.ts",
     "check-deprecated-constants-usage": "npx tsx ./scripts/checkDeprecatedConstantsUsage.ts",
     "check-script-imports": "npx tsx ./scripts/checkScriptImports.ts && npm run check-deprecated-constants-usage",
     "acae:lethality": "npx tsx ./scripts/runAcaeLethalitySimulation.ts",

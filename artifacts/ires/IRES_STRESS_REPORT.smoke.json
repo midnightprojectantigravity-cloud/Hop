@@ -1,0 +1,207 @@
+{
+  "generatedAt": "2026-03-14T01:52:25.441Z",
+  "params": {
+    "count": 2,
+    "maxTurns": 20,
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "seedPrefix": "ires-smoke"
+  },
+  "aggregates": {
+    "loadouts": 6,
+    "avgPeakExhaustionMean": 85.5833,
+    "avgRedlineActionsMean": 3.9167,
+    "avgSparkBurnDamageMean": 20.75,
+    "avgDirectorRedlineBandMean": 0,
+    "mostRedlineLoadoutId": "FIREMAGE",
+    "mostStableLoadoutId": "ASSASSIN"
+  },
+  "archetypes": [
+    {
+      "loadoutId": "VANGUARD",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 0,
+        "avgFloor": 1,
+        "avgFinalPlayerHpRatio": 0,
+        "avgFinalSpark": 8,
+        "avgFinalMana": 10,
+        "avgFinalExhaustion": 100,
+        "avgPeakExhaustion": 100,
+        "avgRestTurns": 0,
+        "avgRedlineActions": 6.5,
+        "avgSparkBurnDamage": 44,
+        "avgActionsPerPlayerTurn": 8.5,
+        "avgDirectorRedlineBand": 0,
+        "avgDirectorResourceStressBand": 0
+      },
+      "redlineRunRate": 1,
+      "worstRun": {
+        "seed": "ires-smoke-VANGUARD-2",
+        "result": "lost",
+        "floor": 1,
+        "peakExhaustion": 100,
+        "finalExhaustion": 100,
+        "redlineActions": 7,
+        "sparkBurnDamage": 49,
+        "avgActionsPerPlayerTurn": 9,
+        "directorRedlineBand": 0
+      }
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 0,
+        "avgFloor": 1,
+        "avgFinalPlayerHpRatio": 0.6822,
+        "avgFinalSpark": 14,
+        "avgFinalMana": 16,
+        "avgFinalExhaustion": 76.5,
+        "avgPeakExhaustion": 76.5,
+        "avgRestTurns": 0,
+        "avgRedlineActions": 1.5,
+        "avgSparkBurnDamage": 4.5,
+        "avgActionsPerPlayerTurn": 0,
+        "avgDirectorRedlineBand": 0,
+        "avgDirectorResourceStressBand": 0
+      },
+      "redlineRunRate": 0.5,
+      "worstRun": {
+        "seed": "ires-smoke-SKIRMISHER-2",
+        "result": "lost",
+        "floor": 1,
+        "peakExhaustion": 74,
+        "finalExhaustion": 74,
+        "redlineActions": 3,
+        "sparkBurnDamage": 9,
+        "avgActionsPerPlayerTurn": 0,
+        "directorRedlineBand": 0
+      }
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 0,
+        "avgFloor": 1,
+        "avgFinalPlayerHpRatio": 0,
+        "avgFinalSpark": 64,
+        "avgFinalMana": 3,
+        "avgFinalExhaustion": 100,
+        "avgPeakExhaustion": 100,
+        "avgRestTurns": 6,
+        "avgRedlineActions": 7,
+        "avgSparkBurnDamage": 42,
+        "avgActionsPerPlayerTurn": 11,
+        "avgDirectorRedlineBand": 0,
+        "avgDirectorResourceStressBand": 0
+      },
+      "redlineRunRate": 1,
+      "worstRun": {
+        "seed": "ires-smoke-FIREMAGE-1",
+        "result": "lost",
+        "floor": 1,
+        "peakExhaustion": 100,
+        "finalExhaustion": 100,
+        "redlineActions": 7,
+        "sparkBurnDamage": 42,
+        "avgActionsPerPlayerTurn": 11,
+        "directorRedlineBand": 0
+      }
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 0,
+        "avgFloor": 1,
+        "avgFinalPlayerHpRatio": 0,
+        "avgFinalSpark": 0,
+        "avgFinalMana": 18,
+        "avgFinalExhaustion": 100,
+        "avgPeakExhaustion": 100,
+        "avgRestTurns": 0.5,
+        "avgRedlineActions": 2.5,
+        "avgSparkBurnDamage": 13.5,
+        "avgActionsPerPlayerTurn": 6,
+        "avgDirectorRedlineBand": 0,
+        "avgDirectorResourceStressBand": 0
+      },
+      "redlineRunRate": 1,
+      "worstRun": {
+        "seed": "ires-smoke-NECROMANCER-1",
+        "result": "lost",
+        "floor": 1,
+        "peakExhaustion": 100,
+        "finalExhaustion": 100,
+        "redlineActions": 3,
+        "sparkBurnDamage": 15,
+        "avgActionsPerPlayerTurn": 6,
+        "directorRedlineBand": 0
+      }
+    },
+    {
+      "loadoutId": "HUNTER",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 0,
+        "avgFloor": 1,
+        "avgFinalPlayerHpRatio": 0,
+        "avgFinalSpark": 28,
+        "avgFinalMana": 10,
+        "avgFinalExhaustion": 78,
+        "avgPeakExhaustion": 78,
+        "avgRestTurns": 0.5,
+        "avgRedlineActions": 3.5,
+        "avgSparkBurnDamage": 13,
+        "avgActionsPerPlayerTurn": 4.5,
+        "avgDirectorRedlineBand": 0,
+        "avgDirectorResourceStressBand": 0
+      },
+      "redlineRunRate": 1,
+      "worstRun": {
+        "seed": "ires-smoke-HUNTER-1",
+        "result": "lost",
+        "floor": 1,
+        "peakExhaustion": 100,
+        "finalExhaustion": 100,
+        "redlineActions": 4,
+        "sparkBurnDamage": 17,
+        "avgActionsPerPlayerTurn": 6,
+        "directorRedlineBand": 0
+      }
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "summary": {
+        "winRate": 0,
+        "timeoutRate": 0.5,
+        "avgFloor": 1,
+        "avgFinalPlayerHpRatio": 0.1321,
+        "avgFinalSpark": 11,
+        "avgFinalMana": 10,
+        "avgFinalExhaustion": 59,
+        "avgPeakExhaustion": 59,
+        "avgRestTurns": 249.5,
+        "avgRedlineActions": 2.5,
+        "avgSparkBurnDamage": 7.5,
+        "avgActionsPerPlayerTurn": 3,
+        "avgDirectorRedlineBand": 0,
+        "avgDirectorResourceStressBand": 0
+      },
+      "redlineRunRate": 1,
+      "worstRun": {
+        "seed": "ires-smoke-ASSASSIN-2",
+        "result": "lost",
+        "floor": 1,
+        "peakExhaustion": 59,
+        "finalExhaustion": 59,
+        "redlineActions": 4,
+        "sparkBurnDamage": 12,
+        "avgActionsPerPlayerTurn": 6,
+        "directorRedlineBand": 0
+      }
+    }
+  ]
+}

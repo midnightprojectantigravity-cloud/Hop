@@ -1,4 +1,4 @@
-import type { ActionResourcePreview, Actor, SkillResourceProfile } from '../../types';
+import type { ActionResourcePreview, Actor, CombatPressureMode, GameState, SkillResourceProfile } from '../../types';
 import { resolveIresRuleset } from './config';
 import { resolveExhaustionTax, resolveEffectiveBfi, resolveIresWeightModifier } from './bfi';
 import { resolveSkillResourceProfile } from './skill-catalog';
@@ -15,9 +15,11 @@ const incrementsActionCount = (profile: SkillResourceProfile): boolean =>
 export const resolveIresActionPreview = (
     actor: Actor,
     skillId: string,
-    profileInput?: SkillResourceProfile
+    profileInput?: SkillResourceProfile,
+    ruleset?: GameState['ruleset'],
+    mode: CombatPressureMode = 'battle'
 ): ActionResourcePreview => {
-    const config = resolveIresRuleset();
+    const config = resolveIresRuleset(ruleset);
     const hydrated = ensureActorIres(actor, config);
     const current = hydrated.ires!;
     const profile = profileInput || resolveSkillResourceProfile(skillId);
@@ -79,6 +81,9 @@ export const resolveIresActionPreview = (
         nextActionCount,
         blockedReason: failure,
         bandAfter: projected.currentState,
+        modeBefore: mode,
+        modeAfter: mode,
+        travelRecoveryApplied: false,
         turnProjection: {
             spark: {
                 current: current.spark,
@@ -102,8 +107,12 @@ export const resolveIresActionPreview = (
     };
 };
 
-export const resolveWaitPreview = (actor: Actor): ActionResourcePreview => {
-    const config = resolveIresRuleset();
+export const resolveWaitPreview = (
+    actor: Actor,
+    ruleset?: GameState['ruleset'],
+    mode: CombatPressureMode = 'battle'
+): ActionResourcePreview => {
+    const config = resolveIresRuleset(ruleset);
     const hydrated = ensureActorIres(actor, config);
     const current = hydrated.ires!;
     const isRest = !current.actedThisTurn && !current.movedThisTurn;
@@ -128,6 +137,9 @@ export const resolveWaitPreview = (actor: Actor): ActionResourcePreview => {
         effectiveBfi: resolveEffectiveBfi(hydrated),
         nextActionCount: 0,
         bandAfter: projected.currentState,
+        modeBefore: mode,
+        modeAfter: mode,
+        travelRecoveryApplied: false,
         turnProjection: {
             spark: { current: current.spark, projected: projected.spark, delta: sparkDelta },
             mana: { current: current.mana, projected: projected.mana, delta: manaDelta },

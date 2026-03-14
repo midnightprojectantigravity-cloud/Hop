@@ -19,6 +19,7 @@ export type HarnessLoadoutId = keyof typeof DEFAULT_LOADOUTS;
 export interface HarnessRunLoopResult {
     state: GameState;
     telemetry: PlayerTurnTelemetryAccumulator;
+    peakPlayerExhaustion: number;
     policyProfileVersion: string;
     terminalOverride?: 'won' | 'lost' | 'timeout';
 }
@@ -40,12 +41,16 @@ export const runHarnessPlayerLoop = ({
 }: HarnessRunLoopOptions): HarnessRunLoopResult => {
     const profile = getStrategicPolicyProfile(policyProfileId);
     let state = generateInitialState(1, seed, seed, undefined, DEFAULT_LOADOUTS[loadoutId]);
+    let peakPlayerExhaustion = Number(state.player.ires?.exhaustion || 0);
     let decisionCounter = 0;
     let guard = 0;
     let stagnantPlayerActions = 0;
     let noHostileNoProgressTurns = 0;
     let terminalOverride: HarnessRunLoopResult['terminalOverride'];
     const telemetry = createPlayerTurnTelemetryAccumulator();
+    const trackPeakPlayerExhaustion = (): void => {
+        peakPlayerExhaustion = Math.max(peakPlayerExhaustion, Number(state.player.ires?.exhaustion || 0));
+    };
 
     while (state.gameStatus !== 'won' && state.gameStatus !== 'lost' && guard < 1500) {
         guard++;
@@ -61,6 +66,7 @@ export const runHarnessPlayerLoop = ({
             const option = options[0] || 'EXTRA_HP';
             state = gameReducer(state, { type: 'SELECT_UPGRADE', payload: option });
             state = resolvePending(state);
+            trackPeakPlayerExhaustion();
             continue;
         }
 
@@ -73,6 +79,7 @@ export const runHarnessPlayerLoop = ({
 
             state = gameReducer(state, action);
             state = resolvePending(state);
+            trackPeakPlayerExhaustion();
             if ((state.turnsSpent || 0) === prevTurnsSpent) {
                 stagnantPlayerActions += 1;
             } else {
@@ -81,6 +88,7 @@ export const runHarnessPlayerLoop = ({
             if (stagnantPlayerActions >= 3) {
                 state = gameReducer(state, { type: 'ADVANCE_TURN' });
                 state = resolvePending(state);
+                trackPeakPlayerExhaustion();
                 stagnantPlayerActions = 0;
             }
 
@@ -105,12 +113,14 @@ export const runHarnessPlayerLoop = ({
         } else {
             state = gameReducer(state, { type: 'ADVANCE_TURN' });
             state = resolvePending(state);
+            trackPeakPlayerExhaustion();
         }
     }
 
     return {
         state,
         telemetry,
+        peakPlayerExhaustion,
         policyProfileVersion: profile.version,
         terminalOverride
     };

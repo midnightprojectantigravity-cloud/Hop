@@ -75,8 +75,10 @@ export const actorStateEffectHandlers: AtomicEffectHandlerMap = {
         const beforeActor = ensureActorIres(currentActor, config);
         const before = beforeActor.ires!;
         const resetTurnFlags =
-            effect.debug?.actionKind === 'rest'
-            || effect.debug?.actionKind === 'end_turn';
+            effect.resetTurnFlags === true
+            || effect.debug?.actionKind === 'rest'
+            || effect.debug?.actionKind === 'end_turn'
+            || effect.debug?.actionKind === 'travel';
         const afterActor = applyIresMutationToActor(beforeActor, {
             sparkDelta: effect.sparkDelta,
             manaDelta: effect.manaDelta,

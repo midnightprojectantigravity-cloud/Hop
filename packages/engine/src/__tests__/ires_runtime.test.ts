@@ -5,6 +5,7 @@ import { previewActionOutcome } from '../systems/action-preview';
 import { buildInitiativeQueue, isPlayerTurn } from '../systems/initiative';
 import { SpatialSystem } from '../systems/spatial-system';
 import { recomputeVisibility } from '../systems/visibility';
+import { resolveCombatPressureMode } from '../systems/free-move';
 import { applyIresMutationToActor, resolveIresActionPreview, resolveIresRuleset } from '../systems/ires';
 import { getSkillDefinition } from '../skillRegistry';
 
@@ -36,7 +37,100 @@ const prepareAdjacentEnemyState = () => {
     return recomputeVisibility(withQueue);
 };
 
+const prepareReadyPlayerState = ({
+    seed,
+    playerPos,
+    enemyPos,
+    mutatePlayer
+}: {
+    seed: string;
+    playerPos: ReturnType<typeof createHex>;
+    enemyPos?: ReturnType<typeof createHex>;
+    mutatePlayer?: (player: ReturnType<typeof generateInitialState>['player']) => ReturnType<typeof generateInitialState>['player'];
+}) => {
+    const base = generateInitialState(1, seed);
+    const nextPlayer = mutatePlayer
+        ? mutatePlayer({
+            ...base.player,
+            position: playerPos,
+            previousPosition: playerPos
+        })
+        : {
+            ...base.player,
+            position: playerPos,
+            previousPosition: playerPos
+        };
+    const nextState = {
+        ...base,
+        player: nextPlayer,
+        enemies: enemyPos
+            ? [{
+                ...base.enemies[0]!,
+                position: enemyPos,
+                previousPosition: enemyPos,
+                hp: 99,
+                maxHp: 99
+            }]
+            : []
+    };
+    const withQueue = {
+        ...nextState,
+        initiativeQueue: buildInitiativeQueue(nextState),
+        occupancyMask: SpatialSystem.refreshOccupancyMask(nextState)
+    };
+    return gameReducer(recomputeVisibility(withQueue), { type: 'ADVANCE_TURN' });
+};
+
 describe('IRES runtime', () => {
+    it('derives travel vs battle mode from enemy alert state', () => {
+        const noHostiles = recomputeVisibility({
+            ...generateInitialState(1, 'ires-travel-no-hostiles'),
+            enemies: []
+        });
+        expect(resolveCombatPressureMode(noHostiles)).toBe('travel');
+
+        const unawareBase = generateInitialState(1, 'ires-travel-unaware-hostile');
+        const unawareHostile = recomputeVisibility({
+            ...unawareBase,
+            player: {
+                ...unawareBase.player,
+                position: createHex(4, 8),
+                previousPosition: createHex(4, 8)
+            },
+            enemies: [{
+                ...unawareBase.enemies[0]!,
+                position: createHex(0, 2),
+                previousPosition: createHex(0, 2),
+                hp: 99,
+                maxHp: 99
+            }]
+        });
+        expect(resolveCombatPressureMode(unawareHostile)).toBe('travel');
+
+        const awareBase = generateInitialState(1, 'ires-travel-aware-hostile');
+        const awareHostile = recomputeVisibility({
+            ...awareBase,
+            player: {
+                ...awareBase.player,
+                position: createHex(4, 8),
+                previousPosition: createHex(4, 8)
+            },
+            enemies: [{
+                ...awareBase.enemies[0]!,
+                position: createHex(4, 7),
+                previousPosition: createHex(4, 7),
+                hp: 99,
+                maxHp: 99
+            }]
+        });
+        expect(resolveCombatPressureMode(awareHostile)).toBe('battle');
+
+        expect(resolveCombatPressureMode({
+            ...unawareHostile,
+            visibility: undefined
+        })).toBe('battle');
+    });
+
     it('keeps exhausted state latched until recovery drops below the hysteresis floor', () => {
         const state = generateInitialState(1, 'ires-hysteresis-seed');
         const config = resolveIresRuleset(state.ruleset);
@@ -68,6 +162,84 @@ describe('IRES runtime', () => {
         expect(preview.sparkDelta).toBe(0);
         expect(preview.sparkBurnHpDelta).toBeGreaterThan(0);
         expect(preview.bandAfter).toBe('exhausted');
+    });
+
+    it('self-settles pure movement in travel mode and resets turn burden without arming rest bonuses', () => {
+        const state = prepareReadyPlayerState({
+            seed: 'ires-travel-settle',
+            playerPos: createHex(4, 8),
+            mutatePlayer: (player) => applyIresMutationToActor(
+                player,
+                { sparkDelta: -40, exhaustionDelta: 20 },
+                resolveIresRuleset()
+            )
+        });
+        const target = getSkillDefinition('BASIC_MOVE')!.getValidTargets!(state, state.player.position)[0]!;
+        const preview = previewActionOutcome(state, {
+            actorId: state.player.id,
+            skillId: 'BASIC_MOVE',
+            target
+        });
+
+        expect(preview.ok).toBe(true);
+        expect(preview.resourcePreview?.modeBefore).toBe('travel');
+        expect(preview.resourcePreview?.modeAfter).toBe('travel');
+        expect(preview.resourcePreview?.travelRecoveryApplied).toBe(true);
+        expect(preview.resourcePreview?.travelRecoverySuppressedReason).toBeUndefined();
+
+        const committed = gameReducer(state, {
+            type: 'USE_SKILL',
+            payload: {
+                skillId: 'BASIC_MOVE',
+                target
+            }
+        });
+
+        expect(isPlayerTurn(committed)).toBe(true);
+        expect(resolveCombatPressureMode(committed)).toBe('travel');
+        expect(committed.player.ires?.spark).toBe(preview.predictedState?.player.ires?.spark);
+        expect(committed.player.ires?.mana).toBe(preview.predictedState?.player.ires?.mana);
+        expect(committed.player.ires?.exhaustion).toBe(preview.predictedState?.player.ires?.exhaustion);
+        expect(committed.player.ires?.actionCountThisTurn).toBe(0);
+        expect(committed.player.ires?.movedThisTurn).toBe(false);
+        expect(committed.player.ires?.actedThisTurn).toBe(false);
+        expect(committed.player.ires?.pendingRestedBonus).toBe(false);
+    });
+
+    it('suppresses travel recovery for the opening move that flips alert on', () => {
+        const state = prepareReadyPlayerState({
+            seed: 'travel-flip-search',
+            playerPos: createHex(4, 8),
+            enemyPos: createHex(0, 2)
+        });
+        const target = createHex(4, 2);
+        const preview = previewActionOutcome(state, {
+            actorId: state.player.id,
+            skillId: 'BASIC_MOVE',
+            target
+        });
+
+        expect(preview.ok).toBe(true);
+        expect(preview.resourcePreview?.modeBefore).toBe('travel');
+        expect(preview.resourcePreview?.modeAfter).toBe('battle');
+        expect(preview.resourcePreview?.travelRecoveryApplied).toBe(false);
+        expect(preview.resourcePreview?.travelRecoverySuppressedReason).toBe('alert_triggered');
+
+        const committed = gameReducer(state, {
+            type: 'USE_SKILL',
+            payload: {
+                skillId: 'BASIC_MOVE',
+                target
+            }
+        });
+
+        expect(resolveCombatPressureMode(committed)).toBe('battle');
+        expect(committed.player.position).toEqual(preview.predictedState?.player.position);
+        expect(committed.player.ires?.spark).toBe(preview.predictedState?.player.ires?.spark);
+        expect(committed.player.ires?.exhaustion).toBe(preview.predictedState?.player.ires?.exhaustion);
+        expect(committed.player.ires?.actionCountThisTurn).toBe(1);
+        expect(committed.player.ires?.movedThisTurn).toBe(true);
+        expect(committed.player.ires?.actedThisTurn).toBe(false);
     });
 
     it('matches preview and committed resource state and keeps the player turn open after an action', () => {

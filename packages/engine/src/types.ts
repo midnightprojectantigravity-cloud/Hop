@@ -28,6 +28,7 @@ export type MapShape = 'diamond' | 'rectangle';
 
 export type WeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
 
+export type CombatPressureMode = 'travel' | 'battle';
 export type IresActorState = 'rested' | 'base' | 'exhausted';
 export type IresPrimaryResource = 'spark' | 'mana' | 'none';
 
@@ -61,6 +62,10 @@ export interface ActionResourcePreview {
     nextActionCount: number;
     blockedReason?: string;
     bandAfter: IresActorState;
+    modeBefore: CombatPressureMode;
+    modeAfter: CombatPressureMode;
+    travelRecoveryApplied: boolean;
+    travelRecoverySuppressedReason?: 'not_travel' | 'not_pure_movement' | 'alert_triggered';
     turnProjection: IresTurnProjection;
 }
 
@@ -85,6 +90,11 @@ export interface IresRulesetConfig {
     sparkRecoveryPerTurn: number;
     manaRecoveryPerTurn: number;
     restExhaustionClear: number;
+    travelModeEnabled: boolean;
+    travelMovementOnly: boolean;
+    travelSparkRecovery: number;
+    travelManaRecovery: number;
+    travelExhaustionClear: number;
     enterExhaustedAt: number;
     exitExhaustedBelow: number;
     sparkBurnHpPct: number;
@@ -259,9 +269,10 @@ export type AtomicEffect =
         nextActiveRestedCritBonusPct?: number;
         nextCurrentState?: IresActorState;
         nextIsExhausted?: boolean;
+        resetTurnFlags?: boolean;
         debug?: {
             skillId?: string;
-            actionKind?: 'move' | 'action' | 'rest' | 'end_turn' | 'turn_start';
+            actionKind?: 'move' | 'action' | 'rest' | 'end_turn' | 'turn_start' | 'travel';
             tax?: number;
             effectiveBfi?: number;
             sparkBurnHpDelta?: number;

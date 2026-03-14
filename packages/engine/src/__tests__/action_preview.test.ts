@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { createHex } from '../hex';
 import { generateInitialState } from '../logic';
 import { previewActionOutcome } from '../systems/action-preview';
+import { buildInitiativeQueue } from '../systems/initiative';
+import { SpatialSystem } from '../systems/spatial-system';
+import { resolveCombatPressureMode } from '../systems/free-move';
 import { recomputeVisibility } from '../systems/visibility';
+import { getSkillDefinition } from '../skillRegistry';
 
 describe('action preview dry run', () => {
     it('simulates outcome without mutating live state', () => {
@@ -46,5 +50,60 @@ describe('action preview dry run', () => {
 
         expect(result.ok).toBe(false);
         expect(result.reason?.toLowerCase()).toContain('invalid');
+    });
+
+    it('reports travel-settled movement metadata when alert is off', () => {
+        const base = generateInitialState(1, 'preview-travel-settle');
+        const positioned = recomputeVisibility({
+            ...base,
+            enemies: [],
+            initiativeQueue: buildInitiativeQueue({ ...base, enemies: [] }),
+            occupancyMask: SpatialSystem.refreshOccupancyMask({ ...base, enemies: [] })
+        });
+        const target = getSkillDefinition('BASIC_MOVE')!.getValidTargets!(positioned, positioned.player.position)[0]!;
+        const result = previewActionOutcome(positioned, {
+            actorId: positioned.player.id,
+            skillId: 'BASIC_MOVE',
+            target
+        });
+
+        expect(result.ok).toBe(true);
+        expect(resolveCombatPressureMode(positioned)).toBe('travel');
+        expect(result.resourcePreview?.modeBefore).toBe('travel');
+        expect(result.resourcePreview?.modeAfter).toBe('travel');
+        expect(result.resourcePreview?.travelRecoveryApplied).toBe(true);
+    });
+
+    it('reports alert-trigger suppression when a movement preview opens combat', () => {
+        const base = generateInitialState(1, 'travel-flip-search');
+        const playerPos = createHex(4, 8);
+        const enemyPos = createHex(0, 2);
+        const positioned = recomputeVisibility({
+            ...base,
+            player: { ...base.player, position: playerPos, previousPosition: playerPos },
+            enemies: [{ ...base.enemies[0]!, position: enemyPos, previousPosition: enemyPos, hp: 99, maxHp: 99 }],
+            initiativeQueue: buildInitiativeQueue({
+                ...base,
+                player: { ...base.player, position: playerPos, previousPosition: playerPos },
+                enemies: [{ ...base.enemies[0]!, position: enemyPos, previousPosition: enemyPos, hp: 99, maxHp: 99 }]
+            }),
+            occupancyMask: SpatialSystem.refreshOccupancyMask({
+                ...base,
+                player: { ...base.player, position: playerPos, previousPosition: playerPos },
+                enemies: [{ ...base.enemies[0]!, position: enemyPos, previousPosition: enemyPos, hp: 99, maxHp: 99 }]
+            })
+        });
+        const target = createHex(4, 2);
+        const result = previewActionOutcome(positioned, {
+            actorId: positioned.player.id,
+            skillId: 'BASIC_MOVE',
+            target
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.resourcePreview?.modeBefore).toBe('travel');
+        expect(result.resourcePreview?.modeAfter).toBe('battle');
+        expect(result.resourcePreview?.travelRecoveryApplied).toBe(false);
+        expect(result.resourcePreview?.travelRecoverySuppressedReason).toBe('alert_triggered');
     });
 });

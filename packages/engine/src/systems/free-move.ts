@@ -1,4 +1,4 @@
-import type { Actor, GameState, Skill } from '../types';
+import type { Actor, CombatPressureMode, GameState, Skill } from '../types';
 import type { Point } from '../types';
 import { hexEquals } from '../hex';
 import { recomputeVisibility } from './visibility';
@@ -25,18 +25,26 @@ const resetActorCooldowns = (actor: Actor): Actor => {
     };
 };
 
-export const isFreeMoveMode = (state: GameState): boolean => {
+export const isEnemyAlertActive = (state: GameState): boolean => {
     const hostiles = state.enemies.filter(e => e.hp > 0 && e.factionId === 'enemy');
-    if (hostiles.length === 0) return true;
-    if (!state.visibility) return false;
+    if (hostiles.length === 0) return false;
+    if (!state.visibility) return true;
 
-    return hostiles.every(enemy => {
+    return hostiles.some(enemy => {
         const awareness = state.visibility?.enemyAwarenessById?.[enemy.id];
-        return !awareness
-            || awareness.memoryTurnsRemaining <= 0
-            || !awareness.lastKnownPlayerPosition;
+        return Boolean(
+            awareness
+            && awareness.memoryTurnsRemaining > 0
+            && awareness.lastKnownPlayerPosition
+        );
     });
 };
+
+export const resolveCombatPressureMode = (state: GameState): CombatPressureMode =>
+    isEnemyAlertActive(state) ? 'battle' : 'travel';
+
+export const isFreeMoveMode = (state: GameState): boolean =>
+    resolveCombatPressureMode(state) === 'travel';
 
 export const isEnemyAwareOfPlayer = (state: GameState, enemyId: string): boolean => {
     const awareness = state.visibility?.enemyAwarenessById?.[enemyId];
