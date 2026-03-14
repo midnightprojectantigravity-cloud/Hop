@@ -84,7 +84,7 @@ export const jumpScenarios: ScenarioCollection = {
 
                     playerAtTarget: hexEquals(state.player.position, { q: 3, r: 8, s: -11 }),
 
-                    oneTurnSpent: state.turnsSpent === 1
+                    turnRemainsOpen: state.turnsSpent === 0
                 };
 
                 if (Object.values(checks).some(v => v === false)) {

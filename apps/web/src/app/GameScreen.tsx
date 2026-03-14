@@ -31,6 +31,9 @@ import {
   FloorIntroOverlay,
   ReplayControlsOverlay
 } from './AppOverlays';
+import { WorldgenBoardOverlay } from './WorldgenBoardOverlay';
+import { WorldgenDebugPanel } from './WorldgenDebugPanel';
+import { UiTriResourceHeader, getWaitDirectiveLabel } from '../components/ui/ui-status-panel-sections';
 
 type MobileToast = {
   id: string;
@@ -232,6 +235,10 @@ export const GameScreen = ({
   mobileDockV2Enabled = false,
   replayChronicleEnabled = false,
 }: GameScreenProps) => {
+  const showWorldgenDebug = React.useMemo(() => {
+    if (!import.meta.env.DEV || typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('worldgenDebug') === '1';
+  }, []);
   const [intelMode, setIntelMode] = React.useState<UiInformationRevealMode>(() => getUiInformationRevealMode());
   const [viewportSize, setViewportSize] = React.useState(() => {
     if (typeof window === 'undefined') return { width: 390, height: 844 };
@@ -290,6 +297,7 @@ export const GameScreen = ({
   const dangerThreatActive = hostilePeakZ >= 2;
   const hpProjectionDelta = Number((gameState as any)?.intentPreview?.playerHpDelta || 0);
   const projectedHp = Math.max(0, Math.min(gameState.player.maxHp, gameState.player.hp + hpProjectionDelta));
+  const waitLabel = React.useMemo(() => getWaitDirectiveLabel(gameState), [gameState]);
   const boardColorMode = React.useMemo(() => resolveBoardColorMode(gameState.theme), [gameState.theme]);
   const hostileEnemies = React.useMemo(
     () => gameState.enemies.filter(enemy => enemy.hp > 0 && enemy.factionId === 'enemy'),
@@ -510,6 +518,9 @@ export const GameScreen = ({
             </button>
           </div>
         </div>
+        <div className="px-4 pb-3">
+          <UiTriResourceHeader gameState={gameState} compact mobile />
+        </div>
         <div className="px-4 pb-2 flex justify-center">
           <EnemyAlertChip alerted={enemyAlertActive} />
         </div>
@@ -519,7 +530,7 @@ export const GameScreen = ({
               className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
               style={{ fontSize: 'var(--hud-label-font)' }}
             >
-              Wait: {isInputLocked ? 'Resolving' : 'Ready'}
+              {waitLabel}: {isInputLocked ? 'Resolving' : 'Ready'}
             </div>
             <div
               className={`rounded-lg border px-2 py-1.5 font-black uppercase tracking-[0.16em] ${Math.abs(sigmaValue) >= 2 ? 'border-[var(--accent-danger)] text-[var(--accent-danger)] bg-[var(--accent-danger-soft)]' : 'border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--surface-panel-muted)]'}`}
@@ -614,6 +625,8 @@ export const GameScreen = ({
                 />
               </div>
             )}
+            {showWorldgenDebug && <WorldgenBoardOverlay gameState={gameState} />}
+            {showWorldgenDebug && <WorldgenDebugPanel gameState={gameState} />}
             <ResolvingTurnOverlay visible={isInputLocked && gameState.gameStatus === 'playing'} />
           </div>
         </div>
@@ -641,7 +654,7 @@ export const GameScreen = ({
                     : 'bg-[var(--surface-panel-hover)] border-[var(--border-subtle)] text-[var(--text-primary)] active:bg-[var(--surface-panel)]'
                     }`}
                 >
-                  Wait
+                  {waitLabel}
                 </button>
                 <button
                   onClick={onExitToHub}
@@ -673,7 +686,7 @@ export const GameScreen = ({
                       : 'bg-[var(--surface-panel-hover)] border-[var(--border-subtle)] text-[var(--text-primary)] active:bg-[var(--surface-panel)]'
                     }`}
                   >
-                    Wait
+                    {waitLabel}
                   </button>
                   <GuardedActionButton
                     disabled={false}

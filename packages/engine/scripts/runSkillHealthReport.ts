@@ -162,12 +162,16 @@ const target = resolve(process.cwd(), outFile);
 writeFileSync(target, JSON.stringify(payload, null, 2), 'utf8');
 const loopRiskCount = rows.filter(r => r.labels.includes('loop-risk')).length;
 const playerFacingNoDataCount = rows.filter(r => r.labels.includes('policy-blocked') && loadoutSkills.has(r.skillId)).length;
-originalLog(JSON.stringify({ wrote: target, rows: rows.length, failures: failures.length, loopRiskCount, playerFacingNoDataCount }, null, 2));
+const summary = JSON.stringify({ wrote: target, rows: rows.length, failures: failures.length, loopRiskCount, playerFacingNoDataCount }, null, 2);
 
-if (
+const exitCode = (
     (maxFailures >= 0 && failures.length > maxFailures)
     || (maxLoopRisk >= 0 && loopRiskCount > maxLoopRisk)
     || (maxPlayerFacingNoData >= 0 && playerFacingNoDataCount > maxPlayerFacingNoData)
-) {
-    process.exitCode = 2;
-}
+) ? 2 : 0;
+
+// This script is a CLI gate. Terminate explicitly after synchronous output so
+// lingering handles in the evaluation stack cannot leave the process hanging.
+process.stdout.write(`${summary}\n`, () => {
+    process.exit(exitCode);
+});

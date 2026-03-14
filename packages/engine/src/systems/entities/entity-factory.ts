@@ -4,6 +4,7 @@ import { deriveMaxHpFromTrinity, type TrinityStats } from '../combat/trinity-res
 import { getTrinityProfile } from '../combat/trinity-profiles';
 import { resolveDefaultCombatProfile, type CombatProfile } from '../combat/combat-traits';
 import { getEnemyBestiaryEntry, getEnemyBestiarySkillLoadout } from '../../data/bestiary';
+import { ensureActorIres } from '../ires';
 
 /**
  * ENTITY FACTORY SYSTEM
@@ -135,7 +136,7 @@ export const ensureActorTrinity = (actor: Actor): Actor => {
         components,
         activeSkills: normalizedSkills
     };
-    return normalizedActor;
+    return ensureActorIres(normalizedActor);
 };
 
 /**
@@ -236,7 +237,7 @@ export function createEntity(config: BaseEntityConfig): Actor {
         isVisible: true,
     };
 
-    return actor;
+    return ensureActorIres(actor);
 }
 
 /**

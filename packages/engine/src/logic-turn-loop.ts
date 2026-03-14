@@ -23,6 +23,7 @@ import { processIntent } from './systems/intent-middleware';
 import { TacticalEngine } from './systems/tactical-engine';
 import { applyAutoAttack } from './skills/auto_attack';
 import { recomputeVisibility } from './systems/visibility';
+import { beginActorTurnIres, buildEndTurnIresMutation, resolveIresRuleset } from './systems/ires';
 
 type ExecuteStatusWindowFn = (
     state: GameState,
@@ -58,7 +59,20 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
         const index = new Map<string, Entity>();
         index.set(state.player.id, state.player);
         for (const enemy of state.enemies) index.set(enemy.id, enemy);
+        for (const companion of state.companions || []) index.set(companion.id, companion);
         return index;
+    };
+
+    const updateActorInState = (state: GameState, actor: Entity): GameState => {
+        if (actor.id === state.player.id) {
+            return { ...state, player: actor };
+        }
+
+        return {
+            ...state,
+            enemies: state.enemies.map(e => e.id === actor.id ? actor : e),
+            companions: state.companions?.map(e => e.id === actor.id ? actor : e)
+        };
     };
 
     const processNextTurn = (state: GameState, isResuming: boolean = false): GameState => {
@@ -78,6 +92,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
         const MAX_ITERATIONS = 100;
 
         let skipAdvance = false;
+        let continueCurrentActor = false;
 
         while (iterations < MAX_ITERATIONS) {
             iterations++;
@@ -105,8 +120,10 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
 
             let actorId: string | undefined;
 
-            if (((isResuming && iterations === 1) || skipAdvance) && curState.initiativeQueue) {
+            const continuingTurn = (isResuming && iterations === 1) || continueCurrentActor;
+            if ((continuingTurn || skipAdvance) && curState.initiativeQueue) {
                 skipAdvance = false;
+                continueCurrentActor = false;
                 const q = curState.initiativeQueue;
                 if (q.entries.length > 0 && q.currentIndex >= 0 && q.currentIndex < q.entries.length) {
                     actorId = q.entries[q.currentIndex].actorId;
@@ -130,9 +147,10 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
             const entry = getCurrentEntry(curState.initiativeQueue!);
             if (!entry?.turnStartPosition) {
                 curState = { ...curState, initiativeQueue: startActorTurn(curState, actor) };
+                curState = updateActorInState(curState, beginActorTurnIres(actor, resolveIresRuleset(curState.ruleset)));
             }
 
-            if (!isResuming || iterations > 1) {
+            if (!continuingTurn) {
                 const sotResult = deps.executeStatusWindow(curState, actorId, 'START_OF_TURN', actorStepId);
                 curState = sotResult.state;
                 messages.push(...sotResult.messages);
@@ -262,7 +280,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
 
             intent = processIntent(intent, curState, actorForIntent);
 
-            const { effects, messages: tacticalMessages, consumesTurn, targetId, kills, stackReactions } = TacticalEngine.execute(intent, actorForIntent, curState);
+            const { effects, messages: tacticalMessages, consumesTurn, targetId, kills, stackReactions, turnOutcome } = TacticalEngine.execute(intent, actorForIntent, curState);
             if (deps.engineDebug) {
                 console.log(`[ENGINE] ${actorId} intends ${intent.type} (${intent.skillId}) onto ${targetId || (intent.targetHex ? JSON.stringify(intent.targetHex) : 'self')}`);
             }
@@ -279,17 +297,38 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 nextState.kills = (nextState.kills || 0) + (kills || 0);
             }
 
-            if (consumesTurn === false) {
+            if (turnOutcome === 'reject') {
                 curState = {
                     ...stateBeforeEffects,
                     message: appendTaggedMessages(curState.message, tacticalMessages, 'INFO', 'COMBAT')
                 };
+                if (actorId === 'player') {
+                    const withVisibility = recomputeVisibility(curState);
+                    return {
+                        ...withVisibility,
+                        intentPreview: buildIntentPreview(withVisibility)
+                    };
+                }
+                messages.push(...tacticalMessages);
+            } else if (consumesTurn === false && turnOutcome !== 'end') {
+                curState = {
+                    ...stateBeforeEffects,
+                    message: appendTaggedMessages(curState.message, tacticalMessages, 'INFO', 'COMBAT')
+                };
+                if (actorId === 'player') {
+                    const withVisibility = recomputeVisibility(curState);
+                    return {
+                        ...withVisibility,
+                        intentPreview: buildIntentPreview(withVisibility)
+                    };
+                }
                 skipAdvance = true;
                 continue;
             }
-
-            curState = nextState;
-            messages.push(...tacticalMessages);
+            if (turnOutcome !== 'reject') {
+                curState = nextState;
+                messages.push(...tacticalMessages);
+            }
 
             if (actorId !== 'player') {
                 const actingEnemy = curState.enemies.find(e => e.id === actorId);
@@ -334,6 +373,38 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 };
                 continue;
             }
+
+            if (turnOutcome === 'continue') {
+                if (actorId === 'player') {
+                    const withVisibility = recomputeVisibility({
+                        ...curState,
+                        message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM')
+                    });
+                    return {
+                        ...withVisibility,
+                        intentPreview: buildIntentPreview(withVisibility)
+                    };
+                }
+                continueCurrentActor = true;
+                continue;
+            }
+
+            const endTurnMutation = buildEndTurnIresMutation(postActionActor, resolveIresRuleset(curState.ruleset));
+            curState = applyEffects(curState, [{
+                type: 'ApplyResources',
+                target: actorId,
+                sparkDelta: endTurnMutation.sparkDelta,
+                manaDelta: endTurnMutation.manaDelta,
+                exhaustionDelta: endTurnMutation.exhaustionDelta,
+                actionCountDelta: endTurnMutation.actionCountDelta,
+                movedThisTurn: endTurnMutation.movedThisTurn,
+                actedThisTurn: endTurnMutation.actedThisTurn,
+                nextPendingRestedBonus: endTurnMutation.pendingRestedBonus,
+                nextActiveRestedCritBonusPct: endTurnMutation.activeRestedCritBonusPct,
+                debug: {
+                    actionKind: endTurnMutation.isRest ? 'rest' : 'end_turn'
+                }
+            }], { sourceId: actorId, stepId: actorStepId });
 
             const eotResult = deps.executeStatusWindow(curState, actorId, 'END_OF_TURN', actorStepId);
             curState = eotResult.state;

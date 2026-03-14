@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useLayoutEffect } from 'react';
-import type { GameState, Point, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
+import type { ActionResourcePreview, GameState, IresTurnProjection, Point, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
 import {
     hexDistance,
     isHexInRectangularGrid,
@@ -57,6 +57,8 @@ interface GameBoardProps {
         hasEnemy: boolean;
         target: Point;
         ailmentDeltaLines?: string[];
+        resourcePreview?: ActionResourcePreview;
+        turnProjection?: IresTurnProjection;
     } | null;
     cameraSafeInsetsPx?: Partial<CameraInsetsPx>;
     isSynapseMode?: boolean;

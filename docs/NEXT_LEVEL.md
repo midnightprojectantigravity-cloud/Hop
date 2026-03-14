@@ -13,6 +13,8 @@
   - `docs/CAPABILITY_ROLLOUT.md`
 - Great Refactor UI/UX tranche is complete and validated:
   - `docs/UI_UX_GREAT_REFACTOR_WRAPUP_2026-03-03.md`
+- Inferno world compiler tranche is complete and integrated as the default inferno map-generation path:
+  - `docs/INFERNO_WORLDGEN_WRAPUP_2026-03-12.md`
 - Documentation sync for post-tranche architecture is complete:
   - `docs/MASTER_TECH_STACK.md`
   - `docs/GOLD_STANDARD_MANIFESTO.md`
@@ -25,6 +27,7 @@
 - Behavior-preserving changes only by default.
 - Determinism and replay parity are non-negotiable.
 - New gameplay systems are introduced only as explicit, gated tranches.
+- Inferno world generation is now on the main compiler/runtime path; remaining rollout toggles belong to capability and UI surfaces, not worldgen.
 - Active balance/tuning intake is tracked in:
   - `docs/BALANCE_BACKLOG.md`
 

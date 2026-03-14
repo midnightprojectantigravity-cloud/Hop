@@ -42,6 +42,7 @@ export const autoAttackScenarios: ScenarioCollection = {
             run: (engine: any) => {
                 // Player moves to (4, 6)
                 engine.move({ q: 4, r: 6, s: -10 });
+                engine.wait();
             },
             verify: (state: GameState, logs: string[]) => {
                 const pFoe = state.enemies.find(e => e.id === 'persistent_foe');
@@ -104,6 +105,11 @@ export const autoAttackScenarios: ScenarioCollection = {
                 // 3. Setup another Enemy (Ally to Attacker) at (2,6)
                 // Both (3,6) [Player] and (2,6) [Enemy Ally] are neighbors to (3,5)
                 engine.spawnEnemy('shieldBearer', { q: 2, r: 6, s: -8 }, 'enemy_ally');
+                const enemyAlly = engine.state.enemies.find((e: any) => e.id === 'enemy_ally');
+                if (enemyAlly) {
+                    enemyAlly.activeSkills = [];
+                    enemyAlly.previousPosition = { q: 2, r: 6, s: -8 };
+                }
 
                 // Mock spatial memory for the enemy
                 attacker.previousPosition = { q: 3, r: 5, s: -8 };

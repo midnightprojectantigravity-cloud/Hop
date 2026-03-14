@@ -7,7 +7,9 @@ import {
     previewActionOutcome,
     resolveMovementPreviewPath,
     SkillRegistry,
+    type ActionResourcePreview,
     type GameState,
+    type IresTurnProjection,
     type Point,
 } from '@hop/engine';
 
@@ -17,6 +19,8 @@ interface EnginePreviewGhost {
     hasEnemy: boolean;
     target: Point;
     ailmentDeltaLines?: string[];
+    resourcePreview?: ActionResourcePreview;
+    turnProjection?: IresTurnProjection;
 }
 
 export const extractAilmentDeltaLines = (events: GameState['simulationEvents'] | undefined): string[] => {
@@ -137,15 +141,29 @@ export const useBoardTargetingPreview = ({
             const isMoveTile = movementTargetSet.has(hoveredKey)
                 || (!hasPrimaryMovementSkills && fallbackNeighborSet.has(hoveredKey));
             if (!isMoveTile) return null;
+            const moveSkillId = gameState.player.activeSkills.some(skill => skill.id === 'BASIC_MOVE')
+                ? 'BASIC_MOVE'
+                : gameState.player.activeSkills.some(skill => skill.id === 'DASH')
+                  ? 'DASH'
+                  : null;
             const previewPath = gameState.player.activeSkills.some(skill => skill.id === 'BASIC_MOVE')
                 ? resolveMovementPreviewPath(gameState, gameState.player, 'BASIC_MOVE', hoveredTile)
+                : null;
+            const resourcePreview = moveSkillId
+                ? previewActionOutcome(gameState, {
+                    actorId: gameState.player.id,
+                    skillId: moveSkillId,
+                    target: hoveredTile
+                  })
                 : null;
             return {
                 path: previewPath?.ok ? previewPath.path : getHexLine(playerPos, hoveredTile),
                 aoe: [],
                 hasEnemy: false,
                 target: hoveredTile,
-                ailmentDeltaLines: []
+                ailmentDeltaLines: [],
+                resourcePreview: resourcePreview?.resourcePreview,
+                turnProjection: resourcePreview?.turnProjection
             };
         }
 
@@ -188,7 +206,9 @@ export const useBoardTargetingPreview = ({
             aoe: [...aoeByKey.values()],
             hasEnemy,
             target: hoveredTile,
-            ailmentDeltaLines
+            ailmentDeltaLines,
+            resourcePreview: preview.resourcePreview,
+            turnProjection: preview.turnProjection
         };
     }, [
         enginePreviewGhost,

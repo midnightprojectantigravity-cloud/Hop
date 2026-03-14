@@ -56,18 +56,19 @@ const removeCorpseTraitAt = (state: GameState, position: Point): GameState => {
 const EFFECT_WARN = typeof process !== 'undefined' && (process.env?.HOP_ENGINE_WARN === '1' || process.env?.HOP_ENGINE_DEBUG === '1');
 const TIMELINE_PHASE_ORDER: Record<TimelinePhase, number> = {
     INTENT_START: 1,
-    MOVE_START: 2,
-    MOVE_END: 3,
-    ON_PASS: 4,
-    ON_ENTER: 5,
-    HAZARD_CHECK: 6,
-    STATUS_APPLY: 7,
-    AILMENT_APPLY: 8,
-    AILMENT_ANNIHILATE: 9,
-    AILMENT_TICK: 10,
-    DAMAGE_APPLY: 11,
-    DEATH_RESOLVE: 12,
-    INTENT_END: 13
+    RESOURCE_APPLY: 2,
+    MOVE_START: 3,
+    MOVE_END: 4,
+    ON_PASS: 5,
+    ON_ENTER: 6,
+    HAZARD_CHECK: 7,
+    STATUS_APPLY: 8,
+    AILMENT_APPLY: 9,
+    AILMENT_ANNIHILATE: 10,
+    AILMENT_TICK: 11,
+    DAMAGE_APPLY: 12,
+    DEATH_RESOLVE: 13,
+    INTENT_END: 14
 };
 
 const getBlockingTimelineDurationMs = (events?: TimelineEvent[]): number => {

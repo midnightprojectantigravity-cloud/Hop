@@ -114,7 +114,7 @@ export const necromancerScenarios: ScenarioCollection = {
             verify: (state: GameState) => {
                 const checks = {
                     movedFar: state.player.position.q === 7 && state.player.position.r === 1,
-                    turnsAdvanced: state.turnsSpent >= 1
+                    turnRemainsOpen: state.turnsSpent === 0
                 };
                 return Object.values(checks).every(Boolean);
             }

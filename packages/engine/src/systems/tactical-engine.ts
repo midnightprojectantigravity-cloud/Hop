@@ -1,21 +1,37 @@
 import type { Intent } from '../types/intent';
-import type { GameState, Actor, AtomicEffect, Point, AtomicStackReactionHooks } from '../types';
+import type { GameState, Actor, AtomicEffect, Point, AtomicStackReactionHooks, ActionResourcePreview } from '../types';
 import { SkillRegistry } from '../skillRegistry';
 import { getActorAt } from '../helpers';
 import { isFreeMoveMode } from './free-move';
+import { resolveIresActionPreview, resolveWaitPreview } from './ires';
+
+type TacticalResolution = {
+    effects: AtomicEffect[];
+    messages: string[];
+    consumesTurn?: boolean;
+    targetId?: string;
+    kills?: number;
+    stackReactions?: AtomicStackReactionHooks;
+    turnOutcome: 'reject' | 'continue' | 'end';
+    resourcePreview?: ActionResourcePreview;
+};
 
 /**
  * Layer 3: The Tactical Executor (The "Body").
  * Pure & Deterministic execution of an Intent.
  */
 export class TacticalEngine {
+    private static ignoresPlayerPerception(skillId: string): boolean {
+        return skillId === 'FALCON_COMMAND';
+    }
+
     private static resolveActorById(gameState: GameState, actorId?: string): Actor | undefined {
         if (!actorId) return undefined;
         if (gameState.player.id === actorId) return gameState.player;
         return gameState.enemies.find(enemy => enemy.id === actorId) || gameState.companions?.find(companion => companion.id === actorId);
     }
 
-    static execute(intent: Intent, actor: Actor, gameState: GameState): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean; targetId?: string; kills?: number; stackReactions?: AtomicStackReactionHooks } {
+    static execute(intent: Intent, actor: Actor, gameState: GameState): TacticalResolution {
         const result = this.resolveExecution(intent, actor, gameState);
         return result;
     }
@@ -24,12 +40,12 @@ export class TacticalEngine {
      * Layer 3b: The Simulator (The "Ghost").
      * Validates what WOULD happen without mutating the state.
      */
-    static simulate(intent: Intent, actor: Actor, gameState: GameState): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean; targetId?: string; kills?: number; stackReactions?: AtomicStackReactionHooks } {
+    static simulate(intent: Intent, actor: Actor, gameState: GameState): TacticalResolution {
         // Since getValidTargets and execute are pure, we just call the same logic.
         return this.resolveExecution(intent, actor, gameState);
     }
 
-    private static resolveExecution(intent: Intent, actor: Actor, gameState: GameState): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean; targetId?: string; kills?: number; stackReactions?: AtomicStackReactionHooks } {
+    private static resolveExecution(intent: Intent, actor: Actor, gameState: GameState): TacticalResolution {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
 
@@ -38,11 +54,17 @@ export class TacticalEngine {
         const skillDef = SkillRegistry.get(intent.skillId);
         if (!skillDef && intent.type !== 'WAIT') {
             // Fallback
-            return { effects: [], messages: [`Failed to execute unknown skill: ${intent.skillId}`], consumesTurn: false };
+            return { effects: [], messages: [`Failed to execute unknown skill: ${intent.skillId}`], consumesTurn: false, turnOutcome: 'reject' };
         }
 
         if (intent.type === 'WAIT') {
-            return { effects: [], messages: [], consumesTurn: true };
+            return {
+                effects: [],
+                messages: [],
+                consumesTurn: true,
+                turnOutcome: 'end',
+                resourcePreview: resolveWaitPreview(actor)
+            };
         }
 
         // VALIDATE LOADOUT: Non-wait intents may only execute actor-owned skills.
@@ -53,7 +75,8 @@ export class TacticalEngine {
             return {
                 effects: [],
                 messages: [`Actor ${actor.id} does not have skill ${intent.skillId} in loadout!`],
-                consumesTurn: false
+                consumesTurn: false,
+                turnOutcome: 'reject'
             };
         }
 
@@ -63,7 +86,8 @@ export class TacticalEngine {
             return {
                 effects: [],
                 messages: [`${intent.skillId} is on cooldown (${actorSkill.currentCooldown}).`],
-                consumesTurn: actor.type === 'player' ? false : true
+                consumesTurn: actor.type === 'player' ? false : true,
+                turnOutcome: 'reject'
             };
         }
 
@@ -87,7 +111,8 @@ export class TacticalEngine {
             return {
                 effects: [],
                 messages: [`No valid target found for ${intent.skillId}`],
-                consumesTurn: actor.id === gameState.player.id ? false : true
+                consumesTurn: actor.id === gameState.player.id ? false : true,
+                turnOutcome: 'reject'
             };
         }
 
@@ -108,7 +133,8 @@ export class TacticalEngine {
                             `Invalid target for ${intent.skillId}.`,
                             ...probeMessages
                         ],
-                        consumesTurn: actor.id === gameState.player.id ? false : true
+                        consumesTurn: actor.id === gameState.player.id ? false : true,
+                        turnOutcome: 'reject'
                     };
                 }
             } else {
@@ -125,7 +151,8 @@ export class TacticalEngine {
                             `Invalid target for ${intent.skillId}.`,
                             ...probeMessages
                         ],
-                        consumesTurn: actor.id === gameState.player.id ? false : true
+                        consumesTurn: actor.id === gameState.player.id ? false : true,
+                        turnOutcome: 'reject'
                     };
                 }
             }
@@ -143,6 +170,7 @@ export class TacticalEngine {
             actor.id === gameState.player.id
             && finalTargetActor
             && finalTargetActor.factionId !== actor.factionId
+            && !this.ignoresPlayerPerception(intent.skillId)
             && gameState.visibility
         ) {
             const visible = new Set(gameState.visibility.playerFog.visibleActorIds || []);
@@ -151,9 +179,21 @@ export class TacticalEngine {
                 return {
                     effects: [],
                     messages: [`Target ${finalTargetActor.id} is outside your current perception.`],
-                    consumesTurn: false
+                    consumesTurn: false,
+                    turnOutcome: 'reject'
                 };
             }
+        }
+
+        const resourcePreview = resolveIresActionPreview(actor, intent.skillId, skillDef?.resourceProfile);
+        if (resourcePreview.blockedReason) {
+            return {
+                effects: [],
+                messages: [resourcePreview.blockedReason],
+                consumesTurn: actor.id === gameState.player.id ? false : true,
+                turnOutcome: 'reject',
+                resourcePreview
+            };
         }
 
         // 3. Execution (Atomic Effects)
@@ -161,7 +201,50 @@ export class TacticalEngine {
         const upgrades = actorSkill?.activeUpgrades || [];
 
         const execution = skillDef!.execute(gameState, actor, targetHex, upgrades);
-        const executionEffects = [...effects, ...execution.effects];
+        const turnOutcome = execution.turnOutcome
+            || (execution.consumesTurn === false && execution.effects.length === 0 ? 'reject' : 'continue');
+        if (turnOutcome === 'reject') {
+            return {
+                effects: execution.effects,
+                messages: [...messages, ...execution.messages],
+                consumesTurn: execution.consumesTurn ?? false,
+                targetId: finalTargetId,
+                kills: execution.kills || 0,
+                stackReactions: execution.stackReactions,
+                turnOutcome,
+                resourcePreview
+            };
+        }
+
+        const executionEffects = [...effects];
+        if (resourcePreview.sparkDelta || resourcePreview.manaDelta || resourcePreview.exhaustionDelta || resourcePreview.nextActionCount) {
+            executionEffects.push({
+                type: 'ApplyResources',
+                target: actor.id,
+                sparkDelta: resourcePreview.sparkDelta,
+                manaDelta: resourcePreview.manaDelta,
+                exhaustionDelta: resourcePreview.exhaustionDelta,
+                actionCountDelta: resourcePreview.nextActionCount - (actor.ires?.actionCountThisTurn || 0),
+                movedThisTurn: skillDef?.resourceProfile?.countsAsMovement || false,
+                actedThisTurn: skillDef?.resourceProfile?.countsAsAction || false,
+                debug: {
+                    skillId: intent.skillId,
+                    actionKind: skillDef?.resourceProfile?.countsAsMovement ? 'move' : 'action',
+                    tax: resourcePreview.tax,
+                    effectiveBfi: resourcePreview.effectiveBfi,
+                    sparkBurnHpDelta: resourcePreview.sparkBurnHpDelta
+                }
+            });
+        }
+        if (resourcePreview.sparkBurnHpDelta > 0) {
+            executionEffects.push({
+                type: 'Damage',
+                target: actor.id,
+                amount: resourcePreview.sparkBurnHpDelta,
+                reason: 'spark_burn'
+            });
+        }
+        executionEffects.push(...execution.effects);
 
         if (execution.consumesTurn !== false && !cooldownsBypassed) {
             const baseCooldown = skillDef!.baseVariables.cooldown || 0;
@@ -190,7 +273,9 @@ export class TacticalEngine {
             consumesTurn: execution.consumesTurn ?? true,
             targetId: finalTargetId,
             kills: execution.kills || 0,
-            stackReactions: execution.stackReactions
+            stackReactions: execution.stackReactions,
+            turnOutcome,
+            resourcePreview
         };
     }
 

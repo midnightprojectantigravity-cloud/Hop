@@ -50,31 +50,47 @@ export const telegraphProjectionScenarios: ScenarioCollection = {
         },
         {
             id: 'telegraph_projection_matches_execute_footprint',
-            title: 'Projection Matches Execute Footprint',
-            description: 'Projected danger tiles should include the tile actually damaged on execution.',
-            relatedSkills: ['BASIC_ATTACK'],
+            title: 'Synapse Projection Matches Execute Footprint',
+            description: 'Projected danger heat should include the tile actually damaged on staged execution.',
+            relatedSkills: ['SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'],
             category: 'telegraph',
             difficulty: 'intermediate',
             isTutorial: false,
             tags: ['projection', 'parity', 'combat'],
             setup: (engine: any) => {
                 engine.setPlayer({ q: 4, r: 5, s: -9 }, []);
-                engine.spawnEnemy('footman', { q: 4, r: 2, s: -6 }, 'threat');
+                engine.spawnEnemy('sentinel', { q: 4, r: 2, s: -6 }, 'threat');
             },
             run: (engine: any) => {
-                engine.wait(); // enemy moves toward player; engine emits next-turn intentPreview
+                engine.wait(); // enemy telegraphs first; intent preview is rebuilt for the player's next turn
                 const previewBefore = engine.state.intentPreview;
-                const threatProjection = previewBefore?.projections?.find((p: any) => p.actorId === 'threat');
-                const tile = threatProjection?.dangerTiles?.[0];
+                const tile = previewBefore?.synapse?.tiles?.find((entry: any) =>
+                    entry.tile
+                    && entry.tile.q === engine.state.player.position.q
+                    && entry.tile.r === engine.state.player.position.r
+                    && entry.heat > 0
+                )?.tile;
                 if (tile) {
                     engine.logs.push(`PREVIEW_TILE=${tile.q},${tile.r},${tile.s}`);
                 } else {
                     engine.logs.push('PREVIEW_TILE=none');
                 }
+                const threat = engine.getEnemy('threat');
+                if (threat?.ires) {
+                    threat.activeSkills = threat.activeSkills.filter((skill: any) =>
+                        skill.id === 'ENEMY_AWARENESS' || skill.id === 'SENTINEL_BLAST'
+                    );
+                    threat.ires = {
+                        ...threat.ires,
+                        mana: threat.ires.maxMana,
+                        actedThisTurn: false,
+                        movedThisTurn: false,
+                        actionCountThisTurn: 0
+                    };
+                }
                 engine.wait(); // projected threat should now execute
             },
             verify: (state: GameState, logs: string[]) => {
-                const threat = state.enemies.find(e => e.id === 'threat');
                 const marker = logs.find(l => l.startsWith('PREVIEW_TILE='));
                 const raw = marker?.split('=')[1] || 'none';
                 const parsed = raw === 'none' ? undefined : (() => {
@@ -84,7 +100,7 @@ export const telegraphProjectionScenarios: ScenarioCollection = {
 
                 const checks = {
                     previewProducedTile: !!parsed,
-                    projectedTileMatchesExecute: !!parsed && !!threat && hexEquals(threat.position, parsed),
+                    projectedTileMatchesExecute: !!parsed && hexEquals(state.player.position, parsed) && state.player.hp < state.player.maxHp,
                 };
 
                 if (Object.values(checks).some(v => v === false)) {

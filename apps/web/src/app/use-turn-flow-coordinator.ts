@@ -13,6 +13,7 @@ interface UseTurnFlowCoordinatorArgs {
   setPostCommitInputLock: Dispatch<SetStateAction<boolean>>;
   appendTurnTrace: TurnTraceAppender;
   dispatchWithTrace: (action: Action, source: string) => void;
+  resolvePendingFloor?: () => void | Promise<void>;
 }
 
 const getVisualEventsSignature = (events: Array<{ type: string; payload: any }> | undefined): string => {
@@ -36,6 +37,7 @@ export const useTurnFlowCoordinator = ({
   setPostCommitInputLock,
   appendTurnTrace,
   dispatchWithTrace,
+  resolvePendingFloor,
 }: UseTurnFlowCoordinatorArgs) => {
   const [postCommitTick, setPostCommitTick] = useState(0);
 
@@ -172,6 +174,10 @@ export const useTurnFlowCoordinator = ({
         elapsedPendingMs,
         requiredFallbackDelayMs
       });
+      if (gameState.pendingStatus?.status === 'playing' && resolvePendingFloor) {
+        void resolvePendingFloor();
+        return;
+      }
       dispatchWithTrace({ type: 'RESOLVE_PENDING' }, 'pending_ready');
       return;
     }
@@ -185,6 +191,10 @@ export const useTurnFlowCoordinator = ({
       });
       const remainingMs = Math.max(0, requiredFallbackDelayMs - elapsedPendingMs);
       const timer = window.setTimeout(() => {
+        if (gameState.pendingStatus?.status === 'playing' && resolvePendingFloor) {
+          void resolvePendingFloor();
+          return;
+        }
         dispatchWithTrace({ type: 'RESOLVE_PENDING' }, 'pending_fallback_delay');
       }, remainingMs);
       return () => window.clearTimeout(timer);
@@ -197,7 +207,9 @@ export const useTurnFlowCoordinator = ({
     currentEventsHash,
     currentTimelineHash,
     dispatchWithTrace,
-    appendTurnTrace
+    appendTurnTrace,
+    gameState.pendingStatus?.status,
+    resolvePendingFloor
   ]);
 
   useEffect(() => {

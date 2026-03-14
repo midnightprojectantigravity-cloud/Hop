@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Actor, GameState, Point } from '../types';
+import { createEmptyRunTelemetry } from '../generation';
 import { BASIC_ATTACK } from '../skills/basic_attack';
 import { FIREBALL } from '../skills/fireball';
 import { CORPSE_EXPLOSION } from '../skills/corpse_explosion';
@@ -40,7 +41,8 @@ const makeState = (player: Actor, enemies: Actor[], tiles?: Map<string, any>): G
     kills: 0,
     environmentalKills: 0,
     visualEvents: [],
-    turnsSpent: 0
+    turnsSpent: 0,
+    runTelemetry: createEmptyRunTelemetry()
 } as GameState);
 
 describe('trinity integration', () => {

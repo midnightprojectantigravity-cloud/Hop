@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { processKineticPulse, type KineticPulseRequest } from '../systems/movement/kinetic-kernel';
 import { GameState, Point } from '../types';
+import { createEmptyRunTelemetry } from '../generation';
 
 // Mock GameState helper
 function createMockState(overrides: Partial<GameState> = {}): GameState {
@@ -24,7 +25,8 @@ function createMockState(overrides: Partial<GameState> = {}): GameState {
         kills: 0,
         environmentalKills: 0,
         visualEvents: [],
-        turnsSpent: 0
+        turnsSpent: 0,
+        runTelemetry: createEmptyRunTelemetry()
     };
     return { ...defaultState, ...overrides };
 }

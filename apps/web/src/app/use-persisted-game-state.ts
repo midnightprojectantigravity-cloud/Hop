@@ -36,8 +36,7 @@ const normalizeActor = (actor: any): Actor => {
   };
 };
 
-const hydrateSavedState = (): GameState => {
-  const saved = localStorage.getItem('hop_save');
+export const hydratePersistedGameState = (saved: string | null): GameState => {
   if (!saved) return generateHubState();
 
   try {
@@ -67,6 +66,7 @@ const hydrateSavedState = (): GameState => {
 
     parsed.player = ensurePlayerLoadoutIntegrity(normalizeActor(parsed.player));
     parsed.enemies = Array.isArray(parsed.enemies) ? parsed.enemies.map(normalizeActor) : [];
+    delete parsed.worldgenDebug;
 
     return gameReducer(generateHubState(), { type: 'LOAD_STATE', payload: parsed as GameState });
   } catch (e) {
@@ -75,13 +75,37 @@ const hydrateSavedState = (): GameState => {
   }
 };
 
+const hydrateSavedState = (): GameState => hydratePersistedGameState(localStorage.getItem('hop_save'));
+
+const safeStringifyPersistedState = (obj: any) =>
+  JSON.stringify(obj, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
+
+export const serializePersistedGameState = (gameState: GameState): string | null => {
+  const isSaveEligible = gameState.gameStatus === 'playing' || gameState.gameStatus === 'choosing_upgrade';
+  if (!isSaveEligible) return null;
+
+  const stateToSave = {
+    ...gameState,
+    worldgenDebug: undefined,
+    tiles: Array.from(gameState.tiles.entries()).map(([key, tile]) => [
+      key,
+      {
+        ...tile,
+        traits: Array.from(tile.traits)
+      }
+    ])
+  };
+
+  return safeStringifyPersistedState(stateToSave);
+};
+
 export const usePersistedGameState = (): [GameState, React.Dispatch<Action>] => {
   const [gameState, dispatch] = useReducer(gameReducer, null, hydrateSavedState);
   const persistSaveJobRef = useRef<number | null>(null);
   const lastPersistedSignatureRef = useRef<string>('');
 
   const isSaveEligible = gameState.gameStatus === 'playing' || gameState.gameStatus === 'choosing_upgrade';
-  const saveSignature = `${gameState.gameStatus}|${gameState.floor}|${gameState.turnNumber}|${gameState.player.hp}|${pointToKey(gameState.player.position)}|${gameState.enemies.length}|${gameState.actionLog?.length ?? 0}|${gameState.message?.length ?? 0}`;
+  const saveSignature = `${gameState.gameStatus}|${gameState.floor}|${gameState.turnNumber}|${gameState.player.hp}|${pointToKey(gameState.player.position)}|${gameState.enemies.length}|${gameState.actionLog?.length ?? 0}|${gameState.message?.length ?? 0}|${gameState.generationState?.artifactDigest ?? 'no-artifact'}`;
 
   useEffect(() => {
     if (persistSaveJobRef.current !== null) {
@@ -104,21 +128,15 @@ export const usePersistedGameState = (): [GameState, React.Dispatch<Action>] => 
     }
 
     const persist = () => {
-      const stateToSave = {
-        ...gameState,
-        tiles: Array.from(gameState.tiles.entries()).map(([key, tile]) => [
-          key,
-          {
-            ...tile,
-            traits: Array.from(tile.traits)
-          }
-        ])
-      };
+      const serialized = serializePersistedGameState(gameState);
+      if (serialized === null) {
+        localStorage.removeItem('hop_save');
+        lastPersistedSignatureRef.current = '';
+        persistSaveJobRef.current = null;
+        return;
+      }
 
-      const safeStringify = (obj: any) =>
-        JSON.stringify(obj, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
-
-      localStorage.setItem('hop_save', safeStringify(stateToSave));
+      localStorage.setItem('hop_save', serialized);
       lastPersistedSignatureRef.current = saveSignature;
       persistSaveJobRef.current = null;
     };

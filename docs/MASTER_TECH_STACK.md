@@ -52,7 +52,14 @@ This document is the high-level source of truth for current engine/runtime archi
   - source: `packages/engine/scripts/generateSkillRegistry.ts`
   - generated: `packages/engine/src/generated/skill-registry.generated.ts`
 
-5. ACAE runtime (feature-flagged pilot)
+5. World compiler and map generation
+- Deterministic map generation lives under `packages/engine/src/generation/`.
+- The public compatibility facade remains `packages/engine/src/systems/map.ts`.
+- Current shipped default worldgen surface is `DEFAULT_WORLDGEN_SPEC`, which presently resolves to inferno-authored content and inferno procedural fill.
+- Web start-run and stairs transitions use artifact-only worker transport; full `GameState` does not cross the worker boundary.
+- Tactical + visual path networks are compiler outputs and renderer inputs, not client-derived overlays.
+
+6. ACAE runtime (feature-flagged pilot)
 - Data contracts and catalog:
   - `packages/engine/src/data/ailments/contracts.ts`
   - `packages/engine/src/data/ailments/mvp-ailments.ts`
@@ -169,6 +176,20 @@ Reference milestone:
 
 6. Web build
 - `npm --workspace @hop/web run build`
+
+## Rollout Boundaries
+
+1. World compiler
+- Inferno world generation is integrated and gated as the default inferno map-generation/runtime path.
+- Content scope remains inferno-first; broader biome promotion is a future content expansion, not an architectural blocker.
+
+2. Capability rollout
+- Capability and movement-runtime toggles remain intentionally staged through ruleset, env, and URL override surfaces.
+- These flags are separate from worldgen completion and are still tracked by `docs/CAPABILITY_ROLLOUT.md`.
+
+3. Dev-only worldgen inspection
+- `?worldgenDebug=1` remains an intentional development-only inspection gate in web.
+- It is not a production feature flag and is stripped from persisted saves.
 
 ## Related Docs
 

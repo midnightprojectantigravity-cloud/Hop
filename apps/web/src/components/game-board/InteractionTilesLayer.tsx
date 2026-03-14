@@ -1,5 +1,5 @@
 import React from 'react';
-import type { GameState, Point } from '@hop/engine';
+import type { ActionResourcePreview, GameState, IresTurnProjection, Point } from '@hop/engine';
 import { hexToPixel, TILE_SIZE, pointToKey } from '@hop/engine';
 import { HexTile } from '../HexTile';
 import PreviewOverlay from '../PreviewOverlay';
@@ -20,6 +20,8 @@ interface InteractionTilesLayerProps {
         hasEnemy: boolean;
         target: Point;
         ailmentDeltaLines?: string[];
+        resourcePreview?: ActionResourcePreview;
+        turnProjection?: IresTurnProjection;
     } | null;
     cells: Point[];
     tileVisualFlags: Map<string, TileFlags>;

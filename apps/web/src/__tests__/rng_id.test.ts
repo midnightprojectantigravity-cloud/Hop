@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nextIdFromState } from '@hop/engine';
+import { createEmptyRunTelemetry, nextIdFromState } from '@hop/engine';
 import type { GameState } from '@hop/engine';
 
 describe('rng id generation from state', () => {
@@ -46,7 +46,8 @@ describe('rng id generation from state', () => {
       commandLog: [],
       undoStack: [],
       visualEvents: [],
-      turnsSpent: 0
+      turnsSpent: 0,
+      runTelemetry: createEmptyRunTelemetry()
     } as GameState;
 
     // 1. Check basic generation

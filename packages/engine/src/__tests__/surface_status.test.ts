@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Actor, GameState, Point } from '../types';
 import { pointToKey } from '../hex';
+import { createEmptyRunTelemetry } from '../generation';
 import { FIREBALL } from '../skills/fireball';
 import { getSurfaceSkillPowerMultiplier, getSurfaceStatus } from '../systems/tiles/surface-status';
 
@@ -37,7 +38,8 @@ const makeState = (player: Actor, enemies: Actor[], tiles: Map<string, any> = ne
     kills: 0,
     environmentalKills: 0,
     visualEvents: [],
-    turnsSpent: 0
+    turnsSpent: 0,
+    runTelemetry: createEmptyRunTelemetry()
 } as GameState);
 
 describe('surface-status hooks', () => {
@@ -100,4 +102,3 @@ describe('surface-status hooks', () => {
         expect(getSurfaceSkillPowerMultiplier('FIREBALL', 'STABLE')).toBe(1);
     });
 });
-

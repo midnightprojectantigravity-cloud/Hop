@@ -43,6 +43,7 @@ export * from './systems/capabilities';
 export * from './systems/threat-scoring';
 export * from './systems/synapse-threat';
 export * from './systems/visibility';
+export * from './systems/ires';
 
 // Juice & VFX
 
@@ -52,3 +53,4 @@ export * from './systems/falcon';
 // Visual Registry (for frontend rendering)
 export * from './systems/visual';
 export * from './data';
+export * from './generation';

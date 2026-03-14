@@ -4,8 +4,10 @@
  * resolveEnemyActions and gameReducer are the primary entry points.
  */
 import type { GameState, Action, AtomicEffect, GridSize, MapShape } from './types';
+import type { CompiledFloorArtifact, GenerationSpecInput, GenerationState } from './generation/schema';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
-import { generateDungeon, generateEnemies, getFloorTheme } from './systems/map';
+import { getNeighbors } from './hex';
+import { getFloorTheme } from './systems/map';
 import { createDefaultSkills } from './skillRegistry';
 import { applyEffects } from './systems/effect-engine';
 
@@ -37,6 +39,17 @@ import { resolveAcaeRuleset, tickActorAilments } from './systems/ailments/runtim
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { isReplayRecordableAction } from './systems/replay-validation';
 import { recomputeVisibility } from './systems/visibility';
+import { UnifiedTileService } from './systems/tiles/unified-tile-service';
+import { createDailyObjectives, createDailySeed, toDateKey } from './systems/run-objectives';
+import {
+    compileStandaloneFloor,
+    createInitialCompilerGenerationState,
+    createEmptyRunTelemetry,
+    rebuildEnemiesFromArtifact,
+    rebuildTilesFromArtifact,
+    initializeGenerationForState
+} from './generation';
+import { hydrateGameStateIres, resolveIresRuleset, withResolvedIresRuleset } from './systems/ires';
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
@@ -70,6 +83,243 @@ const warnTurnStackInvariant = (message: string, payload?: Record<string, unknow
     console.warn(`[TURN_STACK] ${message}`);
 };
 
+const mergeRunRulesetOverrides = (
+    base: GameState['ruleset'],
+    overrides?: Record<string, any>
+): GameState['ruleset'] => {
+    if (!overrides) return base;
+    const baseIres = resolveIresRuleset(base);
+    const nextAilments = base?.ailments
+        ? {
+            ...base.ailments,
+            ...(overrides.ailments?.acaeEnabled !== undefined
+                ? { acaeEnabled: overrides.ailments.acaeEnabled }
+                : {})
+        }
+        : undefined;
+    const nextAttachments = base?.attachments
+        ? {
+            ...base.attachments,
+            ...(overrides.attachments?.sharedVectorCarry !== undefined
+                ? { sharedVectorCarry: overrides.attachments.sharedVectorCarry }
+                : {})
+        }
+        : undefined;
+    const nextCapabilities = base?.capabilities
+        ? {
+            ...base.capabilities,
+            ...(overrides.capabilities?.loadoutPassivesEnabled !== undefined
+                ? { loadoutPassivesEnabled: overrides.capabilities.loadoutPassivesEnabled }
+                : {}),
+            ...(overrides.capabilities?.movementRuntimeEnabled !== undefined
+                ? { movementRuntimeEnabled: overrides.capabilities.movementRuntimeEnabled }
+                : {})
+        }
+        : undefined;
+    return {
+        ...(base || {}),
+        ...(nextAilments ? { ailments: nextAilments } : {}),
+        ...(nextAttachments ? { attachments: nextAttachments } : {}),
+        ...(nextCapabilities ? { capabilities: nextCapabilities } : {}),
+        ires: {
+            ...baseIres,
+            ...(overrides.ires || {}),
+            fibonacciTable: [...((overrides.ires?.fibonacciTable as number[] | undefined) || baseIres.fibonacciTable)]
+        }
+    };
+};
+
+const finalizeArtifactAppliedState = (state: GameState): GameState => {
+    const withRuleset = withResolvedIresRuleset({
+        ...state,
+        ruleset: resolveAcaeRuleset(state)
+    });
+    const hydrated = hydrateGameStateIres(withRuleset);
+    const withInitiative = {
+        ...hydrated,
+        initiativeQueue: buildInitiativeQueue(hydrated),
+        occupancyMask: SpatialSystem.refreshOccupancyMask(hydrated)
+    };
+    const withVisibility = recomputeVisibility(withInitiative);
+    return {
+        ...withVisibility,
+        intentPreview: buildIntentPreview(withVisibility)
+    };
+};
+
+const migrateCompanionsToArtifactFloor = (nextState: GameState, priorState: GameState): GameState => {
+    const migratingSummons = priorState.enemies
+        .filter(e => e.hp > 0 && e.factionId === 'player' && e.companionOf === priorState.player.id)
+        .sort((a, b) => a.id.localeCompare(b.id));
+    if (migratingSummons.length === 0) return nextState;
+
+    const candidates = [nextState.player.position, ...getNeighbors(nextState.player.position)];
+    const occupied = [nextState.player, ...nextState.enemies];
+    const migrated = [];
+
+    for (const summon of migratingSummons) {
+        const fallback = candidates[candidates.length - 1] || nextState.player.position;
+        const spawnPos = candidates.find(pos => {
+            const unoccupied = !occupied.some(actor => actor.position.q === pos.q && actor.position.r === pos.r);
+            return unoccupied && UnifiedTileService.isWalkable(nextState, pos);
+        }) || fallback;
+        const migratedSummon = {
+            ...summon,
+            position: spawnPos,
+            previousPosition: spawnPos
+        };
+        occupied.push(migratedSummon);
+        migrated.push(migratedSummon);
+    }
+
+    return {
+        ...nextState,
+        enemies: [...nextState.enemies, ...migrated],
+        companions: [
+            ...(nextState.companions || []),
+            ...migrated.filter(e => e.companionOf === nextState.player.id)
+        ]
+    };
+};
+
+const applyCompiledFloorArtifactToState = (
+    state: GameState,
+    artifact: CompiledFloorArtifact
+): GameState => {
+    const tiles = rebuildTilesFromArtifact(artifact);
+    const enemies = rebuildEnemiesFromArtifact(artifact).map(enemy => ({
+        ...enemy,
+        previousPosition: enemy.position,
+        statusEffects: enemy.statusEffects || [],
+        temporaryArmor: enemy.temporaryArmor || 0
+    }));
+
+    if (artifact.mode === 'start_run') {
+        const loadoutId = artifact.loadoutId || state.selectedLoadoutId || 'VANGUARD';
+        const loadout = DEFAULT_LOADOUTS[loadoutId];
+        if (!loadout) return state;
+
+        const mergedRuleset = resolveAcaeRuleset({
+            ...state,
+            ruleset: mergeRunRulesetOverrides(state.ruleset, artifact.rulesetOverrides)
+        });
+        const appliedLoadout = applyLoadoutToPlayer(loadout, {
+            capabilityPassivesEnabled: mergedRuleset.capabilities?.loadoutPassivesEnabled === true
+        });
+        const player = createEntity({
+            id: 'player',
+            type: 'player',
+            position: artifact.playerSpawn,
+            speed: INITIAL_PLAYER_STATS.speed,
+            factionId: 'player',
+            activeSkills: ensurePlayerCoreVisionSkill(ensureMobilitySkill(appliedLoadout.activeSkills)),
+            archetype: appliedLoadout.archetype,
+            weightClass: 'Standard',
+            components: new Map()
+        });
+        const dailyRunDate = artifact.runMode === 'daily' && artifact.runDate
+            ? toDateKey(artifact.runDate)
+            : undefined;
+        const nextState: GameState = {
+            ...state,
+            turnNumber: 1,
+            player: {
+                ...player,
+                previousPosition: artifact.playerSpawn
+            },
+            enemies,
+            companions: [],
+            gridWidth: artifact.gridWidth,
+            gridHeight: artifact.gridHeight,
+            mapShape: artifact.mapShape,
+            gameStatus: 'playing',
+            message: [appendTaggedMessage([], 'Welcome to the arena. Survive.', 'INFO', 'SYSTEM')[0]],
+            hasSpear: true,
+            hasShield: true,
+            stairsPosition: artifact.stairsPosition,
+            occupancyMask: [0n],
+            shrinePosition: artifact.shrinePosition,
+            shrineOptions: undefined,
+            floor: artifact.floor,
+            upgrades: appliedLoadout.upgrades,
+            rooms: artifact.rooms,
+            theme: getFloorTheme(artifact.floor),
+            commandLog: [],
+            undoStack: [],
+            rngSeed: artifact.runSeed,
+            initialSeed: artifact.runSeed,
+            rngCounter: 0,
+            actionLog: [],
+            kills: 0,
+            environmentalKills: 0,
+            turnsSpent: 0,
+            dailyRunDate,
+            runObjectives: dailyRunDate ? createDailyObjectives(createDailySeed(dailyRunDate)) : [],
+            hazardBreaches: 0,
+            completedRun: undefined,
+            combatScoreEvents: [],
+            runTelemetry: createEmptyRunTelemetry(),
+            dyingEntities: [],
+            visualEvents: [],
+            timelineEvents: [],
+            intentPreview: undefined,
+            initiativeQueue: undefined,
+            tiles,
+            generationState: artifact.generationDelta,
+            generatedPaths: artifact.pathNetwork,
+            worldgenDebug: artifact.debugSnapshot,
+            selectedLoadoutId: loadoutId,
+            ruleset: mergedRuleset
+        };
+        return finalizeArtifactAppliedState(nextState);
+    }
+
+    const nextFloorSeed = `${artifact.runSeed}:${artifact.floor}`;
+    const nextPlayer = {
+        ...state.player,
+        hp: Math.min(state.player.maxHp, state.player.hp + 1),
+        position: artifact.playerSpawn,
+        previousPosition: artifact.playerSpawn
+    };
+    const seededState: GameState = {
+        ...state,
+        turnNumber: 1,
+        player: nextPlayer,
+        enemies,
+        gridWidth: artifact.gridWidth,
+        gridHeight: artifact.gridHeight,
+        mapShape: artifact.mapShape,
+        gameStatus: 'playing',
+        message: appendTaggedMessage([], `Floor ${artifact.floor} - ${artifact.theme.charAt(0).toUpperCase() + artifact.theme.slice(1)}. Be careful.`, 'INFO', 'OBJECTIVE'),
+        stairsPosition: artifact.stairsPosition,
+        shrinePosition: artifact.shrinePosition,
+        shrineOptions: undefined,
+        pendingStatus: undefined,
+        pendingFrames: undefined,
+        floor: artifact.floor,
+        rooms: artifact.rooms,
+        theme: getFloorTheme(artifact.floor),
+        commandLog: [],
+        undoStack: [],
+        rngSeed: nextFloorSeed,
+        initialSeed: state.initialSeed || artifact.runSeed,
+        rngCounter: 0,
+        actionLog: [...(state.actionLog || [])],
+        runTelemetry: state.runTelemetry,
+        dyingEntities: [],
+        visualEvents: [],
+        timelineEvents: [],
+        intentPreview: undefined,
+        initiativeQueue: undefined,
+        tiles,
+        generationState: artifact.generationDelta,
+        generatedPaths: artifact.pathNetwork,
+        worldgenDebug: artifact.debugSnapshot
+    };
+
+    return finalizeArtifactAppliedState(migrateCompanionsToArtifactFloor(seededState, state));
+};
+
 export const generateHubState = (): GameState => {
     const base = generateInitialState();
     // In the Hub we don't want to expose a fully populated tactical state.
@@ -84,7 +334,10 @@ export const generateHubState = (): GameState => {
         },
         // hide pickup items until a run starts
         hasSpear: false,
-        hasShield: false
+        hasShield: false,
+        generationState: undefined,
+        generatedPaths: undefined,
+        worldgenDebug: undefined
     };
 };
 
@@ -95,7 +348,11 @@ export const generateInitialState = (
     preservePlayer?: { hp: number; maxHp: number; upgrades: string[]; activeSkills?: any[] },
     loadout?: Loadout,
     mapSize?: GridSize,
-    mapShape?: MapShape
+    mapShape?: MapShape,
+    generationOptions?: {
+        generationSpec?: GenerationSpecInput;
+        generationState?: GenerationState;
+    }
 ): GameState => {
     ensureTacticalDataBootstrapped();
 
@@ -107,14 +364,17 @@ export const generateInitialState = (
     // Determine floor theme
     const theme = getFloorTheme(floor);
 
-    // Use tactical arena generation for all floors
-    const dungeon = generateDungeon(floor, actualSeed, {
+    const initialGenerationState = generationOptions?.generationState
+        || createInitialCompilerGenerationState(initialSeed ?? actualSeed, generationOptions?.generationSpec);
+    const compiledFloor = compileStandaloneFloor(floor, actualSeed, {
         gridWidth: resolvedMapConfig.width,
         gridHeight: resolvedMapConfig.height,
-        mapShape: resolvedMapConfig.mapShape
+        mapShape: resolvedMapConfig.mapShape,
+        generationSpec: generationOptions?.generationSpec,
+        generationState: initialGenerationState
     });
-    // dungeon.spawnPositions is valid if we kept it in map.ts
-    const enemies = generateEnemies(floor, (dungeon as any).spawnPositions || [], actualSeed);
+    const dungeon = compiledFloor.dungeon;
+    const enemies = compiledFloor.enemies;
 
     // Build player state (preserve HP/upgrades/skills across floors)
     const playerStats = preservePlayer ? {
@@ -198,6 +458,7 @@ export const generateInitialState = (
         hazardBreaches: (preservePlayer as any)?.hazardBreaches || 0,
         completedRun: undefined,
         combatScoreEvents: (preservePlayer as any)?.combatScoreEvents || [],
+        runTelemetry: (preservePlayer as any)?.runTelemetry || createEmptyRunTelemetry(),
 
         // Juice
         dyingEntities: [],
@@ -208,9 +469,15 @@ export const generateInitialState = (
         // Core Systems
         initiativeQueue: undefined, // Initialized below
         tiles: tiles,
+        generationState: compiledFloor.generationState,
+        generatedPaths: compiledFloor.artifact.pathNetwork,
+        worldgenDebug: compiledFloor.debugSnapshot,
     };
 
-    tempState.ruleset = resolveAcaeRuleset(tempState);
+    tempState.ruleset = withResolvedIresRuleset({
+        ...tempState,
+        ruleset: resolveAcaeRuleset(tempState)
+    }).ruleset;
     if (loadout && !preservePlayer?.activeSkills) {
         const resolvedLoadout = applyLoadoutToPlayer(loadout, {
             capabilityPassivesEnabled: tempState.ruleset?.capabilities?.loadoutPassivesEnabled === true
@@ -224,10 +491,17 @@ export const generateInitialState = (
         };
     }
 
+    tempState = hydrateGameStateIres(tempState);
     tempState.initiativeQueue = buildInitiativeQueue(tempState);
     tempState.occupancyMask = SpatialSystem.refreshOccupancyMask(tempState);
     tempState = recomputeVisibility(tempState);
     tempState.intentPreview = buildIntentPreview(tempState);
+    tempState.generationState = initializeGenerationForState(
+        tempState.generationState,
+        initialSeed ?? actualSeed,
+        generationOptions?.generationSpec || tempState.generationState?.spec,
+        tempState
+    );
 
     return tempState;
 };
@@ -278,7 +552,7 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         ? state
         : { ...state, player: normalizedPlayer };
 
-    if (normalizedState.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE' && action.type !== 'LOAD_STATE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN' && action.type !== 'EXIT_TO_HUB') return normalizedState;
+    if (normalizedState.gameStatus !== 'playing' && action.type !== 'RESET' && action.type !== 'SELECT_UPGRADE' && action.type !== 'LOAD_STATE' && action.type !== 'APPLY_LOADOUT' && action.type !== 'START_RUN' && action.type !== 'APPLY_WORLDGEN_ARTIFACT' && action.type !== 'EXIT_TO_HUB') return normalizedState;
 
     const clearedState: GameState = {
         ...normalizedState,
@@ -294,6 +568,9 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
         case 'LOAD_STATE': {
             return hydrateLoadedState(action.payload);
         }
+        case 'APPLY_WORLDGEN_ARTIFACT': {
+            return applyCompiledFloorArtifactToState(normalizedState, action.payload);
+        }
         case 'RESET': {
             const currentArchetype = state.player.archetype;
             const loadoutId = currentArchetype === 'SKIRMISHER' ? 'SKIRMISHER' : 'VANGUARD';
@@ -305,7 +582,8 @@ export const gameReducer = (state: GameState, action: Action): GameState => {
                 undefined,
                 loadout,
                 { width: state.gridWidth, height: state.gridHeight },
-                state.mapShape
+                state.mapShape,
+                { generationSpec: state.generationState?.spec }
             );
         }
 

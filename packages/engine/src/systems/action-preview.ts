@@ -1,8 +1,10 @@
-import type { Actor, AtomicEffect, GameState, Point, SimulationEvent, StackResolutionTick } from '../types';
+import type { Actor, AtomicEffect, GameState, Point, SimulationEvent, StackResolutionTick, ActionResourcePreview, IresTurnProjection } from '../types';
 import { pointToKey } from '../hex';
 import { getActorAt } from '../helpers';
 import { SkillRegistry } from '../skillRegistry';
 import { applyEffects } from './effect-engine';
+import { TacticalEngine } from './tactical-engine';
+import type { Intent } from '../types/intent';
 
 export interface ActionPreviewRequest {
     actorId: string;
@@ -18,6 +20,8 @@ export interface ActionPreviewResult {
     effects: AtomicEffect[];
     messages: string[];
     consumesTurn?: boolean;
+    resourcePreview?: ActionResourcePreview;
+    turnProjection?: IresTurnProjection;
     predictedState?: GameState;
     simulationEvents: SimulationEvent[];
     stackTrace: StackResolutionTick[];
@@ -68,6 +72,11 @@ const cloneActor = (actor: Actor): Actor => ({
             markTarget: typeof actor.companionState.markTarget === 'object' && actor.companionState.markTarget
                 ? clonePoint(actor.companionState.markTarget as Point)
                 : actor.companionState.markTarget
+        }
+        : undefined,
+    ires: actor.ires
+        ? {
+            ...actor.ires
         }
         : undefined
 });
@@ -135,6 +144,9 @@ const resolveTargetId = (state: GameState, target?: Point): string | undefined =
     return getActorAt(state, target)?.id;
 };
 
+const ignoresPlayerPerception = (skillId: string): boolean =>
+    skillId === 'FALCON_COMMAND';
+
 export const previewActionOutcome = (
     state: GameState,
     request: ActionPreviewRequest
@@ -149,14 +161,7 @@ export const previewActionOutcome = (
         return { ok: false, reason: `Skill ${request.skillId} not found`, effects: [], messages: [], simulationEvents: [], stackTrace: [] };
     }
 
-    if (request.target && skillDef.getValidTargets) {
-        const valid = skillDef.getValidTargets(state, actor.position).some(p => pointToKey(p) === pointToKey(request.target as Point));
-        if (!valid) {
-            return { ok: false, reason: `Target ${pointToKey(request.target)} is invalid`, effects: [], messages: [], simulationEvents: [], stackTrace: [] };
-        }
-    }
-
-    if (request.target && actor.id === state.player.id && state.visibility) {
+    if (request.target && actor.id === state.player.id && state.visibility && !ignoresPlayerPerception(request.skillId)) {
         const targetActor = getActorAt(state, request.target);
         if (targetActor && targetActor.factionId !== actor.factionId) {
             const visible = new Set(state.visibility.playerFog.visibleActorIds || []);
@@ -176,13 +181,36 @@ export const previewActionOutcome = (
 
     const previewState = cloneStateForPreview(state);
     const previewActor = resolveActorById(previewState, request.actorId) as Actor;
-    const execution = skillDef.execute(
-        previewState,
-        previewActor,
-        request.target,
-        request.activeUpgrades || [],
-        request.context || {}
-    );
+    const profile = skillDef.resourceProfile;
+    const intent: Intent = {
+        type: request.skillId === 'WAIT'
+            ? 'WAIT'
+            : (profile?.countsAsMovement && !profile?.countsAsAction ? 'MOVE' : 'USE_SKILL'),
+        actorId: previewActor.id,
+        skillId: request.skillId,
+        targetHex: request.target,
+        primaryTargetId: resolveTargetId(previewState, request.target),
+        priority: 0,
+        metadata: {
+            expectedValue: 0,
+            reasoningCode: 'PREVIEW',
+            isGhost: true
+        }
+    };
+    const execution = TacticalEngine.simulate(intent, previewActor, previewState);
+    if (execution.turnOutcome === 'reject') {
+        return {
+            ok: false,
+            reason: execution.resourcePreview?.blockedReason || execution.messages[0] || `Unable to preview ${request.skillId}`,
+            effects: execution.effects,
+            messages: execution.messages,
+            consumesTurn: execution.consumesTurn,
+            resourcePreview: execution.resourcePreview,
+            turnProjection: execution.resourcePreview?.turnProjection,
+            simulationEvents: [],
+            stackTrace: []
+        };
+    }
 
     const beforeEvents = previewState.simulationEvents?.length || 0;
     const beforeTrace = previewState.stackTrace?.length || 0;
@@ -198,6 +226,8 @@ export const previewActionOutcome = (
         effects: execution.effects,
         messages: execution.messages,
         consumesTurn: execution.consumesTurn,
+        resourcePreview: execution.resourcePreview,
+        turnProjection: execution.resourcePreview?.turnProjection,
         predictedState: resolvedState,
         simulationEvents: (resolvedState.simulationEvents || []).slice(beforeEvents),
         stackTrace: (resolvedState.stackTrace || []).slice(beforeTrace)

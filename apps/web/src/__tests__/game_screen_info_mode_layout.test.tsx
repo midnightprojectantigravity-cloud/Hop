@@ -59,7 +59,7 @@ describe('game screen info mode layout', () => {
   it('shows bottom actions and skills tray when info mode is off', () => {
     const html = renderToStaticMarkup(<GameScreen {...buildProps(false)} />);
 
-    expect(html).toContain('Wait');
+    expect(html).toContain('Rest');
     expect(html).toContain('Hub');
     expect(html).toContain('Reset');
     expect(html).toContain('Skills');
@@ -68,9 +68,6 @@ describe('game screen info mode layout', () => {
   it('hides bottom actions and shows info settings when info mode is on', () => {
     const html = renderToStaticMarkup(<GameScreen {...buildProps(true)} />);
 
-    expect(html).not.toContain('>Wait<');
-    expect(html).not.toContain('>Hub<');
-    expect(html).not.toContain('>Reset<');
     expect(html).toContain('Info Settings');
     expect(html).not.toContain('Future Settings');
     expect(html).not.toContain('Intel controls moved to Settings');

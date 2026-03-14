@@ -5,6 +5,7 @@ const makeSkill = (id: string) => {
     const byId: Record<string, { slot: 'offensive' | 'passive' | 'utility' | 'defensive'; range: number; cooldown: number; name: string; description: string }> = {
         BASIC_MOVE: { slot: 'passive', range: 1, cooldown: 0, name: 'Walk', description: 'Move to adjacent tile.' },
         BASIC_ATTACK: { slot: 'passive', range: 1, cooldown: 0, name: 'Basic Attack', description: 'Strike adjacent target.' },
+        ENEMY_AWARENESS: { slot: 'utility', range: 0, cooldown: 0, name: 'Enemy Awareness', description: 'Tracks the player when detected.' },
         GRAPPLE_HOOK: { slot: 'offensive', range: 4, cooldown: 0, name: 'Grapple Hook', description: 'Pull and swap with target.' },
     };
     const def = byId[id] || { slot: 'offensive' as const, range: 1, cooldown: 0, name: id, description: id };
@@ -43,6 +44,7 @@ export const pouncerHookScenarios: ScenarioCollection = {
                     pouncer.activeSkills = [
                         makeSkill('BASIC_MOVE'),
                         makeSkill('BASIC_ATTACK'),
+                        makeSkill('ENEMY_AWARENESS'),
                         makeSkill('GRAPPLE_HOOK')
                     ];
                 }

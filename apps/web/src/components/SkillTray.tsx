@@ -1,6 +1,5 @@
-﻿import React from 'react';
-import type { Skill, SkillSlot, GameState } from '@hop/engine';
-import { getSkillDefinition } from '@hop/engine';
+import React from 'react';
+import { getSkillDefinition, resolveIresActionPreview, type Skill, type SkillSlot, type GameState } from '@hop/engine';
 
 interface SkillTrayProps {
   skills: Skill[];
@@ -11,6 +10,16 @@ interface SkillTrayProps {
   inputLocked?: boolean;
   compact?: boolean;
 }
+
+const formatPrimaryChip = (preview: ReturnType<typeof resolveIresActionPreview> | undefined): string => {
+  if (!preview) return '';
+  if (preview.sparkBurnHpDelta > 0 && preview.primaryResource === 'spark') {
+    return `Burn ${preview.sparkBurnHpDelta} HP`;
+  }
+  if (preview.primaryResource === 'spark') return `${preview.primaryCost} SP`;
+  if (preview.primaryResource === 'mana') return `${preview.primaryCost} MP`;
+  return '0';
+};
 
 export const SkillTray: React.FC<SkillTrayProps> = ({
   skills,
@@ -31,21 +40,30 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
           const isSelected = selectedSkillId === skill.id;
           const isOnCooldown = skill.currentCooldown > 0;
           const isSpearSlot = skill.id === 'SPEAR_THROW';
-          const cannotUse = inputLocked || (isOnCooldown && !isSpearSlot) || (isSpearSlot && !hasSpear);
-
           const def = getSkillDefinition(skill.id);
+          const resourcePreview = def ? resolveIresActionPreview(gameState.player, skill.id, def.resourceProfile) : undefined;
+          const resourceBlocked = !!resourcePreview?.blockedReason;
+          const cannotUse = inputLocked || resourceBlocked || (isOnCooldown && !isSpearSlot) || (isSpearSlot && !hasSpear);
+
           const rawName = def?.name || skill.name;
           const displayName = typeof rawName === 'function' ? rawName(gameState) : rawName;
           const displayIcon = def?.icon || '*';
+          const taxChip = resourcePreview && resourcePreview.tax > 0 ? `+${resourcePreview.tax} EX` : '+0 EX';
+          const primaryChip = formatPrimaryChip(resourcePreview);
+          const tooltip = resourcePreview?.blockedReason
+            || (resourcePreview?.sparkBurnHpDelta
+              ? `EXHAUSTED: this costs ${resourcePreview.sparkBurnHpDelta} HP Spark Burn`
+              : primaryChip);
 
           return (
             <button
               key={skill.id}
               disabled={cannotUse}
               onClick={() => onSelectSkill(isSelected ? null : skill.id)}
+              title={tooltip}
               className={`
                 skill-card
-                relative w-full ${compact ? 'h-20 rounded-xl gap-0.5' : 'h-24 rounded-2xl gap-1'} flex flex-col items-center justify-center
+                relative w-full ${compact ? 'h-24 rounded-xl gap-0.5' : 'h-28 rounded-2xl gap-1'} flex flex-col items-center justify-center
                 border transition-all transform hover:-translate-y-0.5
                 ${isSelected
                   ? 'skill-card-selected border-[var(--accent-royal)] text-[var(--text-primary)]'
@@ -53,9 +71,7 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                 ${cannotUse ? 'opacity-40 grayscale pointer-events-none' : 'cursor-pointer'}
               `}
             >
-              <span
-                className={`skill-icon-stain ${compact ? 'text-2xl' : 'text-3xl'}`}
-              >
+              <span className={`skill-icon-stain ${compact ? 'text-2xl' : 'text-3xl'}`}>
                 {displayIcon}
               </span>
               <span
@@ -63,6 +79,21 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
               >
                 {displayName}
               </span>
+
+              <div className={`absolute top-1.5 left-1.5 flex flex-col gap-1 ${compact ? 'scale-[0.92] origin-top-left' : ''}`}>
+                <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${resourcePreview?.sparkBurnHpDelta ? 'border-rose-500/70 bg-rose-950/70 text-rose-200' : 'border-amber-300/60 bg-amber-100/70 text-amber-950'}`}>
+                  {resourcePreview?.sparkBurnHpDelta ? 'Flame' : primaryChip}
+                </span>
+                <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-950/55 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-fuchsia-100">
+                  {taxChip}
+                </span>
+              </div>
+
+              {resourcePreview?.sparkBurnHpDelta ? (
+                <div className="absolute inset-x-2 bottom-1.5 rounded-md border border-rose-500/50 bg-rose-950/55 px-1.5 py-0.5 text-center text-[9px] font-black uppercase tracking-[0.14em] text-rose-100">
+                  Burn {resourcePreview.sparkBurnHpDelta} HP
+                </div>
+              ) : null}
 
               {isOnCooldown && !isSpearSlot && (
                 <div
@@ -80,4 +111,3 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
     </div>
   );
 };
-

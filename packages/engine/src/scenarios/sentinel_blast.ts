@@ -5,6 +5,7 @@ const makeSkill = (id: string) => {
     const byId: Record<string, { slot: 'offensive' | 'passive' | 'utility' | 'defensive'; range: number; cooldown: number; name: string; description: string }> = {
         BASIC_MOVE: { slot: 'passive', range: 1, cooldown: 0, name: 'Walk', description: 'Move to adjacent tile.' },
         BASIC_ATTACK: { slot: 'passive', range: 1, cooldown: 0, name: 'Basic Attack', description: 'Strike adjacent target.' },
+        ENEMY_AWARENESS: { slot: 'utility', range: 0, cooldown: 0, name: 'Enemy Awareness', description: 'Tracks the player when detected.' },
         SENTINEL_TELEGRAPH: { slot: 'offensive', range: 3, cooldown: 0, name: 'Sentinel Telegraph', description: 'Marks blast zone.' },
         SENTINEL_BLAST: { slot: 'offensive', range: 3, cooldown: 0, name: 'Sentinel Blast', description: 'Massive area blast.' },
     };
@@ -63,7 +64,7 @@ export const sentinelBlastScenarios: ScenarioCollection = {
         {
             id: 'sentinel_playlist_two_turn_timing',
             title: 'Playlist: Telegraph then Execute',
-            description: 'Boss uses a 2-turn skill playlist: telegraph first, blast on next turn.',
+            description: 'Boss telegraphs first, then is staged into a blast follow-up on the next turn under IRES.',
             relatedSkills: ['SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'],
             category: 'combat',
             difficulty: 'intermediate',
@@ -77,6 +78,7 @@ export const sentinelBlastScenarios: ScenarioCollection = {
                     boss.activeSkills = [
                         makeSkill('BASIC_MOVE'),
                         makeSkill('BASIC_ATTACK'),
+                        makeSkill('ENEMY_AWARENESS'),
                         makeSkill('SENTINEL_TELEGRAPH'),
                         makeSkill('SENTINEL_BLAST')
                     ];
@@ -85,6 +87,20 @@ export const sentinelBlastScenarios: ScenarioCollection = {
             run: (engine: any) => {
                 engine.wait(); // turn 1: telegraph
                 engine.logs.push(`HP_AFTER_TELEGRAPH=${engine.state.player.hp}`);
+                const boss = engine.getEnemy('boss');
+                if (boss?.ires) {
+                    boss.activeSkills = boss.activeSkills.filter((skill: any) =>
+                        skill.id === 'ENEMY_AWARENESS' || skill.id === 'SENTINEL_BLAST'
+                    );
+                    boss.statusEffects = [];
+                    boss.ires = {
+                        ...boss.ires,
+                        mana: boss.ires.maxMana,
+                        actedThisTurn: false,
+                        movedThisTurn: false,
+                        actionCountThisTurn: 0
+                    };
+                }
                 engine.wait(); // turn 2: execute blast
             },
             verify: (state: GameState, logs: string[]) => {
@@ -110,7 +126,7 @@ export const sentinelBlastScenarios: ScenarioCollection = {
         {
             id: 'sentinel_playlist_interruption_by_stun',
             title: 'Playlist: Interruption Cancels Execute',
-            description: 'Stunning the boss during telegraph cancels the follow-up execute turn.',
+            description: 'Stunning the boss after telegraph prevents the staged blast follow-up on the next turn.',
             relatedSkills: ['SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'],
             category: 'combat',
             difficulty: 'advanced',
@@ -124,6 +140,7 @@ export const sentinelBlastScenarios: ScenarioCollection = {
                     boss.activeSkills = [
                         makeSkill('BASIC_MOVE'),
                         makeSkill('BASIC_ATTACK'),
+                        makeSkill('ENEMY_AWARENESS'),
                         makeSkill('SENTINEL_TELEGRAPH'),
                         makeSkill('SENTINEL_BLAST')
                     ];
@@ -131,6 +148,20 @@ export const sentinelBlastScenarios: ScenarioCollection = {
             },
             run: (engine: any) => {
                 engine.wait(); // telegraph
+                const boss = engine.getEnemy('boss');
+                if (boss?.ires) {
+                    boss.activeSkills = boss.activeSkills.filter((skill: any) =>
+                        skill.id === 'ENEMY_AWARENESS' || skill.id === 'SENTINEL_BLAST'
+                    );
+                    boss.statusEffects = [];
+                    boss.ires = {
+                        ...boss.ires,
+                        mana: boss.ires.maxMana,
+                        actedThisTurn: false,
+                        movedThisTurn: false,
+                        actionCountThisTurn: 0
+                    };
+                }
                 engine.applyStatus('boss', 'stunned', 1);
                 engine.wait(); // execute turn should be cancelled
             },

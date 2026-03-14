@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import type { GameState, Point } from '@hop/engine';
+import type { ActionResourcePreview, GameState, IresTurnProjection, Point } from '@hop/engine';
 import {
     hexToPixel, getHexLine, hexAdd, scaleVector, isHexInRectangularGrid,
     TILE_SIZE, SkillRegistry, getSkillRange, pointToKey,
@@ -17,6 +17,8 @@ interface PreviewOverlayProps {
         hasEnemy: boolean;
         target: Point;
         ailmentDeltaLines?: string[];
+        resourcePreview?: ActionResourcePreview;
+        turnProjection?: IresTurnProjection;
     } | null;
 }
 
@@ -244,6 +246,59 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                                         {line}
                                     </text>
                                 ))}
+                            </g>
+                        );
+                    })()}
+
+                    {!!intentPreview.turnProjection && (() => {
+                        const { x, y } = hexToPixel(intentPreview.target, TILE_SIZE);
+                        const projection = intentPreview.turnProjection!;
+                        const lines = [
+                            `Spark ${projection.spark.current} -> ${projection.spark.projected} (${projection.spark.delta > 0 ? '+' : ''}${projection.spark.delta})`,
+                            `Mana ${projection.mana.current} -> ${projection.mana.projected} (${projection.mana.delta > 0 ? '+' : ''}${projection.mana.delta})`,
+                            `Ex ${projection.exhaustion.current} -> ${projection.exhaustion.projected} (${projection.exhaustion.delta > 0 ? '+' : ''}${projection.exhaustion.delta})`,
+                            `${projection.stateAfter.toUpperCase()}`
+                        ];
+                        const burnLine = intentPreview.resourcePreview?.sparkBurnHpDelta
+                            ? `Burn ${intentPreview.resourcePreview.sparkBurnHpDelta} HP`
+                            : null;
+                        const panelWidth = 132;
+                        const panelHeight = burnLine ? 62 : 50;
+                        return (
+                            <g transform={`translate(${x + TILE_SIZE * 0.95},${y - TILE_SIZE * 1.15})`}>
+                                <rect
+                                    x={0}
+                                    y={0}
+                                    width={panelWidth}
+                                    height={panelHeight}
+                                    rx={8}
+                                    fill="rgba(9, 14, 26, 0.88)"
+                                    stroke={projection.stateAfter === 'exhausted' ? 'rgba(244,63,94,0.8)' : 'rgba(148,163,184,0.45)'}
+                                    strokeWidth={1.2}
+                                />
+                                {lines.map((line, idx) => (
+                                    <text
+                                        key={`proj-${idx}`}
+                                        x={8}
+                                        y={12 + (idx * 11)}
+                                        fontSize={8.5}
+                                        fill={idx === lines.length - 1 ? '#f8fafc' : '#cbd5e1'}
+                                        style={{ fontWeight: idx === lines.length - 1 ? 800 : 700 }}
+                                    >
+                                        {line}
+                                    </text>
+                                ))}
+                                {burnLine && (
+                                    <text
+                                        x={8}
+                                        y={54}
+                                        fontSize={8.5}
+                                        fill="#fecdd3"
+                                        style={{ fontWeight: 800 }}
+                                    >
+                                        {burnLine}
+                                    </text>
+                                )}
                             </g>
                         );
                     })()}

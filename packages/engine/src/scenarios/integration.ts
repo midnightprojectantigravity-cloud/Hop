@@ -39,16 +39,10 @@ export const integrationScenarios: ScenarioCollection = {
             },
 
             run: (engine: any) => {
-                // Grapple victim1 into kinetic pulse collision >> Victim3 dies
-                // Victim1 gets pulled towards the player and swaps places with the player when moving from (5, 3, -8) to (5, 4, -9), the player should then be at (5,3,-8)
-                // Victim1 then gets flinged past the player and initiates a kinetic pulse of momentum 4 and heads toward Victim2 and Victim3.
-                // Victim1, 2 and 3 are all adjacent to each other and therefore form a single cluster that moves 1 tile and transfers all the leftover momentum to the lead unit, Victim3.
-                // Victim3 then continues on its own 1 more tile until it reaches another unit, a wall, a lava tile or the edge of the map, or until it runs out of momentum.
-                // Victim3 should die from the kinetic pulse collision as it reaches a lava tile.
+                // Grapple victim1 into kinetic pulse collision >> Victim3 dies.
                 engine.useSkill('GRAPPLE_HOOK', { q: 5, r: 2, s: -7 });
-                // Both enemies take their turn and move 1 tile toward the player.
-                // Shield Throw victim1 into Victim2 >> Victim2 dies
-                engine.useSkill('SHIELD_THROW', { q: 5, r: 5, s: -10 });
+                // Under IRES the player can follow up in the same open turn without yielding initiative.
+                engine.useSkill('SHIELD_THROW', { q: 5, r: 6, s: -11 });
             },
 
             verify: (state: GameState, logs: string[]) => {
@@ -57,19 +51,19 @@ export const integrationScenarios: ScenarioCollection = {
                 const victim3Dead = !state.enemies.find(e => e.id === 'victim3') || !!state.dyingEntities?.find(e => e.id === 'victim3');
                 // Victim2 should die from the kinetic pulse collision as it reaches a lava tile from the Shield Throw.
                 const victim2Dead = !state.enemies.find(e => e.id === 'victim2') || !!state.dyingEntities?.find(e => e.id === 'victim2');
-                // Victim1 should be alive, stunned and on 5,7.
+                // Victim1 should be alive, stunned and on 5,7 after the follow-up kinetic hit.
                 const victim1Alive = state.enemies.find(e => e.id === 'victim1');
                 const victim1Stunned = victim1Alive && logs.some(e => e.includes('stunned'));
-                const victim1On56 = victim1Alive && victim1Alive.position.q === 5 && victim1Alive.position.r === 6;
+                const victim1On57 = victim1Alive && victim1Alive.position.q === 5 && victim1Alive.position.r === 7;
 
-                const checks = [playerAt53, victim3Dead, victim2Dead, victim1Stunned, victim1On56];
+                const checks = [playerAt53, victim3Dead, victim2Dead, victim1Stunned, victim1On57];
 
                 if (Object.values(checks).some(v => v === false)) {
                     console.log('❌ Environmental Chain Reaction Failed:', checks);
                     console.log('Player at 5,3:', playerAt53);
                     console.log('Player Pos:', state.player.position);
                     console.log('Logs found:', logs);
-                    console.log('Victim1 at 5,6:', victim1On56);
+                    console.log('Victim1 at 5,7:', victim1On57);
                     console.log('Victim1 Pos:', victim1Alive?.position);
                     console.log('Victim1 Stunned:', victim1Stunned);
                     console.log('Victim2 Dead:', victim2Dead);
@@ -110,6 +104,7 @@ export const integrationScenarios: ScenarioCollection = {
             run: (engine: any) => {
                 // Grapple the distant enemy
                 engine.useSkill('GRAPPLE_HOOK', { q: 7, r: 6, s: -13 });
+                engine.wait();
             },
 
             verify: (state: GameState, logs: string[]) => {

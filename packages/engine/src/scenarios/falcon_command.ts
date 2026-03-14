@@ -22,13 +22,10 @@ export const falconCommandScenarios: ScenarioCollection = {
     scenarios: [
         {
             id: 'falcon_predator_strike_path',
-            title: 'Predator Mode: Apex Strike Geometry',
+            title: 'Predator Mode: Mark and Lock',
             description: `
-                Tests the Falcon's flight path from its current position to the Target.
-                Layout:
-                   (F)  <- Falcon Start (6, 5, -11)
-                      .
-                         (T) <- Target/Prey (8, 5, -13)
+                Under IRES the command itself should set Predator mode and lock the prey target
+                while keeping the player's turn open until they explicitly end it.
             `,
             relatedSkills: ['FALCON_COMMAND'],
             category: 'summon',
@@ -44,7 +41,6 @@ export const falconCommandScenarios: ScenarioCollection = {
             },
             run: (engine: any) => {
                 engine.useSkill('FALCON_COMMAND', { q: 4, r: 2, s: -6 });
-                engine.wait(); // Turn 1
             },
             verify: (state: GameState, _logs: string[]) => {
                 // const falcon = state.enemies.find(e =>
@@ -58,11 +54,8 @@ export const falconCommandScenarios: ScenarioCollection = {
                     // VERIFICATION: Mode Transition
                     modeSet: falcon?.companionState?.mode === 'predator',
                     targetLocked: falcon?.companionState?.markTarget === 'prey',
-                    // VALIDATION: Falcon should have moved closer, but NOT deal damage yet
-                    movedCloser: falcon && hexDistance(falcon.position, { q: 4, r: 2, s: -6 }) < 7,
                     preyHealthy: prey?.hp === prey?.maxHp,
-                    // FALCON_COMMAND is an action skill, so it should consume 1 turn
-                    turnSpent: state.turnsSpent === 2,
+                    turnRemainsOpen: state.turnsSpent === 0,
                 };
 
 
@@ -76,10 +69,10 @@ export const falconCommandScenarios: ScenarioCollection = {
         },
         {
             id: 'falcon_scout_orbit',
-            title: 'Scout Mode: Hex Ring Orbit',
+            title: 'Scout Mode: Patrol Mark',
             description: `
-                Ensures that in Scout mode, the Falcon rotates around the mark 
-                on the flat-top hex ring.
+                Ensures that in Scout mode, the command plants the patrol mark
+                and keeps the turn open for further player decisions.
             `,
             relatedSkills: ['FALCON_COMMAND'],
             category: 'summon',
@@ -93,8 +86,6 @@ export const falconCommandScenarios: ScenarioCollection = {
             },
             run: (engine: any) => {
                 engine.useSkill('FALCON_COMMAND', { q: 3, r: 6, s: -9 });
-                engine.wait(); // Turn 1
-                engine.wait(); // Turn 2
             },
             verify: (state: GameState, _logs: string[]) => {
                 const falcon = state.companions?.find(c => c.id === 'my-falcon');
@@ -103,11 +94,10 @@ export const falconCommandScenarios: ScenarioCollection = {
                 const checks = {
                     // VERIFICATION: Mode Transition
                     isScout: falcon?.companionState?.mode === 'scout',
-                    // Tight logic: Distance should be EXACTLY 1
-                    onOrbitRing: falcon && hexDistance(falcon.position, markPos) === 1,
-                    hasRotated: falcon && !!falcon.previousPosition && !hexEquals(falcon.position, falcon.previousPosition),
-                    // FALCON_COMMAND is an action skill, so it should consume 1 turn
-                    turnSpent: state.turnsSpent === 3,
+                    patrolMarkSet: !!falcon
+                        && typeof falcon.companionState?.markTarget === 'object'
+                        && hexEquals(falcon.companionState.markTarget as any, markPos),
+                    turnRemainsOpen: state.turnsSpent === 0,
                 };
 
                 if (Object.values(checks).some(v => v === false)) {
@@ -174,10 +164,14 @@ export const falconCommandScenarios: ScenarioCollection = {
             tags: ['falcon', 'predator', 'cleanup'],
             setup: (engine: any) => {
                 engine.setPlayer({ q: 4, r: 9, s: -13 }, ['FALCON_COMMAND']);
-                engine.state.player.hp = 1; // Damage player
+                engine.state.player.hp = 10; // Leave enough buffer that the scenario isolates falcon behavior
                 engine.spawnFalcon({ q: 4, r: 8, s: -12 }, 'my-falcon');
                 // Enemy with 1 HP
                 engine.spawnEnemy('footman', { q: 4, r: 7, s: -11 }, 'prey');
+                const prey = engine.getEnemy('prey');
+                if (prey) {
+                    prey.activeSkills = [];
+                }
             },
             run: (engine: any) => {
                 // Mark enemy

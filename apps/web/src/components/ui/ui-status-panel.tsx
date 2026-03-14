@@ -2,6 +2,7 @@ import React from 'react';
 import type { GameState } from '@hop/engine';
 import { computeScore } from '@hop/engine';
 import {
+  getWaitDirectiveLabel,
   UiDirectivesSection,
   UiInitiativeSection,
   UiProgressSection,
@@ -37,6 +38,7 @@ export const UiStatusPanel: React.FC<UiStatusPanelProps> = ({
   hideInitiativeQueue = false
 }) => {
   const score = computeScore(gameState);
+  const waitLabel = getWaitDirectiveLabel(gameState);
 
   return (
     <div className={`flex flex-col overflow-y-auto flex-1 min-h-0 ${compact ? 'gap-4 p-4' : 'gap-8 p-8'}`}>
@@ -54,6 +56,7 @@ export const UiStatusPanel: React.FC<UiStatusPanelProps> = ({
       <UiDirectivesSection
         compact={compact}
         inputLocked={inputLocked}
+        waitLabel={waitLabel}
         onWait={onWait}
         onReset={onReset}
         onExitToHub={onExitToHub}

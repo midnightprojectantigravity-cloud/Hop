@@ -62,6 +62,50 @@ export const deriveMobileToastsFromSimulationEvents = (
         text: effectId,
         tone: 'status'
       });
+    } else if (ev.type === 'ResourceChanged' && ev.targetId === playerId) {
+      const sparkDelta = Number(ev.payload?.spark?.delta || 0);
+      const manaDelta = Number(ev.payload?.mana?.delta || 0);
+      const exhaustionDelta = Number(ev.payload?.exhaustion?.delta || 0);
+      if (exhaustionDelta !== 0) {
+        out.push({
+          id: `sim-toast-${ev.id}`,
+          text: `${exhaustionDelta > 0 ? '+' : ''}${Math.round(exhaustionDelta)} EX`,
+          tone: 'status'
+        });
+      } else if (sparkDelta !== 0) {
+        out.push({
+          id: `sim-toast-${ev.id}`,
+          text: `${sparkDelta > 0 ? '+' : ''}${Math.round(sparkDelta)} SP`,
+          tone: 'system'
+        });
+      } else if (manaDelta !== 0) {
+        out.push({
+          id: `sim-toast-${ev.id}`,
+          text: `${manaDelta > 0 ? '+' : ''}${Math.round(manaDelta)} MP`,
+          tone: 'system'
+        });
+      }
+    } else if (ev.type === 'ExhaustionStateChanged' && ev.targetId === playerId) {
+      const nextState = String(ev.payload?.after || 'Base').toUpperCase();
+      out.push({
+        id: `sim-toast-${ev.id}`,
+        text: nextState === 'EXHAUSTED' ? 'EXHAUSTED' : nextState === 'RESTED' ? 'RESTED' : 'Recovered Below 50',
+        tone: 'status'
+      });
+    } else if (ev.type === 'SparkBurnTriggered' && ev.targetId === playerId) {
+      const amount = Math.max(0, Number(ev.payload?.amount || 0));
+      out.push({
+        id: `sim-toast-${ev.id}`,
+        text: `-${amount} HP Burn`,
+        tone: 'damage'
+      });
+    } else if (ev.type === 'RestTriggered' && ev.targetId === playerId) {
+      const exhaustionDelta = Math.abs(Number(ev.payload?.exhaustionDelta || 0));
+      out.push({
+        id: `sim-toast-${ev.id}`,
+        text: `Rest: -${Math.round(exhaustionDelta)} EX`,
+        tone: 'status'
+      });
     } else if (ev.type === 'MessageLogged') {
       const text = String(ev.payload?.text || '').trim();
       if (!text) continue;

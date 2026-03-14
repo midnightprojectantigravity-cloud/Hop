@@ -48,8 +48,8 @@ export const basicAttackScenarios: ScenarioCollection = {
                     // VERIFICATION: Spatial integrity
                     playerPositionHeld: hexEquals(state.player.position, { q: 3, r: 6, s: -9 }),
 
-                    // VERIFICATION: Turn accounting
-                    oneTurnConsumed: state.turnsSpent === 1
+                    // VERIFICATION: IRES keeps the turn open until the player explicitly ends it
+                    turnRemainsOpen: state.turnsSpent === 0
                 };
 
                 if (Object.values(checks).some(v => v === false)) {
@@ -62,4 +62,3 @@ export const basicAttackScenarios: ScenarioCollection = {
         }
     ]
 };
-

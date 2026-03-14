@@ -9,6 +9,7 @@ import { hydrateSkillIntentProfiles } from './systems/skill-intent-profile';
 import { getCompositeSkillRuntimeRegistry } from './systems/composite-skill-bridge';
 import { GENERATED_COMPOSITIONAL_SKILLS } from './generated/skill-registry.generated';
 import { registerCapabilitySkillDefinitionResolver } from './systems/capabilities/cache';
+import { resolveSkillResourceProfile } from './systems/ires';
 
 /**
  * A registry of all skills using the new Compositional Skill Framework.
@@ -35,10 +36,16 @@ const getMergedRegistry = (): Record<string, SkillDefinition> => {
         registerCapabilitySkillDefinitionResolver((skillId: string) => SkillRegistry.get(skillId));
         capabilityResolverRegistered = true;
     }
-    return {
+    const registry = {
         ...(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>),
         ...getCompositeSkillRuntimeRegistry()
     };
+    return Object.fromEntries(
+        Object.entries(registry).map(([skillId, def]) => [
+            skillId,
+            def.resourceProfile ? def : { ...def, resourceProfile: resolveSkillResourceProfile(skillId) }
+        ])
+    );
 };
 
 /**
@@ -59,6 +66,7 @@ export function createActiveSkill(id: SkillID | string): any {
         range: def.baseVariables.range || 0,
         upgrades: Object.keys(def.upgrades || {}),
         activeUpgrades: [],
+        energyCost: def.baseVariables.cost,
     };
 }
 

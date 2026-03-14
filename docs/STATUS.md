@@ -110,11 +110,27 @@ Delivered outcomes:
 Reference:
 - `docs/UI_UX_GREAT_REFACTOR_WRAPUP_2026-03-03.md`
 
+## Inferno World Compiler Milestone
+Inferno-only world compiler milestone is merged, hardened, and now serves as the default inferno map-generation path.
+
+Delivered outcomes:
+1. Deterministic world compiler pipeline finalized for inferno floors, with authored special-floor families on top.
+2. Artifact-only worker transport is the canonical web worldgen path.
+3. Authored inferno floor families are active for floors `5`, `8`, and `10`.
+4. Tactical + visual path networks are generated as part of world compilation and rendered on the board.
+5. Golden seeds, worker parity, persistence, and path-specific regressions are now gated.
+
+Reference:
+- `docs/INFERNO_WORLDGEN_WRAPUP_2026-03-12.md`
+
 ## Validation Snapshot (Current)
 
 Engine:
 - `npm --workspace @hop/engine run build` -> pass
 - `npm --workspace @hop/engine test` -> pass
+- `npm --workspace @hop/engine run test:worldgen` -> pass
+- `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts` -> pass
+- `npm run mvp:replay:gate` -> pass
 - `npm --workspace @hop/engine run bench:runtime:candidate` -> pass (5% regression gate)
 
 Web:
@@ -130,6 +146,8 @@ Server:
 2. Determinism/parity checks are active and should remain mandatory for AI-affecting and content-spawn-affecting PRs.
 3. Deprecated constants (`ENEMY_STATS`, `FLOOR_ENEMY_*`) are retired from source ownership and blocked by static checks; runtime ownership remains catalog/profile-backed.
 4. Diagnostics (`oracle/shadow` diff scripts/tests) are retained for investigation workflows.
+5. `npm run upa:health:check` exits cleanly again, but it remains a heavy gate with long runtime because it evaluates the full multi-loadout heuristic health sweep.
+6. Capability rollout toggles and UI feature flags remain intentionally staged outside the worldgen milestone; their retention is tracked separately and is not a blocker for inferno worldgen completion.
 
 ## Next Documentation Focus
 

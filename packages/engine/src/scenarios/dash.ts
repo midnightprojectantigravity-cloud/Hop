@@ -104,9 +104,8 @@ export const dashScenarios: ScenarioCollection = {
                     axialRangeErrorFound: logs.some(l => l.includes('Axial only!')),
                     shuntSuccess: logs.some(l => l.includes('Shield Shunt')),
 
-                    // Crucial for balancing: The failures shouldn't have ended the turn prematurely,
-                    // but the final success should have consumed exactly 2 turns.
-                    twoTurnSpent: state.turnsSpent === 2
+                    // Under IRES the whole sequence remains on the same open turn until the player ends it.
+                    turnRemainsOpen: state.turnsSpent === 0
                 };
 
                 if (Object.values(checks).some(v => v === false)) {

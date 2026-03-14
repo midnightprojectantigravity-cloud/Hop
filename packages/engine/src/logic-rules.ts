@@ -1,4 +1,5 @@
 import type { AtomicEffect, Entity, GameState, GridSize, MapShape, PendingFrameType } from './types';
+import type { GenerationSpecInput, GenerationState } from './generation/schema';
 import { hexEquals, getNeighbors } from './hex';
 import { checkShrine, checkStairs } from './helpers';
 import { SkillRegistry } from './skillRegistry';
@@ -17,6 +18,8 @@ import { SpatialSystem } from './systems/spatial-system';
 import { resolveAcaeRuleset } from './systems/ailments/runtime';
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { recomputeVisibility } from './systems/visibility';
+import { advanceGenerationStateFromCompletedFloor, createEmptyRunTelemetry, ensureGenerationState } from './generation';
+import { hydrateGameStateIres, withResolvedIresRuleset } from './systems/ires';
 
 type PendingFrameStateBuilder = (
     state: GameState,
@@ -32,7 +35,11 @@ type GenerateInitialStateFn = (
     preservePlayer?: any,
     loadout?: any,
     mapSize?: GridSize,
-    mapShape?: MapShape
+    mapShape?: MapShape,
+    generationOptions?: {
+        generationSpec?: GenerationSpecInput;
+        generationState?: GenerationState;
+    }
 ) => GameState;
 
 export const hydrateLoadedState = (loaded: GameState): GameState => {
@@ -68,15 +75,23 @@ export const hydrateLoadedState = (loaded: GameState): GameState => {
         tiles: hydratedTiles,
         player: hydratedPlayer,
         enemies: hydratedEnemies,
-        companions: hydratedCompanions
+        companions: hydratedCompanions,
+        runTelemetry: loaded.runTelemetry || createEmptyRunTelemetry(),
+        worldgenDebug: undefined,
+        generationState: ensureGenerationState(
+            loaded.generationState,
+            loaded.generationState?.runSeed || loaded.initialSeed || loaded.rngSeed || '0',
+            loaded.generationState?.spec
+        )
     };
 
-    const withRuleset: GameState = {
+    const withRuleset = withResolvedIresRuleset({
         ...hydratedState,
         ruleset: resolveAcaeRuleset(hydratedState)
-    };
+    });
+    const hydratedWithIres = hydrateGameStateIres(withRuleset);
 
-    const withVisibility = recomputeVisibility(withRuleset);
+    const withVisibility = recomputeVisibility(hydratedWithIres);
 
     return {
         ...withVisibility,
@@ -160,6 +175,7 @@ export const resolvePendingStateAction = (
     if (status === 'playing' && s.gameStatus === 'playing') {
         const baseSeed = s.initialSeed ?? s.rngSeed ?? '0';
         const nextSeed = `${baseSeed}:${s.floor + 1}`;
+        const nextGenerationState = advanceGenerationStateFromCompletedFloor(s);
         const migratingSummons = s.enemies
             .filter(e => e.hp > 0 && e.factionId === 'player' && e.companionOf === s.player.id)
             .sort((a, b) => a.id.localeCompare(b.id));
@@ -171,18 +187,24 @@ export const resolvePendingStateAction = (
                 ...s.player,
                 hp: Math.min(s.player.maxHp, s.player.hp + 1),
                 upgrades: s.upgrades,
+                runTelemetry: s.runTelemetry,
             },
             undefined,
             { width: s.gridWidth, height: s.gridHeight },
-            s.mapShape
+            s.mapShape,
+            {
+                generationSpec: nextGenerationState.spec,
+                generationState: nextGenerationState
+            }
         );
-        next.ruleset = resolveAcaeRuleset({
+        next.ruleset = withResolvedIresRuleset({
             ...next,
             ruleset: s.ruleset || next.ruleset
-        });
+        }).ruleset;
+        const hydratedNext = hydrateGameStateIres(next);
         if (migratingSummons.length > 0) {
-            const candidates = [next.player.position, ...getNeighbors(next.player.position)];
-            const occupied: Entity[] = [next.player, ...next.enemies];
+            const candidates = [hydratedNext.player.position, ...getNeighbors(hydratedNext.player.position)];
+            const occupied: Entity[] = [hydratedNext.player, ...hydratedNext.enemies];
             const migrated: Entity[] = [];
 
             for (let i = 0; i < migratingSummons.length; i++) {
@@ -190,7 +212,7 @@ export const resolvePendingStateAction = (
                 const fallback = candidates[candidates.length - 1] || next.player.position;
                 const spawnPos = candidates.find(pos => {
                     const unoccupied = !occupied.some(a => hexEquals(a.position, pos));
-                    return unoccupied && UnifiedTileService.isWalkable(next, pos);
+                    return unoccupied && UnifiedTileService.isWalkable(hydratedNext, pos);
                 }) || fallback;
                 const migratedSummon: Entity = {
                     ...summon,
@@ -201,16 +223,16 @@ export const resolvePendingStateAction = (
                 migrated.push(migratedSummon);
             }
 
-            next.enemies = [...next.enemies, ...migrated];
-            next.companions = [
-                ...(next.companions || []),
+            hydratedNext.enemies = [...hydratedNext.enemies, ...migrated];
+            hydratedNext.companions = [
+                ...(hydratedNext.companions || []),
                 ...migrated.filter(e => e.companionOf === s.player.id)
             ];
-            next.initiativeQueue = buildInitiativeQueue(next);
-            next.occupancyMask = SpatialSystem.refreshOccupancyMask(next);
+            hydratedNext.initiativeQueue = buildInitiativeQueue(hydratedNext);
+            hydratedNext.occupancyMask = SpatialSystem.refreshOccupancyMask(hydratedNext);
         }
 
-        const withVisibility = recomputeVisibility(next);
+        const withVisibility = recomputeVisibility(hydratedNext);
         const withPreview = {
             ...withVisibility,
             intentPreview: buildIntentPreview(withVisibility)

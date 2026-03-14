@@ -5,6 +5,8 @@ import { appendTaggedMessage } from '../engine-messages';
 import { buildStatusBreakReleaseEffects } from '../movement/attachment-system';
 import type { AtomicEffectHandlerMap } from './types';
 
+const CONTROL_STATUSES = new Set(['stunned', 'blinded', 'rooted', 'slowed', 'frozen', 'silenced']);
+
 export const statusEffectHandlers: AtomicEffectHandlerMap = {
     Heal: (state, effect, context, api) => {
         let nextState = { ...state };
@@ -22,7 +24,25 @@ export const statusEffectHandlers: AtomicEffectHandlerMap = {
                 nextState.message = appendTaggedMessage(nextState.message, `${name} recover ${effect.amount} HP.`, 'INFO', 'COMBAT');
 
                 if (targetId === nextState.player.id) {
+                    const priorHp = nextState.player.hp;
                     nextState.player = healActor(nextState.player);
+                    const healedAmount = Math.max(0, nextState.player.hp - priorHp);
+                    if (healedAmount > 0) {
+                        nextState.runTelemetry = {
+                            ...(nextState.runTelemetry || {
+                                damageTaken: 0,
+                                healingReceived: 0,
+                                forcedDisplacementsTaken: 0,
+                                controlIncidents: 0,
+                                hazardDamageEvents: 0
+                            }),
+                            damageTaken: nextState.runTelemetry?.damageTaken || 0,
+                            healingReceived: (nextState.runTelemetry?.healingReceived || 0) + healedAmount,
+                            forcedDisplacementsTaken: nextState.runTelemetry?.forcedDisplacementsTaken || 0,
+                            controlIncidents: nextState.runTelemetry?.controlIncidents || 0,
+                            hazardDamageEvents: nextState.runTelemetry?.hazardDamageEvents || 0
+                        };
+                    }
                     healedTargetId = nextState.player.id;
                     healedPos = nextState.player.position;
                 } else {
@@ -86,6 +106,22 @@ export const statusEffectHandlers: AtomicEffectHandlerMap = {
 
                 if (targetActorId === nextState.player.id) {
                     nextState.player = addStatus(nextState.player, effect.status as any, adjustedDuration);
+                    if (CONTROL_STATUSES.has(effect.status)) {
+                        nextState.runTelemetry = {
+                            ...(nextState.runTelemetry || {
+                                damageTaken: 0,
+                                healingReceived: 0,
+                                forcedDisplacementsTaken: 0,
+                                controlIncidents: 0,
+                                hazardDamageEvents: 0
+                            }),
+                            damageTaken: nextState.runTelemetry?.damageTaken || 0,
+                            healingReceived: nextState.runTelemetry?.healingReceived || 0,
+                            forcedDisplacementsTaken: nextState.runTelemetry?.forcedDisplacementsTaken || 0,
+                            controlIncidents: (nextState.runTelemetry?.controlIncidents || 0) + 1,
+                            hazardDamageEvents: nextState.runTelemetry?.hazardDamageEvents || 0
+                        };
+                    }
                 } else {
                     const updateStatus = (e: Actor) => (e.id === targetActorId) ? addStatus(e, effect.status as any, adjustedDuration) : e;
                     nextState.enemies = nextState.enemies.map(updateStatus);

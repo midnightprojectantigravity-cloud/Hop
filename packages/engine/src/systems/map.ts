@@ -1,277 +1,32 @@
 /**
  * MAP GENERATION SYSTEM
- * Deterministic procedural generation of tactical arenas.
- * Optimized for mobile portrait (diamond grid).
- * TODO: Implement "Hazard Generation" (e.g. dynamic spikes or traps) using the same RNG seed.
+ * Public compatibility facade over the world compiler.
  */
-import type { Point, Room, FloorTheme, Entity, MapShape } from '../types';
-import type { Tile } from './tiles/tile-types';
-import { BASE_TILES } from './tiles/tile-registry';
-import { createHex, hexEquals, hexDistance, getGridForShape, getMapRowBoundsForColumn } from '../hex';
-import { createRng, stableIdFromSeed } from './rng';
-import {
-    FLOOR_THEMES,
-    GRID_WIDTH,
-    GRID_HEIGHT,
-    HAZARD_PERCENTAGE
-} from '../constants';
-import { getEnemyCatalogEntry, getEnemyCatalogSkillLoadout, getFloorSpawnProfile } from '../data/enemies';
-import { isSpecialTile } from '../helpers';
-import { createEnemy, getEnemySkillLoadout } from './entities/entity-factory';
-import { ensureTacticalDataBootstrapped } from './tactical-data-bootstrap';
-import { getBaseUnitDefinitionBySubtype } from './entities/base-unit-registry';
-import { instantiateActorFromDefinitionWithCursor, type PropensityRngCursor } from './entities/propensity-instantiation';
+import { FLOOR_THEMES } from '../constants';
+import type { FloorTheme, Point } from '../types';
+import type { DungeonGenerationOptions, DungeonResult } from '../generation/compiler';
+import { compileStandaloneFloor, generateFloorEnemies } from '../generation/compiler';
 
-export interface DungeonResult {
-    rooms: Room[];
-    allHexes: Point[];
-    stairsPosition: Point;
-    shrinePosition?: Point;
-    playerSpawn: Point;
-    spawnPositions: Point[];
-    tiles: Map<string, Tile>;
-}
+export type { DungeonGenerationOptions, DungeonResult } from '../generation/compiler';
 
-export interface DungeonGenerationOptions {
-    gridWidth?: number;
-    gridHeight?: number;
-    mapShape?: MapShape;
-}
-
-/**
- * Generate a single tactical arena floor
- */
 export const generateDungeon = (
     floor: number,
     seed: string,
     options?: DungeonGenerationOptions
 ): DungeonResult => {
-    const rng = createRng(seed);
-    const gridWidth = Number.isInteger(options?.gridWidth) && Number(options?.gridWidth) > 0
-        ? Number(options?.gridWidth)
-        : GRID_WIDTH;
-    const gridHeight = Number.isInteger(options?.gridHeight) && Number(options?.gridHeight) > 0
-        ? Number(options?.gridHeight)
-        : GRID_HEIGHT;
-    const mapShape: MapShape = options?.mapShape === 'rectangle' ? 'rectangle' : 'diamond';
-
-    // 1. Generate the base grid
-    const allHexes = getGridForShape(gridWidth, gridHeight, mapShape);
-
-    // 4. MVP map shape is directly playable (no perimeter wall ring)
-    const wallPositions: Point[] = [];
-    const playableHexes: Point[] = allHexes;
-    const centerQ = Math.floor(gridWidth / 2);
-    const centerColumnBounds = getMapRowBoundsForColumn(centerQ, gridWidth, gridHeight, mapShape);
-    const centerTopR = centerColumnBounds?.minR ?? 0;
-    const centerBottomR = centerColumnBounds?.maxR ?? (gridHeight - 1);
-    const centerR = Math.floor((centerTopR + centerBottomR) / 2);
-
-    // 5. Determine Player Spawn (shape-aware bottom-center edge)
-    const playerSpawn = createHex(centerQ, centerBottomR);
-
-    // 6. Place Stairs (shape-aware top-center edge)
-    const stairsPosition = createHex(centerQ, centerTopR);
-
-    // 7. Place Shrine (if applicable)
-    let shrinePosition: Point | undefined;
-    const canHaveShrine = floor % 1 === 0;
-    if (canHaveShrine) {
-        const potentialShrines = playableHexes.filter(h =>
-            !hexEquals(h, playerSpawn) &&
-            !hexEquals(h, stairsPosition) &&
-            hexDistance(h, playerSpawn) >= 3
-        );
-        if (potentialShrines.length > 0) {
-            shrinePosition = potentialShrines[Math.floor(rng.next() * potentialShrines.length)];
-        }
-    }
-
-    // 8. Generate Hazards (Lava/Void)
-    const hazardCount = Math.floor(playableHexes.length * HAZARD_PERCENTAGE);
-    const lavaPositions: Point[] = [];
-
-    const specialPositions = {
-        playerStart: playerSpawn,
-        stairsPosition,
-        shrinePosition,
-    };
-
-    const availableForHazards = playableHexes.filter(h => !isSpecialTile(h, specialPositions));
-
-    // Randomly shuffle available tiles
-    const shuffled = [...availableForHazards].sort(() => rng.next() - 0.5);
-
-    // First 15-20% are hazards
-    for (let i = 0; i < hazardCount; i++) {
-        if (i < shuffled.length) {
-            lavaPositions.push(shuffled[i]);
-        }
-    }
-
-    // 9. Spawn Positions (anything else that isn't a hazard or wall or player spawn)
-    const spawnPositions = playableHexes.filter(h =>
-        !isSpecialTile(h, {
-            playerStart: playerSpawn,
-            stairsPosition,
-            shrinePosition
-        }) &&
-        !wallPositions.some(wp => hexEquals(wp, h)) &&
-        !lavaPositions.some(lp => hexEquals(lp, h)) &&
-        hexDistance(h, playerSpawn) >= 3
-    );
-
-    // Mock a single room for backward compatibility
-    const mainRoom: Room = {
-        id: 'arena',
-        type: 'combat',
-        center: createHex(centerQ, centerR),
-        hexes: allHexes,
-        connections: []
-    };
-
-    // 10. Populate Tile Map
-    const tileMap = new Map<string, Tile>();
-
-    // Fill with stone first
-    for (const h of allHexes) {
-        tileMap.set(`${h.q},${h.r}`, {
-            baseId: 'STONE',
-            position: h,
-            traits: new Set(BASE_TILES.STONE.defaultTraits),
-            effects: []
-        });
-    }
-
-    // Apply Walls
-    for (const w of wallPositions) {
-        tileMap.set(`${w.q},${w.r}`, {
-            baseId: 'WALL',
-            position: w,
-            traits: new Set(BASE_TILES.WALL.defaultTraits),
-            effects: []
-        });
-    }
-
-    // Apply Hazards (Lava)
-    for (const l of lavaPositions) {
-        tileMap.set(`${l.q},${l.r}`, {
-            baseId: 'LAVA',
-            position: l,
-            traits: new Set(BASE_TILES.LAVA.defaultTraits),
-            effects: []
-        });
-    }
-
-    return {
-        rooms: [mainRoom],
-        allHexes,
-        stairsPosition,
-        shrinePosition,
-        spawnPositions,
-        playerSpawn,
-        tiles: tileMap
-    };
+    return compileStandaloneFloor(floor, seed, options).dungeon;
 };
 
 export const generateEnemies = (
     floor: number,
     spawnPositions: Point[],
     seed: string
-): Entity[] => {
-    ensureTacticalDataBootstrapped();
-
-    const rng = createRng(seed + ':enemies');
-    const spawnProfile = getFloorSpawnProfile(floor);
-    const budget = spawnProfile.budget;
-    const availableTypes = spawnProfile.allowedSubtypes;
-    let propensityCursor: PropensityRngCursor = {
-        rngSeed: `${seed}:enemy-propensity`,
-        rngCounter: 0
-    };
-
-    const enemies: Entity[] = [];
-    let remainingBudget = budget;
-    const usedPositions: Point[] = [];
-
-    while (remainingBudget > 0 && usedPositions.length < spawnPositions.length) {
-        const affordableTypes = availableTypes.filter((subtype) => {
-            const entry = getEnemyCatalogEntry(subtype);
-            return !!entry && entry.bestiary.stats.cost <= remainingBudget;
-        });
-
-        if (affordableTypes.length === 0) break;
-
-        const typeIdx = Math.floor(rng.next() * affordableTypes.length);
-        const enemyType = affordableTypes[typeIdx];
-        const catalogEntry = getEnemyCatalogEntry(enemyType);
-        if (!catalogEntry) break;
-        const stats = catalogEntry.bestiary.stats;
-
-        const availablePositions = spawnPositions.filter(
-            p => !usedPositions.some(u => hexEquals(u, p))
-        );
-
-        if (availablePositions.length === 0) break;
-
-        const posIdx = Math.floor(rng.next() * availablePositions.length);
-        const position = availablePositions[posIdx];
-        usedPositions.push(position);
-
-        const hpScale = Math.floor(floor / 5);
-        const weightClass = stats.weightClass || 'Standard';
-        const enemySeedCounter = (propensityCursor.rngCounter << 8) + enemies.length;
-        const enemyId = `enemy_${enemies.length}_${stableIdFromSeed(seed, enemySeedCounter, 6, enemyType)}`;
-
-        const unitDef = getBaseUnitDefinitionBySubtype(enemyType);
-        let enemy: Entity;
-        if (unitDef) {
-            const instantiated = instantiateActorFromDefinitionWithCursor(propensityCursor, unitDef, {
-                actorId: enemyId,
-                position,
-                subtype: enemyType,
-                factionId: 'enemy'
-            });
-            propensityCursor = instantiated.nextCursor;
-            enemy = instantiated.actor;
-        } else {
-            enemy = createEnemy({
-                id: enemyId,
-                subtype: enemyType,
-                position,
-                speed: stats.speed || 1,
-                skills: getEnemyCatalogSkillLoadout(enemyType, { source: 'runtime', includePassive: true }).length > 0
-                    ? getEnemyCatalogSkillLoadout(enemyType, { source: 'runtime', includePassive: true })
-                    : getEnemySkillLoadout(enemyType),
-                weightClass,
-                enemyType: stats.type as 'melee' | 'ranged',
-            });
-        }
-
-        const scaledEnemy = hpScale > 0
-            ? {
-                ...enemy,
-                hp: enemy.hp + hpScale,
-                maxHp: enemy.maxHp + hpScale,
-            }
-            : enemy;
-
-        enemies.push({
-            ...scaledEnemy,
-            subtype: enemyType,
-            enemyType: stats.type as 'melee' | 'ranged' | 'boss',
-            actionCooldown: stats.actionCooldown ?? scaledEnemy.actionCooldown,
-            isVisible: true
-        });
-
-        remainingBudget -= stats.cost;
-    }
-
-    return enemies;
+) => {
+    return generateFloorEnemies(floor, spawnPositions, seed);
 };
 
 export const getFloorTheme = (floor: number): FloorTheme => {
-    return (FLOOR_THEMES as any)[floor] || 'inferno';
+    return (FLOOR_THEMES[floor] as FloorTheme | undefined) || 'inferno';
 };
 
 export default {

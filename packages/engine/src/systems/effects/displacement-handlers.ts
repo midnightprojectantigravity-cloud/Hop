@@ -254,11 +254,28 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
         nextState.visualEvents = visualEvents;
 
         if (targetActorId === nextState.player.id) {
+            const wasDisplaced = !hexEquals(nextState.player.position, finalDestination);
             nextState.player = {
                 ...nextState.player,
                 position: finalDestination,
                 previousPosition: isTeleportMovement ? finalDestination : nextState.player.position
             };
+            if (wasDisplaced) {
+                nextState.runTelemetry = {
+                    ...(nextState.runTelemetry || {
+                        damageTaken: 0,
+                        healingReceived: 0,
+                        forcedDisplacementsTaken: 0,
+                        controlIncidents: 0,
+                        hazardDamageEvents: 0
+                    }),
+                    damageTaken: nextState.runTelemetry?.damageTaken || 0,
+                    healingReceived: nextState.runTelemetry?.healingReceived || 0,
+                    forcedDisplacementsTaken: (nextState.runTelemetry?.forcedDisplacementsTaken || 0) + 1,
+                    controlIncidents: nextState.runTelemetry?.controlIncidents || 0,
+                    hazardDamageEvents: nextState.runTelemetry?.hazardDamageEvents || 0
+                };
+            }
         } else {
             const updatePos = (e: Actor) => e.id === targetActorId
                 ? { ...e, position: finalDestination, previousPosition: isTeleportMovement ? finalDestination : e.position }

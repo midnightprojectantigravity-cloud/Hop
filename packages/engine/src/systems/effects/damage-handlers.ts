@@ -102,7 +102,23 @@ export const damageEffectHandlers: AtomicEffectHandlerMap = {
                 simulationTargetId = nextState.player.id;
                 simulationPos = nextState.player.position;
                 simulationAmount = damageAmount;
-                if (damageAmount > 0) damagedActorIds.add(nextState.player.id);
+                if (damageAmount > 0) {
+                    damagedActorIds.add(nextState.player.id);
+                    nextState.runTelemetry = {
+                        ...(nextState.runTelemetry || {
+                            damageTaken: 0,
+                            healingReceived: 0,
+                            forcedDisplacementsTaken: 0,
+                            controlIncidents: 0,
+                            hazardDamageEvents: 0
+                        }),
+                        damageTaken: (nextState.runTelemetry?.damageTaken || 0) + damageAmount,
+                        healingReceived: nextState.runTelemetry?.healingReceived || 0,
+                        forcedDisplacementsTaken: nextState.runTelemetry?.forcedDisplacementsTaken || 0,
+                        controlIncidents: nextState.runTelemetry?.controlIncidents || 0,
+                        hazardDamageEvents: (nextState.runTelemetry?.hazardDamageEvents || 0) + (isHazardReason ? 1 : 0)
+                    };
+                }
                 if (isFireDamage) {
                     nextState.hazardBreaches = (nextState.hazardBreaches || 0) + 1;
                 }
@@ -215,7 +231,23 @@ export const damageEffectHandlers: AtomicEffectHandlerMap = {
             if (hexEquals(nextState.player.position, targetPos)) {
                 const playerDamage = scaledAmount + markedPredatorBonus(nextState.player);
                 nextState.player = applyDamage(nextState.player, playerDamage);
-                if (playerDamage > 0) damagedActorIds.add(nextState.player.id);
+                if (playerDamage > 0) {
+                    damagedActorIds.add(nextState.player.id);
+                    nextState.runTelemetry = {
+                        ...(nextState.runTelemetry || {
+                            damageTaken: 0,
+                            healingReceived: 0,
+                            forcedDisplacementsTaken: 0,
+                            controlIncidents: 0,
+                            hazardDamageEvents: 0
+                        }),
+                        damageTaken: (nextState.runTelemetry?.damageTaken || 0) + playerDamage,
+                        healingReceived: nextState.runTelemetry?.healingReceived || 0,
+                        forcedDisplacementsTaken: nextState.runTelemetry?.forcedDisplacementsTaken || 0,
+                        controlIncidents: nextState.runTelemetry?.controlIncidents || 0,
+                        hazardDamageEvents: (nextState.runTelemetry?.hazardDamageEvents || 0) + (isHazardReason ? 1 : 0)
+                    };
+                }
                 if (isFireDamage) {
                     nextState.hazardBreaches = (nextState.hazardBreaches || 0) + 1;
                 }

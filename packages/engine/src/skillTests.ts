@@ -7,6 +7,9 @@ import { SCENARIO_COLLECTIONS } from './scenarios';
 import { addStatus } from './systems/entities/actor';
 import { pointToKey, UnifiedTileService } from './systems/tiles/unified-tile-service';
 import { createEnemy, createEnemyFromBestiary, createFalcon, createPlayer } from './systems/entities/entity-factory';
+import { recomputeVisibility } from './systems/visibility';
+import { buildIntentPreview } from './systems/telegraph-projection';
+import { SpatialSystem } from './systems/spatial-system';
 
 const SCENARIO_GRID_WIDTH = 9;
 const SCENARIO_GRID_HEIGHT = 11;
@@ -302,6 +305,9 @@ async function runTests() {
             try {
                 scenario.setup(engine);
                 engine.state.initiativeQueue = undefined;
+                engine.state.occupancyMask = SpatialSystem.refreshOccupancyMask(engine.state);
+                engine.state = recomputeVisibility(engine.state);
+                engine.state.intentPreview = buildIntentPreview(engine.state);
 
                 scenario.run(engine);
 

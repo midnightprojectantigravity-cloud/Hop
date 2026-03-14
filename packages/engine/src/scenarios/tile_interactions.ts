@@ -26,6 +26,7 @@ export const tileInteractionScenarios: ScenarioCollection = {
             },
             run: (engine: any) => {
                 engine.move({ q: 4, r: 6, s: -10 });
+                engine.wait();
             },
             verify: (state: GameState) => {
                 const checks = {
@@ -55,6 +56,7 @@ export const tileInteractionScenarios: ScenarioCollection = {
             },
             run: (engine: any) => {
                 engine.move({ q: 4, r: 6, s: -10 });
+                engine.wait();
             },
             verify: (state: GameState) => {
                 const checks = {

@@ -2,6 +2,7 @@ import type { GameComponent } from './systems/components';
 import type { SkillID, StatusID, ArchetypeID, JuiceEffectID, AilmentID } from './types/registry';
 import type { JuiceSignaturePayloadV1 } from './types/juice-signature';
 import type { CombatScoreEvent } from './systems/combat/combat-calculator';
+import type { CompiledFloorArtifact, GeneratedPathNetwork, GenerationDebugSnapshot, GenerationSpecInput, GenerationState, RunTelemetryCounters } from './generation/schema';
 
 /**
  * ARCHITECTURE OVERVIEW: "Gold Standard" Tech Stack
@@ -26,6 +27,71 @@ export interface GridSize {
 export type MapShape = 'diamond' | 'rectangle';
 
 export type WeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
+
+export type IresActorState = 'rested' | 'base' | 'exhausted';
+export type IresPrimaryResource = 'spark' | 'mana' | 'none';
+
+export interface SkillResourceProfile {
+    primaryResource: IresPrimaryResource;
+    primaryCost: number;
+    baseStrain: number;
+    countsAsMovement: boolean;
+    countsAsAction: boolean;
+    redlineAllowed?: boolean;
+}
+
+export interface IresTurnProjection {
+    spark: { current: number; projected: number; delta: number };
+    mana: { current: number; projected: number; delta: number };
+    exhaustion: { current: number; projected: number; delta: number };
+    stateAfter: IresActorState;
+    actionCountAfter: number;
+    wouldRest: boolean;
+}
+
+export interface ActionResourcePreview {
+    primaryResource: IresPrimaryResource;
+    primaryCost: number;
+    sparkDelta: number;
+    manaDelta: number;
+    exhaustionDelta: number;
+    sparkBurnHpDelta: number;
+    tax: number;
+    effectiveBfi: number;
+    nextActionCount: number;
+    blockedReason?: string;
+    bandAfter: IresActorState;
+    turnProjection: IresTurnProjection;
+}
+
+export interface IresRuntimeState {
+    spark: number;
+    maxSpark: number;
+    mana: number;
+    maxMana: number;
+    exhaustion: number;
+    actionCountThisTurn: number;
+    actedThisTurn: boolean;
+    movedThisTurn: boolean;
+    isExhausted: boolean;
+    currentState: IresActorState;
+    pendingRestedBonus: boolean;
+    activeRestedCritBonusPct: number;
+}
+
+export interface IresRulesetConfig {
+    enabled: boolean;
+    version: 'ires-v1';
+    sparkRecoveryPerTurn: number;
+    manaRecoveryPerTurn: number;
+    restExhaustionClear: number;
+    enterExhaustedAt: number;
+    exitExhaustedBelow: number;
+    sparkBurnHpPct: number;
+    restedSparkBonus: number;
+    restedCritBonusPct: number;
+    fibonacciTable: number[];
+}
 
 // (Actor model introduced below; `Entity` is now an alias to `Actor`)
 
@@ -181,6 +247,27 @@ export type AtomicEffect =
     | { type: 'Impact'; target: string; damage: number; direction?: Point }
     | { type: 'Message'; text: string }
     | {
+        type: 'ApplyResources';
+        target: 'self' | string;
+        sparkDelta: number;
+        manaDelta: number;
+        exhaustionDelta: number;
+        actionCountDelta: number;
+        movedThisTurn?: boolean;
+        actedThisTurn?: boolean;
+        nextPendingRestedBonus?: boolean;
+        nextActiveRestedCritBonusPct?: number;
+        nextCurrentState?: IresActorState;
+        nextIsExhausted?: boolean;
+        debug?: {
+            skillId?: string;
+            actionKind?: 'move' | 'action' | 'rest' | 'end_turn' | 'turn_start';
+            tax?: number;
+            effectiveBfi?: number;
+            sparkBurnHpDelta?: number;
+        };
+    }
+    | {
         type: 'Juice';
         effect: JuiceEffectID;
         target?: Point | string;
@@ -224,6 +311,10 @@ export type SimulationEventType =
     | 'Healed'
     | 'StatusApplied'
     | 'MessageLogged'
+    | 'ResourceChanged'
+    | 'ExhaustionStateChanged'
+    | 'SparkBurnTriggered'
+    | 'RestTriggered'
     | 'AilmentChanged'
     | 'AilmentAnnihilated'
     | 'AilmentResilienceGained'
@@ -241,6 +332,7 @@ export interface SimulationEvent {
 
 export type TimelinePhase =
     | 'INTENT_START'
+    | 'RESOURCE_APPLY'
     | 'MOVE_START'
     | 'MOVE_END'
     | 'ON_PASS'
@@ -298,6 +390,7 @@ export interface SkillExecutionResult {
     effects: AtomicEffect[];
     messages: string[];
     consumesTurn?: boolean;
+    turnOutcome?: 'reject' | 'continue' | 'end';
     kills?: number;
     stackReactions?: AtomicStackReactionHooks;
 }
@@ -634,6 +727,7 @@ export interface SkillDefinition {
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades?: string[], context?: Record<string, any>) => SkillExecutionResult;
     /** Optional helper for UI/tests: return valid target hexes for previews (Level 1/2) */
     getValidTargets?: (state: GameState, origin: Point) => Point[];
+    resourceProfile?: SkillResourceProfile;
     capabilities?: SkillCapabilities;
     intentProfile?: SkillIntentProfile;
     upgrades: Record<string, SkillModifier>;
@@ -714,6 +808,7 @@ export interface Actor {
         apexStrikeCooldown?: number;  // Tracking for design alignment
         healCooldown?: number;
     };
+    ires?: IresRuntimeState;
 }
 
 // Backwards-compatible alias: existing code that expects `Entity` keeps working.
@@ -816,6 +911,10 @@ export interface GameState {
 
     // Selected loadout id from the Hub (not persisted to a run unless START_RUN is called)
     selectedLoadoutId?: string;
+    generationState?: GenerationState;
+    generatedPaths?: GeneratedPathNetwork;
+    runTelemetry: RunTelemetryCounters;
+    worldgenDebug?: GenerationDebugSnapshot;
 
     // Ruleset/feature flags persisted in-state for deterministic toggles.
     ruleset?: {
@@ -832,6 +931,7 @@ export interface GameState {
             movementRuntimeEnabled: boolean;
             version: 'capabilities-v1';
         };
+        ires?: IresRulesetConfig;
     };
 
     visibility?: VisibilityState;
@@ -884,7 +984,8 @@ export type Action =
     | { type: 'USE_SKILL'; payload: { skillId: string; target?: Point } }
     | { type: 'ADVANCE_TURN' }
     | { type: 'LOAD_STATE'; payload: GameState }
-    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string; mode?: 'normal' | 'daily'; date?: string; mapSize?: GridSize; mapShape?: MapShape; rulesetOverrides?: RunRulesetOverrides } }
+    | { type: 'APPLY_WORLDGEN_ARTIFACT'; payload: CompiledFloorArtifact }
+    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string; mode?: 'normal' | 'daily'; date?: string; mapSize?: GridSize; mapShape?: MapShape; rulesetOverrides?: RunRulesetOverrides; generationSpec?: GenerationSpecInput } }
     | { type: 'APPLY_LOADOUT'; payload: any }
     | { type: 'EXIT_TO_HUB' }
     | { type: 'RESOLVE_PENDING' };
@@ -900,6 +1001,7 @@ export interface RunRulesetOverrides {
         loadoutPassivesEnabled?: boolean;
         movementRuntimeEnabled?: boolean;
     };
+    ires?: Partial<IresRulesetConfig>;
 }
 
 export interface Scenario {

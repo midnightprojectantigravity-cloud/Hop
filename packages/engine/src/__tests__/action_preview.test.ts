@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createHex } from '../hex';
 import { generateInitialState } from '../logic';
 import { previewActionOutcome } from '../systems/action-preview';
+import { recomputeVisibility } from '../systems/visibility';
 
 describe('action preview dry run', () => {
     it('simulates outcome without mutating live state', () => {
@@ -9,11 +10,11 @@ describe('action preview dry run', () => {
         const enemy = state.enemies[0]!;
         const playerPos = createHex(4, 5);
         const enemyPos = createHex(5, 5);
-        const positioned = {
+        const positioned = recomputeVisibility({
             ...state,
             player: { ...state.player, position: playerPos },
             enemies: state.enemies.map((e, idx) => idx === 0 ? { ...e, position: enemyPos } : e)
-        };
+        });
         const beforeHp = positioned.enemies[0]!.hp;
 
         const result = previewActionOutcome(positioned, {
@@ -44,6 +45,6 @@ describe('action preview dry run', () => {
         });
 
         expect(result.ok).toBe(false);
-        expect(result.reason).toContain('invalid');
+        expect(result.reason?.toLowerCase()).toContain('invalid');
     });
 });

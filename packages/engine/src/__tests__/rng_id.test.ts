@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { GameState } from '../types';
+import { createEmptyRunTelemetry } from '../generation';
 import { nextIdFromState, stableIdFromSeed } from '../systems/rng';
 
 describe('deterministic id helpers', () => {
@@ -51,7 +52,8 @@ describe('deterministic id helpers', () => {
             commandLog: [],
             undoStack: [],
             visualEvents: [],
-            turnsSpent: 0
+            turnsSpent: 0,
+            runTelemetry: createEmptyRunTelemetry()
         } as GameState;
 
         const { id, nextState } = nextIdFromState(baseState, 6);

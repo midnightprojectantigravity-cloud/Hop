@@ -1573,3 +1573,42 @@ body::after {
     transform: scale(1);
   }
 }
+
+@keyframes iresSparkPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(251, 191, 36, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.45);
+  }
+}
+
+.ires-spark-pulse {
+  animation: iresSparkPulse 900ms ease-in-out infinite;
+}
+
+@keyframes iresRedline {
+  0%, 100% {
+    filter: drop-shadow(0 0 0 rgba(244, 63, 94, 0));
+    transform: translateX(0);
+  }
+
+  25% {
+    filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.72));
+    transform: translateX(-0.4px);
+  }
+
+  75% {
+    filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.72));
+    transform: translateX(0.4px);
+  }
+}
+
+.ires-redline {
+  animation: iresRedline 540ms ease-in-out infinite;
+}
+
+.ires-exhausted-badge {
+  animation: iresRedline 620ms ease-in-out infinite;
+}

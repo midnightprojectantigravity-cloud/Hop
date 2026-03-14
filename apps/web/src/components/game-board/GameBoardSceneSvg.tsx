@@ -1,8 +1,9 @@
 import React from 'react';
-import type { GameState, Point, SynapseThreatPreview } from '@hop/engine';
+import type { ActionResourcePreview, GameState, IresTurnProjection, Point, SynapseThreatPreview } from '@hop/engine';
 import type { VisualAssetManifest } from '../../visual/asset-manifest';
 import { BiomeBackdropLayer } from './BiomeBackdropLayer';
 import { InteractionTilesLayer } from './InteractionTilesLayer';
+import { RoutePathLayer } from './RoutePathLayer';
 import { FogOfWarLayer } from './FogOfWarLayer';
 import { ClutterObstaclesLayer } from './ClutterObstaclesLayer';
 import { EntityLayer } from './EntityLayer';
@@ -27,6 +28,8 @@ interface GameBoardSceneSvgProps {
         hasEnemy: boolean;
         target: Point;
         ailmentDeltaLines?: string[];
+        resourcePreview?: ActionResourcePreview;
+        turnProjection?: IresTurnProjection;
     } | null;
     tileVisualFlags: Map<string, { isWall: boolean; isLava: boolean; isFire: boolean }>;
     movementTargetSet: Set<string>;
@@ -173,6 +176,7 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
             onTileHover={onTileHover}
             decals={decals}
         />
+        <RoutePathLayer gameState={gameState} />
         <FogOfWarLayer gameState={gameState} cells={cells} />
         <ClutterObstaclesLayer
             sprites={depthSortedSprites}

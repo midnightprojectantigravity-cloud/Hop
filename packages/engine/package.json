@@ -23,6 +23,7 @@
     "prebuild": "npm run generate-skill-registry",
     "build": "tsc",
     "test": "vitest run",
+    "test:worldgen": "vitest run src/__tests__/generation_compile.test.ts src/__tests__/generation_hex_int.test.ts src/__tests__/generation_registry.test.ts src/__tests__/generation_state_persistence.test.ts src/__tests__/generation_session_parity.test.ts src/__tests__/generation_artifact_apply_parity.test.ts src/__tests__/generation_spec_linter.test.ts src/__tests__/generation_paths.test.ts src/__tests__/generation_path_visual_subset.test.ts src/__tests__/generation_path_overrides.test.ts src/__tests__/golden_worldgen.test.ts",
     "test:ai-acceptance": "npx tsx ./scripts/runAiAcceptance.ts",
     "test:ai-acceptance:strict": "npx tsx ./scripts/runAiAcceptance.ts --strict",
     "inspect-enemy-ai": "npx tsx ./scripts/runEnemyAiDecisionDiff.ts",

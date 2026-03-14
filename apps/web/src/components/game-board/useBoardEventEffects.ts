@@ -152,6 +152,28 @@ export const useBoardEventEffects = ({
         };
 
         for (const ev of newEvents) {
+            if (ev.type === 'RestTriggered') {
+                const actorId = String(ev.actorId || ev.targetId || '');
+                if (!actorId) continue;
+                pushPose(
+                    actorId,
+                    'rest-cool',
+                    { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                    { offsetX: 0, offsetY: -6, scaleX: 0.98, scaleY: 1.03 },
+                    now,
+                    160
+                );
+                pushPose(
+                    actorId,
+                    'rest-cool-return',
+                    { offsetX: 0, offsetY: -2, scaleX: 0.99, scaleY: 1.02 },
+                    { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 },
+                    now + 120,
+                    220
+                );
+                continue;
+            }
+
             if (ev.type !== 'DamageTaken') continue;
             const targetId = String(ev.targetId || '');
             const targetActor = targetId ? actorByIdLocal.get(targetId) : undefined;

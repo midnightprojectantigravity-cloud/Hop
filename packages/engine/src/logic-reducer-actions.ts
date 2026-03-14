@@ -1,4 +1,5 @@
 import type { Action, GameState, GridSize, MapShape, RunRulesetOverrides } from './types';
+import type { GenerationSpecInput, GenerationState } from './generation/schema';
 import { hexEquals } from './hex';
 import { getEnemyAt } from './helpers';
 import { SkillRegistry } from './skillRegistry';
@@ -19,6 +20,7 @@ import { resolvePendingStateAction, resolveSelectUpgradeAction } from './logic-r
 import type { Intent } from './types/intent';
 import { recomputeVisibility } from './systems/visibility';
 import { buildIntentPreview } from './systems/telegraph-projection';
+import { resolveIresRuleset } from './systems/ires';
 
 type ReducerDeps = {
     processNextTurn: (state: GameState, isResuming?: boolean) => GameState;
@@ -29,7 +31,11 @@ type ReducerDeps = {
         preservePlayer?: any,
         loadout?: Loadout,
         mapSize?: GridSize,
-        mapShape?: MapShape
+        mapShape?: MapShape,
+        generationOptions?: {
+            generationSpec?: GenerationSpecInput;
+            generationState?: GenerationState;
+        }
     ) => GameState;
     generateHubState: () => GameState;
     warnTurnStackInvariant: (message: string, payload?: Record<string, unknown>) => void;
@@ -64,6 +70,7 @@ const mergeRunRulesetOverrides = (
     overrides?: RunRulesetOverrides
 ): GameState['ruleset'] => {
     if (!overrides) return base;
+    const baseIres = resolveIresRuleset(base);
     const nextAilments = base?.ailments
         ? {
             ...base.ailments,
@@ -95,7 +102,12 @@ const mergeRunRulesetOverrides = (
         ...(base || {}),
         ...(nextAilments ? { ailments: nextAilments } : {}),
         ...(nextAttachments ? { attachments: nextAttachments } : {}),
-        ...(nextCapabilities ? { capabilities: nextCapabilities } : {})
+        ...(nextCapabilities ? { capabilities: nextCapabilities } : {}),
+        ires: {
+            ...baseIres,
+            ...(overrides.ires || {}),
+            fibonacciTable: [...(overrides.ires?.fibonacciTable || baseIres.fibonacciTable)]
+        }
     };
 };
 
@@ -221,13 +233,13 @@ export const resolveGameStateAction = (
         }
 
         case 'START_RUN': {
-            const { loadoutId, seed, mode, date, mapSize, mapShape, rulesetOverrides } = a.payload;
+            const { loadoutId, seed, mode, date, mapSize, mapShape, rulesetOverrides, generationSpec } = a.payload;
             const loadout = DEFAULT_LOADOUTS[loadoutId];
             if (!loadout) return s;
             if (mode === 'daily') {
                 const dateKey = toDateKey(date);
                 const dailySeed = createDailySeed(dateKey);
-                const next = deps.generateInitialState(1, seed || dailySeed, undefined, undefined, loadout, mapSize, mapShape);
+                const next = deps.generateInitialState(1, seed || dailySeed, undefined, undefined, loadout, mapSize, mapShape, { generationSpec });
                 const mergedRuleset = resolveAcaeRuleset({
                     ...next,
                     ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)
@@ -255,7 +267,7 @@ export const resolveGameStateAction = (
                     intentPreview: buildIntentPreview(withVisibility)
                 };
             }
-            const next = deps.generateInitialState(1, seed, undefined, undefined, loadout, mapSize, mapShape);
+            const next = deps.generateInitialState(1, seed, undefined, undefined, loadout, mapSize, mapShape, { generationSpec });
             const mergedRuleset = resolveAcaeRuleset({
                 ...next,
                 ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)

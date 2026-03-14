@@ -6,6 +6,11 @@ import { useDebugPerfLogger } from './app/use-debug-perf-logger';
 import { useDebugQueryBridge } from './app/use-debug-query-bridge';
 import { useFloorIntro } from './app/use-floor-intro';
 import { usePersistedGameState } from './app/use-persisted-game-state';
+import { useWorldgenWorker } from './app/use-worldgen-worker';
+import { usePendingFloorWorldgen } from './app/use-pending-floor-worldgen';
+import {
+  buildStartRunCompileContext,
+} from './app/worldgen-transport';
 import { useReplayController } from './app/use-replay-controller';
 import { buildReplayRecordFromGameState, useRunRecording } from './app/use-run-recording';
 import { useSimulationFeedback } from './app/use-simulation-feedback';
@@ -102,12 +107,16 @@ const ArcadeSplashGate = ({
   canEnter,
   waitingForReady,
   showDelayedPulse,
+  statusLine,
+  error,
   onEnterArcade,
   onOpenHub
 }: {
   canEnter: boolean;
   waitingForReady: boolean;
   showDelayedPulse: boolean;
+  statusLine?: string;
+  error?: string;
   onEnterArcade: () => void;
   onOpenHub: () => void;
 }) => {
@@ -155,9 +164,77 @@ const ArcadeSplashGate = ({
                 showDelayedPulse ? 'arcade-ready-pulse' : ''
               }`}
             >
-              Initializing engine...
+              {statusLine || 'Initializing engine...'}
             </div>
           )}
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-300/40 bg-red-950/50 px-3 py-3 text-[11px] text-red-100">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-red-200">Worldgen Error</div>
+              <div className="mt-1 leading-relaxed">{error}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+type WorldgenUiError = {
+  kind: 'boot' | 'start_run' | 'stairs';
+  message: string;
+};
+
+const WorldgenErrorOverlay = ({
+  error,
+  progressLabel,
+  onDismiss,
+  onRetry,
+  onExitToHub
+}: {
+  error: WorldgenUiError | null;
+  progressLabel?: string;
+  onDismiss: () => void;
+  onRetry?: () => void;
+  onExitToHub?: () => void;
+}) => {
+  if (!error) return null;
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/65 px-4">
+      <div className="w-full max-w-md rounded-3xl border border-red-300/30 bg-[var(--surface-panel)] p-5 text-[var(--text-primary)] shadow-2xl">
+        <div className="text-[11px] font-black uppercase tracking-[0.2em] text-red-400">Worldgen Blocked</div>
+        <div className="mt-3 text-sm leading-relaxed">{error.message}</div>
+        {progressLabel && (
+          <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            {progressLabel}
+          </div>
+        )}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="min-h-11 rounded-xl bg-[var(--accent-brass)] px-4 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-inverse)]"
+            >
+              Retry
+            </button>
+          )}
+          {onExitToHub && (
+            <button
+              type="button"
+              onClick={onExitToHub}
+              className="min-h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-4 text-xs font-black uppercase tracking-[0.16em]"
+            >
+              Exit To Hub
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="min-h-11 rounded-xl border border-[var(--border-subtle)] bg-transparent px-4 text-xs font-black uppercase tracking-[0.16em]"
+          >
+            Dismiss
+          </button>
         </div>
       </div>
     </div>
@@ -195,6 +272,8 @@ function App() {
   }, []);
 
   const [gameState, dispatch] = usePersistedGameState();
+  const worldgenWorker = useWorldgenWorker();
+  const [worldgenUiError, setWorldgenUiError] = useState<WorldgenUiError | null>(null);
   const [runResumeContext, setRunResumeContext] = useState<RunResumeContext | null>(() => readRunResumeContext());
   const hubLoadoutSelectionAtRef = useRef<number | null>(null);
   const runStartedAtRef = useRef<number | null>(null);
@@ -208,6 +287,11 @@ function App() {
   const [arcadeSplashEntered, setArcadeSplashEntered] = useState(false);
   const [arcadeSplashWaitingForReady, setArcadeSplashWaitingForReady] = useState(false);
   const [showArcadeDelayedPulse, setShowArcadeDelayedPulse] = useState(false);
+  const worldgenDebugEnabled = useMemo(() => {
+    if (!import.meta.env.DEV || typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('worldgenDebug') === '1';
+  }, []);
+  const worldgenRuntimeReady = engineReady && worldgenWorker.ready;
 
   const isDebugQueryEnabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_QUERY);
   const assetManifest = useAssetManifest();
@@ -262,6 +346,12 @@ function App() {
     if (!sensoryDispatcherEnabled) return;
     dispatchSensoryEvent(payload);
   }, [sensoryDispatcherEnabled]);
+  const clearWorldgenUiError = useCallback(() => {
+    setWorldgenUiError(null);
+  }, []);
+  const reportWorldgenUiError = useCallback((kind: WorldgenUiError['kind'], message: string) => {
+    setWorldgenUiError({ kind, message });
+  }, []);
 
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [showMovementRange, setShowMovementRange] = useState(false);
@@ -299,6 +389,19 @@ function App() {
     handleSimulationEvents,
     handleUiMirrorSnapshot
   } = useSimulationFeedback({ gameState, appendTurnTrace });
+  const pendingFloorWorldgen = usePendingFloorWorldgen({
+    gameState,
+    worldgenWorker,
+    worldgenDebugEnabled,
+    dispatchWithTrace,
+    reportWorldgenUiError,
+    clearWorldgenUiError
+  });
+  const worldgenProgressLabel = pendingFloorWorldgen.progressLabel || (
+    worldgenWorker.progress
+      ? `Compiling: ${worldgenWorker.progress.pass} (${worldgenWorker.progress.percent}%)`
+      : undefined
+  );
   const { armPostCommitLock } = useTurnFlowCoordinator({
     gameState,
     turnDriver,
@@ -307,7 +410,8 @@ function App() {
     postCommitInputLock,
     setPostCommitInputLock,
     appendTurnTrace,
-    dispatchWithTrace
+    dispatchWithTrace,
+    resolvePendingFloor: pendingFloorWorldgen.resolvePendingFloor
   });
 
   const [tutorialInstructions, setTutorialInstructions] = useState<string | null>(null);
@@ -327,22 +431,36 @@ function App() {
   }, [assetManifest, engineReady]);
 
   useEffect(() => {
+    if (!worldgenWorker.error) return;
+    console.error('[HOP_WORLDGEN_WORKER]', worldgenWorker.error, {
+      registryVersion: worldgenWorker.registryVersion,
+      specSchemaVersion: worldgenWorker.specSchemaVersion
+    });
+    if (!worldgenWorker.ready) {
+      setWorldgenUiError((previous) => previous ?? {
+        kind: 'boot',
+        message: worldgenWorker.error || 'Worldgen worker failed to initialize'
+      });
+    }
+  }, [worldgenWorker.error, worldgenWorker.ready, worldgenWorker.registryVersion, worldgenWorker.specSchemaVersion]);
+
+  useEffect(() => {
     if (!isArcadeRoute || gameState.gameStatus !== 'hub') return;
     if (!arcadeSplashEntered && !arcadeSplashWaitingForReady) return;
-    if (engineReady) return;
+    if (worldgenRuntimeReady) return;
     setArcadeSplashEntered(false);
     setArcadeSplashWaitingForReady(false);
     setShowArcadeDelayedPulse(false);
   }, [
     arcadeSplashEntered,
     arcadeSplashWaitingForReady,
-    engineReady,
+    worldgenRuntimeReady,
     gameState.gameStatus,
     isArcadeRoute
   ]);
 
   useEffect(() => {
-    if (!arcadeSplashWaitingForReady || engineReady) {
+    if (!arcadeSplashWaitingForReady || worldgenRuntimeReady) {
       setShowArcadeDelayedPulse(false);
       return;
     }
@@ -354,14 +472,14 @@ function App() {
       }
     }, 1500);
     return () => window.clearTimeout(pulseTimeout);
-  }, [arcadeSplashWaitingForReady, engineReady]);
+  }, [arcadeSplashWaitingForReady, worldgenRuntimeReady]);
 
   useEffect(() => {
-    if (!arcadeSplashWaitingForReady || !engineReady) return;
+    if (!arcadeSplashWaitingForReady || !worldgenRuntimeReady) return;
     setArcadeSplashEntered(true);
     setArcadeSplashWaitingForReady(false);
     setShowArcadeDelayedPulse(false);
-  }, [arcadeSplashWaitingForReady, engineReady]);
+  }, [arcadeSplashWaitingForReady, worldgenRuntimeReady]);
 
   useEffect(() => {
     const normalizedPath = pathname.toLowerCase().replace(/\/+$/, '');
@@ -667,7 +785,7 @@ function App() {
     navigateTo(hubPath);
   };
 
-  const startRun = useCallback((params: {
+  const startRun = useCallback(async (params: {
     loadoutId: string;
     mode: 'normal' | 'daily';
     source: string;
@@ -677,6 +795,12 @@ function App() {
     mapShape?: MapShape;
     mapSizeInputMode?: 'usable' | 'grid';
   }) => {
+    if (!worldgenWorker.ready) {
+      const message = worldgenWorker.error || 'Worldgen worker unavailable';
+      console.error('[HOP_WORLDGEN_START_BLOCKED]', message);
+      reportWorldgenUiError('start_run', message);
+      return;
+    }
     const payload = buildStartRunPayload({
       loadoutId: params.loadoutId,
       mode: params.mode,
@@ -688,7 +812,25 @@ function App() {
       capabilityPassivesEnabled: hubCapabilityPassivesEnabled,
       movementRuntimeEnabled: hubMovementRuntimeEnabled
     });
-    dispatchWithTrace({ type: 'START_RUN', payload }, params.source);
+    const context = buildStartRunCompileContext({
+      loadoutId: params.loadoutId,
+      mode: params.mode,
+      seed: payload.seed,
+      date: payload.date,
+      mapSize: payload.mapSize,
+      mapShape: payload.mapShape,
+      rulesetOverrides: payload.rulesetOverrides as Record<string, unknown> | undefined,
+      generationSpec: payload.generationSpec,
+      includeDebug: worldgenDebugEnabled
+    });
+    const artifact = await worldgenWorker.compileRunStart(context).catch((error: Error) => {
+      console.error('[HOP_WORLDGEN_START_FAILED]', error);
+      reportWorldgenUiError('start_run', error.message || 'Worldgen start failed');
+      return null;
+    });
+    if (!artifact) return;
+    clearWorldgenUiError();
+    dispatchWithTrace({ type: 'APPLY_WORLDGEN_ARTIFACT', payload: artifact }, params.source);
     const nextContext = buildRunResumeContext({
       loadoutId: params.loadoutId,
       mode: params.mode,
@@ -699,7 +841,15 @@ function App() {
     runStartedAtRef.current = Date.now();
     firstActionMeasuredRef.current = false;
     defeatAtRef.current = null;
-  }, [dispatchWithTrace, hubCapabilityPassivesEnabled, hubMovementRuntimeEnabled]);
+  }, [
+    clearWorldgenUiError,
+    dispatchWithTrace,
+    hubCapabilityPassivesEnabled,
+    hubMovementRuntimeEnabled,
+    reportWorldgenUiError,
+    worldgenDebugEnabled,
+    worldgenWorker
+  ]);
 
   const handleCapabilityPassivesEnabledChange = useCallback((enabled: boolean) => {
     setHubCapabilityPassivesEnabled(enabled);
@@ -755,14 +905,14 @@ function App() {
       priority: 'high',
       context: 'hub'
     });
-    if (engineReady) {
+    if (worldgenRuntimeReady) {
       setArcadeSplashEntered(true);
       setArcadeSplashWaitingForReady(false);
       setShowArcadeDelayedPulse(false);
       return;
     }
     setArcadeSplashWaitingForReady(true);
-  }, [dispatchSensory, engineReady]);
+  }, [dispatchSensory, worldgenRuntimeReady]);
 
   const handleOpenHubFromArcadeSplash = useCallback(() => {
     setArcadeSplashEntered(false);
@@ -967,119 +1117,144 @@ function App() {
 
     if (isArcadeRoute && !arcadeSplashEntered) {
       return (
-        <ArcadeSplashGate
-          canEnter={engineReady}
-          waitingForReady={arcadeSplashWaitingForReady}
-          showDelayedPulse={showArcadeDelayedPulse}
-          onEnterArcade={handleEnterArcadeSplash}
-          onOpenHub={handleOpenHubFromArcadeSplash}
-        />
+        <>
+          <ArcadeSplashGate
+            canEnter={worldgenRuntimeReady}
+            waitingForReady={arcadeSplashWaitingForReady}
+            showDelayedPulse={showArcadeDelayedPulse}
+            statusLine={worldgenProgressLabel}
+            error={worldgenWorker.ready ? undefined : (worldgenUiError?.message || worldgenWorker.error)}
+            onEnterArcade={handleEnterArcadeSplash}
+            onOpenHub={handleOpenHubFromArcadeSplash}
+          />
+          <WorldgenErrorOverlay
+            error={worldgenUiError}
+            progressLabel={worldgenProgressLabel}
+            onDismiss={clearWorldgenUiError}
+          />
+        </>
       );
     }
 
     return (
-      <Suspense fallback={<AppScreenFallback label="Loading Hub..." />}>
-        <LazyHubScreen
+      <>
+        <Suspense fallback={<AppScreenFallback label="Loading Hub..." />}>
+          <LazyHubScreen
+            gameState={gameState}
+            isArcadeRoute={isArcadeRoute}
+            hubPath={hubPath}
+            arcadePath={arcadePath}
+            biomesPath={biomesPath}
+            themeLabPath={themeLabPath}
+            settingsPath={settingsPath}
+            leaderboardPath={leaderboardPath}
+            tutorialsPath={tutorialsPath}
+            replayError={replayError}
+            tutorialInstructions={tutorialInstructions}
+            uiPreferences={uiPreferences}
+            dedicatedRoutesEnabled={dedicatedHubRoutesEnabled}
+            navigateTo={navigateTo}
+            onStartArcadeRun={handleStartArcadeRun}
+            onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
+            onSetMotionMode={(motionMode) => patchUiPreferences({ motionMode })}
+            onSetHudDensity={(hudDensity) => patchUiPreferences({ hudDensity })}
+            capabilityPassivesEnabled={hubCapabilityPassivesEnabled}
+            onCapabilityPassivesEnabledChange={handleCapabilityPassivesEnabledChange}
+            movementRuntimeEnabled={hubMovementRuntimeEnabled}
+            onMovementRuntimeEnabledChange={handleMovementRuntimeEnabledChange}
+            mapShape={hubMapShape}
+            onMapShapeChange={setHubMapShape}
+            mapSize={hubMapSize}
+            onMapSizeChange={setHubMapSize}
+            onSelectLoadout={(l) => {
+              hubLoadoutSelectionAtRef.current = Date.now();
+              dispatchWithTrace({ type: 'APPLY_LOADOUT', payload: l }, 'hub_select_loadout');
+            }}
+            onStartRun={handleStartRun}
+            onLoadScenario={handleLoadScenario}
+            onStartReplay={(record) => {
+              dispatchSensory({
+                id: 'ui-parchment-slide',
+                intensity: 1.0,
+                priority: 'low',
+                context: 'hub'
+              });
+              startReplay(record);
+            }}
+            onDismissTutorial={() => setTutorialInstructions(null)}
+          />
+        </Suspense>
+        <WorldgenErrorOverlay
+          error={worldgenUiError}
+          progressLabel={worldgenProgressLabel}
+          onDismiss={clearWorldgenUiError}
+        />
+      </>
+    );
+  }
+  return (
+    <>
+      <Suspense fallback={<AppScreenFallback label="Loading Run..." />}>
+        <LazyGameScreen
           gameState={gameState}
-          isArcadeRoute={isArcadeRoute}
-          hubPath={hubPath}
-          arcadePath={arcadePath}
-          biomesPath={biomesPath}
-          themeLabPath={themeLabPath}
-          settingsPath={settingsPath}
-          leaderboardPath={leaderboardPath}
-          tutorialsPath={tutorialsPath}
-          replayError={replayError}
+          selectedSkillId={selectedSkillId}
+          showMovementRange={showMovementRange}
+          isInputLocked={isInputLocked}
+          isReplayMode={isReplayMode}
+          replayActionsLength={replayActions.length}
+          replayIndex={replayIndexRef.current}
+          replayActive={replayActive}
+          mobileToasts={mobileToasts}
           tutorialInstructions={tutorialInstructions}
+          floorIntro={floorIntro}
+          assetManifest={assetManifest}
           uiPreferences={uiPreferences}
-          dedicatedRoutesEnabled={dedicatedHubRoutesEnabled}
-          navigateTo={navigateTo}
-          onStartArcadeRun={handleStartArcadeRun}
-          onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
-          onSetMotionMode={(motionMode) => patchUiPreferences({ motionMode })}
-          onSetHudDensity={(hudDensity) => patchUiPreferences({ hudDensity })}
-          capabilityPassivesEnabled={hubCapabilityPassivesEnabled}
-          onCapabilityPassivesEnabledChange={handleCapabilityPassivesEnabledChange}
-          movementRuntimeEnabled={hubMovementRuntimeEnabled}
-          onMovementRuntimeEnabledChange={handleMovementRuntimeEnabledChange}
-          mapShape={hubMapShape}
-          onMapShapeChange={setHubMapShape}
-          mapSize={hubMapSize}
-          onMapSizeChange={setHubMapSize}
-          onSelectLoadout={(l) => {
-            hubLoadoutSelectionAtRef.current = Date.now();
-            dispatchWithTrace({ type: 'APPLY_LOADOUT', payload: l }, 'hub_select_loadout');
-          }}
-          onStartRun={handleStartRun}
-          onLoadScenario={handleLoadScenario}
-          onStartReplay={(record) => {
+          onSetBoardBusy={setIsBusy}
+          onTileClick={handleTileClick}
+          onSimulationEvents={handleSimulationEvents}
+          onMirrorSnapshot={handleUiMirrorSnapshot}
+          onReset={handleReset}
+          onWait={handleWait}
+          onExitToHub={handleExitToHub}
+          onSelectSkill={handleSelectSkill}
+          onSelectUpgrade={handleSelectUpgrade}
+          isSynapseMode={isSynapseMode}
+          synapseSelection={synapseSelection}
+          synapsePulse={synapsePulse}
+          onToggleSynapseMode={toggleSynapseMode}
+          onSynapseInspectEntity={handleSynapseInspectEntity}
+          onSynapseSelectSource={handleSynapseInspectEntity}
+          onSynapseClearSelection={clearSynapseContext}
+          onDismissTutorial={() => setTutorialInstructions(null)}
+          onToggleReplay={() => {
             dispatchSensory({
               id: 'ui-parchment-slide',
               intensity: 1.0,
               priority: 'low',
-              context: 'hub'
+              context: 'run'
             });
-            startReplay(record);
+            setReplayActive(!replayActive);
           }}
-          onDismissTutorial={() => setTutorialInstructions(null)}
+          onStepReplay={stepReplay}
+          onJumpReplay={goToReplayIndex}
+          replayMarkerIndices={replayMarkerIndices}
+          onCloseReplay={stopReplay}
+          onQuickRestart={handleQuickRestart}
+          onViewReplay={handleViewReplay}
+          onRunLostActionsReady={handleRunLostActionsReady}
+          onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
+          mobileDockV2Enabled={mobileDockV2Enabled}
+          replayChronicleEnabled={defeatLoopV2Enabled}
         />
       </Suspense>
-    );
-  }
-  return (
-    <Suspense fallback={<AppScreenFallback label="Loading Run..." />}>
-      <LazyGameScreen
-        gameState={gameState}
-        selectedSkillId={selectedSkillId}
-        showMovementRange={showMovementRange}
-        isInputLocked={isInputLocked}
-        isReplayMode={isReplayMode}
-        replayActionsLength={replayActions.length}
-        replayIndex={replayIndexRef.current}
-        replayActive={replayActive}
-        mobileToasts={mobileToasts}
-        tutorialInstructions={tutorialInstructions}
-        floorIntro={floorIntro}
-        assetManifest={assetManifest}
-        uiPreferences={uiPreferences}
-        onSetBoardBusy={setIsBusy}
-        onTileClick={handleTileClick}
-        onSimulationEvents={handleSimulationEvents}
-        onMirrorSnapshot={handleUiMirrorSnapshot}
-        onReset={handleReset}
-        onWait={handleWait}
-        onExitToHub={handleExitToHub}
-        onSelectSkill={handleSelectSkill}
-        onSelectUpgrade={handleSelectUpgrade}
-        isSynapseMode={isSynapseMode}
-        synapseSelection={synapseSelection}
-        synapsePulse={synapsePulse}
-        onToggleSynapseMode={toggleSynapseMode}
-        onSynapseInspectEntity={handleSynapseInspectEntity}
-        onSynapseSelectSource={handleSynapseInspectEntity}
-        onSynapseClearSelection={clearSynapseContext}
-        onDismissTutorial={() => setTutorialInstructions(null)}
-        onToggleReplay={() => {
-          dispatchSensory({
-            id: 'ui-parchment-slide',
-            intensity: 1.0,
-            priority: 'low',
-            context: 'run'
-          });
-          setReplayActive(!replayActive);
-        }}
-        onStepReplay={stepReplay}
-        onJumpReplay={goToReplayIndex}
-        replayMarkerIndices={replayMarkerIndices}
-        onCloseReplay={stopReplay}
-        onQuickRestart={handleQuickRestart}
-        onViewReplay={handleViewReplay}
-        onRunLostActionsReady={handleRunLostActionsReady}
-        onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
-        mobileDockV2Enabled={mobileDockV2Enabled}
-        replayChronicleEnabled={defeatLoopV2Enabled}
-      />
-    </Suspense>
+        <WorldgenErrorOverlay
+          error={worldgenUiError}
+          progressLabel={worldgenProgressLabel}
+          onDismiss={clearWorldgenUiError}
+          onRetry={worldgenUiError?.kind === 'stairs' ? pendingFloorWorldgen.retryPendingFloor : undefined}
+          onExitToHub={worldgenUiError?.kind === 'stairs' ? handleExitToHub : undefined}
+        />
+    </>
   );
 }
 
