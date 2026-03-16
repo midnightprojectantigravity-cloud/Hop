@@ -26,7 +26,7 @@ export class ScenarioEngine {
         this.state = initialState;
     }
 
-    setPlayer(pos: Point, skillIds: string[], archetype: 'VANGUARD' | 'SKIRMISHER' = 'VANGUARD') {
+    setPlayer(pos: Point, skillIds: string[], archetype: string = 'VANGUARD') {
         const player = createPlayer({
             position: { ...pos },
             skills: skillIds,

@@ -37,8 +37,7 @@ const pushParityViolation = (
     violations: BalanceBudgetViolation[],
     category: 'loadout_parity' | 'enemy_parity',
     subjectId: string,
-    relativeDeltaPct: number,
-    actual: number
+    relativeDeltaPct: number
 ): void => {
     const thresholds = category === 'loadout_parity'
         ? BALANCE_BUDGET_THRESHOLDS.loadoutParity
@@ -172,8 +171,7 @@ export const buildBalanceBudgetViolations = (
             violations,
             'loadout_parity',
             profile.loadoutId,
-            profile.relativeDeltaPct,
-            profile.intrinsicPowerScore
+            profile.relativeDeltaPct
         );
     }
 
@@ -186,8 +184,7 @@ export const buildBalanceBudgetViolations = (
             violations,
             'enemy_parity',
             profile.subtype,
-            profile.relativeDeltaPct,
-            profile.intrinsicPowerScore
+            profile.relativeDeltaPct
         );
     }
 

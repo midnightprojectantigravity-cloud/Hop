@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Actor } from '@hop/engine';
+import { getEntityComponent } from './entity-components';
 
 type AilmentBadge = { ailment: string; count: number };
 
@@ -12,7 +13,7 @@ const AILMENT_COLORS: Record<string, string> = {
 };
 
 const readAilmentCounters = (entity: Actor): Record<string, number> => {
-  const component = entity.components?.get('ailments') as { counters?: Record<string, number> } | undefined;
+  const component = getEntityComponent<{ counters?: Record<string, number> }>(entity.components, 'ailments');
   return component?.counters || {};
 };
 

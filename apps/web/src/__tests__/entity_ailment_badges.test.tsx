@@ -23,5 +23,23 @@ describe('entity ailment badges', () => {
     const badges = getEntityAilmentBadges(state.player, 3);
     expect(badges.map(b => `${b.ailment}:${b.count}`)).toEqual(['poison:11', 'bleed:6', 'burn:4']);
   });
-});
 
+  it('reads ailment counters from object-shaped components without crashing', () => {
+    const state = generateInitialState(1, 'entity-ailment-badges-object-seed');
+    state.player = {
+      ...state.player,
+      components: {
+        ailments: {
+          type: 'ailments',
+          counters: {
+            burn: 3,
+            wet: 1
+          }
+        }
+      } as any
+    };
+
+    const badges = getEntityAilmentBadges(state.player, 3);
+    expect(badges.map(b => `${b.ailment}:${b.count}`)).toEqual(['burn:3', 'wet:1']);
+  });
+});

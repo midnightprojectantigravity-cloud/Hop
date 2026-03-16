@@ -48,7 +48,12 @@ const inferTags = (def: SkillDefinition): SkillIntentTag[] => {
 
 const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
     BASIC_MOVE: { intentTags: ['move', 'objective', 'utility'], target: { pattern: 'single' }, estimates: { movement: 1 } },
-    BASIC_ATTACK: { intentTags: ['damage'], target: { pattern: 'single' }, estimates: { damage: 4 } },
+    BASIC_ATTACK: {
+        intentTags: ['damage'],
+        target: { pattern: 'single' },
+        estimates: { damage: 4 },
+        economy: { consumesTurn: true }
+    },
     AUTO_ATTACK: { intentTags: ['damage', 'utility'], target: { pattern: 'single' }, estimates: { damage: 2 } },
     DASH: {
         intentTags: ['move', 'damage', 'utility'],

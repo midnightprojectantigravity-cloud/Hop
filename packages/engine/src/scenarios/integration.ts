@@ -112,17 +112,22 @@ export const integrationScenarios: ScenarioCollection = {
                 const autoattacked = state.enemies.find(e => e.id === 'auto-attacked');
                 const safe = state.enemies.find(e => e.id === 'safe');
                 const safe2 = state.enemies.find(e => e.id === 'safe2');
+                const removed = new Set((state.dyingEntities || []).map(e => e.id));
+                const attackedTargetLog = logs.some(l => l.includes('You attacked footman#grappleHookTarget!'));
+                const attackedSafeLog = logs.some(l => l.includes('You attacked footman#safe!'));
+                const attackedSafe2Log = logs.some(l => l.includes('You attacked footman#safe2!'));
+                const attackedAutoLog = logs.some(l => l.includes('You attacked footman#auto-attacked!'));
 
                 const checks = {
                     // Target should be pulled but NOT auto-attacked (wasn't adjacent at turn start)
                     targetPulled: !!(target && target.position.q < 7),
-                    targetNotHit: !!(target && target.hp === target.maxHp),
+                    targetNotHit: !!(target && target.hp === target.maxHp && !attackedTargetLog),
                     // Adjacent enemy at the start of the turnshould NOT be auto-attacked if they are no longer adjacent at the end of the turn
-                    safeNotHit: !!(safe && safe.hp === safe.maxHp),
+                    safeNotHit: !!((safe || removed.has('safe')) && !attackedSafeLog),
                     // Non-adjacent enemy should NOT be auto-attacked even if the player moves towards it
-                    safe2NotHit: !!(safe2 && safe2.hp === safe2.maxHp),
+                    safe2NotHit: !!((safe2 || removed.has('safe2')) && !attackedSafe2Log),
                     // Adjacent enemy that remains adjacent should be auto-attacked
-                    autoattackedDead: !autoattacked || autoattacked.hp <= 0,
+                    autoattackedDead: (!autoattacked || removed.has('auto-attacked') || autoattacked.hp <= 0) && attackedAutoLog,
                 };
 
                 if (Object.values(checks).some(v => v === false)) {
@@ -139,8 +144,8 @@ export const integrationScenarios: ScenarioCollection = {
 
                 /**
                  * WHY THIS VERIFICATION:
-                 * This proves the skill's target selection logic includes an 
-                 * alignment filter (Target != Attacker.alignment).
+                 * This proves the start/end adjacency filter still applies after displacement, even when
+                 * the autonomous loop has already removed resolved actors into `dyingEntities`.
                  */
                 return Object.values(checks).every(v => v === true);
             }

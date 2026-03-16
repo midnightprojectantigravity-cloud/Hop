@@ -1,4 +1,30 @@
-# Codebase Status - March 3, 2026
+# Codebase Status - March 16, 2026
+
+## IRES Runtime Alignment Milestone
+Beat-based IRES metabolic modeling is now bridged into live runtime skill costs and validated end-to-end.
+
+Delivered outcomes:
+1. Standalone metabolic layer:
+   - beat-based band model with passive-per-beat recovery and explicit `WAIT` bonuses
+   - shared movement/attack/spell BFI compression ladder
+   - metabolic report/search tooling and runtime bridge
+2. Turn-flow safety:
+   - protected single-action auto-end is the default web behavior
+   - per-turn `Overdrive` opt-in preserves intentional chaining without reducer changes
+3. Live skill integration:
+   - all 49 registered skills now have explicit metabolic band mappings
+   - the 27-skill active runtime roster derives costs/strain from band + offsets
+   - passive capability/system skills are explicitly band-mapped but metabolically inert
+4. Evaluation and audit hardening:
+   - skill-band audit artifacts track mapped coverage, fallback count, migration deltas, and intrinsic power drift
+   - passive capability skills score as passive utility instead of fake active economy
+5. Scenario harness hardening:
+   - scenario player setup now accepts arbitrary archetype strings
+   - necromancer summon scenarios run against the actual `NECROMANCER` runtime pool instead of a `VANGUARD` fallback
+
+References:
+- `artifacts/ires/IRES_METABOLIC_REPORT.md`
+- `artifacts/ires/IRES_SKILL_BAND_AUDIT.md`
 
 ## Major Accomplishment
 Post-AI roadmap tranches are complete and hardened (content pipeline closure, frontend decomposition, harness core unification).
@@ -127,9 +153,10 @@ Reference:
 
 Engine:
 - `npm --workspace @hop/engine run build` -> pass
-- `npm --workspace @hop/engine test` -> pass
+- `npm --workspace @hop/engine test` -> failing on known parity/baseline drift (`enemy_ai_parity_corpus`, `golden_run`, `harness_ai_convergence_regression`)
 - `npm --workspace @hop/engine run test:worldgen` -> pass
 - `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts` -> pass
+- `npm run ires:skill-bands:audit` -> pass
 - `npm run mvp:replay:gate` -> pass
 - `npm --workspace @hop/engine run bench:runtime:candidate` -> pass (5% regression gate)
 
@@ -140,6 +167,9 @@ Web:
 Server:
 - `npm --workspace @hop/server run test` -> pass
 
+Monorepo:
+- `npm run build` -> pass
+
 ## Current Risk Posture
 
 1. No known blocking regressions in the strict AI acceptance gate.
@@ -148,6 +178,8 @@ Server:
 4. Diagnostics (`oracle/shadow` diff scripts/tests) are retained for investigation workflows.
 5. `npm run upa:health:check` exits cleanly again, but it remains a heavy gate with long runtime because it evaluates the full multi-loadout heuristic health sweep.
 6. Capability rollout toggles and UI feature flags remain intentionally staged outside the worldgen milestone; their retention is tracked separately and is not a blocker for inferno worldgen completion.
+7. IRES runtime skill derivation is now full-coverage for known registry skills; the main remaining tuning frontier is actor reserve alignment with the beat-band model rather than more fallback cleanup.
+8. Full engine Vitest parity/golden envelopes are not yet rebaselined to the current runtime-aligned IRES model; remaining failures are concentrated in AI corpus parity and golden/harness balance regressions rather than build integrity or scenario correctness.
 
 ## Next Documentation Focus
 

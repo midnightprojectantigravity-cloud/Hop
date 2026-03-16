@@ -78,6 +78,30 @@ Canonical doctrine:
     - Skill intent tuning: `packages/engine/src/systems/skill-intent-profile.ts`
     - Labeling refinement for fast-loop triage: `packages/engine/scripts/runSkillHealthReport.ts`
 
+## Priority E: IRES Runtime Reserve Alignment
+- [x] Expand live IRES skill derivation to full 49-skill registry coverage.
+  - Evidence:
+    - `artifacts/ires/IRES_SKILL_BAND_AUDIT.json`
+    - `artifacts/ires/IRES_SKILL_BAND_AUDIT.md`
+- [x] Correct passive capability/system skills to explicit inert band-derived profiles.
+  - Evidence:
+    - `packages/engine/src/systems/ires/skill-catalog.ts`
+    - `packages/engine/src/systems/evaluation/balance-skill-power.ts`
+- [x] Restore scenario runner parity for necromancer summon flows under runtime-derived mana rules.
+  - Evidence:
+    - `packages/engine/src/scenarios/necromancer.ts`
+    - `packages/engine/src/skillTests.ts`
+- [ ] Align live actor Spark/Mana reserve pools with beat-band runtime costs.
+  - Acceptance:
+    - common player and enemy actors can sustain their intended bread-and-butter skills over 3-5 beat windows without relying on roster-specific cost compression
+    - boss/caster signatures remain castable from native runtime pools without one-off scenario overrides
+    - reserve tuning is validated against `artifacts/ires/IRES_METABOLIC_REPORT.md` and `artifacts/ires/IRES_SKILL_BAND_AUDIT.md`
+- [ ] Rebaseline AI parity and golden/harness balance envelopes against the runtime-aligned IRES model.
+  - Acceptance:
+    - `packages/engine/src/__tests__/enemy_ai_parity_corpus.test.ts` matches refreshed expected corpus
+    - `packages/engine/src/__tests__/golden-runs/golden_run.test.ts` reflects current intended run outcomes
+    - `packages/engine/src/__tests__/harness_ai_convergence_regression.test.ts` reflects the accepted post-alignment envelope
+
 ## Release Gate
 - [x] Build, scenarios, and health checks are green before merge.
   - Commands:

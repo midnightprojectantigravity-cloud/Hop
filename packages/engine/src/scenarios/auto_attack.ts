@@ -45,23 +45,22 @@ export const autoAttackScenarios: ScenarioCollection = {
                 engine.wait();
             },
             verify: (state: GameState, logs: string[]) => {
-                const pFoe = state.enemies.find(e => e.id === 'persistent_foe');
-                const nFoe = state.enemies.find(e => e.id === 'new_neighbor');
-                const fFoe = state.enemies.find(e => e.id === 'former_neighbor');
+                const attackedPersistent = logs.some(l => l.includes('You attacked footman#persistent_foe!'));
+                const attackedNewNeighbor = logs.some(l => l.includes('You attacked footman#new_neighbor!'));
+                const attackedFormerNeighbor = logs.some(l => l.includes('You attacked footman#former_neighbor!'));
 
                 const checks = {
+                    // 1. HIT: Persistent foe was selected by auto-attack.
+                    persistentHit: attackedPersistent,
 
-                    // 1. HIT: Persistent foe took damage and is now dead
-                    persistentDead: !pFoe || pFoe.hp < pFoe.maxHp,
+                    // 2. SAFE: New neighbor ignored (wasn't there at start).
+                    ignoredNew: !attackedNewNeighbor,
 
-                    // 2. SAFE: New neighbor ignored (wasn't there at start)
-                    ignoredNew: nFoe && nFoe.hp === nFoe.maxHp,
-
-                    // 3. SAFE: Former neighbor ignored (is too far now)
-                    ignoredFormer: fFoe && fFoe.hp === fFoe.maxHp,
+                    // 3. SAFE: Former neighbor ignored (is too far now).
+                    ignoredFormer: !attackedFormerNeighbor,
 
                     // 4. LOGS: Check for correct feedback
-                    logFound: logs.some(l => l.includes('attacked footman')),
+                    logFound: logs.some(l => l.includes('attacked footman#persistent_foe')),
 
                 };
 
@@ -74,7 +73,8 @@ export const autoAttackScenarios: ScenarioCollection = {
                 /**
                  * WHY THIS VERIFICATION:
                  * This "Triple Check" ensures the skill logic correctly intersects 
-                 * the set of START neighbors and END neighbors.
+                 * the set of START neighbors and END neighbors. We verify on action logs because
+                 * the autonomous loop can move removed actors into `dyingEntities` before scenario teardown.
                  */
 
                 return Object.values(checks).every(v => v === true);

@@ -67,8 +67,8 @@ const tagWeight = (profile: SkillIntentProfile | undefined, tag: string): number
     return profile.intentTags.includes(tag as any) ? 1 : 0;
 };
 
-const utilityWeights = (_state: GameState, strategicIntent: StrategicIntent, profile: StrategicPolicyProfile) => {
-    return profile.weightsByIntent[strategicIntent];
+const utilityWeights = (_state: GameState, strategicIntent: StrategicIntent, policyProfile: StrategicPolicyProfile) => {
+    return policyProfile.weightsByIntent[strategicIntent];
 };
 
 const firemageSpellSelectionScore = (
@@ -107,8 +107,7 @@ const scoreIresTransition = (
     metrics: TransitionMetrics,
     hostilesRemaining: number,
     archetype: string,
-    resourceWeight: number,
-    profile: StrategicPolicyProfile
+    resourceWeight: number
 ): number => {
     const current = state.player.ires;
     const projected = next.player.ires;
@@ -421,8 +420,7 @@ const evaluateAction = (
         metrics,
         hostilesRemaining,
         archetype,
-        w.resource,
-        profile
+        w.resource
     );
 
     const evaluated = { value, metrics, next };

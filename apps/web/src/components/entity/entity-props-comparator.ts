@@ -1,5 +1,6 @@
 import type { MovementTrace } from '@hop/engine';
 import type { EntityProps } from './entity-types';
+import { getEntityComponent } from './entity-components';
 
 const movementTraceKey = (movementTrace?: MovementTrace): string => {
   if (!movementTrace) return '';
@@ -8,8 +9,8 @@ const movementTraceKey = (movementTrace?: MovementTrace): string => {
 };
 
 const statusSig = (arr: any[] = []) => arr.map(s => `${s.id}:${s.duration ?? ''}:${s.stacks ?? ''}`).join('|');
-const ailmentSig = (entity: { components?: Map<string, any> }): string => {
-  const ailments = entity.components?.get('ailments') as { counters?: Record<string, number> } | undefined;
+const ailmentSig = (entity: { components?: unknown }): string => {
+  const ailments = getEntityComponent<{ counters?: Record<string, number> }>(entity.components, 'ailments');
   const counters = ailments?.counters || {};
   return Object.keys(counters)
     .sort((a, b) => a.localeCompare(b))

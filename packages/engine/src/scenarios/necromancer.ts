@@ -17,7 +17,7 @@ export const necromancerScenarios: ScenarioCollection = {
             isTutorial: false,
             tags: ['necromancer', 'corpse', 'persistence'],
             setup: (engine: any) => {
-                engine.setPlayer({ q: 4, r: 4, s: -8 }, ['BASIC_ATTACK', 'RAISE_DEAD'], 'VANGUARD');
+                engine.setPlayer({ q: 4, r: 4, s: -8 }, ['BASIC_ATTACK', 'RAISE_DEAD'], 'NECROMANCER');
                 engine.spawnEnemy('footman', { q: 5, r: 4, s: -9 }, 'dummy');
                 const enemy = engine.getEnemy('dummy');
                 if (enemy) {
@@ -59,7 +59,7 @@ export const necromancerScenarios: ScenarioCollection = {
             isTutorial: false,
             tags: ['necromancer', 'summon', 'floor-transition'],
             setup: (engine: any) => {
-                engine.setPlayer({ q: 4, r: 4, s: -8 }, ['RAISE_DEAD'], 'VANGUARD');
+                engine.setPlayer({ q: 4, r: 4, s: -8 }, ['RAISE_DEAD'], 'NECROMANCER');
                 const corpsePos = { q: 5, r: 4, s: -9 };
                 const key = pointToKey(corpsePos);
                 const tile = engine.getTileAt(corpsePos);
@@ -129,7 +129,7 @@ export const necromancerScenarios: ScenarioCollection = {
             isTutorial: false,
             tags: ['necromancer', 'occupancy', 'push'],
             setup: (engine: any) => {
-                engine.setPlayer({ q: 4, r: 5, s: -9 }, ['RAISE_DEAD'], 'VANGUARD');
+                engine.setPlayer({ q: 4, r: 5, s: -9 }, ['RAISE_DEAD'], 'NECROMANCER');
                 const corpsePos = { q: 5, r: 5, s: -10 };
                 const corpseKey = pointToKey(corpsePos);
                 const tile = engine.getTileAt(corpsePos);
