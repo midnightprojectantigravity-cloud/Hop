@@ -65,6 +65,22 @@ const isInLine = (from: Point, to: Point): boolean =>
 const hasActiveSkill = (enemy: Entity, skillId: string): boolean =>
     !!enemy.activeSkills?.some(s => s.id === skillId);
 
+const resolveWarlockCastSkillId = (enemy: Entity): string | undefined =>
+    hasActiveSkill(enemy, 'FIREBALL')
+        ? 'FIREBALL'
+        : (hasActiveSkill(enemy, 'SENTINEL_BLAST') ? 'SENTINEL_BLAST' : undefined);
+
+const skillCanTargetPlayer = (
+    state: GameState,
+    skillId: string | undefined,
+    origin: Point,
+    playerPos: Point
+): boolean => {
+    if (!skillId) return false;
+    const def = SkillRegistry.get(skillId);
+    return !!def?.getValidTargets && def.getValidTargets(state, origin).some(target => hexEquals(target, playerPos));
+};
+
 const DEDICATED_POLICY_SUBTYPES = new Set<string>([
     'sprinter',
     'shieldBearer',
@@ -435,8 +451,8 @@ export const buildEnemyPlannedCandidates = (
         }
 
         const moved = !hexEquals(newPos, ctx.enemy.position);
-        const newDist = hexDistance(newPos, ctx.playerPos);
-        const canCast = !moved && newDist >= 2 && newDist <= 4;
+        const castSkillId = resolveWarlockCastSkillId(ctx.enemy);
+        const canCast = !moved && skillCanTargetPlayer(ctx.state, castSkillId, newPos, ctx.playerPos);
         add({
             id: 'warlock-policy-like',
             source: 'synthetic',
@@ -446,7 +462,7 @@ export const buildEnemyPlannedCandidates = (
                 entity: {
                     ...ctx.enemy,
                     position: newPos,
-                    intent: moved ? 'Repositioning' : (canCast ? 'Casting' : 'Preparing'),
+                    intent: moved ? 'Repositioning' : (canCast ? castSkillId : 'Preparing'),
                     intentPosition: canCast ? { ...ctx.playerPos } : undefined
                 },
                 nextState: curState,

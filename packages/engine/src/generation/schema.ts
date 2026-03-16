@@ -41,6 +41,7 @@ export type CompilerPass =
     | 'classifyPathLandmarks'
     | 'buildTacticalPathNetwork'
     | 'buildVisualPathNetwork'
+    | 'applyEnvironmentalPressure'
     | 'verifyArenaArtifact'
     | 'finalizeGenerationState';
 
@@ -53,6 +54,22 @@ export type GasketClosureState =
 export type VerificationSeverity = 'info' | 'warning' | 'error';
 
 export type PathMembership = 'main' | 'hidden';
+export type RouteTopologyMode = 'single' | 'dual_route' | 'dual_route_pre_arena' | 'arena_single';
+export type RouteMembership = 'primary' | 'alternate' | 'shared' | 'hidden';
+export type EnvironmentalTrapKind = 'snare_surface' | 'fire_surface';
+export type RouteRiskBias = 'none' | 'soft' | 'strong';
+
+export interface RouteProfile {
+    mode: RouteTopologyMode;
+    minRouteCount: number;
+    maxStraightRun: number;
+    minBranchSeparationTiles: number;
+    rejoinBeforeExit: boolean;
+    obstacleClusterBudget: number;
+    trapClusterBudget: number;
+    saferRouteBias: RouteRiskBias;
+    riskierRouteBias: RouteRiskBias;
+}
 
 export interface GenerationPoint {
     q: number;
@@ -215,6 +232,7 @@ export interface FloorIntentRequest {
     hazardLureDemand: number;
     resetBudget: number;
     parTurnTarget: number;
+    routeProfile: RouteProfile;
 }
 
 export interface NarrativeSceneRequest {
@@ -270,6 +288,8 @@ export interface SpatialPlan {
     anchorById: Record<string, GenerationPoint>;
     gasketAnchors: Record<string, GenerationPoint>;
     mainLandmarkIds: string[];
+    primaryLandmarkIds: string[];
+    alternateLandmarkIds: string[];
     hiddenLandmarkIds: string[];
 }
 
@@ -385,6 +405,7 @@ export interface ModulePlan {
 export interface AuthoredPathOverride {
     onPath?: boolean;
     pathOrder?: number;
+    routeHint?: Exclude<RouteMembership, 'shared'>;
 }
 
 export interface PathLandmark {
@@ -393,6 +414,7 @@ export interface PathLandmark {
     point: GenerationPoint;
     sourceId?: string;
     onPath: boolean;
+    routeMembership: RouteMembership;
     reachable: boolean;
     orderHint: number;
 }
@@ -408,7 +430,16 @@ export interface PathSegment {
     toLandmarkId: string;
     tileKeys: string[];
     edges: PathEdge[];
-    kind: 'main' | 'spur';
+    kind: 'primary' | 'alternate' | 'connector' | 'spur';
+    routeMembership: Exclude<RouteMembership, 'hidden'>;
+}
+
+export interface EnvironmentalPressureCluster {
+    id: string;
+    kind: 'obstacle' | 'trap';
+    routeMembership: Exclude<RouteMembership, 'hidden'>;
+    tileKeys: string[];
+    trapKind?: EnvironmentalTrapKind;
 }
 
 export interface GeneratedPathNetwork {
@@ -418,11 +449,22 @@ export interface GeneratedPathNetwork {
     visualTileKeys: string[];
     visualEdges: PathEdge[];
     segments: PathSegment[];
+    routeCount: number;
+    junctionTileKeys: string[];
+    maxStraightRun: number;
+    environmentalPressureClusters: EnvironmentalPressureCluster[];
 }
 
 export interface PathSummary {
     mainLandmarkIds: string[];
+    primaryLandmarkIds: string[];
+    alternateLandmarkIds: string[];
     hiddenLandmarkIds: string[];
+    routeCount: number;
+    junctionCount: number;
+    maxStraightRun: number;
+    obstacleClusterCount: number;
+    trapClusterCount: number;
     tacticalTileCount: number;
     visualTileCount: number;
 }
@@ -599,6 +641,15 @@ export interface EnemySpawnArtifact {
     position: GenerationPoint;
 }
 
+export interface ArtifactTileEffectEntry {
+    key: string;
+    effects: Array<{
+        id: string;
+        duration: number;
+        potency: number;
+    }>;
+}
+
 export interface CompiledFloorArtifact {
     mode: 'start_run' | 'floor_transition';
     runSeed: string;
@@ -615,6 +666,7 @@ export interface CompiledFloorArtifact {
     stairsPosition: GenerationPoint;
     shrinePosition?: GenerationPoint;
     tileBaseIds: Uint8Array;
+    tileEffects?: ArtifactTileEffectEntry[];
     enemySpawns: EnemySpawnArtifact[];
     rooms: Array<{
         id: string;

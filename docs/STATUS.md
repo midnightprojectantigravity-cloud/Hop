@@ -154,3 +154,4 @@ Server:
 1. Keep architecture references aligned with grouped system directories (`ai`, `evaluation`, `combat`, `entities`, `tiles`).
 2. Keep completed implementation plans under `docs/archive/`; keep only living trackers and runbooks at `docs/` root.
 3. Keep generated/audit artifacts in `artifacts/upa/`; keep stable references in `docs/`.
+4. Keep balance operations aligned with the canonical doctrine in `docs/GOLD_STANDARD_BALANCING.md`.

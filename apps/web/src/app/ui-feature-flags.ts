@@ -8,7 +8,7 @@ export interface UiFeatureFlags {
 export const UI_FEATURE_FLAGS_STORAGE_KEY = 'hop_ui_feature_flags_v1';
 
 const DEFAULT_UI_FEATURE_FLAGS: UiFeatureFlags = {
-  ui_mobile_dock_v2: false,
+  ui_mobile_dock_v2: true,
   ui_defeat_loop_v2: false,
   ui_sensory_dispatcher_v1: false,
   ui_dedicated_hub_routes_v1: false

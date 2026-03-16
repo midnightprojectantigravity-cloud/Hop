@@ -27,6 +27,18 @@ jobs:
       - name: Build engine
         run: npm run build --workspace=@hop/engine
 
+      - name: Generate IRES stress candidate report
+        run: npm run ires:stress:candidate
+
+      - name: Run strict IRES stress gate
+        run: npm run ires:stress:gate
+
+      - name: Generate balance stack candidate report
+        run: npm run balance:stack:candidate
+
+      - name: Run strict balance stack gate
+        run: npm run balance:stack:gate
+
       - name: Generate static grades
         run: npm run upa:grades:static
 
@@ -60,3 +72,19 @@ jobs:
             docs/UPA_CALIBRATION_BASELINE.json
             docs/UPA_PVP_MATCHUP_MATRIX.json
             docs/UPA_EVALUATOR_BASELINES.json
+
+      - name: Upload IRES stress artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ires-stress-nightly
+          path: |
+            artifacts/ires/IRES_STRESS_CANDIDATE.json
+            artifacts/ires/IRES_STRESS_GATE_REPORT.json
+
+      - name: Upload balance stack artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: balance-stack-nightly
+          path: |
+            artifacts/balance/BALANCE_STACK_CANDIDATE.json
+            artifacts/balance/BALANCE_STACK_GATE_REPORT.json

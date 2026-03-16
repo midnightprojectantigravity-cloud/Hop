@@ -28,6 +28,12 @@ import { useUiPreferences } from './app/ui-preferences';
 import { readUiFeatureFlags } from './app/ui-feature-flags';
 import { dispatchSensoryEvent } from './app/sensory-dispatcher';
 import {
+  resolveMeaningfulActionType,
+  shouldArmAutoEndForAction,
+  type OverdriveTurnState,
+  type PendingAutoEndState
+} from './app/turn-flow-policy';
+import {
   LazyBiomeSandbox,
   LazyGameScreen,
   LazyHubScreen,
@@ -357,6 +363,8 @@ function App() {
   const [showMovementRange, setShowMovementRange] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [postCommitInputLock, setPostCommitInputLock] = useState(false);
+  const [overdriveState, setOverdriveState] = useState<OverdriveTurnState>('idle');
+  const [pendingAutoEnd, setPendingAutoEnd] = useState<PendingAutoEndState | null>(null);
   const [isSynapseMode, setIsSynapseMode] = useState(false);
   const [synapseSelection, setSynapseSelection] = useState<SynapseSelection>(EMPTY_SYNAPSE_SELECTION);
   const [synapsePulse, setSynapsePulse] = useState<SynapsePulse>(null);
@@ -409,10 +417,68 @@ function App() {
     isReplayMode,
     postCommitInputLock,
     setPostCommitInputLock,
+    pendingAutoEnd,
+    setPendingAutoEnd,
     appendTurnTrace,
     dispatchWithTrace,
     resolvePendingFloor: pendingFloorWorldgen.resolvePendingFloor
   });
+
+  useEffect(() => {
+    setOverdriveState('idle');
+    setPendingAutoEnd(null);
+  }, [gameState.turnNumber]);
+
+  useEffect(() => {
+    if (uiPreferences.turnFlowMode === 'protected_single') return;
+    setOverdriveState('idle');
+    setPendingAutoEnd(null);
+  }, [uiPreferences.turnFlowMode]);
+
+  useEffect(() => {
+    if (gameState.gameStatus === 'playing' && !isReplayMode) return;
+    setOverdriveState('idle');
+    setPendingAutoEnd(null);
+  }, [gameState.gameStatus, isReplayMode]);
+
+  useEffect(() => {
+    if (!gameState.pendingStatus && (gameState.pendingFrames?.length ?? 0) === 0) return;
+    setOverdriveState('idle');
+    setPendingAutoEnd(null);
+  }, [gameState.pendingStatus, gameState.pendingFrames]);
+
+  const toggleOverdrive = useCallback(() => {
+    if (uiPreferences.turnFlowMode !== 'protected_single') return;
+    setPendingAutoEnd(null);
+    setOverdriveState((current) => current === 'armed' ? 'idle' : 'armed');
+  }, [uiPreferences.turnFlowMode]);
+
+  const dispatchPlayerActionWithTurnPolicy = useCallback((action: Action, source: string) => {
+    const meaningfulActionType = resolveMeaningfulActionType(action);
+    if (shouldArmAutoEndForAction({
+      turnFlowMode: uiPreferences.turnFlowMode,
+      overdriveState,
+      action
+    }) && meaningfulActionType) {
+      setPendingAutoEnd({
+        armedOnTurn: gameState.turnNumber,
+        expectedActionLogLength: (gameState.actionLog?.length ?? 0) + 1,
+        sourceActionType: meaningfulActionType
+      });
+    } else if (meaningfulActionType) {
+      setPendingAutoEnd(null);
+    }
+
+    armPostCommitLock();
+    dispatchWithTrace(action, source);
+  }, [
+    armPostCommitLock,
+    dispatchWithTrace,
+    gameState.actionLog,
+    gameState.turnNumber,
+    overdriveState,
+    uiPreferences.turnFlowMode
+  ]);
 
   const [tutorialInstructions, setTutorialInstructions] = useState<string | null>(null);
   const floorIntro = useFloorIntro(gameState);
@@ -698,8 +764,7 @@ function App() {
         priority: 'low',
         context: 'run'
       });
-      armPostCommitLock();
-      dispatchWithTrace({ type: 'USE_SKILL', payload: { skillId: selectedSkillId, target } }, 'player_use_skill');
+      dispatchPlayerActionWithTurnPolicy({ type: 'USE_SKILL', payload: { skillId: selectedSkillId, target } }, 'player_use_skill');
       setSelectedSkillId(null);
       return;
     }
@@ -714,8 +779,7 @@ function App() {
       priority: 'low',
       context: 'run'
     });
-    armPostCommitLock();
-    dispatchWithTrace({ type: 'MOVE', payload: target }, 'player_move');
+    dispatchPlayerActionWithTurnPolicy({ type: 'MOVE', payload: target }, 'player_move');
     setShowMovementRange(false);
   };
 
@@ -738,6 +802,8 @@ function App() {
       context: 'run'
     });
     dispatchWithTrace({ type: 'RESET' }, 'reset');
+    setPendingAutoEnd(null);
+    setOverdriveState('idle');
     setSelectedSkillId(null);
     setSynapseMode(false);
     resetReplayUi();
@@ -755,6 +821,8 @@ function App() {
       priority: 'low',
       context: 'run'
     });
+    setPendingAutoEnd(null);
+    setOverdriveState('idle');
     armPostCommitLock();
     dispatchWithTrace({ type: 'WAIT' }, 'player_wait');
     setSelectedSkillId(null);
@@ -772,6 +840,8 @@ function App() {
 
   const handleLoadScenario = (state: GameState, instructions: string) => {
     dispatchWithTrace({ type: 'LOAD_STATE', payload: state }, 'scenario_load');
+    setPendingAutoEnd(null);
+    setOverdriveState('idle');
     setTutorialInstructions(instructions);
     setSelectedSkillId(null);
     setSynapseMode(false);
@@ -779,6 +849,8 @@ function App() {
 
   const handleExitToHub = () => {
     dispatchWithTrace({ type: 'EXIT_TO_HUB' }, 'exit_to_hub');
+    setPendingAutoEnd(null);
+    setOverdriveState('idle');
     setSelectedSkillId(null);
     setSynapseMode(false);
     resetReplayUi();
@@ -1078,6 +1150,7 @@ function App() {
             onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
             onSetMotionMode={(motionMode) => patchUiPreferences({ motionMode })}
             onSetHudDensity={(hudDensity) => patchUiPreferences({ hudDensity })}
+            onSetTurnFlowMode={(turnFlowMode) => patchUiPreferences({ turnFlowMode })}
             onBack={() => navigateTo(hubPath)}
           />
         </Suspense>
@@ -1209,6 +1282,8 @@ function App() {
           floorIntro={floorIntro}
           assetManifest={assetManifest}
           uiPreferences={uiPreferences}
+          turnFlowMode={uiPreferences.turnFlowMode}
+          overdriveArmed={overdriveState === 'armed'}
           onSetBoardBusy={setIsBusy}
           onTileClick={handleTileClick}
           onSimulationEvents={handleSimulationEvents}
@@ -1243,6 +1318,7 @@ function App() {
           onViewReplay={handleViewReplay}
           onRunLostActionsReady={handleRunLostActionsReady}
           onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
+          onToggleOverdrive={toggleOverdrive}
           mobileDockV2Enabled={mobileDockV2Enabled}
           replayChronicleEnabled={defeatLoopV2Enabled}
         />

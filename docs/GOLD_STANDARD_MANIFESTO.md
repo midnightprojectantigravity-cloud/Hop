@@ -83,8 +83,9 @@ Use it as the decision filter for engine, client, and balance changes.
 4. Post-AI phases milestone: `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
 5. ACAE milestone: `docs/ACAE_MILESTONE_2026-03-01.md`
 6. Active balance backlog: `docs/BALANCE_BACKLOG.md`
-7. UPA operations: `docs/UPA_GUIDE.md`
-8. Historical archive: `docs/ROADMAP_HISTORY.md`
-9. Archived completed plans: `docs/archive/`
-10. Biome + bestiary + trinity contract: `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`
-11. Generated audit/test artifacts: `artifacts/upa/` (not `docs/` root)
+7. Canonical balance doctrine: `docs/GOLD_STANDARD_BALANCING.md`
+8. UPA operations: `docs/UPA_GUIDE.md`
+9. Historical archive: `docs/ROADMAP_HISTORY.md`
+10. Archived completed plans: `docs/archive/`
+11. Biome + bestiary + trinity contract: `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`
+12. Generated audit/test artifacts: `artifacts/upa/` (not `docs/` root)

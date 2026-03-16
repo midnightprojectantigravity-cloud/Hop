@@ -53,8 +53,8 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
     DASH: {
         intentTags: ['move', 'damage', 'utility'],
         target: { pattern: 'line' },
-        estimates: { movement: 2, damage: 2 },
-        risk: { noProgressCastPenalty: 5 }
+        estimates: { movement: 2, damage: 1 },
+        risk: { requireEnemyContact: true, noContactPenalty: 4, noProgressCastPenalty: 8 }
     },
     JUMP: {
         intentTags: ['move', 'utility'],
@@ -70,22 +70,22 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
     },
     BULWARK_CHARGE: { intentTags: ['move', 'protect', 'damage'], target: { pattern: 'line' }, estimates: { movement: 2, damage: 4, shielding: 2 } },
     VAULT: {
-        intentTags: ['move', 'damage', 'utility'],
+        intentTags: ['move', 'control', 'utility'],
         target: { pattern: 'single' },
-        estimates: { movement: 2, control: 1, damage: 3 },
-        risk: { noProgressCastPenalty: 10 }
+        estimates: { movement: 2, control: 1, damage: 0 },
+        risk: { noProgressCastPenalty: 12 }
     },
     GRAPPLE_HOOK: {
         intentTags: ['move', 'control', 'damage', 'utility'],
         target: { pattern: 'line' },
-        estimates: { movement: 2, control: 1, damage: 4 },
-        risk: { noProgressCastPenalty: 10 }
+        estimates: { movement: 2, control: 2, damage: 1 },
+        risk: { requireEnemyContact: true, noContactPenalty: 8, noProgressCastPenalty: 18, hazardAffinity: 1 }
     },
     SHIELD_THROW: {
         intentTags: ['damage', 'control', 'utility'],
         target: { pattern: 'line' },
-        estimates: { damage: 10, control: 2 },
-        risk: { requireEnemyContact: true, noContactPenalty: 6, noProgressCastPenalty: 10 }
+        estimates: { damage: 3, control: 3, shielding: 1 },
+        risk: { requireEnemyContact: true, noContactPenalty: 8, noProgressCastPenalty: 20, hazardAffinity: 1.5 }
     },
     SPEAR_THROW: {
         intentTags: ['damage'],
@@ -111,6 +111,7 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         intentTags: ['heal', 'hazard', 'utility'],
         target: { pattern: 'self' },
         estimates: { healing: 6 },
+        economy: { consumesTurn: false },
         risk: { noProgressCastPenalty: 2 }
     },
     BOMB_TOSS: { intentTags: ['damage', 'control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 6, control: 2 } },
@@ -121,6 +122,69 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
     MULTI_SHOOT: { intentTags: ['damage'], target: { pattern: 'line' }, estimates: { damage: 5 } },
     SET_TRAP: { intentTags: ['control', 'hazard'], target: { pattern: 'single' }, estimates: { control: 3 } },
     SWIFT_ROLL: { intentTags: ['move', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2 } },
+    BURROW: {
+        intentTags: ['move', 'utility', 'objective'],
+        target: { pattern: 'self' },
+        estimates: { movement: 2, control: 1 },
+        economy: { consumesTurn: false }
+    },
+    FLIGHT: {
+        intentTags: ['move', 'utility', 'objective'],
+        target: { pattern: 'self' },
+        estimates: { movement: 2, control: 1 },
+        economy: { consumesTurn: false }
+    },
+    PHASE_STEP: {
+        intentTags: ['move', 'utility', 'objective'],
+        target: { pattern: 'self' },
+        estimates: { movement: 2, control: 1 },
+        economy: { consumesTurn: false }
+    },
+    STANDARD_VISION: {
+        intentTags: ['control', 'utility', 'objective'],
+        estimates: { control: 1.5 },
+        economy: { consumesTurn: false }
+    },
+    BASIC_AWARENESS: {
+        intentTags: ['control', 'utility'],
+        target: { pattern: 'self' },
+        estimates: { control: 1 },
+        economy: { consumesTurn: false }
+    },
+    COMBAT_ANALYSIS: {
+        intentTags: ['control', 'utility'],
+        target: { pattern: 'self' },
+        estimates: { control: 1.2 },
+        economy: { consumesTurn: false }
+    },
+    TACTICAL_INSIGHT: {
+        intentTags: ['control', 'utility'],
+        target: { pattern: 'self' },
+        estimates: { control: 1.4 },
+        economy: { consumesTurn: false }
+    },
+    ORACLE_SIGHT: {
+        intentTags: ['control', 'utility'],
+        target: { pattern: 'self' },
+        estimates: { control: 1.6 },
+        economy: { consumesTurn: false }
+    },
+    VIBRATION_SENSE: {
+        intentTags: ['control', 'utility', 'objective'],
+        estimates: { control: 2 },
+        economy: { consumesTurn: false }
+    },
+    BLIND_FIGHTING: {
+        intentTags: ['protect', 'control', 'utility'],
+        target: { pattern: 'self' },
+        estimates: { shielding: 1, control: 1 },
+        economy: { consumesTurn: false }
+    },
+    ENEMY_AWARENESS: {
+        intentTags: ['control', 'utility', 'objective'],
+        estimates: { control: 1.2 },
+        economy: { consumesTurn: false }
+    },
     SNEAK_ATTACK: {
         intentTags: ['damage', 'move', 'utility'],
         target: { pattern: 'single' },
@@ -149,7 +213,12 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
     FALCON_APEX_STRIKE: { intentTags: ['damage', 'control'], target: { pattern: 'single' }, estimates: { damage: 5, control: 1 } },
     FALCON_HEAL: { intentTags: ['heal', 'utility'], target: { pattern: 'single' }, estimates: { healing: 4 } },
     FALCON_SCOUT: { intentTags: ['control', 'utility'], target: { pattern: 'self' }, estimates: { control: 3 } },
-    FALCON_AUTO_ROOST: { intentTags: ['summon', 'utility'], target: { pattern: 'self' }, estimates: { summon: 2 } },
+    FALCON_AUTO_ROOST: {
+        intentTags: ['summon', 'utility', 'protect'],
+        target: { pattern: 'self' },
+        estimates: { summon: 2, shielding: 1 },
+        economy: { consumesTurn: false }
+    },
     KINETIC_TRI_TRAP: {
         intentTags: ['control', 'hazard', 'damage'],
         target: { pattern: 'radius', aoeRadius: 1 },
@@ -164,7 +233,12 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
     },
     SENTINEL_TELEGRAPH: { intentTags: ['control', 'objective'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { control: 3 } },
     SENTINEL_BLAST: { intentTags: ['damage', 'hazard'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { damage: 7 } },
-    THEME_HAZARDS: { intentTags: ['hazard', 'control'], target: { pattern: 'global' }, estimates: { control: 2 } }
+    THEME_HAZARDS: {
+        intentTags: ['hazard', 'control', 'utility'],
+        target: { pattern: 'global' },
+        estimates: { control: 2 },
+        economy: { consumesTurn: false }
+    }
 };
 
 const mergeProfile = (base: SkillIntentProfile, patch?: PartialProfile): SkillIntentProfile => {
@@ -200,7 +274,7 @@ export const buildSkillIntentProfile = (def: SkillDefinition): SkillIntentProfil
         economy: {
             cost: Math.max(0, def.baseVariables.cost || 0),
             cooldown: Math.max(0, def.baseVariables.cooldown || 0),
-            consumesTurn: true
+            consumesTurn: def.slot !== 'passive'
         },
         risk: {
             selfExposure: hasTag(inferredTags, 'move') ? 0.5 : 0,

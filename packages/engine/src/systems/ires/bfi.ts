@@ -22,7 +22,7 @@ export const resolveIresWeightModifier = (weightClass?: WeightClass): { bfi: num
 
 export const resolveBaseBfi = (actor: Actor): number => {
     const instinct = Math.max(0, Number(extractTrinityStats(actor).instinct || 0));
-    return clamp(5 - Math.floor(instinct / 5), 0, 10);
+    return clamp(6 - Math.floor(instinct / 5), 2, 10);
 };
 
 export const resolveEffectiveBfi = (actor: Actor): number =>

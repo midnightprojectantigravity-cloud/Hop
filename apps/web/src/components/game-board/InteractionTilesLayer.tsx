@@ -14,6 +14,8 @@ interface InteractionTilesLayerProps {
     selectedSkillId: string | null;
     showMovementRange: boolean;
     hoveredTile: Point | null;
+    turnFlowMode?: 'protected_single' | 'manual_chain';
+    overdriveArmed?: boolean;
     enginePreviewGhost?: {
         path: Point[];
         aoe: Point[];
@@ -44,6 +46,8 @@ export const InteractionTilesLayer: React.FC<InteractionTilesLayerProps> = ({
     selectedSkillId,
     showMovementRange,
     hoveredTile,
+    turnFlowMode,
+    overdriveArmed,
     enginePreviewGhost,
     cells,
     tileVisualFlags,
@@ -68,6 +72,8 @@ export const InteractionTilesLayer: React.FC<InteractionTilesLayerProps> = ({
                     selectedSkillId={selectedSkillId}
                     showMovementRange={showMovementRange}
                     hoveredTile={hoveredTile}
+                    turnFlowMode={turnFlowMode}
+                    overdriveArmed={overdriveArmed}
                     enginePreviewGhost={enginePreviewGhost}
                 />
             </g>

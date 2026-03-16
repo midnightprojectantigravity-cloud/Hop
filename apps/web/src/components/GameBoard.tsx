@@ -34,6 +34,8 @@ interface GameBoardProps {
     onMove: (hex: Point) => void;
     selectedSkillId: string | null;
     showMovementRange: boolean;
+    turnFlowMode?: 'protected_single' | 'manual_chain';
+    overdriveArmed?: boolean;
     onBusyStateChange?: (busy: boolean) => void;
     assetManifest?: VisualAssetManifest | null;
     biomeDebug?: {
@@ -83,6 +85,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     onMove,
     selectedSkillId,
     showMovementRange,
+    turnFlowMode = 'protected_single',
+    overdriveArmed = false,
     onBusyStateChange,
     assetManifest,
     biomeDebug,
@@ -436,6 +440,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     selectedSkillId={selectedSkillId}
                     showMovementRange={showMovementRange}
                     hoveredTile={hoveredTile}
+                    turnFlowMode={turnFlowMode}
+                    overdriveArmed={overdriveArmed}
                     resolvedEnginePreviewGhost={resolvedEnginePreviewGhost}
                     tileVisualFlags={tileVisualFlags}
                     movementTargetSet={movementTargetSet}

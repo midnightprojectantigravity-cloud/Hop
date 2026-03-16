@@ -7,8 +7,8 @@ import type {
     ModuleRegistrySnapshot
 } from './schema';
 
-const REGISTRY_VERSION = 'worldgen-v7.0';
-const SPEC_SCHEMA_VERSION = 'worldgen-spec-v7.0';
+const REGISTRY_VERSION = 'worldgen-v7.1';
+const SPEC_SCHEMA_VERSION = 'worldgen-spec-v7.1';
 
 const collisionMaskFromKeys = (keys: string[]): ModuleCollisionMask => {
     const sortedKeys = [...keys].sort();
@@ -238,6 +238,114 @@ const createInfernoModules = (): ModuleRegistryEntry[] => ([
             forbiddenNeighborTags: []
         },
         collisionMask: collisionMaskFromKeys(['-1,0', '1,0'])
+    },
+    {
+        id: 'inferno_switchback_bend',
+        theme: 'inferno',
+        footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: 0, dr: 1 }, { dq: 1, dr: -1 }],
+        tileStamps: [{ dq: 1, dr: 0, baseId: 'WALL' }, { dq: 0, dr: 1, baseId: 'WALL' }],
+        claimTemplates: [{ id: 'switchback_lane', kind: 'movement_corridor', hardness: 'soft', from: { dq: -1, dr: 0 }, to: { dq: 1, dr: -1 } }],
+        capability: {
+            tacticalTags: ['cover_band', 'flank_route'],
+            narrativeTags: ['failed_escape'],
+            moodTags: ['grim'],
+            evidenceTags: ['collapsed_supply'],
+            encounterPostures: ['panic_scatter'],
+            sceneRoles: ['pocket'],
+            anchorKinds: ['left', 'lower', 'right'],
+            forbiddenNeighborTags: []
+        },
+        collisionMask: collisionMaskFromKeys(['0,1', '1,0'])
+    },
+    {
+        id: 'inferno_split_fork',
+        theme: 'inferno',
+        footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: -1, dr: 1 }, { dq: 1, dr: -1 }],
+        tileStamps: [{ dq: 0, dr: 0, baseId: 'STONE' }, { dq: -1, dr: 1, baseId: 'WALL' }],
+        claimTemplates: [{ id: 'fork_lane', kind: 'movement_corridor', hardness: 'soft', from: { dq: -1, dr: 0 }, to: { dq: 1, dr: 0 } }],
+        capability: {
+            tacticalTags: ['flank_route', 'safe_reset'],
+            narrativeTags: ['failed_escape'],
+            moodTags: ['grim'],
+            evidenceTags: ['warning_marker'],
+            encounterPostures: ['panic_scatter'],
+            sceneRoles: ['pocket'],
+            anchorKinds: ['center', 'left', 'right'],
+            forbiddenNeighborTags: ['boss_arena']
+        },
+        collisionMask: collisionMaskFromKeys(['-1,1'])
+    },
+    {
+        id: 'inferno_merge_choke',
+        theme: 'inferno',
+        footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: 0, dr: -1 }, { dq: 0, dr: 1 }],
+        tileStamps: [{ dq: -1, dr: 0, baseId: 'WALL' }, { dq: 0, dr: -1, baseId: 'WALL' }],
+        claimTemplates: [{ id: 'merge_lane', kind: 'movement_corridor', hardness: 'hard', from: { dq: 0, dr: 1 }, to: { dq: 1, dr: 0 } }],
+        capability: {
+            tacticalTags: ['choke', 'cover_band'],
+            narrativeTags: ['siege_breach'],
+            moodTags: ['tense'],
+            evidenceTags: ['broken_weapon'],
+            encounterPostures: ['fortified_hold'],
+            sceneRoles: ['choke'],
+            anchorKinds: ['center', 'upper'],
+            forbiddenNeighborTags: []
+        },
+        collisionMask: collisionMaskFromKeys(['-1,0', '0,-1'])
+    },
+    {
+        id: 'inferno_snare_lane',
+        theme: 'inferno',
+        footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: 0, dr: 1 }],
+        tileStamps: [{ dq: 1, dr: 0, baseId: 'STONE' }],
+        claimTemplates: [{ id: 'snare_lane', kind: 'movement_corridor', hardness: 'soft', from: { dq: -1, dr: 0 }, to: { dq: 0, dr: 1 } }],
+        capability: {
+            tacticalTags: ['hazard_lure', 'flank_route'],
+            narrativeTags: ['collapsed_crossing'],
+            moodTags: ['grim'],
+            evidenceTags: ['scorched_path'],
+            encounterPostures: ['predatory_lure'],
+            sceneRoles: ['hazard_field'],
+            anchorKinds: ['left', 'right', 'lower'],
+            forbiddenNeighborTags: ['safe_reset']
+        },
+        collisionMask: collisionMaskFromKeys([])
+    },
+    {
+        id: 'inferno_fire_step',
+        theme: 'inferno',
+        footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: 0, dr: -1 }],
+        tileStamps: [{ dq: 0, dr: 0, baseId: 'LAVA' }],
+        claimTemplates: [{ id: 'fire_step', kind: 'movement_corridor', hardness: 'soft', from: { dq: -1, dr: 0 }, to: { dq: 1, dr: 0 } }],
+        capability: {
+            tacticalTags: ['hazard_lure'],
+            narrativeTags: ['collapsed_crossing'],
+            moodTags: ['grim'],
+            evidenceTags: ['scorched_path'],
+            encounterPostures: ['predatory_lure'],
+            sceneRoles: ['hazard_field'],
+            anchorKinds: ['center', 'upper', 'right'],
+            forbiddenNeighborTags: ['safe_reset']
+        },
+        collisionMask: collisionMaskFromKeys([])
+    },
+    {
+        id: 'inferno_broken_cover_weave',
+        theme: 'inferno',
+        footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: -1, dr: 1 }, { dq: 1, dr: -1 }, { dq: 0, dr: 1 }],
+        tileStamps: [{ dq: -1, dr: 0, baseId: 'WALL' }, { dq: 1, dr: -1, baseId: 'WALL' }, { dq: 0, dr: 1, baseId: 'STONE' }],
+        claimTemplates: [{ id: 'weave_lane', kind: 'los_corridor', hardness: 'soft', from: { dq: -1, dr: 1 }, to: { dq: 1, dr: 0 } }],
+        capability: {
+            tacticalTags: ['cover_band', 'perch'],
+            narrativeTags: ['watch_post'],
+            moodTags: ['alert'],
+            evidenceTags: ['warning_marker'],
+            encounterPostures: ['crossfire_screen'],
+            sceneRoles: ['perch'],
+            anchorKinds: ['upper', 'left', 'right'],
+            forbiddenNeighborTags: []
+        },
+        collisionMask: collisionMaskFromKeys(['-1,0', '1,-1'])
     },
     {
         id: 'inferno_ritual_dais',

@@ -1,4 +1,4 @@
-import { isEnemyAlertActive, pointToKey, type GameState, type Point, type SimulationEvent, type StateMirrorSnapshot } from '@hop/engine';
+import { isEnemyAlertActive, pointToKey, type ActionResourcePreview, type GameState, type Point, type SimulationEvent, type StateMirrorSnapshot } from '@hop/engine';
 import React from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { UI } from '../components/UI';
@@ -34,6 +34,7 @@ import {
 import { WorldgenBoardOverlay } from './WorldgenBoardOverlay';
 import { WorldgenDebugPanel } from './WorldgenDebugPanel';
 import { UiTriResourceHeader, getWaitDirectiveLabel } from '../components/ui/ui-status-panel-sections';
+import { UiVitalsGlyph } from '../components/ui/ui-vitals-glyph';
 
 type MobileToast = {
   id: string;
@@ -78,6 +79,8 @@ const EnemyAlertChip = ({
 interface GameScreenProps {
   gameState: GameState;
   uiPreferences: UiPreferencesV1;
+  turnFlowMode: 'protected_single' | 'manual_chain';
+  overdriveArmed: boolean;
   selectedSkillId: string | null;
   showMovementRange: boolean;
   isInputLocked: boolean;
@@ -115,6 +118,7 @@ interface GameScreenProps {
   onViewReplay: () => void;
   onRunLostActionsReady?: () => void;
   onSetColorMode: (mode: UiColorMode) => void;
+  onToggleOverdrive: () => void;
   mobileDockV2Enabled?: boolean;
   replayChronicleEnabled?: boolean;
 }
@@ -195,6 +199,8 @@ export const resolveBottomDockHeightPx = (width: number, height: number): number
 export const GameScreen = ({
   gameState,
   uiPreferences,
+  turnFlowMode,
+  overdriveArmed,
   selectedSkillId,
   showMovementRange,
   isInputLocked,
@@ -232,7 +238,8 @@ export const GameScreen = ({
   onViewReplay,
   onRunLostActionsReady,
   onSetColorMode,
-  mobileDockV2Enabled = false,
+  onToggleOverdrive,
+  mobileDockV2Enabled = true,
   replayChronicleEnabled = false,
 }: GameScreenProps) => {
   const showWorldgenDebug = React.useMemo(() => {
@@ -240,6 +247,7 @@ export const GameScreen = ({
     return new URLSearchParams(window.location.search).get('worldgenDebug') === '1';
   }, []);
   const [intelMode, setIntelMode] = React.useState<UiInformationRevealMode>(() => getUiInformationRevealMode());
+  const [showVitalsDetail, setShowVitalsDetail] = React.useState(false);
   const [viewportSize, setViewportSize] = React.useState(() => {
     if (typeof window === 'undefined') return { width: 390, height: 844 };
     return { width: window.innerWidth, height: window.innerHeight };
@@ -298,8 +306,11 @@ export const GameScreen = ({
   const hpProjectionDelta = Number((gameState as any)?.intentPreview?.playerHpDelta || 0);
   const projectedHp = Math.max(0, Math.min(gameState.player.maxHp, gameState.player.hp + hpProjectionDelta));
   const waitLabel = React.useMemo(() => getWaitDirectiveLabel(gameState), [gameState]);
+  const turnFlowLabel = turnFlowMode === 'protected_single' ? 'Protected' : 'Manual Chain';
+  const overdriveButtonLabel = overdriveArmed ? 'Overdrive Armed' : 'Arm Overdrive';
   const boardColorMode = React.useMemo(() => resolveBoardColorMode(gameState.theme), [gameState.theme]);
   const enemyAlertActive = React.useMemo(() => isEnemyAlertActive(gameState), [gameState]);
+  const resourcePreview = ((gameState.intentPreview as { resourcePreview?: ActionResourcePreview } | undefined)?.resourcePreview);
   const hudScale = React.useMemo(
     () => resolveHudScale(viewportSize.width, viewportSize.height),
     [viewportSize.height, viewportSize.width]
@@ -333,10 +344,22 @@ export const GameScreen = ({
     } as React.CSSProperties),
     [buttonFontPx, buttonMinHeightPx, labelFontPx, valueFontPx]
   );
+  const mobileTopRailStyle = React.useMemo(
+    () => ({
+      ...hudCssVars,
+      paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)',
+      paddingLeft: 'max(env(safe-area-inset-left, 0px), 0px)',
+      paddingRight: 'max(env(safe-area-inset-right, 0px), 0px)'
+    } as React.CSSProperties),
+    [hudCssVars]
+  );
   const bottomDockStyle = React.useMemo(
     () => ({
       ...hudCssVars,
-      height: `${bottomDockHeightPx}px`
+      height: `calc(${bottomDockHeightPx}px + max(env(safe-area-inset-bottom, 0px), 0px))`,
+      paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0px)',
+      paddingLeft: 'max(env(safe-area-inset-left, 0px), 0px)',
+      paddingRight: 'max(env(safe-area-inset-right, 0px), 0px)'
     } as React.CSSProperties),
     [bottomDockHeightPx, hudCssVars]
   );
@@ -353,6 +376,13 @@ export const GameScreen = ({
   const desktopUtilityRef = React.useRef<HTMLDivElement | null>(null);
   const desktopSynapseTrayRef = React.useRef<HTMLDivElement | null>(null);
   const [cameraSafeInsetsPx, setCameraSafeInsetsPx] = React.useState<Partial<CameraInsetsPx>>({});
+
+  React.useEffect(() => {
+    if (!showVitalsDetail) return;
+    if (!mobileDockV2Enabled || isSynapseMode || layoutMode === 'desktop_command_center') {
+      setShowVitalsDetail(false);
+    }
+  }, [isSynapseMode, layoutMode, mobileDockV2Enabled, showVitalsDetail]);
 
   React.useEffect(() => {
     if (!synapsePreview) {
@@ -464,63 +494,143 @@ export const GameScreen = ({
     >
       <div
         className="surface-panel-material torn-edge-shell lg:hidden shrink-0 border-b border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm z-20"
-        style={hudCssVars}
+        style={mobileTopRailStyle}
       >
-        <div className="px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-          <div className="min-w-0 text-left">
-            <div className="uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold" style={{ fontSize: 'var(--hud-label-font)' }}>Floor</div>
-            <div className="font-black text-[var(--text-primary)] leading-none" style={{ fontSize: 'var(--hud-value-font)' }}>
-              {gameState.floor}
-              <span className="text-[var(--text-muted)] ml-1" style={{ fontSize: 'calc(var(--hud-value-font) * 0.64)' }}>/ 10</span>
+        {!mobileDockV2Enabled && (
+          <>
+            <div className="px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <div className="min-w-0 text-left">
+                <div className="uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold" style={{ fontSize: 'var(--hud-label-font)' }}>Floor</div>
+                <div className="font-black text-[var(--text-primary)] leading-none" style={{ fontSize: 'var(--hud-value-font)' }}>
+                  {gameState.floor}
+                  <span className="text-[var(--text-muted)] ml-1" style={{ fontSize: 'calc(var(--hud-value-font) * 0.64)' }}>/ 10</span>
+                </div>
+              </div>
+              <div className="min-w-0 text-center">
+                <div className="uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold" style={{ fontSize: 'var(--hud-label-font)' }}>HP</div>
+                <div className="font-black text-[var(--accent-danger)] leading-none" style={{ fontSize: 'var(--hud-value-font)' }}>
+                  {gameState.player.hp}
+                  <span className="text-[var(--text-muted)] ml-1" style={{ fontSize: 'calc(var(--hud-value-font) * 0.64)' }}>/ {gameState.player.maxHp}</span>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={onToggleSynapseMode}
+                  style={hudActionButtonStyle}
+                  className={`px-3 rounded-lg border font-black uppercase tracking-[0.16em] transition-colors ${isSynapseMode
+                    ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
+                    : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] active:bg-[var(--surface-panel-hover)]'
+                  }`}
+                >
+                  Info
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="min-w-0 text-center">
-            <div className="uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold" style={{ fontSize: 'var(--hud-label-font)' }}>HP</div>
-            <div className="font-black text-[var(--accent-danger)] leading-none" style={{ fontSize: 'var(--hud-value-font)' }}>
-              {gameState.player.hp}
-              <span className="text-[var(--text-muted)] ml-1" style={{ fontSize: 'calc(var(--hud-value-font) * 0.64)' }}>/ {gameState.player.maxHp}</span>
+            <div className="px-4 pb-3">
+              <UiTriResourceHeader gameState={gameState} compact mobile />
             </div>
-            {mobileDockV2Enabled && hpProjectionDelta !== 0 && (
+            <div className="px-4 pb-2 flex justify-center">
+              <EnemyAlertChip alerted={enemyAlertActive} />
+            </div>
+          </>
+        )}
+        {mobileDockV2Enabled && (
+          <div className="px-3 pb-3 pt-2.5">
+            <div className="grid grid-cols-[minmax(4.75rem,1fr)_auto_minmax(4rem,1fr)] items-start gap-2">
+              <div className="min-w-0 self-center text-left">
+                <div className="uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold" style={{ fontSize: 'var(--hud-label-font)' }}>Floor</div>
+                <div className="font-black text-[var(--text-primary)] leading-none" style={{ fontSize: 'var(--hud-value-font)' }}>
+                  {gameState.floor}
+                  <span className="text-[var(--text-muted)] ml-1" style={{ fontSize: 'calc(var(--hud-value-font) * 0.64)' }}>/ 10</span>
+                </div>
+                {hpProjectionDelta !== 0 && (
+                  <div
+                    className={`mt-1 font-black uppercase tracking-[0.16em] ${hpProjectionDelta < 0 ? 'text-[var(--accent-danger)]' : 'text-emerald-600'}`}
+                    style={{ fontSize: 'var(--hud-label-font)' }}
+                  >
+                    HP {hpProjectionDelta > 0 ? '+' : ''}{hpProjectionDelta}{' -> '}{projectedHp}
+                  </div>
+                )}
+              </div>
+              <div className="relative flex justify-center">
+                <UiVitalsGlyph
+                  gameState={gameState}
+                  layoutMode={layoutMode}
+                  showDetail={showVitalsDetail}
+                  onToggleDetail={() => setShowVitalsDetail((value) => !value)}
+                  resourcePreview={resourcePreview}
+                  turnFlowMode={turnFlowMode}
+                  overdriveArmed={overdriveArmed}
+                />
+              </div>
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={onToggleSynapseMode}
+                  style={hudActionButtonStyle}
+                  className={`min-w-[4.25rem] px-3 rounded-lg border font-black uppercase tracking-[0.16em] transition-colors ${isSynapseMode
+                    ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
+                    : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] active:bg-[var(--surface-panel-hover)]'
+                  }`}
+                >
+                  Info
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-2.5 grid grid-cols-2 gap-1.5">
               <div
-                className={`font-black uppercase tracking-[0.16em] ${hpProjectionDelta < 0 ? 'text-[var(--accent-danger)]' : 'text-emerald-600'}`}
+                className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
                 style={{ fontSize: 'var(--hud-label-font)' }}
               >
-                {hpProjectionDelta > 0 ? '+' : ''}{hpProjectionDelta}{' -> '}{projectedHp}
+                {waitLabel}: {isInputLocked ? 'Resolving' : 'Ready'}
               </div>
-            )}
-          </div>
-          <div className="flex justify-end">
-            <button
-              onClick={onToggleSynapseMode}
-              style={hudActionButtonStyle}
-              className={`px-3 rounded-lg border font-black uppercase tracking-[0.16em] transition-colors ${isSynapseMode
-                ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
-                : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] active:bg-[var(--surface-panel-hover)]'
-              }`}
-            >
-              Info
-            </button>
-          </div>
-        </div>
-        <div className="px-4 pb-3">
-          <UiTriResourceHeader gameState={gameState} compact mobile />
-        </div>
-        <div className="px-4 pb-2 flex justify-center">
-          <EnemyAlertChip alerted={enemyAlertActive} />
-        </div>
-        {mobileDockV2Enabled && (
-          <div className="px-4 pb-3 grid grid-cols-2 gap-1.5">
-            <div
-              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
-              style={{ fontSize: 'var(--hud-label-font)' }}
-            >
-              {waitLabel}: {isInputLocked ? 'Resolving' : 'Ready'}
+              <div
+                className={`rounded-lg border px-2 py-1.5 font-black uppercase tracking-[0.16em] ${Math.abs(sigmaValue) >= 2 ? 'border-[var(--accent-danger)] text-[var(--accent-danger)] bg-[var(--accent-danger-soft)]' : 'border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--surface-panel-muted)]'}`}
+                style={{ fontSize: 'var(--hud-label-font)' }}
+              >
+                Sigma {sigmaValue >= 0 ? '+' : ''}{sigmaValue.toFixed(1)}
+              </div>
             </div>
-            <div
-              className={`rounded-lg border px-2 py-1.5 font-black uppercase tracking-[0.16em] ${Math.abs(sigmaValue) >= 2 ? 'border-[var(--accent-danger)] text-[var(--accent-danger)] bg-[var(--accent-danger-soft)]' : 'border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--surface-panel-muted)]'}`}
-              style={{ fontSize: 'var(--hud-label-font)' }}
-            >
-              Sigma {sigmaValue >= 0 ? '+' : ''}{sigmaValue.toFixed(1)}
+
+            <div className="mt-2 flex items-center justify-between gap-2 px-0.5">
+              <div className="font-black uppercase tracking-[0.18em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
+                Tactical HUD
+              </div>
+              <div className="font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
+                Tap glyph for detail
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span
+                  className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
+                  style={{ fontSize: 'var(--hud-label-font)' }}
+                >
+                  {turnFlowLabel}
+                </span>
+                {turnFlowMode === 'protected_single' ? (
+                  <span
+                    className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
+                    style={{ fontSize: 'var(--hud-label-font)' }}
+                  >
+                    Auto-End: 1
+                  </span>
+                ) : null}
+              </div>
+              {turnFlowMode === 'protected_single' ? (
+                <button
+                  type="button"
+                  onClick={onToggleOverdrive}
+                  style={hudActionButtonStyle}
+                  className={`px-3 rounded-lg border font-black uppercase tracking-[0.16em] ${
+                    overdriveArmed
+                      ? 'bg-emerald-950/60 border-emerald-400/50 text-emerald-100'
+                      : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-primary)]'
+                  }`}
+                >
+                  {overdriveButtonLabel}
+                </button>
+              ) : null}
             </div>
           </div>
         )}
@@ -572,6 +682,22 @@ export const GameScreen = ({
           >
             Info (I)
           </button>
+          <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            {turnFlowLabel}
+            {turnFlowMode === 'protected_single' ? ' / Auto-End: 1' : ''}
+          </div>
+          {turnFlowMode === 'protected_single' ? (
+            <button
+              onClick={onToggleOverdrive}
+              className={`px-3 py-2 rounded-lg border text-[10px] font-black uppercase tracking-[0.16em] transition-colors ${
+                overdriveArmed
+                  ? 'bg-emerald-950/60 border-emerald-400/50 text-emerald-100'
+                  : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-panel-hover)]'
+              }`}
+            >
+              {overdriveButtonLabel}
+            </button>
+          ) : null}
         </div>
         <div className="w-full h-full p-0 sm:p-3 lg:p-8 flex items-center justify-center">
           <div ref={boardSurfaceRef} className={`surface-panel-material torn-edge-shell w-full h-full relative border border-[var(--border-subtle)] bg-[color:var(--surface-panel)] rounded-none sm:rounded-3xl lg:rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.2)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
@@ -580,6 +706,8 @@ export const GameScreen = ({
               onMove={onTileClick}
               selectedSkillId={selectedSkillId}
               showMovementRange={showMovementRange}
+              turnFlowMode={turnFlowMode}
+              overdriveArmed={overdriveArmed}
               onBusyStateChange={onSetBoardBusy}
               assetManifest={assetManifest}
               onSimulationEvents={onSimulationEvents}
@@ -658,40 +786,57 @@ export const GameScreen = ({
             </div>
           )}
           {!isSynapseMode && mobileDockV2Enabled && (
-            <>
+            <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    disabled={isInputLocked}
-                    onClick={onWait}
-                    style={hudActionButtonStyle}
-                    className={`px-2 rounded-lg border font-black uppercase tracking-widest ${isInputLocked
-                      ? 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] opacity-50'
-                      : 'bg-[var(--surface-panel-hover)] border-[var(--border-subtle)] text-[var(--text-primary)] active:bg-[var(--surface-panel)]'
-                    }`}
-                  >
-                    {waitLabel}
-                  </button>
-                  <GuardedActionButton
-                    disabled={false}
-                    onConfirm={onExitToHub}
-                    label="Hub"
-                    style={hudActionButtonStyle}
-                    className="px-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] font-black uppercase tracking-widest text-[var(--text-primary)]"
-                  />
-                  <GuardedActionButton
-                    disabled={false}
-                    onConfirm={onReset}
-                    label="Reset"
-                    style={hudActionButtonStyle}
-                    className="px-2 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] font-black uppercase tracking-widest text-[var(--accent-danger)]"
-                  />
-                </div>
                 <div className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
                   Skills
                 </div>
+                <div className="font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
+                  Thumb Row
+                </div>
               </div>
-            </>
+              {turnFlowMode === 'protected_single' ? (
+                <button
+                  type="button"
+                  onClick={onToggleOverdrive}
+                  style={hudActionButtonStyle}
+                  className={`w-full rounded-lg border font-black uppercase tracking-widest ${
+                    overdriveArmed
+                      ? 'bg-emerald-950/60 border-emerald-400/50 text-emerald-100'
+                      : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-primary)]'
+                  }`}
+                >
+                  {overdriveButtonLabel}
+                </button>
+              ) : null}
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  disabled={isInputLocked}
+                  onClick={onWait}
+                  style={hudActionButtonStyle}
+                  className={`px-2 rounded-lg border font-black uppercase tracking-widest ${isInputLocked
+                    ? 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] opacity-50'
+                    : 'bg-[var(--surface-panel-hover)] border-[var(--border-subtle)] text-[var(--text-primary)] active:bg-[var(--surface-panel)]'
+                  }`}
+                >
+                  {waitLabel}
+                </button>
+                <GuardedActionButton
+                  disabled={false}
+                  onConfirm={onExitToHub}
+                  label="Hub"
+                  style={hudActionButtonStyle}
+                  className="px-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] font-black uppercase tracking-widest text-[var(--text-primary)]"
+                />
+                <GuardedActionButton
+                  disabled={false}
+                  onConfirm={onReset}
+                  label="Reset"
+                  style={hudActionButtonStyle}
+                  className="px-2 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] font-black uppercase tracking-widest text-[var(--accent-danger)]"
+                />
+              </div>
+            </div>
           )}
           {!isSynapseMode && (
             <SkillTray

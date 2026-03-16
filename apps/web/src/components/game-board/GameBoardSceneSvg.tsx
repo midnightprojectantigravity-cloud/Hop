@@ -22,6 +22,8 @@ interface GameBoardSceneSvgProps {
     selectedSkillId: string | null;
     showMovementRange: boolean;
     hoveredTile: Point | null;
+    turnFlowMode?: 'protected_single' | 'manual_chain';
+    overdriveArmed?: boolean;
     resolvedEnginePreviewGhost: {
         path: Point[];
         aoe: Point[];
@@ -96,6 +98,8 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
     selectedSkillId,
     showMovementRange,
     hoveredTile,
+    turnFlowMode,
+    overdriveArmed,
     resolvedEnginePreviewGhost,
     tileVisualFlags,
     movementTargetSet,
@@ -160,6 +164,8 @@ export const GameBoardSceneSvg: React.FC<GameBoardSceneSvgProps> = ({
             selectedSkillId={selectedSkillId}
             showMovementRange={showMovementRange}
             hoveredTile={hoveredTile}
+            turnFlowMode={turnFlowMode}
+            overdriveArmed={overdriveArmed}
             enginePreviewGhost={resolvedEnginePreviewGhost}
             cells={cells}
             tileVisualFlags={tileVisualFlags}

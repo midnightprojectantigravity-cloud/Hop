@@ -9,7 +9,7 @@ import { hydrateSkillIntentProfiles } from './systems/skill-intent-profile';
 import { getCompositeSkillRuntimeRegistry } from './systems/composite-skill-bridge';
 import { GENERATED_COMPOSITIONAL_SKILLS } from './generated/skill-registry.generated';
 import { registerCapabilitySkillDefinitionResolver } from './systems/capabilities/cache';
-import { resolveSkillResourceProfile } from './systems/ires';
+import { resolveSkillMetabolicBandProfile, resolveSkillResourceProfile } from './systems/ires';
 
 /**
  * A registry of all skills using the new Compositional Skill Framework.
@@ -41,10 +41,18 @@ const getMergedRegistry = (): Record<string, SkillDefinition> => {
         ...getCompositeSkillRuntimeRegistry()
     };
     return Object.fromEntries(
-        Object.entries(registry).map(([skillId, def]) => [
-            skillId,
-            def.resourceProfile ? def : { ...def, resourceProfile: resolveSkillResourceProfile(skillId) }
-        ])
+        Object.entries(registry).map(([skillId, def]) => {
+            const metabolicBandProfile = def.metabolicBandProfile || resolveSkillMetabolicBandProfile(skillId);
+            const resourceProfile = def.resourceProfile || resolveSkillResourceProfile(skillId);
+            return [
+                skillId,
+                {
+                    ...def,
+                    ...(metabolicBandProfile ? { metabolicBandProfile } : {}),
+                    resourceProfile
+                }
+            ];
+        })
     );
 };
 

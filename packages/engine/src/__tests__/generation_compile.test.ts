@@ -70,9 +70,12 @@ describe('world compiler facade', () => {
         expect(result.generationState.currentFloorSummary?.role).toBe('recovery');
         expect(result.generationState.currentFloorSummary?.sceneSignature.motif).toBe('failed_escape');
         expect(result.generationState.currentFloorSummary?.parTurnTarget).toBe(16);
+        expect(result.generationState.currentFloorSummary?.pathSummary.routeCount).toBeGreaterThanOrEqual(2);
         expect(
             result.generationState.currentFloorSummary?.moduleIds.some(id =>
-                id === 'inferno_reset_pocket' || id === 'inferno_cover_band'
+                id === 'inferno_reset_pocket'
+                || id === 'inferno_cover_band'
+                || id === 'inferno_split_fork'
             )
         ).toBe(true);
     });

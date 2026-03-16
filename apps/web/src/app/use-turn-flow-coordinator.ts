@@ -3,6 +3,7 @@ import { isPlayerTurn } from '@hop/engine';
 import type { Action, GameState } from '@hop/engine';
 import type { TurnDriverState } from '../turn-driver';
 import type { TurnTraceAppender } from './use-turn-driver-trace';
+import type { PendingAutoEndState } from './turn-flow-policy';
 
 interface UseTurnFlowCoordinatorArgs {
   gameState: GameState;
@@ -11,6 +12,8 @@ interface UseTurnFlowCoordinatorArgs {
   isReplayMode: boolean;
   postCommitInputLock: boolean;
   setPostCommitInputLock: Dispatch<SetStateAction<boolean>>;
+  pendingAutoEnd: PendingAutoEndState | null;
+  setPendingAutoEnd: Dispatch<SetStateAction<PendingAutoEndState | null>>;
   appendTurnTrace: TurnTraceAppender;
   dispatchWithTrace: (action: Action, source: string) => void;
   resolvePendingFloor?: () => void | Promise<void>;
@@ -35,6 +38,8 @@ export const useTurnFlowCoordinator = ({
   isReplayMode,
   postCommitInputLock,
   setPostCommitInputLock,
+  pendingAutoEnd,
+  setPendingAutoEnd,
   appendTurnTrace,
   dispatchWithTrace,
   resolvePendingFloor,
@@ -82,6 +87,41 @@ export const useTurnFlowCoordinator = ({
       postCommitWatchdogRef.current = null;
     }
   }, [appendTurnTrace, postCommitInputLock, setPostCommitInputLock]);
+
+  const clearPendingAutoEnd = useCallback((reason: string) => {
+    if (!pendingAutoEnd) return;
+    appendTurnTrace('AUTO_END_CLEAR', {
+      reason,
+      armedOnTurn: pendingAutoEnd.armedOnTurn,
+      expectedActionLogLength: pendingAutoEnd.expectedActionLogLength,
+      sourceActionType: pendingAutoEnd.sourceActionType
+    });
+    setPendingAutoEnd(null);
+  }, [appendTurnTrace, pendingAutoEnd, setPendingAutoEnd]);
+
+  const rearmPostCommitLockForAutoEnd = useCallback((source: string) => {
+    commitLockTurnRef.current = gameState.turnNumber;
+    commitLockActionLenRef.current = (gameState.actionLog?.length ?? 0) + 1;
+    postCommitLockedAtRef.current = performance.now();
+    postCommitObservedBusyRef.current = false;
+    postCommitEventHashAtArmRef.current = currentEventsHash;
+    postCommitTimelineHashAtArmRef.current = currentTimelineHash;
+    setPostCommitInputLock(true);
+    appendTurnTrace('LOCK_REARM', {
+      source,
+      lockTurn: gameState.turnNumber,
+      expectedActionLogLength: (gameState.actionLog?.length ?? 0) + 1,
+      eventHashAtArm: currentEventsHash,
+      timelineHashAtArm: currentTimelineHash
+    });
+  }, [
+    appendTurnTrace,
+    currentEventsHash,
+    currentTimelineHash,
+    gameState.actionLog,
+    gameState.turnNumber,
+    setPostCommitInputLock
+  ]);
 
   useEffect(() => {
     if (!turnDriver.shouldAdvanceQueue) return;
@@ -216,6 +256,7 @@ export const useTurnFlowCoordinator = ({
     if (!postCommitInputLock) return;
 
     if (isReplayMode || gameState.gameStatus !== 'playing') {
+      clearPendingAutoEnd('mode_or_status_change');
       clearPostCommitLock('mode_or_status_change');
       return;
     }
@@ -223,6 +264,7 @@ export const useTurnFlowCoordinator = ({
     // Intercept stack (shrine/stairs/win/loss) now owns flow control.
     // Post-commit lock is only for normal queue handoff back to player input.
     if (gameState.pendingStatus || (gameState.pendingFrames?.length ?? 0) > 0) {
+      clearPendingAutoEnd('pending_intercept');
       clearPostCommitLock('pending_intercept');
       return;
     }
@@ -261,8 +303,34 @@ export const useTurnFlowCoordinator = ({
       return;
     }
 
+    if (pendingAutoEnd) {
+      if (turnAdvanced) {
+        clearPendingAutoEnd('turn_advanced');
+      } else if (!isPlayerTurn(gameState)) {
+        clearPendingAutoEnd('player_turn_ended');
+      }
+    }
+
     if (queueResolved && noActionProgressYet && lockAgeMs > 450) {
       clearPostCommitLock('no_progress_timeout');
+      return;
+    }
+
+    if (
+      queueResolved
+      && minimumLockSatisfied
+      && actionCommitted
+      && pendingAutoEnd
+      && pendingAutoEnd.armedOnTurn === gameState.turnNumber
+    ) {
+      appendTurnTrace('AUTO_END_DISPATCH', {
+        turnNumber: gameState.turnNumber,
+        expectedActionLogLength: pendingAutoEnd.expectedActionLogLength,
+        sourceActionType: pendingAutoEnd.sourceActionType
+      });
+      clearPendingAutoEnd('dispatch');
+      rearmPostCommitLockForAutoEnd('auto_end_guard');
+      dispatchWithTrace({ type: 'WAIT' }, 'auto_end_guard');
       return;
     }
 
@@ -270,6 +338,7 @@ export const useTurnFlowCoordinator = ({
       clearPostCommitLock(turnAdvanced ? 'turn_advanced' : actionCommitted ? 'action_committed' : 'age_fallback');
     }
   }, [
+    pendingAutoEnd,
     postCommitInputLock,
     isReplayMode,
     gameState.gameStatus,
@@ -285,14 +354,18 @@ export const useTurnFlowCoordinator = ({
     currentEventsHash,
     currentTimelineHash,
     postCommitTick,
-    clearPostCommitLock
+    clearPendingAutoEnd,
+    clearPostCommitLock,
+    dispatchWithTrace,
+    rearmPostCommitLockForAutoEnd
   ]);
 
   useEffect(() => {
     if (gameState.gameStatus !== 'playing' && postCommitInputLock) {
+      clearPendingAutoEnd('not_playing');
       clearPostCommitLock('not_playing');
     }
-  }, [gameState.gameStatus, postCommitInputLock, clearPostCommitLock]);
+  }, [gameState.gameStatus, postCommitInputLock, clearPendingAutoEnd, clearPostCommitLock]);
 
   useEffect(() => {
     if (!postCommitInputLock) return;

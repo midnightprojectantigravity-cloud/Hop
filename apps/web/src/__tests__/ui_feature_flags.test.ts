@@ -18,10 +18,10 @@ class MemoryStorage {
 }
 
 describe('ui feature flags', () => {
-  it('reads defaults as all disabled', () => {
+  it('reads mobile dock v2 as enabled by default', () => {
     const flags = readUiFeatureFlags(null);
     expect(flags).toEqual({
-      ui_mobile_dock_v2: false,
+      ui_mobile_dock_v2: true,
       ui_defeat_loop_v2: false,
       ui_sensory_dispatcher_v1: false,
       ui_dedicated_hub_routes_v1: false

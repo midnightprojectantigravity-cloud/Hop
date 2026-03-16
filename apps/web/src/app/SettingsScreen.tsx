@@ -1,12 +1,20 @@
 import React from 'react';
 import { getUiInformationRevealMode, setUiInformationRevealMode, type UiInformationRevealMode } from './information-reveal';
-import { UI_THEME_OPTIONS, type UiColorMode, type UiHudDensity, type UiMotionMode, type UiPreferencesV1 } from './ui-preferences';
+import {
+  UI_THEME_OPTIONS,
+  type UiColorMode,
+  type UiHudDensity,
+  type UiMotionMode,
+  type UiPreferencesV1,
+  type UiTurnFlowMode
+} from './ui-preferences';
 
 interface SettingsScreenProps {
   uiPreferences: UiPreferencesV1;
   onSetColorMode: (mode: UiColorMode) => void;
   onSetMotionMode: (mode: UiMotionMode) => void;
   onSetHudDensity: (density: UiHudDensity) => void;
+  onSetTurnFlowMode: (mode: UiTurnFlowMode) => void;
   onBack: () => void;
 }
 
@@ -15,6 +23,7 @@ export const SettingsScreen = ({
   onSetColorMode,
   onSetMotionMode,
   onSetHudDensity,
+  onSetTurnFlowMode,
   onBack
 }: SettingsScreenProps) => {
   const [intelMode, setIntelMode] = React.useState<UiInformationRevealMode>(() => getUiInformationRevealMode());
@@ -71,6 +80,19 @@ export const SettingsScreen = ({
           >
             {uiPreferences.hudDensity === 'compact' ? 'Compact' : 'Comfortable'}
           </button>
+        </section>
+
+        <section className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
+          <h2 className="text-[11px] uppercase tracking-[0.2em] font-black text-[var(--text-muted)] mb-3">Turn Flow</h2>
+          <button
+            onClick={() => onSetTurnFlowMode(uiPreferences.turnFlowMode === 'protected_single' ? 'manual_chain' : 'protected_single')}
+            className="w-full min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[10px] font-black uppercase tracking-widest"
+          >
+            {uiPreferences.turnFlowMode === 'protected_single' ? 'Protected Single' : 'Manual Chain'}
+          </button>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+            Protected Single auto-ends after one action unless Overdrive is armed.
+          </p>
         </section>
 
         <section className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">

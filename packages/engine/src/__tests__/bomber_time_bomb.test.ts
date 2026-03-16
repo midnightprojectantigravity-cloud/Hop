@@ -4,6 +4,8 @@ import { BOMB_TOSS } from '../skills/bomb_toss';
 import { TIME_BOMB } from '../skills/time_bomb';
 import { createEnemy } from '../systems/entities/entity-factory';
 import { applyEffects } from '../systems/effect-engine';
+import { resolveRuntimeSkillResourceProfile } from '../systems/ires';
+import { getSkillDefinition } from '../skillRegistry';
 
 describe('bomber summon contract', () => {
     it('BOMB_TOSS spawns a bomb actor with TIME_BOMB and fuse status', () => {
@@ -77,5 +79,16 @@ describe('bomber summon contract', () => {
 
         expect(nextState.player.hp).toBe(4);
         expect(nextState.enemies.some(e => e.id === bomb.id)).toBe(false);
+    });
+
+    it('keeps TIME_BOMB metabolically inert even though it consumes a turn', () => {
+        const profile = resolveRuntimeSkillResourceProfile('TIME_BOMB', getSkillDefinition('TIME_BOMB'));
+
+        expect(profile.profileSource).toBe('band_derived');
+        expect(profile.primaryResource).toBe('none');
+        expect(profile.primaryCost).toBe(0);
+        expect(profile.baseStrain).toBe(0);
+        expect(profile.countsAsMovement).toBe(false);
+        expect(profile.countsAsAction).toBe(false);
     });
 });

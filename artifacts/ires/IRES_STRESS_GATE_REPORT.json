@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-03-14T23:44:30.210Z",
+  "baseline": {
+    "generatedAt": "2026-03-14T23:25:03.351Z",
+    "params": {
+      "count": 24,
+      "maxTurns": 60,
+      "policy": "heuristic",
+      "policyProfileId": "sp-v1-default",
+      "seedPrefix": "ires-baseline"
+    }
+  },
+  "candidate": {
+    "generatedAt": "2026-03-14T23:44:09.166Z",
+    "params": {
+      "count": 24,
+      "maxTurns": 60,
+      "policy": "heuristic",
+      "policyProfileId": "sp-v1-default",
+      "seedPrefix": "ires-baseline"
+    }
+  },
+  "deltas": [
+    {
+      "loadoutId": "VANGUARD",
+      "avgFloorDelta": 0,
+      "avgPeakExhaustionDelta": 0,
+      "avgRedlineActionsDelta": 0,
+      "avgSparkBurnDamageDelta": 0,
+      "redlineRunRateDelta": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "avgFloorDelta": 0,
+      "avgPeakExhaustionDelta": 0,
+      "avgRedlineActionsDelta": 0,
+      "avgSparkBurnDamageDelta": 0,
+      "redlineRunRateDelta": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "avgFloorDelta": 0,
+      "avgPeakExhaustionDelta": 0,
+      "avgRedlineActionsDelta": 0,
+      "avgSparkBurnDamageDelta": 0,
+      "redlineRunRateDelta": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "avgFloorDelta": 0,
+      "avgPeakExhaustionDelta": 0,
+      "avgRedlineActionsDelta": 0,
+      "avgSparkBurnDamageDelta": 0,
+      "redlineRunRateDelta": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "avgFloorDelta": 0,
+      "avgPeakExhaustionDelta": 0,
+      "avgRedlineActionsDelta": 0,
+      "avgSparkBurnDamageDelta": 0,
+      "redlineRunRateDelta": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "avgFloorDelta": 0,
+      "avgPeakExhaustionDelta": 0,
+      "avgRedlineActionsDelta": 0,
+      "avgSparkBurnDamageDelta": 0,
+      "redlineRunRateDelta": 0
+    }
+  ],
+  "regressions": [],
+  "passed": true
+}

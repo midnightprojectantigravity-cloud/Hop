@@ -144,7 +144,7 @@ const lintPathOverrides = (
 
     const validateSource = (
         sourceName: 'family' | 'floor',
-        overrides: Record<string, { onPath?: boolean; pathOrder?: number }>
+        overrides: Record<string, { onPath?: boolean; pathOrder?: number; routeHint?: 'primary' | 'alternate' | 'hidden' }>
     ) => {
         for (const targetId of Object.keys(overrides).sort()) {
             if (validTargets.has(targetId)) continue;

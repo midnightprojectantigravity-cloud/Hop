@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { generateInitialState, recomputeVisibility } from '@hop/engine';
 import { GameScreen } from '../app/GameScreen';
 
-const buildProps = (isSynapseMode: boolean) => {
+const buildProps = (isSynapseMode: boolean, mobileDockV2Enabled = true) => {
   const gameState = recomputeVisibility({
     ...generateInitialState(1, `game-screen-info-mode-${isSynapseMode ? 'on' : 'off'}`),
     enemies: []
@@ -14,8 +14,12 @@ const buildProps = (isSynapseMode: boolean) => {
       colorMode: 'parchment' as const,
       motionMode: 'snappy' as const,
       hudDensity: 'compact' as const,
-      mobileLayout: 'portrait_primary' as const
+      mobileLayout: 'portrait_primary' as const,
+      turnFlowMode: 'protected_single' as const,
+      overdriveUiMode: 'per_turn_arm' as const
     },
+    turnFlowMode: 'protected_single' as const,
+    overdriveArmed: false,
     selectedSkillId: null,
     showMovementRange: false,
     isInputLocked: false,
@@ -53,7 +57,8 @@ const buildProps = (isSynapseMode: boolean) => {
     onViewReplay: vi.fn(),
     onRunLostActionsReady: vi.fn(),
     onSetColorMode: vi.fn(),
-    mobileDockV2Enabled: false,
+    onToggleOverdrive: vi.fn(),
+    mobileDockV2Enabled,
     replayChronicleEnabled: false
   };
 };
@@ -62,11 +67,25 @@ describe('game screen info mode layout', () => {
   it('shows bottom actions and skills tray when info mode is off', () => {
     const html = renderToStaticMarkup(<GameScreen {...buildProps(false)} />);
 
+    expect(html).toContain('Toggle vitals details');
     expect(html).toContain('Rest');
     expect(html).toContain('Hub');
     expect(html).toContain('Reset');
     expect(html).toContain('Skills');
     expect(html).toContain('Travel Mode');
+    expect(html).toContain('Tap glyph for detail');
+    expect(html).toContain('Protected');
+    expect(html).toContain('Arm Overdrive');
+  });
+
+  it('shows the compact vitals glyph in mobile dock v2 without the old alert chip', () => {
+    const html = renderToStaticMarkup(<GameScreen {...buildProps(false, true)} />);
+
+    expect(html).toContain('Toggle vitals details');
+    expect(html).toContain('Alert Off');
+    expect(html).toContain('Spark');
+    expect(html).toContain('HP');
+    expect(html).toContain('MP');
   });
 
   it('hides bottom actions and shows info settings when info mode is on', () => {

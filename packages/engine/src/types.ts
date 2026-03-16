@@ -3,6 +3,7 @@ import type { SkillID, StatusID, ArchetypeID, JuiceEffectID, AilmentID } from '.
 import type { JuiceSignaturePayloadV1 } from './types/juice-signature';
 import type { CombatScoreEvent } from './systems/combat/combat-calculator';
 import type { CompiledFloorArtifact, GeneratedPathNetwork, GenerationDebugSnapshot, GenerationSpecInput, GenerationState, RunTelemetryCounters } from './generation/schema';
+import type { IresMetabolicConfig, MetabolicActionBandId } from './systems/ires/metabolic-types';
 
 /**
  * ARCHITECTURE OVERVIEW: "Gold Standard" Tech Stack
@@ -39,6 +40,31 @@ export interface SkillResourceProfile {
     countsAsMovement: boolean;
     countsAsAction: boolean;
     redlineAllowed?: boolean;
+    travelEligible?: boolean;
+    metabolicBandId?: MetabolicActionBandId;
+    profileSource?: 'legacy' | 'band_derived';
+}
+
+export type SkillMetabolicScopeTag =
+    | 'player_default'
+    | 'enemy_runtime'
+    | 'shared_active'
+    | 'loadout_capability'
+    | 'off_roster_action'
+    | 'companion_runtime'
+    | 'spawned_runtime'
+    | 'system_passive';
+
+export interface SkillMetabolicBandProfile {
+    bandId: MetabolicActionBandId;
+    resourceMode: 'spark_only' | 'mana_only' | 'hybrid' | 'none';
+    countsAsMovement: boolean;
+    countsAsAction: boolean;
+    travelEligible: boolean;
+    sparkCostOffset?: number;
+    manaCostOffset?: number;
+    baseStrainOffset?: number;
+    scopeTags: SkillMetabolicScopeTag[];
 }
 
 export interface IresTurnProjection {
@@ -65,7 +91,7 @@ export interface ActionResourcePreview {
     modeBefore: CombatPressureMode;
     modeAfter: CombatPressureMode;
     travelRecoveryApplied: boolean;
-    travelRecoverySuppressedReason?: 'not_travel' | 'not_pure_movement' | 'alert_triggered';
+    travelRecoverySuppressedReason?: 'not_travel' | 'not_pure_movement' | 'not_travel_eligible' | 'alert_triggered';
     turnProjection: IresTurnProjection;
 }
 
@@ -101,6 +127,7 @@ export interface IresRulesetConfig {
     restedSparkBonus: number;
     restedCritBonusPct: number;
     fibonacciTable: number[];
+    metabolism?: IresMetabolicConfig;
 }
 
 // (Actor model introduced below; `Entity` is now an alias to `Actor`)
@@ -739,6 +766,7 @@ export interface SkillDefinition {
     /** Optional helper for UI/tests: return valid target hexes for previews (Level 1/2) */
     getValidTargets?: (state: GameState, origin: Point) => Point[];
     resourceProfile?: SkillResourceProfile;
+    metabolicBandProfile?: SkillMetabolicBandProfile;
     capabilities?: SkillCapabilities;
     intentProfile?: SkillIntentProfile;
     upgrades: Record<string, SkillModifier>;

@@ -126,6 +126,17 @@ const tagWeight = (profile: SkillIntentProfile | undefined, tag: string): number
 export const preRankAction = (state: GameState, action: Action, profile?: SkillIntentProfile): number => {
     const immediateBasicKill = hasImmediateBasicAttackKill(state);
     const immediateAutoKill = hasImmediateAutoAttackKill(state);
+    const ires = state.player.ires;
+    const exhaustionPressure = ires
+        ? (ires.isExhausted ? 14 : ires.exhaustion >= 65 ? 10 : ires.exhaustion >= 45 ? 6 : 0)
+        : 0;
+    const sparkPressure = ires
+        ? (ires.spark <= 20 ? 8 : ires.spark <= 35 ? 5 : ires.spark <= 50 ? 2 : 0)
+        : 0;
+    const manaPressure = ires
+        ? (ires.mana <= 5 ? 8 : ires.mana <= 10 ? 5 : ires.mana <= 15 ? 2 : 0)
+        : 0;
+    const isRestOpportunity = !!ires && !ires.actedThisTurn && !ires.movedThisTurn;
 
     if (action.type === 'WAIT') {
         const adjacent = adjacentHostileCount(state, state.player.position);
@@ -133,8 +144,13 @@ export const preRankAction = (state: GameState, action: Action, profile?: SkillI
         if (hasAutoAttack && immediateAutoKill) {
             return 14 + adjacent * 2;
         }
-        if (hasAutoAttack && adjacent > 0) return -3;
-        return -4;
+        let score = hasAutoAttack && adjacent > 0 ? -3 : -4;
+        if (isRestOpportunity) {
+            score += exhaustionPressure + sparkPressure + manaPressure;
+        } else if (ires && ires.actionCountThisTurn > 0) {
+            score += Math.max(2, Math.floor(exhaustionPressure * 0.75) + Math.floor(sparkPressure * 0.5) + Math.floor(manaPressure * 0.5));
+        }
+        return score;
     }
 
     const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
@@ -204,6 +220,7 @@ export const buildSkillActions = (state: GameState): ActionCandidate[] => {
 
         const def = SkillRegistry.get(skill.id);
         if (!def?.getValidTargets) continue;
+        if (def.intentProfile?.economy.consumesTurn === false) continue;
         let targets = def.getValidTargets(state, origin);
         if ((!targets || targets.length === 0) && def.intentProfile?.target.pattern === 'self') {
             targets = [origin];

@@ -28,7 +28,9 @@ describe('ui preferences v1', () => {
       colorMode: 'parchment',
       motionMode: 'snappy',
       hudDensity: 'compact',
-      mobileLayout: 'portrait_primary'
+      mobileLayout: 'portrait_primary',
+      turnFlowMode: 'protected_single',
+      overdriveUiMode: 'per_turn_arm'
     });
   });
 
@@ -38,7 +40,9 @@ describe('ui preferences v1', () => {
       colorMode: 'midnight',
       motionMode: 'reduced',
       hudDensity: 'comfortable',
-      mobileLayout: 'portrait_primary'
+      mobileLayout: 'portrait_primary',
+      turnFlowMode: 'manual_chain',
+      overdriveUiMode: 'per_turn_arm'
     };
 
     writeUiPreferences(prefs, storage);
@@ -71,7 +75,9 @@ describe('ui preferences v1', () => {
         colorMode: 'midnight',
         motionMode: 'reduced',
         hudDensity: 'comfortable',
-        mobileLayout: 'portrait_primary'
+        mobileLayout: 'portrait_primary',
+        turnFlowMode: 'protected_single',
+        overdriveUiMode: 'per_turn_arm'
       },
       root
     );
@@ -80,5 +86,6 @@ describe('ui preferences v1', () => {
     expect(root.dataset.motion).toBe('reduced');
     expect(root.dataset.hudDensity).toBe('comfortable');
     expect(root.dataset.mobileLayout).toBe('portrait_primary');
+    expect(root.dataset.turnFlowMode).toBe('protected_single');
   });
 });

@@ -28,6 +28,12 @@ jobs:
       - name: Build engine
         run: npm run build --workspace=@hop/engine
 
+      - name: Generate IRES stress smoke report
+        run: npm run ires:stress:smoke
+
+      - name: Generate balance stack smoke report
+        run: npm run balance:stack:smoke
+
       - name: Regenerate static skill grades
         run: npm run upa:grades:static
 
@@ -55,3 +61,15 @@ jobs:
           path: |
             docs/UPA_SKILL_HEALTH.json
             docs/UPA_CALIBRATION_BASELINE.json
+
+      - name: Upload IRES stress smoke artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ires-stress-pr
+          path: artifacts/ires/IRES_STRESS_REPORT.smoke.json
+
+      - name: Upload balance stack smoke artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: balance-stack-pr
+          path: artifacts/balance/BALANCE_STACK_REPORT.smoke.json

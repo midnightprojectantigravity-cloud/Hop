@@ -11,6 +11,8 @@ interface PreviewOverlayProps {
     selectedSkillId: string | null;
     showMovementRange: boolean;
     hoveredTile: Point | null;
+    turnFlowMode?: 'protected_single' | 'manual_chain';
+    overdriveArmed?: boolean;
     enginePreviewGhost?: {
         path: Point[];
         aoe: Point[];
@@ -22,7 +24,15 @@ interface PreviewOverlayProps {
     } | null;
 }
 
-const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkillId, showMovementRange, hoveredTile, enginePreviewGhost }) => {
+const PreviewOverlay: React.FC<PreviewOverlayProps> = ({
+    gameState,
+    selectedSkillId,
+    showMovementRange,
+    hoveredTile,
+    turnFlowMode = 'protected_single',
+    overdriveArmed = false,
+    enginePreviewGhost
+}) => {
     const playerPos = gameState.player.position;
     const enemyPositionSet = useMemo(() => {
         const set = new Set<string>();
@@ -267,8 +277,11 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                             : intentPreview.resourcePreview?.travelRecoverySuppressedReason === 'alert_triggered'
                                 ? 'Combat triggered'
                                 : null;
-                        const panelWidth = 132;
-                        const panelHeight = 50 + (burnLine ? 12 : 0) + (travelLine ? 12 : 0);
+                        const turnFlowLine = turnFlowMode === 'protected_single'
+                            ? (overdriveArmed ? 'Overdrive: chaining enabled' : 'Turn will auto-end after this action')
+                            : 'Manual chain: turn stays open';
+                        const panelWidth = 172;
+                        const panelHeight = 50 + (burnLine ? 12 : 0) + (travelLine ? 12 : 0) + 12;
                         return (
                             <g transform={`translate(${x + TILE_SIZE * 0.95},${y - TILE_SIZE * 1.15})`}>
                                 <rect
@@ -315,6 +328,15 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({ gameState, selectedSkil
                                         {travelLine}
                                     </text>
                                 )}
+                                <text
+                                    x={8}
+                                    y={burnLine ? (travelLine ? 78 : 66) : (travelLine ? 66 : 54)}
+                                    fontSize={8.5}
+                                    fill={overdriveArmed ? '#bbf7d0' : '#f8fafc'}
+                                    style={{ fontWeight: 800 }}
+                                >
+                                    {turnFlowLine}
+                                </text>
                             </g>
                         );
                     })()}

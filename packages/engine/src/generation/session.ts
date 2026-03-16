@@ -29,6 +29,7 @@ const PASS_ORDER: CompilerPass[] = [
     'classifyPathLandmarks',
     'buildTacticalPathNetwork',
     'buildVisualPathNetwork',
+    'applyEnvironmentalPressure',
     'verifyArenaArtifact',
     'finalizeGenerationState'
 ];

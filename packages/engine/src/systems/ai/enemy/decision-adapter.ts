@@ -39,6 +39,7 @@ const intentStringToAiDecisionAction = (
     }
     if (plannedIntent === 'SPEAR_THROW') return { type: 'USE_SKILL', skillId: 'SPEAR_THROW', targetHex };
     if (plannedIntent === 'ARCHER_SHOT') return { type: 'USE_SKILL', skillId: 'ARCHER_SHOT', targetHex };
+    if (plannedIntent === 'FIREBALL') return { type: 'USE_SKILL', skillId: 'FIREBALL', targetHex };
     if (plannedIntent === 'DASH') return { type: 'USE_SKILL', skillId: 'DASH', targetHex };
     if (plannedIntent === 'GRAPPLE_HOOK') return { type: 'USE_SKILL', skillId: 'GRAPPLE_HOOK', targetHex };
     if (plannedIntent === 'Bombing') return { type: 'USE_SKILL', skillId: 'BOMB_TOSS', targetHex };

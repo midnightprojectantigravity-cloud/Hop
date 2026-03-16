@@ -62,7 +62,7 @@ export const getWaitDirectiveLabel = (gameState: GameState): 'Rest' | 'End Turn'
   return ires && (ires.actedThisTurn || ires.movedThisTurn) ? 'End Turn' : 'Rest';
 };
 
-const UiStateBadge: React.FC<{ stateLabel: string }> = ({ stateLabel }) => {
+export const UiStateBadge: React.FC<{ stateLabel: string }> = ({ stateLabel }) => {
   const style = stateLabel === 'Exhausted'
     ? 'border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] text-[var(--accent-danger)]'
     : stateLabel === 'Rested'
@@ -197,7 +197,7 @@ export const UiTriResourceHeader: React.FC<StatusGameProps & { mobile?: boolean 
   );
 };
 
-const UiMetabolicProfileSection: React.FC<StatusGameProps> = ({ gameState, compact }) => {
+export const UiMetabolicProfileSection: React.FC<StatusGameProps> = ({ gameState, compact }) => {
   const ires = gameState.player.ires;
   if (!ires) return null;
   const effectiveBfi = resolveEffectiveBfi(gameState.player);

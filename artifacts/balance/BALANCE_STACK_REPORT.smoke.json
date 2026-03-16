@@ -1,0 +1,2618 @@
+{
+  "generatedAt": "2026-03-15T20:55:53.823Z",
+  "params": {
+    "runSeed": "balance-smoke",
+    "maxFloor": 4,
+    "trinityProfileId": "live"
+  },
+  "skillProfiles": [
+    {
+      "skillId": "SENTINEL_BLAST",
+      "slot": "offensive",
+      "intentTags": [
+        "damage",
+        "hazard"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 10,
+      "directDamageScore": 21.7,
+      "areaCoverageScore": 6,
+      "mobilityScore": 0,
+      "controlScore": 2,
+      "defenseScore": 0,
+      "economyTaxScore": 4.5,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 2,
+      "intrinsicPowerScore": 16.41,
+      "powerBand": "high",
+      "rationale": [
+        "damage 21.7",
+        "coverage 6",
+        "control 2",
+        "economy tax 4.5"
+      ]
+    },
+    {
+      "skillId": "FIREWALL",
+      "slot": "utility",
+      "intentTags": [
+        "hazard",
+        "control",
+        "damage"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 10,
+      "directDamageScore": 16.5,
+      "areaCoverageScore": 6,
+      "mobilityScore": 0,
+      "controlScore": 9,
+      "defenseScore": 0,
+      "economyTaxScore": 8.9,
+      "setupDependencyScore": 0.75,
+      "hazardSynergyScore": 3,
+      "intrinsicPowerScore": 16,
+      "powerBand": "high",
+      "rationale": [
+        "damage 16.5",
+        "coverage 6",
+        "control 9",
+        "economy tax 8.9",
+        "setup 0.75"
+      ]
+    },
+    {
+      "skillId": "SHIELD_THROW",
+      "slot": "defensive",
+      "intentTags": [
+        "damage",
+        "control",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 17.5,
+      "areaCoverageScore": 2.75,
+      "mobilityScore": 0,
+      "controlScore": 5,
+      "defenseScore": 2.2,
+      "economyTaxScore": 7.87,
+      "setupDependencyScore": 2.5,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 12.42,
+      "powerBand": "medium",
+      "rationale": [
+        "damage 17.5",
+        "coverage 2.75",
+        "control 5",
+        "defense 2.2",
+        "economy tax 7.87",
+        "setup 2.5"
+      ]
+    },
+    {
+      "skillId": "CORPSE_EXPLOSION",
+      "slot": "offensive",
+      "intentTags": [
+        "damage",
+        "control",
+        "hazard"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 10,
+      "directDamageScore": 13.86,
+      "areaCoverageScore": 3.5,
+      "mobilityScore": 0,
+      "controlScore": 4,
+      "defenseScore": 0,
+      "economyTaxScore": 6.7,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 2,
+      "intrinsicPowerScore": 10.46,
+      "powerBand": "medium",
+      "rationale": [
+        "damage 13.86",
+        "coverage 3.5",
+        "control 4",
+        "economy tax 6.7"
+      ]
+    },
+    {
+      "skillId": "BOMB_TOSS",
+      "slot": "offensive",
+      "intentTags": [
+        "damage",
+        "control",
+        "hazard"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 13.02,
+      "areaCoverageScore": 3.5,
+      "mobilityScore": 0,
+      "controlScore": 6,
+      "defenseScore": 0,
+      "economyTaxScore": 8.7,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 2,
+      "intrinsicPowerScore": 10.32,
+      "powerBand": "medium",
+      "rationale": [
+        "damage 13.02",
+        "coverage 3.5",
+        "control 6",
+        "economy tax 8.7"
+      ]
+    },
+    {
+      "skillId": "FIREBALL",
+      "slot": "offensive",
+      "intentTags": [
+        "damage",
+        "hazard"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 5,
+      "directDamageScore": 10.85,
+      "areaCoverageScore": 3.5,
+      "mobilityScore": 0,
+      "controlScore": 3,
+      "defenseScore": 0,
+      "economyTaxScore": 4.53,
+      "setupDependencyScore": 0.75,
+      "hazardSynergyScore": 3,
+      "intrinsicPowerScore": 9.02,
+      "powerBand": "medium",
+      "rationale": [
+        "damage 10.85",
+        "coverage 3.5",
+        "control 3",
+        "economy tax 4.53",
+        "setup 0.75"
+      ]
+    },
+    {
+      "skillId": "SENTINEL_TELEGRAPH",
+      "slot": "offensive",
+      "intentTags": [
+        "control",
+        "objective"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 5,
+      "directDamageScore": 0,
+      "areaCoverageScore": 6,
+      "mobilityScore": 0,
+      "controlScore": 9,
+      "defenseScore": 0,
+      "economyTaxScore": 2.33,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0.5,
+      "intrinsicPowerScore": 8.68,
+      "powerBand": "medium",
+      "rationale": [
+        "coverage 6",
+        "control 9",
+        "economy tax 2.33"
+      ]
+    },
+    {
+      "skillId": "ABSORB_FIRE",
+      "slot": "passive",
+      "intentTags": [
+        "heal",
+        "hazard",
+        "utility"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 5,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 10.8,
+      "economyTaxScore": 1.33,
+      "setupDependencyScore": 0.95,
+      "hazardSynergyScore": 2.5,
+      "intrinsicPowerScore": 8.25,
+      "powerBand": "medium",
+      "rationale": [
+        "defense 10.8",
+        "economy tax 1.33",
+        "setup 0.95"
+      ]
+    },
+    {
+      "skillId": "SNEAK_ATTACK",
+      "slot": "offensive",
+      "intentTags": [
+        "damage",
+        "move",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 15.12,
+      "areaCoverageScore": 0,
+      "mobilityScore": 1.12,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 5.67,
+      "setupDependencyScore": 1.8,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 6.4,
+      "powerBand": "low",
+      "rationale": [
+        "damage 15.12",
+        "mobility 1.12",
+        "economy tax 5.67",
+        "setup 1.8"
+      ]
+    },
+    {
+      "skillId": "THEME_HAZARDS",
+      "slot": "passive",
+      "intentTags": [
+        "hazard",
+        "control"
+      ],
+      "primaryResource": "none",
+      "primaryCost": 0,
+      "directDamageScore": 0,
+      "areaCoverageScore": 5,
+      "mobilityScore": 0,
+      "controlScore": 5,
+      "defenseScore": 0,
+      "economyTaxScore": 1,
+      "setupDependencyScore": 0.75,
+      "hazardSynergyScore": 2.5,
+      "intrinsicPowerScore": 6.19,
+      "powerBand": "low",
+      "rationale": [
+        "coverage 5",
+        "control 5",
+        "economy tax 1",
+        "setup 0.75"
+      ]
+    },
+    {
+      "skillId": "GRAPPLE_HOOK",
+      "slot": "offensive",
+      "intentTags": [
+        "move",
+        "control",
+        "damage",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 20,
+      "directDamageScore": 6.6,
+      "areaCoverageScore": 2.6,
+      "mobilityScore": 2.96,
+      "controlScore": 3,
+      "defenseScore": 0,
+      "economyTaxScore": 6.87,
+      "setupDependencyScore": 1,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 5.36,
+      "powerBand": "low",
+      "rationale": [
+        "damage 6.6",
+        "coverage 2.6",
+        "mobility 2.96",
+        "control 3",
+        "economy tax 6.87",
+        "setup 1"
+      ]
+    },
+    {
+      "skillId": "TIME_BOMB",
+      "slot": "passive",
+      "intentTags": [
+        "damage",
+        "hazard",
+        "utility"
+      ],
+      "primaryResource": "none",
+      "primaryCost": 0,
+      "directDamageScore": 5.1,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 2,
+      "defenseScore": 0,
+      "economyTaxScore": 1,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 1.5,
+      "intrinsicPowerScore": 4.84,
+      "powerBand": "low",
+      "rationale": [
+        "damage 5.1",
+        "control 2",
+        "economy tax 1"
+      ]
+    },
+    {
+      "skillId": "BULWARK_CHARGE",
+      "slot": "offensive",
+      "intentTags": [
+        "move",
+        "protect",
+        "damage"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 5.4,
+      "areaCoverageScore": 2.15,
+      "mobilityScore": 2.24,
+      "controlScore": 0,
+      "defenseScore": 5.9,
+      "economyTaxScore": 9.8,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 4.59,
+      "powerBand": "low",
+      "rationale": [
+        "damage 5.4",
+        "coverage 2.15",
+        "mobility 2.24",
+        "defense 5.9",
+        "economy tax 9.8"
+      ]
+    },
+    {
+      "skillId": "FALCON_SCOUT",
+      "slot": "passive",
+      "intentTags": [
+        "control",
+        "utility"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 5,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 7,
+      "defenseScore": 0,
+      "economyTaxScore": 2.33,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 4.2,
+      "powerBand": "low",
+      "rationale": [
+        "control 7",
+        "economy tax 2.33"
+      ]
+    },
+    {
+      "skillId": "KINETIC_TRI_TRAP",
+      "slot": "defensive",
+      "intentTags": [
+        "control",
+        "hazard",
+        "damage"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 4.06,
+      "areaCoverageScore": 3.5,
+      "mobilityScore": 0,
+      "controlScore": 6,
+      "defenseScore": 2.2,
+      "economyTaxScore": 9.8,
+      "setupDependencyScore": 4.75,
+      "hazardSynergyScore": 3,
+      "intrinsicPowerScore": 3.7,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 4.06",
+        "coverage 3.5",
+        "control 6",
+        "defense 2.2",
+        "economy tax 9.8",
+        "setup 4.75"
+      ]
+    },
+    {
+      "skillId": "FALCON_HEAL",
+      "slot": "passive",
+      "intentTags": [
+        "heal",
+        "utility"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 5,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 7.2,
+      "economyTaxScore": 3.43,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 3.34,
+      "powerBand": "trivial",
+      "rationale": [
+        "defense 7.2",
+        "economy tax 3.43"
+      ]
+    },
+    {
+      "skillId": "SHIELD_BASH",
+      "slot": "defensive",
+      "intentTags": [
+        "damage",
+        "control",
+        "protect"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 3.24,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 5,
+      "defenseScore": 3.7,
+      "economyTaxScore": 7.87,
+      "setupDependencyScore": 2.2,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 3.17,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 3.24",
+        "control 5",
+        "defense 3.7",
+        "economy tax 7.87",
+        "setup 2.2"
+      ]
+    },
+    {
+      "skillId": "MULTI_SHOOT",
+      "slot": "offensive",
+      "intentTags": [
+        "damage"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 8.25,
+      "areaCoverageScore": 2.6,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 6.77,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 2.47,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 8.25",
+        "coverage 2.6",
+        "economy tax 6.77"
+      ]
+    },
+    {
+      "skillId": "DASH",
+      "slot": "passive",
+      "intentTags": [
+        "move",
+        "damage",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 20,
+      "directDamageScore": 3.3,
+      "areaCoverageScore": 2.6,
+      "mobilityScore": 2.96,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 4.67,
+      "setupDependencyScore": 0.5,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 2.36,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 3.3",
+        "coverage 2.6",
+        "mobility 2.96",
+        "economy tax 4.67",
+        "setup 0.5"
+      ]
+    },
+    {
+      "skillId": "FALCON_APEX_STRIKE",
+      "slot": "passive",
+      "intentTags": [
+        "damage",
+        "control"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 6.6,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 3,
+      "defenseScore": 0,
+      "economyTaxScore": 7.87,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 1.97,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 6.6",
+        "control 3",
+        "economy tax 7.87"
+      ]
+    },
+    {
+      "skillId": "SPEAR_THROW",
+      "slot": "offensive",
+      "intentTags": [
+        "damage"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 7.75,
+      "areaCoverageScore": 2.45,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 5.67,
+      "setupDependencyScore": 2,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 1.84,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 7.75",
+        "coverage 2.45",
+        "economy tax 5.67",
+        "setup 2"
+      ]
+    },
+    {
+      "skillId": "VAULT",
+      "slot": "utility",
+      "intentTags": [
+        "move",
+        "damage",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 3.72,
+      "areaCoverageScore": 0,
+      "mobilityScore": 2.72,
+      "controlScore": 2,
+      "defenseScore": 0,
+      "economyTaxScore": 6.5,
+      "setupDependencyScore": 1,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 1.57,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 3.72",
+        "mobility 2.72",
+        "control 2",
+        "economy tax 6.5",
+        "setup 1"
+      ]
+    },
+    {
+      "skillId": "SOUL_SWAP",
+      "slot": "utility",
+      "intentTags": [
+        "move",
+        "control",
+        "utility"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 10,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 2.96,
+      "controlScore": 5,
+      "defenseScore": 0,
+      "economyTaxScore": 7.8,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 1.39,
+      "powerBand": "trivial",
+      "rationale": [
+        "mobility 2.96",
+        "control 5",
+        "economy tax 7.8"
+      ]
+    },
+    {
+      "skillId": "SET_TRAP",
+      "slot": "utility",
+      "intentTags": [
+        "control",
+        "hazard"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 7,
+      "defenseScore": 0,
+      "economyTaxScore": 8.7,
+      "setupDependencyScore": 0.75,
+      "hazardSynergyScore": 2.5,
+      "intrinsicPowerScore": 0.92,
+      "powerBand": "trivial",
+      "rationale": [
+        "control 7",
+        "economy tax 8.7",
+        "setup 0.75"
+      ]
+    },
+    {
+      "skillId": "ARCHER_SHOT",
+      "slot": "offensive",
+      "intentTags": [
+        "damage"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 3.3,
+      "areaCoverageScore": 2.6,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 5.67,
+      "setupDependencyScore": 1.9,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 3.3",
+        "coverage 2.6",
+        "economy tax 5.67",
+        "setup 1.9"
+      ]
+    },
+    {
+      "skillId": "AUTO_ATTACK",
+      "slot": "passive",
+      "intentTags": [
+        "damage",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 2.16,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 5.67,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 2.16",
+        "economy tax 5.67"
+      ]
+    },
+    {
+      "skillId": "BASIC_ATTACK",
+      "slot": "passive",
+      "intentTags": [
+        "damage"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 4.32,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 5.67,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 4.32",
+        "economy tax 5.67"
+      ]
+    },
+    {
+      "skillId": "BASIC_AWARENESS",
+      "slot": "passive",
+      "intentTags": [
+        "utility"
+      ],
+      "primaryResource": "none",
+      "primaryCost": 0,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 1,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 1"
+      ]
+    },
+    {
+      "skillId": "BASIC_MOVE",
+      "slot": "passive",
+      "intentTags": [
+        "move",
+        "objective",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 20,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 1.12,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 4.67,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "mobility 1.12",
+        "economy tax 4.67"
+      ]
+    },
+    {
+      "skillId": "BLIND_FIGHTING",
+      "slot": "passive",
+      "intentTags": [
+        "utility"
+      ],
+      "primaryResource": "none",
+      "primaryCost": 0,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 1,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 1"
+      ]
+    },
+    {
+      "skillId": "BURROW",
+      "slot": "passive",
+      "intentTags": [
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 20,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 4.67,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 4.67"
+      ]
+    },
+    {
+      "skillId": "COMBAT_ANALYSIS",
+      "slot": "passive",
+      "intentTags": [
+        "utility"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 5,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 2.33,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 2.33"
+      ]
+    },
+    {
+      "skillId": "ENEMY_AWARENESS",
+      "slot": "passive",
+      "intentTags": [
+        "utility"
+      ],
+      "primaryResource": "none",
+      "primaryCost": 0,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 1,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 1"
+      ]
+    },
+    {
+      "skillId": "FALCON_AUTO_ROOST",
+      "slot": "passive",
+      "intentTags": [
+        "summon",
+        "utility"
+      ],
+      "primaryResource": "none",
+      "primaryCost": 0,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 1,
+      "setupDependencyScore": 1,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 1",
+        "setup 1"
+      ]
+    },
+    {
+      "skillId": "FALCON_COMMAND",
+      "slot": "offensive",
+      "intentTags": [
+        "summon",
+        "control",
+        "damage",
+        "utility"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 5,
+      "directDamageScore": 2.96,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 1,
+      "defenseScore": 0,
+      "economyTaxScore": 2.33,
+      "setupDependencyScore": 3,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 2.96",
+        "control 1",
+        "economy tax 2.33",
+        "setup 3"
+      ]
+    },
+    {
+      "skillId": "FALCON_PECK",
+      "slot": "passive",
+      "intentTags": [
+        "damage"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 3.24,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 5.67,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 3.24",
+        "economy tax 5.67"
+      ]
+    },
+    {
+      "skillId": "FIREWALK",
+      "slot": "utility",
+      "intentTags": [
+        "move",
+        "hazard",
+        "utility"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 5,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 4.44,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 5.63,
+      "setupDependencyScore": 1.55,
+      "hazardSynergyScore": 2.5,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "mobility 4.44",
+        "economy tax 5.63",
+        "setup 1.55"
+      ]
+    },
+    {
+      "skillId": "FLIGHT",
+      "slot": "passive",
+      "intentTags": [
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 20,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 4.67,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 4.67"
+      ]
+    },
+    {
+      "skillId": "JUMP",
+      "slot": "utility",
+      "intentTags": [
+        "move",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 20,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 2.48,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 6.87,
+      "setupDependencyScore": 0.6,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "mobility 2.48",
+        "economy tax 6.87",
+        "setup 0.6"
+      ]
+    },
+    {
+      "skillId": "ORACLE_SIGHT",
+      "slot": "passive",
+      "intentTags": [
+        "utility"
+      ],
+      "primaryResource": "none",
+      "primaryCost": 0,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 1,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 1"
+      ]
+    },
+    {
+      "skillId": "PHASE_STEP",
+      "slot": "passive",
+      "intentTags": [
+        "move"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 5,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 1,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 2.33,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "mobility 1",
+        "economy tax 2.33"
+      ]
+    },
+    {
+      "skillId": "RAISE_DEAD",
+      "slot": "utility",
+      "intentTags": [
+        "summon",
+        "control",
+        "utility"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 10,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 1,
+      "defenseScore": 0,
+      "economyTaxScore": 7.8,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "control 1",
+        "economy tax 7.8"
+      ]
+    },
+    {
+      "skillId": "SHADOW_STEP",
+      "slot": "utility",
+      "intentTags": [
+        "move",
+        "utility"
+      ],
+      "primaryResource": "mana",
+      "primaryCost": 10,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 6.7,
+      "setupDependencyScore": 10,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 6.7",
+        "setup 10"
+      ]
+    },
+    {
+      "skillId": "SMOKE_SCREEN",
+      "slot": "utility",
+      "intentTags": [
+        "control",
+        "protect",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 0,
+      "areaCoverageScore": 3.5,
+      "mobilityScore": 0,
+      "controlScore": 2,
+      "defenseScore": 3.7,
+      "economyTaxScore": 8.7,
+      "setupDependencyScore": 10,
+      "hazardSynergyScore": 0.5,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "coverage 3.5",
+        "control 2",
+        "defense 3.7",
+        "economy tax 8.7",
+        "setup 10"
+      ]
+    },
+    {
+      "skillId": "STANDARD_VISION",
+      "slot": "passive",
+      "intentTags": [
+        "utility"
+      ],
+      "primaryResource": "none",
+      "primaryCost": 0,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 1,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 1"
+      ]
+    },
+    {
+      "skillId": "SWIFT_ROLL",
+      "slot": "utility",
+      "intentTags": [
+        "move",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 20,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 2.48,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 6.87,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "mobility 2.48",
+        "economy tax 6.87"
+      ]
+    },
+    {
+      "skillId": "TACTICAL_INSIGHT",
+      "slot": "passive",
+      "intentTags": [
+        "utility"
+      ],
+      "primaryResource": "none",
+      "primaryCost": 0,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 1,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 1"
+      ]
+    },
+    {
+      "skillId": "VIBRATION_SENSE",
+      "slot": "passive",
+      "intentTags": [
+        "utility"
+      ],
+      "primaryResource": "none",
+      "primaryCost": 0,
+      "directDamageScore": 0,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 1,
+      "setupDependencyScore": 0,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "economy tax 1"
+      ]
+    },
+    {
+      "skillId": "WITHDRAWAL",
+      "slot": "utility",
+      "intentTags": [
+        "move",
+        "damage",
+        "utility"
+      ],
+      "primaryResource": "spark",
+      "primaryCost": 30,
+      "directDamageScore": 2.16,
+      "areaCoverageScore": 0,
+      "mobilityScore": 0,
+      "controlScore": 0,
+      "defenseScore": 0,
+      "economyTaxScore": 8.7,
+      "setupDependencyScore": 4,
+      "hazardSynergyScore": 0,
+      "intrinsicPowerScore": 0,
+      "powerBand": "trivial",
+      "rationale": [
+        "damage 2.16",
+        "economy tax 8.7",
+        "setup 4"
+      ]
+    }
+  ],
+  "loadoutProfiles": [
+    {
+      "loadoutId": "SKIRMISHER",
+      "skillIds": [
+        "DASH",
+        "GRAPPLE_HOOK",
+        "SHIELD_THROW",
+        "VAULT"
+      ],
+      "trinity": {
+        "body": 12,
+        "mind": 8,
+        "instinct": 14
+      },
+      "chassisScore": 39.3,
+      "offenseScore": 25.76,
+      "controlScore": 9,
+      "mobilityScore": 8.64,
+      "defenseScore": 2.2,
+      "economyDisciplineScore": 7.46,
+      "recoveryDemandScore": 8.81,
+      "hazardHandlingScore": 5.52,
+      "intrinsicPowerScore": 27.59,
+      "powerBand": "high",
+      "rationale": [
+        "chassis 39.3",
+        "offense 25.76",
+        "control 9",
+        "mobility 8.64",
+        "defense 2.2",
+        "economy discipline 7.46",
+        "recovery demand 8.81"
+      ]
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "ABSORB_FIRE",
+        "FIREBALL",
+        "FIREWALL",
+        "FIREWALK"
+      ],
+      "trinity": {
+        "body": 2,
+        "mind": 9,
+        "instinct": 4
+      },
+      "chassisScore": 16.9,
+      "offenseScore": 26.92,
+      "controlScore": 14.65,
+      "mobilityScore": 5.56,
+      "defenseScore": 10.8,
+      "economyDisciplineScore": 6.91,
+      "recoveryDemandScore": 8.18,
+      "hazardHandlingScore": 12.22,
+      "intrinsicPowerScore": 25.2,
+      "powerBand": "high",
+      "rationale": [
+        "chassis 16.9",
+        "offense 26.92",
+        "control 14.65",
+        "mobility 5.56",
+        "defense 10.8",
+        "economy discipline 6.91",
+        "recovery demand 8.18"
+      ]
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "CORPSE_EXPLOSION",
+        "RAISE_DEAD",
+        "SOUL_SWAP"
+      ],
+      "trinity": {
+        "body": 5,
+        "mind": 9,
+        "instinct": 5
+      },
+      "chassisScore": 21.65,
+      "offenseScore": 14.48,
+      "controlScore": 9.7,
+      "mobilityScore": 4.08,
+      "defenseScore": 0,
+      "economyDisciplineScore": 5.71,
+      "recoveryDemandScore": 8.97,
+      "hazardHandlingScore": 4.73,
+      "intrinsicPowerScore": 15.29,
+      "powerBand": "low",
+      "rationale": [
+        "chassis 21.65",
+        "offense 14.48",
+        "control 9.7",
+        "mobility 4.08",
+        "defense 0",
+        "economy discipline 5.71",
+        "recovery demand 8.97"
+      ]
+    },
+    {
+      "loadoutId": "VANGUARD",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "AUTO_ATTACK",
+        "SPEAR_THROW",
+        "SHIELD_BASH",
+        "JUMP"
+      ],
+      "trinity": {
+        "body": 9,
+        "mind": 4,
+        "instinct": 5
+      },
+      "chassisScore": 20.95,
+      "offenseScore": 13.45,
+      "controlScore": 4.5,
+      "mobilityScore": 3.6,
+      "defenseScore": 3.7,
+      "economyDisciplineScore": 5.04,
+      "recoveryDemandScore": 9.76,
+      "hazardHandlingScore": 3.36,
+      "intrinsicPowerScore": 13.29,
+      "powerBand": "low",
+      "rationale": [
+        "chassis 20.95",
+        "offense 13.45",
+        "control 4.5",
+        "mobility 3.6",
+        "defense 3.7",
+        "economy discipline 5.04",
+        "recovery demand 9.76"
+      ]
+    },
+    {
+      "loadoutId": "HUNTER",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "FALCON_COMMAND",
+        "KINETIC_TRI_TRAP",
+        "WITHDRAWAL"
+      ],
+      "trinity": {
+        "body": 4,
+        "mind": 4,
+        "instinct": 9
+      },
+      "chassisScore": 19.55,
+      "offenseScore": 11.2,
+      "controlScore": 7.35,
+      "mobilityScore": 1.12,
+      "defenseScore": 2.2,
+      "economyDisciplineScore": 4.93,
+      "recoveryDemandScore": 9.16,
+      "hazardHandlingScore": 3.94,
+      "intrinsicPowerScore": 12.08,
+      "powerBand": "low",
+      "rationale": [
+        "chassis 19.55",
+        "offense 11.2",
+        "control 7.35",
+        "mobility 1.12",
+        "defense 2.2",
+        "economy discipline 4.93",
+        "recovery demand 9.16"
+      ]
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "SNEAK_ATTACK",
+        "SMOKE_SCREEN",
+        "SHADOW_STEP"
+      ],
+      "trinity": {
+        "body": 3,
+        "mind": 4,
+        "instinct": 10
+      },
+      "chassisScore": 19.5,
+      "offenseScore": 15.36,
+      "controlScore": 1.98,
+      "mobilityScore": 2.24,
+      "defenseScore": 3.7,
+      "economyDisciplineScore": 3.75,
+      "recoveryDemandScore": 10.96,
+      "hazardHandlingScore": 2.26,
+      "intrinsicPowerScore": 11.74,
+      "powerBand": "low",
+      "rationale": [
+        "chassis 19.5",
+        "offense 15.36",
+        "control 1.98",
+        "mobility 2.24",
+        "defense 3.7",
+        "economy discipline 3.75",
+        "recovery demand 10.96"
+      ]
+    }
+  ],
+  "unitProfiles": [
+    {
+      "unitId": "SKIRMISHER",
+      "unitKind": "player_loadout",
+      "skillIds": [
+        "DASH",
+        "GRAPPLE_HOOK",
+        "SHIELD_THROW",
+        "VAULT"
+      ],
+      "trinity": {
+        "body": 12,
+        "mind": 8,
+        "instinct": 14
+      },
+      "hp": 118,
+      "maxHp": 118,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 227.4,
+      "actionEconomyScore": 13.5,
+      "offenseScore": 19.1,
+      "controlScore": 8,
+      "mobilityScore": 9.24,
+      "sustainScore": 10.4,
+      "intrinsicPowerScore": 117.25,
+      "powerBand": "spike",
+      "rationale": [
+        "durability 227.4",
+        "economy 13.5",
+        "offense 19.1",
+        "control 8",
+        "mobility 9.24",
+        "sustain 10.4"
+      ]
+    },
+    {
+      "unitId": "VANGUARD",
+      "unitKind": "player_loadout",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "AUTO_ATTACK",
+        "SPEAR_THROW",
+        "SHIELD_BASH",
+        "JUMP"
+      ],
+      "trinity": {
+        "body": 9,
+        "mind": 4,
+        "instinct": 5
+      },
+      "hp": 68,
+      "maxHp": 68,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 133.65,
+      "actionEconomyScore": 7.65,
+      "offenseScore": 10.22,
+      "controlScore": 4,
+      "mobilityScore": 4.2,
+      "sustainScore": 9.15,
+      "intrinsicPowerScore": 68.76,
+      "powerBand": "spike",
+      "rationale": [
+        "durability 133.65",
+        "economy 7.65",
+        "offense 10.22",
+        "control 4",
+        "mobility 4.2",
+        "sustain 9.15"
+      ]
+    },
+    {
+      "unitId": "NECROMANCER",
+      "unitKind": "player_loadout",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "CORPSE_EXPLOSION",
+        "RAISE_DEAD",
+        "SOUL_SWAP"
+      ],
+      "trinity": {
+        "body": 5,
+        "mind": 9,
+        "instinct": 5
+      },
+      "hp": 58,
+      "maxHp": 58,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 110.65,
+      "actionEconomyScore": 7.65,
+      "offenseScore": 10.87,
+      "controlScore": 8.4,
+      "mobilityScore": 4.68,
+      "sustainScore": 5.4,
+      "intrinsicPowerScore": 59.7,
+      "powerBand": "spike",
+      "rationale": [
+        "durability 110.65",
+        "economy 7.65",
+        "offense 10.87",
+        "control 8.4",
+        "mobility 4.68",
+        "sustain 5.4"
+      ]
+    },
+    {
+      "unitId": "HUNTER",
+      "unitKind": "player_loadout",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "FALCON_COMMAND",
+        "KINETIC_TRI_TRAP",
+        "WITHDRAWAL"
+      ],
+      "trinity": {
+        "body": 4,
+        "mind": 4,
+        "instinct": 9
+      },
+      "hp": 55,
+      "maxHp": 55,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 104,
+      "actionEconomyScore": 10.25,
+      "offenseScore": 8.3,
+      "controlScore": 6.2,
+      "mobilityScore": 1.72,
+      "sustainScore": 5.4,
+      "intrinsicPowerScore": 55.46,
+      "powerBand": "spike",
+      "rationale": [
+        "durability 104",
+        "economy 10.25",
+        "offense 8.3",
+        "control 6.2",
+        "mobility 1.72",
+        "sustain 5.4"
+      ]
+    },
+    {
+      "unitId": "ASSASSIN",
+      "unitKind": "player_loadout",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "SNEAK_ATTACK",
+        "SMOKE_SCREEN",
+        "SHADOW_STEP"
+      ],
+      "trinity": {
+        "body": 3,
+        "mind": 4,
+        "instinct": 10
+      },
+      "hp": 53,
+      "maxHp": 53,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 99.15,
+      "actionEconomyScore": 10.9,
+      "offenseScore": 11.57,
+      "controlScore": 1.7,
+      "mobilityScore": 2.84,
+      "sustainScore": 6.45,
+      "intrinsicPowerScore": 54.4,
+      "powerBand": "spike",
+      "rationale": [
+        "durability 99.15",
+        "economy 10.9",
+        "offense 11.57",
+        "control 1.7",
+        "mobility 2.84",
+        "sustain 6.45"
+      ]
+    },
+    {
+      "unitId": "FIREMAGE",
+      "unitKind": "player_loadout",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "ABSORB_FIRE",
+        "FIREBALL",
+        "FIREWALL",
+        "FIREWALK"
+      ],
+      "trinity": {
+        "body": 2,
+        "mind": 9,
+        "instinct": 4
+      },
+      "hp": 40,
+      "maxHp": 40,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 74.5,
+      "actionEconomyScore": 7,
+      "offenseScore": 19.79,
+      "controlScore": 11.8,
+      "mobilityScore": 6.16,
+      "sustainScore": 14.85,
+      "intrinsicPowerScore": 52.54,
+      "powerBand": "spike",
+      "rationale": [
+        "durability 74.5",
+        "economy 7",
+        "offense 19.79",
+        "control 11.8",
+        "mobility 6.16",
+        "sustain 14.85"
+      ]
+    }
+  ],
+  "enemyProfiles": [
+    {
+      "unitId": "sentinel",
+      "unitKind": "enemy",
+      "skillIds": [
+        "BASIC_MOVE",
+        "SENTINEL_TELEGRAPH",
+        "SENTINEL_BLAST"
+      ],
+      "trinity": {
+        "body": 4,
+        "mind": 2,
+        "instinct": 2
+      },
+      "hp": 30,
+      "maxHp": 30,
+      "speed": 1,
+      "weightClass": "Heavy",
+      "chassisDurabilityScore": 61.25,
+      "actionEconomyScore": 8.5,
+      "offenseScore": 22.73,
+      "controlScore": 9.3,
+      "mobilityScore": 0.22,
+      "sustainScore": 2.5,
+      "intrinsicPowerScore": 62.44,
+      "powerBand": "spike",
+      "rationale": [
+        "durability 61.25",
+        "economy 8.5",
+        "offense 22.73",
+        "control 9.3",
+        "mobility 0.22",
+        "sustain 2.5"
+      ],
+      "subtype": "sentinel",
+      "enemyType": "boss",
+      "budgetCost": 25,
+      "threatProjectionScore": 17.42,
+      "spikePressureScore": 15,
+      "zoneDenialScore": 8.84,
+      "reliabilityScore": 5.05
+    },
+    {
+      "unitId": "warlock",
+      "unitKind": "enemy",
+      "skillIds": [
+        "BASIC_MOVE",
+        "SENTINEL_BLAST"
+      ],
+      "trinity": {
+        "body": 0.4,
+        "mind": 0.6,
+        "instinct": 0.2
+      },
+      "hp": 1,
+      "maxHp": 1,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 2.3,
+      "actionEconomyScore": 5.93,
+      "offenseScore": 18.23,
+      "controlScore": 2,
+      "mobilityScore": 1.72,
+      "sustainScore": 0.39,
+      "intrinsicPowerScore": 20.92,
+      "powerBand": "low",
+      "rationale": [
+        "durability 2.3",
+        "economy 5.93",
+        "offense 18.23",
+        "control 2",
+        "mobility 1.72",
+        "sustain 0.39"
+      ],
+      "subtype": "warlock",
+      "enemyType": "ranged",
+      "budgetCost": 2,
+      "threatProjectionScore": 14.99,
+      "spikePressureScore": 7.01,
+      "zoneDenialScore": 3.6,
+      "reliabilityScore": 3.7
+    },
+    {
+      "unitId": "bomber",
+      "unitKind": "enemy",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BOMB_TOSS"
+      ],
+      "trinity": {
+        "body": 0.4,
+        "mind": 0.2,
+        "instinct": 0.2
+      },
+      "hp": 1,
+      "maxHp": 1,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 2.3,
+      "actionEconomyScore": 5.93,
+      "offenseScore": 12.39,
+      "controlScore": 5.2,
+      "mobilityScore": 1.72,
+      "sustainScore": 0.25,
+      "intrinsicPowerScore": 17.78,
+      "powerBand": "low",
+      "rationale": [
+        "durability 2.3",
+        "economy 5.93",
+        "offense 12.39",
+        "control 5.2",
+        "mobility 1.72",
+        "sustain 0.25"
+      ],
+      "subtype": "bomber",
+      "enemyType": "ranged",
+      "budgetCost": 1,
+      "threatProjectionScore": 11.17,
+      "spikePressureScore": 5.73,
+      "zoneDenialScore": 6.16,
+      "reliabilityScore": 3.7
+    },
+    {
+      "unitId": "pouncer",
+      "unitKind": "enemy",
+      "skillIds": [
+        "BASIC_MOVE",
+        "GRAPPLE_HOOK"
+      ],
+      "trinity": {
+        "body": 2,
+        "mind": 0,
+        "instinct": 1
+      },
+      "hp": 1,
+      "maxHp": 1,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 4.3,
+      "actionEconomyScore": 7.85,
+      "offenseScore": 9.08,
+      "controlScore": 2.4,
+      "mobilityScore": 4.68,
+      "sustainScore": 0.9,
+      "intrinsicPowerScore": 17.47,
+      "powerBand": "low",
+      "rationale": [
+        "durability 4.3",
+        "economy 7.85",
+        "offense 9.08",
+        "control 2.4",
+        "mobility 4.68",
+        "sustain 0.9"
+      ],
+      "subtype": "pouncer",
+      "enemyType": "melee",
+      "budgetCost": 2,
+      "threatProjectionScore": 12.05,
+      "spikePressureScore": 5,
+      "zoneDenialScore": 1.92,
+      "reliabilityScore": 4.7
+    },
+    {
+      "unitId": "raider",
+      "unitKind": "enemy",
+      "skillIds": [
+        "DASH"
+      ],
+      "trinity": {
+        "body": 2,
+        "mind": 0,
+        "instinct": 1
+      },
+      "hp": 1,
+      "maxHp": 1,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 4.3,
+      "actionEconomyScore": 7.85,
+      "offenseScore": 7.26,
+      "controlScore": 0,
+      "mobilityScore": 3.56,
+      "sustainScore": 0.9,
+      "intrinsicPowerScore": 15.18,
+      "powerBand": "trivial",
+      "rationale": [
+        "durability 4.3",
+        "economy 7.85",
+        "offense 7.26",
+        "control 0",
+        "mobility 3.56",
+        "sustain 0.9"
+      ],
+      "subtype": "raider",
+      "enemyType": "melee",
+      "budgetCost": 2,
+      "threatProjectionScore": 11.36,
+      "spikePressureScore": 4.6,
+      "zoneDenialScore": 0,
+      "reliabilityScore": 4.35
+    },
+    {
+      "unitId": "shieldBearer",
+      "unitKind": "enemy",
+      "skillIds": [
+        "BASIC_MOVE",
+        "SHIELD_BASH"
+      ],
+      "trinity": {
+        "body": 1,
+        "mind": 0,
+        "instinct": 0.4
+      },
+      "hp": 2,
+      "maxHp": 2,
+      "speed": 1,
+      "weightClass": "Heavy",
+      "chassisDurabilityScore": 7.1,
+      "actionEconomyScore": 6.06,
+      "offenseScore": 5.23,
+      "controlScore": 4,
+      "mobilityScore": 0.22,
+      "sustainScore": 4.15,
+      "intrinsicPowerScore": 13.75,
+      "powerBand": "low",
+      "rationale": [
+        "durability 7.1",
+        "economy 6.06",
+        "offense 5.23",
+        "control 4",
+        "mobility 0.22",
+        "sustain 4.15"
+      ],
+      "subtype": "shieldBearer",
+      "enemyType": "melee",
+      "budgetCost": 2,
+      "threatProjectionScore": 5.28,
+      "spikePressureScore": 4.15,
+      "zoneDenialScore": 3.2,
+      "reliabilityScore": 3.7
+    },
+    {
+      "unitId": "sprinter",
+      "unitKind": "enemy",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK"
+      ],
+      "trinity": {
+        "body": 2,
+        "mind": 0,
+        "instinct": 0
+      },
+      "hp": 1,
+      "maxHp": 1,
+      "speed": 2,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 4.3,
+      "actionEconomyScore": 10.2,
+      "offenseScore": 5.83,
+      "controlScore": 0,
+      "mobilityScore": 2.32,
+      "sustainScore": 0.9,
+      "intrinsicPowerScore": 12.57,
+      "powerBand": "trivial",
+      "rationale": [
+        "durability 4.3",
+        "economy 10.2",
+        "offense 5.83",
+        "control 0",
+        "mobility 2.32",
+        "sustain 0.9"
+      ],
+      "subtype": "sprinter",
+      "enemyType": "melee",
+      "budgetCost": 1,
+      "threatProjectionScore": 6.67,
+      "spikePressureScore": 4.28,
+      "zoneDenialScore": 0,
+      "reliabilityScore": 5.7
+    },
+    {
+      "unitId": "archer",
+      "unitKind": "enemy",
+      "skillIds": [
+        "BASIC_MOVE",
+        "ARCHER_SHOT"
+      ],
+      "trinity": {
+        "body": 0.2,
+        "mind": 0,
+        "instinct": 0.2
+      },
+      "hp": 1,
+      "maxHp": 1,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 2.05,
+      "actionEconomyScore": 4.53,
+      "offenseScore": 7.26,
+      "controlScore": 0,
+      "mobilityScore": 1.72,
+      "sustainScore": 0.09,
+      "intrinsicPowerScore": 12.07,
+      "powerBand": "trivial",
+      "rationale": [
+        "durability 2.05",
+        "economy 4.53",
+        "offense 7.26",
+        "control 0",
+        "mobility 1.72",
+        "sustain 0.09"
+      ],
+      "subtype": "archer",
+      "enemyType": "ranged",
+      "budgetCost": 1,
+      "threatProjectionScore": 10.43,
+      "spikePressureScore": 4.6,
+      "zoneDenialScore": 0.6,
+      "reliabilityScore": 2.7
+    },
+    {
+      "unitId": "footman",
+      "unitKind": "enemy",
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK"
+      ],
+      "trinity": {
+        "body": 4,
+        "mind": 0,
+        "instinct": 0
+      },
+      "hp": 1,
+      "maxHp": 1,
+      "speed": 1,
+      "weightClass": "Standard",
+      "chassisDurabilityScore": 6.8,
+      "actionEconomyScore": 5.8,
+      "offenseScore": 5.83,
+      "controlScore": 0,
+      "mobilityScore": 1.72,
+      "sustainScore": 1.8,
+      "intrinsicPowerScore": 11.12,
+      "powerBand": "trivial",
+      "rationale": [
+        "durability 6.8",
+        "economy 5.8",
+        "offense 5.83",
+        "control 0",
+        "mobility 1.72",
+        "sustain 1.8"
+      ],
+      "subtype": "footman",
+      "enemyType": "melee",
+      "budgetCost": 1,
+      "threatProjectionScore": 5.44,
+      "spikePressureScore": 4.28,
+      "zoneDenialScore": 0,
+      "reliabilityScore": 3.7
+    }
+  ],
+  "floorProfiles": [
+    {
+      "floor": 1,
+      "role": "onboarding",
+      "theme": "inferno",
+      "routeCount": 1,
+      "junctionCount": 0,
+      "maxStraightRun": 5,
+      "obstacleClusterCount": 1,
+      "trapClusterCount": 0,
+      "routeComplexityScore": 0.6,
+      "pathFrictionScore": 2.4,
+      "hazardPressureScore": -0.7,
+      "recoveryAccessScore": 2.3,
+      "navigationDifficultyScore": 2.14,
+      "intrinsicDifficultyScore": 0,
+      "difficultyBand": "trivial",
+      "rationale": [
+        "routes 1",
+        "junctions 0",
+        "straight run 5",
+        "obstacles 1",
+        "traps 0"
+      ]
+    },
+    {
+      "floor": 2,
+      "role": "pressure_spike",
+      "theme": "inferno",
+      "routeCount": 2,
+      "junctionCount": 2,
+      "maxStraightRun": 3,
+      "obstacleClusterCount": 2,
+      "trapClusterCount": 2,
+      "routeComplexityScore": 7.3,
+      "pathFrictionScore": 6.25,
+      "hazardPressureScore": 9.1,
+      "recoveryAccessScore": 1.4,
+      "navigationDifficultyScore": 8.55,
+      "intrinsicDifficultyScore": 18.45,
+      "difficultyBand": "spike",
+      "rationale": [
+        "routes 2",
+        "junctions 2",
+        "straight run 3",
+        "obstacles 2",
+        "traps 2"
+      ]
+    },
+    {
+      "floor": 3,
+      "role": "recovery",
+      "theme": "inferno",
+      "routeCount": 2,
+      "junctionCount": 2,
+      "maxStraightRun": 3,
+      "obstacleClusterCount": 2,
+      "trapClusterCount": 1,
+      "routeComplexityScore": 7.3,
+      "pathFrictionScore": 6.25,
+      "hazardPressureScore": 4.1,
+      "recoveryAccessScore": 4.75,
+      "navigationDifficultyScore": 8.55,
+      "intrinsicDifficultyScore": 9.78,
+      "difficultyBand": "medium",
+      "rationale": [
+        "routes 2",
+        "junctions 2",
+        "straight run 3",
+        "obstacles 2",
+        "traps 1"
+      ]
+    },
+    {
+      "floor": 4,
+      "role": "pressure_spike",
+      "theme": "inferno",
+      "routeCount": 2,
+      "junctionCount": 2,
+      "maxStraightRun": 3,
+      "obstacleClusterCount": 2,
+      "trapClusterCount": 2,
+      "routeComplexityScore": 7.3,
+      "pathFrictionScore": 6.25,
+      "hazardPressureScore": 9.1,
+      "recoveryAccessScore": 1.4,
+      "navigationDifficultyScore": 8.55,
+      "intrinsicDifficultyScore": 18.45,
+      "difficultyBand": "spike",
+      "rationale": [
+        "routes 2",
+        "junctions 2",
+        "straight run 3",
+        "obstacles 2",
+        "traps 2"
+      ]
+    }
+  ],
+  "encounterProfiles": [
+    {
+      "floor": 1,
+      "role": "onboarding",
+      "theme": "inferno",
+      "enemyCount": 2,
+      "uniqueEnemySubtypeCount": 1,
+      "enemySubtypeIds": [
+        "footman",
+        "footman"
+      ],
+      "encounterEnemyPowerScore": 22.24,
+      "spawnPressureScore": 4.5,
+      "routePressureScore": 1.87,
+      "objectiveTensionScore": 0,
+      "intrinsicDifficultyScore": 7,
+      "difficultyBand": "trivial",
+      "rationale": [
+        "enemy power 22.24",
+        "spawn pressure 4.5",
+        "route pressure 1.87",
+        "objective tension 0"
+      ]
+    },
+    {
+      "floor": 2,
+      "role": "pressure_spike",
+      "theme": "inferno",
+      "enemyCount": 3,
+      "uniqueEnemySubtypeCount": 2,
+      "enemySubtypeIds": [
+        "footman",
+        "sprinter",
+        "sprinter"
+      ],
+      "encounterEnemyPowerScore": 36.26,
+      "spawnPressureScore": 6.75,
+      "routePressureScore": 16.77,
+      "objectiveTensionScore": 1.5,
+      "intrinsicDifficultyScore": 43.59,
+      "difficultyBand": "spike",
+      "rationale": [
+        "enemy power 36.26",
+        "spawn pressure 6.75",
+        "route pressure 16.77",
+        "objective tension 1.5"
+      ]
+    },
+    {
+      "floor": 3,
+      "role": "recovery",
+      "theme": "inferno",
+      "enemyCount": 5,
+      "uniqueEnemySubtypeCount": 2,
+      "enemySubtypeIds": [
+        "archer",
+        "archer",
+        "archer",
+        "footman",
+        "footman"
+      ],
+      "encounterEnemyPowerScore": 58.45,
+      "spawnPressureScore": 11.25,
+      "routePressureScore": 12.19,
+      "objectiveTensionScore": 0,
+      "intrinsicDifficultyScore": 34.28,
+      "difficultyBand": "spike",
+      "rationale": [
+        "enemy power 58.45",
+        "spawn pressure 11.25",
+        "route pressure 12.19",
+        "objective tension 0"
+      ]
+    },
+    {
+      "floor": 4,
+      "role": "pressure_spike",
+      "theme": "inferno",
+      "enemyCount": 5,
+      "uniqueEnemySubtypeCount": 3,
+      "enemySubtypeIds": [
+        "archer",
+        "archer",
+        "footman",
+        "raider",
+        "raider"
+      ],
+      "encounterEnemyPowerScore": 65.62,
+      "spawnPressureScore": 13.25,
+      "routePressureScore": 16.19,
+      "objectiveTensionScore": 1.5,
+      "intrinsicDifficultyScore": 49.43,
+      "difficultyBand": "spike",
+      "rationale": [
+        "enemy power 65.62",
+        "spawn pressure 13.25",
+        "route pressure 16.19",
+        "objective tension 1.5"
+      ]
+    }
+  ],
+  "loadoutParityProfiles": [
+    {
+      "loadoutId": "SKIRMISHER",
+      "intrinsicPowerScore": 27.59,
+      "deltaFromMedian": 13.3,
+      "relativeDeltaPct": 0.9307,
+      "parityBand": "outlier_over"
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "intrinsicPowerScore": 25.2,
+      "deltaFromMedian": 10.91,
+      "relativeDeltaPct": 0.7635,
+      "parityBand": "outlier_over"
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "intrinsicPowerScore": 15.29,
+      "deltaFromMedian": 1,
+      "relativeDeltaPct": 0.07,
+      "parityBand": "balanced"
+    },
+    {
+      "loadoutId": "VANGUARD",
+      "intrinsicPowerScore": 13.29,
+      "deltaFromMedian": -1,
+      "relativeDeltaPct": -0.07,
+      "parityBand": "balanced"
+    },
+    {
+      "loadoutId": "HUNTER",
+      "intrinsicPowerScore": 12.08,
+      "deltaFromMedian": -2.21,
+      "relativeDeltaPct": -0.1547,
+      "parityBand": "under"
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "intrinsicPowerScore": 11.74,
+      "deltaFromMedian": -2.55,
+      "relativeDeltaPct": -0.1784,
+      "parityBand": "under"
+    }
+  ],
+  "enemyParityProfiles": [
+    {
+      "subtype": "sentinel",
+      "intrinsicPowerScore": 62.44,
+      "deltaFromMedian": 47.26,
+      "relativeDeltaPct": 3.1133,
+      "parityBand": "outlier_over"
+    },
+    {
+      "subtype": "warlock",
+      "intrinsicPowerScore": 20.92,
+      "deltaFromMedian": 5.74,
+      "relativeDeltaPct": 0.3781,
+      "parityBand": "outlier_over"
+    },
+    {
+      "subtype": "bomber",
+      "intrinsicPowerScore": 17.78,
+      "deltaFromMedian": 2.6,
+      "relativeDeltaPct": 0.1713,
+      "parityBand": "over"
+    },
+    {
+      "subtype": "pouncer",
+      "intrinsicPowerScore": 17.47,
+      "deltaFromMedian": 2.29,
+      "relativeDeltaPct": 0.1509,
+      "parityBand": "over"
+    },
+    {
+      "subtype": "raider",
+      "intrinsicPowerScore": 15.18,
+      "deltaFromMedian": 0,
+      "relativeDeltaPct": 0,
+      "parityBand": "balanced"
+    },
+    {
+      "subtype": "shieldBearer",
+      "intrinsicPowerScore": 13.75,
+      "deltaFromMedian": -1.43,
+      "relativeDeltaPct": -0.0942,
+      "parityBand": "balanced"
+    },
+    {
+      "subtype": "sprinter",
+      "intrinsicPowerScore": 12.57,
+      "deltaFromMedian": -2.61,
+      "relativeDeltaPct": -0.1719,
+      "parityBand": "under"
+    },
+    {
+      "subtype": "archer",
+      "intrinsicPowerScore": 12.07,
+      "deltaFromMedian": -3.11,
+      "relativeDeltaPct": -0.2049,
+      "parityBand": "under"
+    },
+    {
+      "subtype": "footman",
+      "intrinsicPowerScore": 11.12,
+      "deltaFromMedian": -4.06,
+      "relativeDeltaPct": -0.2675,
+      "parityBand": "outlier_under"
+    }
+  ],
+  "budgetViolations": [
+    {
+      "category": "enemy_parity",
+      "severity": "error",
+      "subjectId": "footman",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.25,
+      "actual": 0.27,
+      "delta": -0.27,
+      "message": "footman is under roster parity by 26.75%"
+    },
+    {
+      "category": "enemy_parity",
+      "severity": "error",
+      "subjectId": "warlock",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.25,
+      "actual": 0.38,
+      "delta": 0.38,
+      "message": "warlock is over roster parity by 37.81%"
+    },
+    {
+      "category": "loadout_parity",
+      "severity": "error",
+      "subjectId": "FIREMAGE",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.25,
+      "actual": 0.76,
+      "delta": 0.76,
+      "message": "FIREMAGE is over roster parity by 76.35%"
+    },
+    {
+      "category": "loadout_parity",
+      "severity": "error",
+      "subjectId": "SKIRMISHER",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.25,
+      "actual": 0.93,
+      "delta": 0.93,
+      "message": "SKIRMISHER is over roster parity by 93.07%"
+    },
+    {
+      "category": "enemy_parity",
+      "severity": "warning",
+      "subjectId": "archer",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.2,
+      "delta": -0.2,
+      "message": "archer is under roster parity by 20.49%"
+    },
+    {
+      "category": "enemy_parity",
+      "severity": "warning",
+      "subjectId": "bomber",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.17,
+      "delta": 0.17,
+      "message": "bomber is over roster parity by 17.13%"
+    },
+    {
+      "category": "enemy_parity",
+      "severity": "warning",
+      "subjectId": "pouncer",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.15,
+      "delta": 0.15,
+      "message": "pouncer is over roster parity by 15.09%"
+    },
+    {
+      "category": "enemy_parity",
+      "severity": "warning",
+      "subjectId": "sprinter",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.17,
+      "delta": -0.17,
+      "message": "sprinter is under roster parity by 17.19%"
+    },
+    {
+      "category": "loadout_parity",
+      "severity": "warning",
+      "subjectId": "ASSASSIN",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.18,
+      "delta": -0.18,
+      "message": "ASSASSIN is under roster parity by 17.84%"
+    },
+    {
+      "category": "loadout_parity",
+      "severity": "warning",
+      "subjectId": "HUNTER",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.15,
+      "delta": -0.15,
+      "message": "HUNTER is under roster parity by 15.47%"
+    },
+    {
+      "category": "encounter_floor_budget",
+      "severity": "warning",
+      "subjectId": "floor_2",
+      "floor": 2,
+      "role": "pressure_spike",
+      "metric": "intrinsicDifficultyScore",
+      "expectedMax": 43.2,
+      "actual": 43.59,
+      "delta": 0.39,
+      "message": "Encounter floor 2 exceeds pressure_spike difficulty budget"
+    },
+    {
+      "category": "encounter_floor_budget",
+      "severity": "warning",
+      "subjectId": "floor_3",
+      "floor": 3,
+      "role": "recovery",
+      "metric": "intrinsicDifficultyScore",
+      "expectedMax": 33.5,
+      "actual": 34.28,
+      "delta": 0.78,
+      "message": "Encounter floor 3 exceeds recovery difficulty budget"
+    }
+  ],
+  "allowlistedViolations": [
+    {
+      "category": "enemy_parity",
+      "severity": "error",
+      "subjectId": "footman",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.25,
+      "actual": 0.27,
+      "delta": -0.27,
+      "message": "footman is under roster parity by 26.75%"
+    },
+    {
+      "category": "enemy_parity",
+      "severity": "error",
+      "subjectId": "warlock",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.25,
+      "actual": 0.38,
+      "delta": 0.38,
+      "message": "warlock is over roster parity by 37.81%"
+    },
+    {
+      "category": "loadout_parity",
+      "severity": "error",
+      "subjectId": "FIREMAGE",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.25,
+      "actual": 0.76,
+      "delta": 0.76,
+      "message": "FIREMAGE is over roster parity by 76.35%"
+    },
+    {
+      "category": "loadout_parity",
+      "severity": "error",
+      "subjectId": "SKIRMISHER",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.25,
+      "actual": 0.93,
+      "delta": 0.93,
+      "message": "SKIRMISHER is over roster parity by 93.07%"
+    }
+  ],
+  "unallowlistedViolations": [
+    {
+      "category": "enemy_parity",
+      "severity": "warning",
+      "subjectId": "archer",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.2,
+      "delta": -0.2,
+      "message": "archer is under roster parity by 20.49%"
+    },
+    {
+      "category": "enemy_parity",
+      "severity": "warning",
+      "subjectId": "bomber",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.17,
+      "delta": 0.17,
+      "message": "bomber is over roster parity by 17.13%"
+    },
+    {
+      "category": "enemy_parity",
+      "severity": "warning",
+      "subjectId": "pouncer",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.15,
+      "delta": 0.15,
+      "message": "pouncer is over roster parity by 15.09%"
+    },
+    {
+      "category": "enemy_parity",
+      "severity": "warning",
+      "subjectId": "sprinter",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.17,
+      "delta": -0.17,
+      "message": "sprinter is under roster parity by 17.19%"
+    },
+    {
+      "category": "loadout_parity",
+      "severity": "warning",
+      "subjectId": "ASSASSIN",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.18,
+      "delta": -0.18,
+      "message": "ASSASSIN is under roster parity by 17.84%"
+    },
+    {
+      "category": "loadout_parity",
+      "severity": "warning",
+      "subjectId": "HUNTER",
+      "metric": "relativeDeltaPct",
+      "expectedMax": 0.15,
+      "actual": 0.15,
+      "delta": -0.15,
+      "message": "HUNTER is under roster parity by 15.47%"
+    },
+    {
+      "category": "encounter_floor_budget",
+      "severity": "warning",
+      "subjectId": "floor_2",
+      "floor": 2,
+      "role": "pressure_spike",
+      "metric": "intrinsicDifficultyScore",
+      "expectedMax": 43.2,
+      "actual": 43.59,
+      "delta": 0.39,
+      "message": "Encounter floor 2 exceeds pressure_spike difficulty budget"
+    },
+    {
+      "category": "encounter_floor_budget",
+      "severity": "warning",
+      "subjectId": "floor_3",
+      "floor": 3,
+      "role": "recovery",
+      "metric": "intrinsicDifficultyScore",
+      "expectedMax": 33.5,
+      "actual": 34.28,
+      "delta": 0.78,
+      "message": "Encounter floor 3 exceeds recovery difficulty budget"
+    }
+  ],
+  "violationSummary": {
+    "warnings": 8,
+    "errors": 4,
+    "allowlistedWarnings": 0,
+    "allowlistedErrors": 4
+  },
+  "summary": {
+    "skillCount": 49,
+    "loadoutCount": 6,
+    "unitCount": 6,
+    "enemyCount": 9,
+    "floorCount": 4,
+    "encounterCount": 4,
+    "hottestSkillId": "SENTINEL_BLAST",
+    "strongestLoadoutId": "SKIRMISHER",
+    "strongestEnemySubtype": "sentinel",
+    "hardestFloor": 2,
+    "hardestEncounterFloor": 4,
+    "mostOverParityLoadoutId": "SKIRMISHER",
+    "mostOverParityEnemySubtype": "sentinel",
+    "loadoutMedianIntrinsicPower": 14.29,
+    "enemyMedianIntrinsicPower": 15.18,
+    "budgetViolationCount": 12,
+    "errorBudgetViolationCount": 4,
+    "allowlistedBudgetViolationCount": 4,
+    "unallowlistedBudgetViolationCount": 8
+  }
+}

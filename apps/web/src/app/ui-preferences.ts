@@ -14,6 +14,8 @@ export type UiColorMode = (typeof UI_THEME_IDS)[number];
 export type UiMotionMode = 'snappy' | 'reduced';
 export type UiHudDensity = 'compact' | 'comfortable';
 export type UiMobileLayout = 'portrait_primary';
+export type UiTurnFlowMode = 'protected_single' | 'manual_chain';
+export type UiOverdriveUiMode = 'per_turn_arm';
 
 export const UI_THEME_OPTIONS: ReadonlyArray<{ id: UiColorMode; label: string }> = [
   { id: 'parchment', label: 'Parchment' },
@@ -31,6 +33,8 @@ export interface UiPreferencesV1 {
   motionMode: UiMotionMode;
   hudDensity: UiHudDensity;
   mobileLayout: UiMobileLayout;
+  turnFlowMode: UiTurnFlowMode;
+  overdriveUiMode: UiOverdriveUiMode;
 }
 
 export const UI_PREFERENCES_STORAGE_KEY = 'hop_ui_prefs_v1';
@@ -40,7 +44,9 @@ export const DEFAULT_UI_PREFERENCES: UiPreferencesV1 = {
   colorMode: 'parchment',
   motionMode: 'snappy',
   hudDensity: 'compact',
-  mobileLayout: 'portrait_primary'
+  mobileLayout: 'portrait_primary',
+  turnFlowMode: 'protected_single',
+  overdriveUiMode: 'per_turn_arm'
 };
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
@@ -58,6 +64,8 @@ const resolveColorMode = (value: unknown): UiColorMode | null => {
 const isMotionMode = (value: unknown): value is UiMotionMode => value === 'snappy' || value === 'reduced';
 const isHudDensity = (value: unknown): value is UiHudDensity => value === 'compact' || value === 'comfortable';
 const isMobileLayout = (value: unknown): value is UiMobileLayout => value === 'portrait_primary';
+const isTurnFlowMode = (value: unknown): value is UiTurnFlowMode => value === 'protected_single' || value === 'manual_chain';
+const isOverdriveUiMode = (value: unknown): value is UiOverdriveUiMode => value === 'per_turn_arm';
 
 const getBrowserStorage = (): Storage | null => {
   if (typeof window === 'undefined') return null;
@@ -70,7 +78,9 @@ const normalizeUiPreferences = (input: unknown): UiPreferencesV1 => {
     colorMode: resolveColorMode(obj.colorMode) ?? DEFAULT_UI_PREFERENCES.colorMode,
     motionMode: isMotionMode(obj.motionMode) ? obj.motionMode : DEFAULT_UI_PREFERENCES.motionMode,
     hudDensity: isHudDensity(obj.hudDensity) ? obj.hudDensity : DEFAULT_UI_PREFERENCES.hudDensity,
-    mobileLayout: isMobileLayout(obj.mobileLayout) ? obj.mobileLayout : DEFAULT_UI_PREFERENCES.mobileLayout
+    mobileLayout: isMobileLayout(obj.mobileLayout) ? obj.mobileLayout : DEFAULT_UI_PREFERENCES.mobileLayout,
+    turnFlowMode: isTurnFlowMode(obj.turnFlowMode) ? obj.turnFlowMode : DEFAULT_UI_PREFERENCES.turnFlowMode,
+    overdriveUiMode: isOverdriveUiMode(obj.overdriveUiMode) ? obj.overdriveUiMode : DEFAULT_UI_PREFERENCES.overdriveUiMode
   };
 };
 
@@ -121,6 +131,7 @@ export const applyUiPreferencesToRoot = (
   root.dataset.motion = normalized.motionMode;
   root.dataset.hudDensity = normalized.hudDensity;
   root.dataset.mobileLayout = normalized.mobileLayout;
+  root.dataset.turnFlowMode = normalized.turnFlowMode;
 };
 
 export const useUiPreferences = () => {

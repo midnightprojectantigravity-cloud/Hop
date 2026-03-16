@@ -271,6 +271,9 @@ describe('capabilities senses integration', () => {
                 weightClass: 'Standard'
             })
         ];
+        for (let r = 5; r <= 7; r++) {
+            placeTile(state, createHex(3, r), 'STONE');
+        }
 
         const blockedByBlindness = validateLineOfSight(state, origin, target, {
             observerActor: state.player,

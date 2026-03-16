@@ -22,9 +22,24 @@ export const chooseStrategicIntent = (state: GameState, profile: StrategicPolicy
     const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
     const hostiles = aliveHostiles(state);
     const archetype = String(state.player.archetype || '');
+    const ires = state.player.ires;
 
     if (profile.version === 'sp-v1-balance' && hostiles > 0 && archetype === 'HUNTER' && hpRatio > 0.25) {
         return 'offense';
+    }
+
+    if (
+        hostiles > 0
+        && archetype === 'FIREMAGE'
+        && ires
+        && (
+            ires.isExhausted
+            || ires.exhaustion >= 70
+            || ires.spark <= 20
+            || ires.mana <= 5
+        )
+    ) {
+        return 'defense';
     }
 
     if (hpRatio < profile.thresholds.defenseHpRatio) return 'defense';

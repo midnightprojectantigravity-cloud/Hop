@@ -1,7 +1,7 @@
-import type { ActionResourcePreview, Actor, CombatPressureMode, GameState, SkillResourceProfile } from '../../types';
+import type { ActionResourcePreview, Actor, CombatPressureMode, GameState, SkillDefinition, SkillResourceProfile } from '../../types';
 import { resolveIresRuleset } from './config';
 import { resolveExhaustionTax, resolveEffectiveBfi, resolveIresWeightModifier } from './bfi';
-import { resolveSkillResourceProfile } from './skill-catalog';
+import { resolveRuntimeSkillResourceProfile } from './skill-catalog';
 import { computeSparkBurnHp, ensureActorIres, resolveExhaustionState } from './state';
 
 export const MAX_IRES_ACTIONS_PER_TURN = 8;
@@ -17,12 +17,17 @@ export const resolveIresActionPreview = (
     skillId: string,
     profileInput?: SkillResourceProfile,
     ruleset?: GameState['ruleset'],
-    mode: CombatPressureMode = 'battle'
+    mode: CombatPressureMode = 'battle',
+    skillDefInput?: Pick<SkillDefinition, 'resourceProfile' | 'metabolicBandProfile'>
 ): ActionResourcePreview => {
     const config = resolveIresRuleset(ruleset);
     const hydrated = ensureActorIres(actor, config);
     const current = hydrated.ires!;
-    const profile = profileInput || resolveSkillResourceProfile(skillId);
+    const profile = resolveRuntimeSkillResourceProfile(
+        skillId,
+        skillDefInput || (profileInput ? { resourceProfile: profileInput } : undefined),
+        ruleset
+    );
     const weight = resolveIresWeightModifier(hydrated.weightClass);
     const costAdjustment = profile.primaryResource === 'spark' && profile.countsAsMovement
         ? weight.movementSpark

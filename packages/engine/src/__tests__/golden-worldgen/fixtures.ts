@@ -22,7 +22,14 @@ export interface GoldenWorldgenFixture {
     }>;
     pathSummary: {
         mainLandmarkIds: string[];
+        primaryLandmarkIds: string[];
+        alternateLandmarkIds: string[];
         hiddenLandmarkIds: string[];
+        routeCount: number;
+        junctionCount: number;
+        maxStraightRun: number;
+        obstacleClusterCount: number;
+        trapClusterCount: number;
         tacticalTileCount: number;
         visualTileCount: number;
     };
@@ -34,7 +41,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 1,
         runSeed: 'golden-open-1',
         floorSeed: 'golden-open-1',
-        artifactDigest: '445865c0',
+        artifactDigest: 'e29d44e9',
         verificationDigest: '52780755',
         sceneId: 'f8f1931c',
         moduleIds: [],
@@ -42,8 +49,15 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         recentOutcomeQueue: [],
         pathSummary: {
             mainLandmarkIds: ['entry', 'exit', 'shrine'],
+            primaryLandmarkIds: ['entry', 'exit', 'shrine'],
+            alternateLandmarkIds: ['entry', 'exit', 'shrine'],
             hiddenLandmarkIds: ['scene_anchor_collapsed_crossing'],
-            tacticalTileCount: 11,
+            routeCount: 1,
+            junctionCount: 0,
+            maxStraightRun: 4,
+            obstacleClusterCount: 1,
+            trapClusterCount: 0,
+            tacticalTileCount: 10,
             visualTileCount: 10
         }
     },
@@ -52,7 +66,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 1,
         runSeed: 'golden-open-2',
         floorSeed: 'golden-open-2',
-        artifactDigest: '7cbdc1dc',
+        artifactDigest: '89129fc3',
         verificationDigest: '52780755',
         sceneId: 'f8f1931c',
         moduleIds: [],
@@ -60,7 +74,14 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         recentOutcomeQueue: [],
         pathSummary: {
             mainLandmarkIds: ['entry', 'exit', 'shrine'],
+            primaryLandmarkIds: ['entry', 'exit', 'shrine'],
+            alternateLandmarkIds: ['entry', 'exit', 'shrine'],
             hiddenLandmarkIds: ['scene_anchor_collapsed_crossing'],
+            routeCount: 1,
+            junctionCount: 0,
+            maxStraightRun: 5,
+            obstacleClusterCount: 1,
+            trapClusterCount: 0,
             tacticalTileCount: 13,
             visualTileCount: 11
         }
@@ -70,7 +91,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 5,
         runSeed: 'golden-watch-1',
         floorSeed: 'golden-watch-1:5',
-        artifactDigest: '1f85b2ff',
+        artifactDigest: 'a0546d81',
         verificationDigest: '52780755',
         sceneId: '3cf066e5',
         moduleIds: ['inferno_cover_band', 'inferno_watch_post'],
@@ -78,7 +99,14 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         recentOutcomeQueue: [],
         pathSummary: {
             mainLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_watch_post', 'shrine'],
+            primaryLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_watch_post', 'shrine'],
+            alternateLandmarkIds: ['entry', 'exit', 'shrine'],
             hiddenLandmarkIds: ['inferno_cover_band'],
+            routeCount: 1,
+            junctionCount: 0,
+            maxStraightRun: 4,
+            obstacleClusterCount: 0,
+            trapClusterCount: 0,
             tacticalTileCount: 15,
             visualTileCount: 13
         }
@@ -88,7 +116,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 5,
         runSeed: 'golden-watch-2',
         floorSeed: 'golden-watch-2:5',
-        artifactDigest: '467a6663',
+        artifactDigest: '81b66f79',
         verificationDigest: '52780755',
         sceneId: '3cf066e5',
         moduleIds: ['inferno_cover_band', 'inferno_watch_post'],
@@ -96,8 +124,15 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         recentOutcomeQueue: [],
         pathSummary: {
             mainLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_watch_post', 'shrine'],
+            primaryLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_watch_post', 'shrine'],
+            alternateLandmarkIds: ['entry', 'exit', 'shrine'],
             hiddenLandmarkIds: ['inferno_cover_band'],
-            tacticalTileCount: 17,
+            routeCount: 1,
+            junctionCount: 0,
+            maxStraightRun: 5,
+            obstacleClusterCount: 0,
+            trapClusterCount: 0,
+            tacticalTileCount: 15,
             visualTileCount: 15
         }
     },
@@ -106,17 +141,24 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 7,
         runSeed: 'golden-recovery-3',
         floorSeed: 'golden-recovery-3:7',
-        artifactDigest: 'e8402e00',
+        artifactDigest: 'af99f6ed',
         verificationDigest: '52780755',
-        sceneId: '7e7cccb7',
-        moduleIds: ['inferno_lava_pocket'],
+        sceneId: '9c19b46d',
+        moduleIds: ['inferno_fire_step'],
         directorEntropyKey: '500d64db',
         recentOutcomeQueue: [],
         pathSummary: {
             mainLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_collapsed_crossing', 'shrine'],
+            primaryLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_collapsed_crossing', 'shrine'],
+            alternateLandmarkIds: ['entry', 'exit', 'shrine'],
             hiddenLandmarkIds: [],
-            tacticalTileCount: 11,
-            visualTileCount: 11
+            routeCount: 2,
+            junctionCount: 2,
+            maxStraightRun: 3,
+            obstacleClusterCount: 2,
+            trapClusterCount: 1,
+            tacticalTileCount: 13,
+            visualTileCount: 13
         }
     },
     {
@@ -124,17 +166,24 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 7,
         runSeed: 'golden-recovery-4',
         floorSeed: 'golden-recovery-4:7',
-        artifactDigest: 'dcd9dfea',
+        artifactDigest: 'b2330d0f',
         verificationDigest: '52780755',
-        sceneId: '7e7cccb7',
-        moduleIds: ['inferno_lava_pocket'],
+        sceneId: 'd60474fe',
+        moduleIds: ['inferno_snare_lane'],
         directorEntropyKey: '0e67cd48',
         recentOutcomeQueue: [],
         pathSummary: {
             mainLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_collapsed_crossing', 'shrine'],
+            primaryLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_collapsed_crossing', 'shrine'],
+            alternateLandmarkIds: ['entry', 'exit', 'shrine'],
             hiddenLandmarkIds: [],
-            tacticalTileCount: 13,
-            visualTileCount: 13
+            routeCount: 2,
+            junctionCount: 2,
+            maxStraightRun: 3,
+            obstacleClusterCount: 2,
+            trapClusterCount: 1,
+            tacticalTileCount: 15,
+            visualTileCount: 15
         }
     },
     {
@@ -142,7 +191,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 8,
         runSeed: 'golden-escape-a',
         floorSeed: 'golden-escape-a:8',
-        artifactDigest: '8afecb57',
+        artifactDigest: '8a7409ac',
         verificationDigest: '52780755',
         sceneId: 'f92b8eea',
         moduleIds: ['inferno_failed_escape', 'inferno_flank_loop'],
@@ -150,9 +199,16 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         recentOutcomeQueue: [],
         pathSummary: {
             mainLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_failed_escape', 'shrine'],
+            primaryLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_failed_escape', 'shrine'],
+            alternateLandmarkIds: ['entry', 'exit', 'shrine'],
             hiddenLandmarkIds: ['secondary_slot'],
+            routeCount: 1,
+            junctionCount: 0,
+            maxStraightRun: 6,
+            obstacleClusterCount: 0,
+            trapClusterCount: 0,
             tacticalTileCount: 17,
-            visualTileCount: 16
+            visualTileCount: 15
         }
     },
     {
@@ -160,7 +216,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 8,
         runSeed: 'golden-escape-2',
         floorSeed: 'golden-escape-2:8',
-        artifactDigest: 'ea3f69da',
+        artifactDigest: 'ed11bc7a',
         verificationDigest: '52780755',
         sceneId: 'f92b8eea',
         moduleIds: ['inferno_failed_escape', 'inferno_flank_loop'],
@@ -168,8 +224,15 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         recentOutcomeQueue: [],
         pathSummary: {
             mainLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_failed_escape', 'shrine'],
+            primaryLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_failed_escape', 'shrine'],
+            alternateLandmarkIds: ['entry', 'exit', 'shrine'],
             hiddenLandmarkIds: ['secondary_slot'],
-            tacticalTileCount: 17,
+            routeCount: 1,
+            junctionCount: 0,
+            maxStraightRun: 5,
+            obstacleClusterCount: 0,
+            trapClusterCount: 0,
+            tacticalTileCount: 18,
             visualTileCount: 15
         }
     },
@@ -178,7 +241,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 10,
         runSeed: 'golden-boss-1',
         floorSeed: 'golden-boss-1:10',
-        artifactDigest: '1dfbc079',
+        artifactDigest: '989402ee',
         verificationDigest: '52780755',
         sceneId: '5ce5d93a',
         moduleIds: ['inferno_arena_ring', 'inferno_ritual_dais'],
@@ -186,9 +249,16 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         recentOutcomeQueue: [],
         pathSummary: {
             mainLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_ritual_site', 'secondary_slot', 'shrine'],
+            primaryLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_ritual_site', 'secondary_slot', 'shrine'],
+            alternateLandmarkIds: ['entry', 'exit', 'shrine'],
             hiddenLandmarkIds: [],
-            tacticalTileCount: 18,
-            visualTileCount: 18
+            routeCount: 1,
+            junctionCount: 0,
+            maxStraightRun: 6,
+            obstacleClusterCount: 0,
+            trapClusterCount: 0,
+            tacticalTileCount: 16,
+            visualTileCount: 16
         }
     },
     {
@@ -196,7 +266,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 10,
         runSeed: 'golden-boss-2',
         floorSeed: 'golden-boss-2:10',
-        artifactDigest: 'd738877a',
+        artifactDigest: '17035984',
         verificationDigest: '52780755',
         sceneId: '5ce5d93a',
         moduleIds: ['inferno_arena_ring', 'inferno_ritual_dais'],
@@ -204,7 +274,14 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         recentOutcomeQueue: [],
         pathSummary: {
             mainLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_ritual_site', 'secondary_slot', 'shrine'],
+            primaryLandmarkIds: ['entry', 'exit', 'primary_slot', 'scene_anchor_ritual_site', 'secondary_slot', 'shrine'],
+            alternateLandmarkIds: ['entry', 'exit', 'shrine'],
             hiddenLandmarkIds: [],
+            routeCount: 1,
+            junctionCount: 0,
+            maxStraightRun: 3,
+            obstacleClusterCount: 0,
+            trapClusterCount: 0,
             tacticalTileCount: 15,
             visualTileCount: 15
         }

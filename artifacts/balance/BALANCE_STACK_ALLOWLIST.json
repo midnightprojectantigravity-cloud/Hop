@@ -1,0 +1,10 @@
+[
+  {
+    "id": "enemy-parity-footman-2026q2",
+    "category": "enemy_parity",
+    "subjectId": "footman",
+    "metric": "relativeDeltaPct",
+    "expiresOn": "2026-06-30",
+    "reason": "Baseline melee grunt intentionally remains under roster median while the non-boss enemy roster is retuned."
+  }
+]

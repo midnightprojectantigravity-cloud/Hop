@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-03-16T02:32:03.128Z",
+  "baseline": {
+    "generatedAt": "2026-03-16T02:31:42.263Z",
+    "params": {
+      "runSeed": "balance-stack",
+      "maxFloor": 6,
+      "trinityProfileId": "live"
+    },
+    "errorViolations": 0,
+    "warningViolations": 9
+  },
+  "candidate": {
+    "generatedAt": "2026-03-16T02:31:42.263Z",
+    "params": {
+      "runSeed": "balance-stack",
+      "maxFloor": 6,
+      "trinityProfileId": "live"
+    },
+    "errorViolations": 0,
+    "warningViolations": 9,
+    "allowlistedErrors": 0,
+    "unallowlistedErrors": 0
+  },
+  "allowlist": {
+    "entries": 1,
+    "expiredEntryIds": []
+  },
+  "newErrorViolations": [],
+  "unallowlistedErrorViolations": [],
+  "expiredAllowlistEntries": [],
+  "passed": true
+}

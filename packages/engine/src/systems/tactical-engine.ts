@@ -5,7 +5,7 @@ import { getActorAt } from '../helpers';
 import { isFreeMoveMode, resolveCombatPressureMode } from './free-move';
 import { applyEffects } from './effect-engine';
 import { recomputeVisibility } from './visibility';
-import { ensureActorIres, resolveExhaustionState, resolveIresActionPreview, resolveIresRuleset, resolveSkillResourceProfile, resolveWaitPreview } from './ires';
+import { ensureActorIres, resolveExhaustionState, resolveIresActionPreview, resolveIresRuleset, resolveRuntimeSkillResourceProfile, resolveWaitPreview } from './ires';
 
 type TacticalResolution = {
     effects: AtomicEffect[];
@@ -66,11 +66,13 @@ export class TacticalEngine {
         const config = resolveIresRuleset(gameState.ruleset);
         const hydratedActor = ensureActorIres(actor, config);
         const current = hydratedActor.ires!;
-        const profile = skillDef.resourceProfile || resolveSkillResourceProfile(skillDef.id);
+        const profile = resolveRuntimeSkillResourceProfile(skillDef.id, skillDef, gameState.ruleset);
         const isPureMovement = profile.countsAsMovement && !profile.countsAsAction;
+        const travelEligibleByProfile = profile.travelEligible ?? isPureMovement;
         const travelEligible =
             config.travelModeEnabled
             && hydratedActor.id === gameState.player.id
+            && travelEligibleByProfile
             && (!config.travelMovementOnly || isPureMovement);
 
         let modeAfter = modeBefore;
@@ -89,7 +91,9 @@ export class TacticalEngine {
                 modeBefore,
                 modeAfter,
                 travelRecoveryApplied: false,
-                travelRecoverySuppressedReason: modeBefore !== 'travel' ? 'not_travel' : 'not_pure_movement'
+                travelRecoverySuppressedReason: modeBefore !== 'travel'
+                    ? 'not_travel'
+                    : (travelEligibleByProfile ? 'not_pure_movement' : 'not_travel_eligible')
             };
         }
 
@@ -309,7 +313,17 @@ export class TacticalEngine {
             }
         }
 
-        const baseResourcePreview = resolveIresActionPreview(actor, intent.skillId, skillDef?.resourceProfile, gameState.ruleset);
+        const runtimeSkillProfile = skillDef
+            ? resolveRuntimeSkillResourceProfile(skillDef.id, skillDef, gameState.ruleset)
+            : undefined;
+        const baseResourcePreview = resolveIresActionPreview(
+            actor,
+            intent.skillId,
+            runtimeSkillProfile || skillDef?.resourceProfile,
+            gameState.ruleset,
+            'battle',
+            skillDef
+        );
         if (baseResourcePreview.blockedReason) {
             return {
                 effects: [],
@@ -364,14 +378,14 @@ export class TacticalEngine {
                 manaDelta: resourcePreview.manaDelta,
                 exhaustionDelta: resourcePreview.exhaustionDelta,
                 actionCountDelta,
-                movedThisTurn: resourcePreview.travelRecoveryApplied ? false : (skillDef?.resourceProfile?.countsAsMovement || false),
-                actedThisTurn: resourcePreview.travelRecoveryApplied ? false : (skillDef?.resourceProfile?.countsAsAction || false),
+                movedThisTurn: resourcePreview.travelRecoveryApplied ? false : (runtimeSkillProfile?.countsAsMovement || false),
+                actedThisTurn: resourcePreview.travelRecoveryApplied ? false : (runtimeSkillProfile?.countsAsAction || false),
                 resetTurnFlags: resourcePreview.travelRecoveryApplied || undefined,
                 debug: {
                     skillId: intent.skillId,
                     actionKind: resourcePreview.travelRecoveryApplied
                         ? 'travel'
-                        : (skillDef?.resourceProfile?.countsAsMovement ? 'move' : 'action'),
+                        : (runtimeSkillProfile?.countsAsMovement ? 'move' : 'action'),
                     tax: resourcePreview.tax,
                     effectiveBfi: resourcePreview.effectiveBfi,
                     sparkBurnHpDelta: resourcePreview.sparkBurnHpDelta

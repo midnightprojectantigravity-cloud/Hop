@@ -24,7 +24,7 @@ const DEFAULT_ENEMY_POLICY: EnemyAiPolicyProfile = {
 const POLICY_BY_SUBTYPE: Record<string, EnemyAiPolicyProfile> = {
     sprinter: { id: 'enemy-sprinter-policy-v1', subtype: 'sprinter', preferredRange: 1, tags: ['policy-v1', 'melee'] },
     shieldBearer: { id: 'enemy-shieldBearer-policy-v1', subtype: 'shieldBearer', preferredRange: 1, tags: ['policy-v1', 'melee'] },
-    warlock: { id: 'enemy-warlock-policy-v1', subtype: 'warlock', preferredRange: [2, 4], tags: ['policy-v1', 'ranged', 'teleport'] },
+    warlock: { id: 'enemy-warlock-policy-v1', subtype: 'warlock', preferredRange: [2, 3], tags: ['policy-v1', 'ranged', 'teleport'] },
     sentinel: { id: 'enemy-sentinel-policy-v1', subtype: 'sentinel', preferredRange: 3, tags: ['policy-v1', 'playlist'] },
     raider: { id: 'enemy-raider-policy-v1', subtype: 'raider', preferredRange: [1, 4], tags: ['policy-v1', 'dash'] },
     pouncer: { id: 'enemy-pouncer-policy-v1', subtype: 'pouncer', preferredRange: [1, 4], tags: ['policy-v1', 'grapple'] },
@@ -205,14 +205,20 @@ const computeWarlockAction: EnemyPolicyHandler = (enemy, playerPos, state) => {
     }
 
     const moved = !hexEquals(newPos, enemy.position);
-    const newDist = hexDistance(newPos, playerPos);
-    const canCast = !moved && newDist >= 2 && newDist <= 4;
+    const castSkillId = enemy.activeSkills?.some(skill => skill.id === 'FIREBALL')
+        ? 'FIREBALL'
+        : (enemy.activeSkills?.some(skill => skill.id === 'SENTINEL_BLAST') ? 'SENTINEL_BLAST' : undefined);
+    const castSkillDef = castSkillId ? SkillRegistry.get(castSkillId) : undefined;
+    const canCast = !moved
+        && !!castSkillId
+        && !!castSkillDef?.getValidTargets
+        && castSkillDef.getValidTargets(state, newPos).some(target => hexEquals(target, playerPos));
 
     return {
         entity: {
             ...enemy,
             position: newPos,
-            intent: moved ? 'Repositioning' : (canCast ? 'Casting' : 'Preparing'),
+            intent: moved ? 'Repositioning' : (canCast ? castSkillId : 'Preparing'),
             intentPosition: canCast ? { ...playerPos } : undefined
         },
         nextState: curState,

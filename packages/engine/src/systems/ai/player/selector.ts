@@ -1,6 +1,7 @@
 import { gameReducer } from '../../../logic';
 import type { Action, GameState, SkillIntentProfile } from '../../../types';
 import { pointToKey } from '../../../hex';
+import { getFalconForHunter } from '../../falcon';
 import type { StrategicIntent, StrategicPolicyProfile } from '../strategic-policy';
 import { scoreFeatures } from '../core/scoring';
 import { seededChoiceSource } from '../core/tiebreak';
@@ -68,6 +69,148 @@ const tagWeight = (profile: SkillIntentProfile | undefined, tag: string): number
 
 const utilityWeights = (_state: GameState, strategicIntent: StrategicIntent, profile: StrategicPolicyProfile) => {
     return profile.weightsByIntent[strategicIntent];
+};
+
+const firemageSpellSelectionScore = (
+    entry: { value: number; metrics: TransitionMetrics; candidate: ActionCandidate }
+): number => {
+    if (entry.candidate.action.type !== 'USE_SKILL') return entry.value;
+    const skillId = entry.candidate.action.payload.skillId;
+    const metrics = entry.metrics;
+    let score = entry.value;
+
+    if (skillId === 'FIREBALL') {
+        score += Math.min(14, metrics.enemyDamage * 1.2);
+        score += metrics.killShot * 16;
+        score += Math.max(0, metrics.enemyApproachProgress) * 2;
+        score -= metrics.hazardDamage * 3;
+        if (metrics.safetyDelta <= 0) {
+            score += 2;
+        }
+    } else if (skillId === 'FIREWALL') {
+        score += Math.min(10, metrics.enemyDamage);
+        score += Math.max(0, metrics.safetyDelta) * 10;
+        score += Math.max(0, metrics.enemyApproachProgress) * 2;
+        score -= metrics.hazardDamage * 4;
+        if (metrics.safetyDelta <= 0 && metrics.enemyDamage <= 2) {
+            score -= 8;
+        }
+    }
+
+    return score;
+};
+
+const scoreIresTransition = (
+    state: GameState,
+    next: GameState,
+    candidate: ActionCandidate,
+    metrics: TransitionMetrics,
+    hostilesRemaining: number,
+    archetype: string,
+    resourceWeight: number,
+    profile: StrategicPolicyProfile
+): number => {
+    const current = state.player.ires;
+    const projected = next.player.ires;
+    if (!current || !projected) return 0;
+
+    const weightedResource = Math.max(1, resourceWeight);
+    const sparkSpent = Math.max(0, current.spark - projected.spark);
+    const sparkRecovered = Math.max(0, projected.spark - current.spark);
+    const manaSpent = Math.max(0, current.mana - projected.mana);
+    const manaRecovered = Math.max(0, projected.mana - current.mana);
+    const exhaustionGained = Math.max(0, projected.exhaustion - current.exhaustion);
+    const exhaustionCleared = Math.max(0, current.exhaustion - projected.exhaustion);
+    const enteredExhausted = !current.isExhausted && projected.isExhausted;
+    const clearedExhausted = current.isExhausted && !projected.isExhausted;
+    const stayedExhausted = current.isExhausted && projected.isExhausted;
+    const isWait = candidate.action.type === 'WAIT';
+    const isRestAction = isWait && !current.actedThisTurn && !current.movedThisTurn;
+    const isEndTurnAction = isWait && !isRestAction;
+    const pressureBand = current.isExhausted
+        ? 3
+        : current.exhaustion >= 65
+            ? 2
+            : current.exhaustion >= 45
+                ? 1
+                : 0;
+
+    let value = 0;
+    value += sparkRecovered * 0.18 * weightedResource;
+    value += manaRecovered * 0.3 * weightedResource;
+    value += exhaustionCleared * 0.55 * weightedResource;
+    value -= sparkSpent * 0.1 * weightedResource;
+    value -= manaSpent * 0.2 * weightedResource;
+    value -= exhaustionGained * 0.42 * weightedResource;
+
+    if (enteredExhausted) value -= 26;
+    if (stayedExhausted && !isWait) value -= 12;
+    if (clearedExhausted) value += 18;
+
+    if (projected.spark <= 25) {
+        value -= (26 - projected.spark) * 0.85;
+    }
+    if (projected.mana <= 10) {
+        value -= (11 - projected.mana) * 0.75;
+    }
+
+    if (isRestAction) {
+        value += 6 + (pressureBand * 6);
+        if (hostilesRemaining > 0) {
+            value += exhaustionCleared * 0.45;
+            value += sparkRecovered * 0.2;
+            value += manaRecovered * 0.35;
+        }
+    }
+
+    if (isEndTurnAction && current.actionCountThisTurn > 0) {
+        value += 2 + (pressureBand * 5);
+        if (current.actionCountThisTurn >= 2) {
+            value += 5;
+        }
+    }
+
+    if (archetype === 'FIREMAGE') {
+        value += exhaustionCleared * 0.3;
+        value -= exhaustionGained * 0.2;
+
+        if (isWait) {
+            if (isRestAction && (current.isExhausted || current.exhaustion >= 45 || current.spark <= 35 || current.mana <= 10)) {
+                value += 16;
+            }
+            if (isEndTurnAction && (current.actionCountThisTurn >= 2 || current.isExhausted || projected.isExhausted)) {
+                value += 10;
+            }
+        } else if (candidate.action.type === 'MOVE') {
+            if (current.exhaustion >= 50) {
+                value -= 6;
+            }
+        } else if (candidate.action.type === 'USE_SKILL') {
+            const skillId = candidate.action.payload.skillId;
+            if (skillId === 'FIREWALK') {
+                if (metrics.enemyDamage === 0 && metrics.killShot === 0) {
+                    value -= 10;
+                }
+                if (metrics.enemyApproachProgress <= 0 && metrics.safetyDelta <= 0) {
+                    value -= 10;
+                }
+                if (current.exhaustion >= 45 || current.spark <= 35) {
+                    value -= 12;
+                }
+                if (enteredExhausted) {
+                    value -= 10;
+                }
+            }
+            if ((skillId === 'FIREBALL' || skillId === 'FIREWALL') && metrics.enemyDamage > 0) {
+                value += 6;
+            }
+            if (current.mana <= 10 && manaSpent > 0) {
+                value -= 8;
+            }
+        }
+    }
+
+    return value;
 };
 
 const evaluateAction = (
@@ -216,14 +359,37 @@ const evaluateAction = (
         }
 
         const skillId = candidate.action.payload.skillId;
-        if (skillId === 'FALCON_COMMAND' && metrics.enemyDamage === 0 && metrics.killShot === 0) {
+        if (
+            skillId === 'FALCON_COMMAND'
+            && getFalconForHunter(state, state.player.id)
+            && metrics.enemyDamage === 0
+            && metrics.killShot === 0
+        ) {
             value -= 20;
+        }
+        if (
+            profile.version === 'sp-v1-balance'
+            && archetype === 'HUNTER'
+            && skillId === 'FALCON_COMMAND'
+            && !getFalconForHunter(state, state.player.id)
+        ) {
+            value += hostilesRemaining > 0 ? 24 : 12;
         }
         if (skillId === 'KINETIC_TRI_TRAP' && metrics.enemyDamage === 0 && metrics.killShot === 0) {
             value -= 14;
         }
         if (skillId === 'WITHDRAWAL' && metrics.enemyDamage === 0 && metrics.killShot === 0) {
             value -= 10;
+        }
+        if (
+            profile.version === 'sp-v1-balance'
+            && archetype === 'HUNTER'
+            && skillId === 'WITHDRAWAL'
+        ) {
+            const adjacentThreat = adjacentHostileCount(state, state.player.position);
+            if (adjacentThreat > 0) {
+                value += 10 + (metrics.safetyDelta * 4);
+            }
         }
 
         if (profile.version === 'sp-v1-balance' && archetype === 'SKIRMISHER') {
@@ -247,6 +413,17 @@ const evaluateAction = (
     ) {
         value -= 6;
     }
+
+    value += scoreIresTransition(
+        state,
+        next,
+        candidate,
+        metrics,
+        hostilesRemaining,
+        archetype,
+        w.resource,
+        profile
+    );
 
     const evaluated = { value, metrics, next };
     memo.set(key, evaluated);
@@ -297,12 +474,7 @@ export const selectByOnePlySimulation = (
     const allCandidates = [waitCandidate, ...moveCandidates, ...skillCandidates];
     if (allCandidates.length === 0) return { type: 'WAIT' };
 
-    const inCombat = hostiles > 0;
-    const waitCanBeTactical = hasReadySkill(state, 'AUTO_ATTACK') && hasImmediateAutoAttackKill(state);
-    const filteredRaw = inCombat
-        ? allCandidates.filter(c => c.action.type !== 'WAIT' || waitCanBeTactical)
-        : allCandidates;
-    const filtered = filteredRaw.length > 0 ? filteredRaw : allCandidates;
+    const filtered = allCandidates;
     const ranked = [...filtered].sort((a, b) => b.preScore - a.preScore);
     const shortlist = ranked.slice(0, Math.max(1, Math.min(topK, ranked.length)));
 
@@ -329,6 +501,46 @@ export const selectByOnePlySimulation = (
     const killers = candidatePool.filter(s => s.metrics.killShot > 0);
     const bestPool = killers.length > 0 ? killers : candidatePool;
     bestPool.sort((a, b) => b.value - a.value);
+
+    if (archetype === 'FIREMAGE') {
+        const current = state.player.ires;
+        const stableSpellWindow = !!current
+            && !current.isExhausted
+            && current.exhaustion < 55
+            && current.spark > 25
+            && current.mana > 5;
+        if (stableSpellWindow) {
+            const fireSpells = bestPool
+                .filter(entry =>
+                    entry.candidate.action.type === 'USE_SKILL'
+                    && (entry.candidate.action.payload.skillId === 'FIREBALL' || entry.candidate.action.payload.skillId === 'FIREWALL')
+                    && entry.metrics.enemyDamage > 0
+                )
+                .sort((a, b) => firemageSpellSelectionScore(b) - firemageSpellSelectionScore(a));
+
+            const bestSpell = fireSpells[0];
+            const currentBest = bestPool[0];
+            if (bestSpell && currentBest) {
+                const currentBestIsSpell = currentBest.candidate.action.type === 'USE_SKILL'
+                    && (currentBest.candidate.action.payload.skillId === 'FIREBALL' || currentBest.candidate.action.payload.skillId === 'FIREWALL');
+
+                if (
+                    !currentBestIsSpell
+                    && firemageSpellSelectionScore(bestSpell) >= currentBest.value - 4
+                ) {
+                    return bestSpell.candidate.action;
+                }
+
+                if (
+                    currentBestIsSpell
+                    && firemageSpellSelectionScore(bestSpell) > firemageSpellSelectionScore(currentBest) + 2
+                ) {
+                    return bestSpell.candidate.action;
+                }
+            }
+        }
+    }
+
     const best = bestPool[0].value;
     const ties = bestPool.filter(x => x.value === best).map(x => x.candidate.action);
     const tie = seededChoiceSource.chooseIndex(ties.length, { seed: `${simSeed}:sim`, counter: decisionCounter });

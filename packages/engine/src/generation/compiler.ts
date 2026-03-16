@@ -1,6 +1,6 @@
 import type { Entity, GameState, MapShape, Point, Room } from '../types';
 import type { Tile } from '../systems/tiles/tile-types';
-import { FLOOR_THEMES, GRID_HEIGHT, GRID_WIDTH, HAZARD_PERCENTAGE } from '../constants';
+import { FLOOR_THEMES, GRID_HEIGHT, GRID_WIDTH } from '../constants';
 import { createHex, getGridForShape, getMapRowBoundsForColumn, isTileInMapShape, pointToKey } from '../hex';
 import { isSpecialTile } from '../helpers';
 import { BASE_TILES } from '../systems/tiles/tile-registry';
@@ -28,6 +28,7 @@ import type {
     CompilerSessionState,
     ConflictTriple,
     CurrentFloorSummary,
+    EnvironmentalPressureCluster,
     FloorIntentRequest,
     GeneratedPathNetwork,
     GenerationDebugSnapshot,
@@ -42,6 +43,8 @@ import type {
     NarrativeSceneRequest,
     PathEdge,
     PathLandmark,
+    RouteMembership,
+    RouteProfile,
     PathSegment,
     PathSummary,
     SceneSignature,
@@ -413,6 +416,7 @@ const resolveFloorIntent = (
         + Number(directorState?.tensionBand || 0)
         + Number(directorState?.resourceStressBand || 0)
         + Number(directorState?.redlineBand || 0);
+    const routeProfile = resolveRouteProfile(role, authoredFloor);
 
     return {
         floor,
@@ -431,7 +435,8 @@ const resolveFloorIntent = (
         perchDemand: role === 'elite' || role === 'boss' ? 1 : 0,
         hazardLureDemand,
         resetBudget,
-        parTurnTarget
+        parTurnTarget,
+        routeProfile
     };
 };
 
@@ -765,6 +770,8 @@ const embedSpatialPlan = (
             anchorById,
             gasketAnchors,
             mainLandmarkIds: [],
+            primaryLandmarkIds: [],
+            alternateLandmarkIds: [],
             hiddenLandmarkIds: []
         },
         occupied
@@ -959,7 +966,7 @@ const realizeSceneEvidence = (
 const realizeArenaArtifact = (
     arena: BaseArena,
     floor: number,
-    seed: string,
+    _seed: string,
     modulePlan: ModulePlan,
     authoredFloor: AuthoredFloor | undefined
 ): {
@@ -1000,18 +1007,6 @@ const realizeArenaArtifact = (
         stairsPosition: arena.stairsPosition,
         shrinePosition: arena.shrinePosition
     };
-    const availableForHazards = arena.allHexes
-        .filter(hex => !isSpecialTile(hex, specials))
-        .filter(hex => !reservedKeys.has(pointToKey(hex)))
-        .sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)));
-    const hazardCount = Math.floor(availableForHazards.length * HAZARD_PERCENTAGE);
-    const shuffledHazards = shuffleStable(availableForHazards, createRng32(`${seed}:hazards`));
-    for (let i = 0; i < hazardCount; i++) {
-        const point = shuffledHazards[i];
-        if (!point) break;
-        tileMap.set(pointToKey(point), createTile('LAVA', point));
-    }
-
     const spawnPositions = arena.allHexes.filter(point => {
         const tile = tileMap.get(pointToKey(point));
         if (!tile) return false;
@@ -1090,8 +1085,94 @@ const emptyGeneratedPathNetwork = (): GeneratedPathNetwork => ({
     tacticalEdges: [],
     visualTileKeys: [],
     visualEdges: [],
-    segments: []
+    segments: [],
+    routeCount: 1,
+    junctionTileKeys: [],
+    maxStraightRun: 0,
+    environmentalPressureClusters: []
 });
+
+const resolveRouteProfile = (
+    role: FloorIntentRequest['role'],
+    authoredFloor?: AuthoredFloor
+): RouteProfile => {
+    if (authoredFloor && role !== 'boss') {
+        return {
+            mode: 'single',
+            minRouteCount: 1,
+            maxStraightRun: 5,
+            minBranchSeparationTiles: 0,
+            rejoinBeforeExit: true,
+            obstacleClusterBudget: 1,
+            trapClusterBudget: 0,
+            saferRouteBias: 'none',
+            riskierRouteBias: 'none'
+        };
+    }
+    switch (role) {
+        case 'recovery':
+            return {
+                mode: 'dual_route',
+                minRouteCount: 2,
+                maxStraightRun: 4,
+                minBranchSeparationTiles: 3,
+                rejoinBeforeExit: true,
+                obstacleClusterBudget: 2,
+                trapClusterBudget: 1,
+                saferRouteBias: 'strong',
+                riskierRouteBias: 'soft'
+            };
+        case 'pressure_spike':
+            return {
+                mode: 'dual_route',
+                minRouteCount: 2,
+                maxStraightRun: 4,
+                minBranchSeparationTiles: 3,
+                rejoinBeforeExit: true,
+                obstacleClusterBudget: 2,
+                trapClusterBudget: 2,
+                saferRouteBias: 'soft',
+                riskierRouteBias: 'strong'
+            };
+        case 'elite':
+            return {
+                mode: 'dual_route_pre_arena',
+                minRouteCount: 2,
+                maxStraightRun: 4,
+                minBranchSeparationTiles: 3,
+                rejoinBeforeExit: true,
+                obstacleClusterBudget: 2,
+                trapClusterBudget: 1,
+                saferRouteBias: 'soft',
+                riskierRouteBias: 'strong'
+            };
+        case 'boss':
+            return {
+                mode: 'arena_single',
+                minRouteCount: 1,
+                maxStraightRun: 5,
+                minBranchSeparationTiles: 0,
+                rejoinBeforeExit: true,
+                obstacleClusterBudget: 1,
+                trapClusterBudget: 0,
+                saferRouteBias: 'none',
+                riskierRouteBias: 'none'
+            };
+        case 'onboarding':
+        default:
+            return {
+                mode: 'single',
+                minRouteCount: 1,
+                maxStraightRun: 4,
+                minBranchSeparationTiles: 0,
+                rejoinBeforeExit: true,
+                obstacleClusterBudget: 1,
+                trapClusterBudget: 0,
+                saferRouteBias: 'none',
+                riskierRouteBias: 'none'
+            };
+    }
+};
 
 const parseKeyToHex = (key: string): Point => {
     const [q, r] = key.split(',').map(Number);
@@ -1131,14 +1212,31 @@ const buildPathSummary = (pathNetwork: GeneratedPathNetwork): PathSummary => {
         .filter(landmark => landmark.onPath)
         .map(landmark => landmark.id)
         .sort();
+    const primaryLandmarkIds = pathNetwork.landmarks
+        .filter(landmark => landmark.routeMembership === 'primary' || landmark.routeMembership === 'shared')
+        .map(landmark => landmark.id)
+        .sort();
+    const alternateLandmarkIds = pathNetwork.landmarks
+        .filter(landmark => landmark.routeMembership === 'alternate' || landmark.routeMembership === 'shared')
+        .map(landmark => landmark.id)
+        .sort();
     const hiddenLandmarkIds = pathNetwork.landmarks
         .filter(landmark => !landmark.onPath)
         .map(landmark => landmark.id)
         .sort();
+    const obstacleClusterCount = pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'obstacle').length;
+    const trapClusterCount = pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'trap').length;
 
     return {
         mainLandmarkIds,
+        primaryLandmarkIds,
+        alternateLandmarkIds,
         hiddenLandmarkIds,
+        routeCount: pathNetwork.routeCount,
+        junctionCount: pathNetwork.junctionTileKeys.length,
+        maxStraightRun: pathNetwork.maxStraightRun,
+        obstacleClusterCount,
+        trapClusterCount,
         tacticalTileCount: pathNetwork.tacticalTileKeys.length,
         visualTileCount: pathNetwork.visualTileKeys.length
     };
@@ -1146,7 +1244,16 @@ const buildPathSummary = (pathNetwork: GeneratedPathNetwork): PathSummary => {
 
 const buildPathDiagnostics = (pathNetwork: GeneratedPathNetwork): string[] => ([
     `main_landmarks=${pathNetwork.landmarks.filter(landmark => landmark.onPath).map(landmark => landmark.id).sort().join(',') || 'none'}`,
+    `primary_landmarks=${pathNetwork.landmarks.filter(landmark => landmark.routeMembership === 'primary' || landmark.routeMembership === 'shared').map(landmark => landmark.id).sort().join(',') || 'none'}`,
+    `alternate_landmarks=${pathNetwork.landmarks.filter(landmark => landmark.routeMembership === 'alternate' || landmark.routeMembership === 'shared').map(landmark => landmark.id).sort().join(',') || 'none'}`,
     `hidden_landmarks=${pathNetwork.landmarks.filter(landmark => !landmark.onPath).map(landmark => landmark.id).sort().join(',') || 'none'}`,
+    `route_count=${pathNetwork.routeCount}`,
+    `junction_count=${pathNetwork.junctionTileKeys.length}`,
+    `max_straight_run=${pathNetwork.maxStraightRun}`,
+    `obstacle_clusters=${pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'obstacle').length}`,
+    `trap_clusters=${pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'trap').length}`,
+    `primary_route_tiles=${new Set(pathNetwork.segments.filter(segment => segment.routeMembership === 'primary' || segment.routeMembership === 'shared').flatMap(segment => segment.tileKeys)).size}`,
+    `alternate_route_tiles=${new Set(pathNetwork.segments.filter(segment => segment.routeMembership === 'alternate' || segment.routeMembership === 'shared').flatMap(segment => segment.tileKeys)).size}`,
     `tactical_tiles=${pathNetwork.tacticalTileKeys.length}`,
     `visual_tiles=${pathNetwork.visualTileKeys.length}`,
     `segments=${pathNetwork.segments.map(segment => `${segment.kind}:${segment.fromLandmarkId}->${segment.toLandmarkId}`).join('|') || 'none'}`
@@ -1156,6 +1263,31 @@ const getPathOverride = (
     authoredFloor: AuthoredFloor | undefined,
     targetId: string
 ): AuthoredPathOverride | undefined => authoredFloor?.pathOverrides?.[targetId];
+
+const resolveLandmarkRoute = (
+    override: AuthoredPathOverride | undefined,
+    onPathDefault: boolean,
+    fallbackMembership: Exclude<RouteMembership, 'hidden'>
+): { onPath: boolean; routeMembership: RouteMembership } => {
+    if (override?.routeHint === 'hidden') {
+        return {
+            onPath: false,
+            routeMembership: 'hidden'
+        };
+    }
+    if (override?.routeHint === 'primary' || override?.routeHint === 'alternate') {
+        const onPath = override.onPath ?? true;
+        return {
+            onPath,
+            routeMembership: onPath ? override.routeHint : 'hidden'
+        };
+    }
+    const onPath = override?.onPath ?? onPathDefault;
+    return {
+        onPath,
+        routeMembership: onPath ? fallbackMembership : 'hidden'
+    };
+};
 
 const isPathEligibleTile = (tile: Tile | undefined): boolean =>
     !!tile && tile.baseId !== 'VOID' && !tile.traits.has('BLOCKS_MOVEMENT');
@@ -1178,6 +1310,7 @@ const buildPathLandmarks = (
     spatialPlan: SpatialPlan;
 } => {
     const slotById = new Map(blueprint.slots.map(slot => [slot.id, slot]));
+    const secondaryRouteFallback: Exclude<RouteMembership, 'hidden'> = blueprint.role === 'boss' ? 'primary' : 'alternate';
     const resolveReachablePoint = (preferredPoint: Point, footprintKeys?: string[]): Point => {
         if (isPathEligibleTile(tiles.get(pointToKey(preferredPoint)))) return preferredPoint;
         const candidates = (footprintKeys || [])
@@ -1194,10 +1327,14 @@ const buildPathLandmarks = (
         .map(placement => {
             const slot = slotById.get(placement.slotId);
             const override = getPathOverride(authoredFloor, placement.slotId);
-            const onPath = override?.onPath ?? slot?.onPathDefault ?? false;
+            const route = resolveLandmarkRoute(
+                override,
+                slot?.onPathDefault ?? false,
+                placement.slotId === 'secondary_slot' ? secondaryRouteFallback : 'primary'
+            );
             return {
                 ...placement,
-                onPath
+                onPath: route.onPath
             };
         })
         .sort((left, right) => left.slotId.localeCompare(right.slotId));
@@ -1222,11 +1359,15 @@ const buildPathLandmarks = (
             const containingPlacement = resolveContainingPlacement(anchor.point);
             const resolvedPoint = resolveReachablePoint(anchor.point, containingPlacement?.footprintKeys);
             const resolvedPlacement = resolveContainingPlacement(resolvedPoint) || containingPlacement;
-            const onPath = override?.onPath ?? resolvedPlacement?.onPath ?? false;
+            const route = resolveLandmarkRoute(
+                override,
+                resolvedPlacement?.onPath ?? false,
+                resolvedPlacement?.slotId === 'secondary_slot' ? secondaryRouteFallback : 'primary'
+            );
             return {
                 ...anchor,
                 point: resolvedPoint,
-                onPath
+                onPath: route.onPath
             };
         })
         .sort((left, right) => left.id.localeCompare(right.id));
@@ -1241,6 +1382,7 @@ const buildPathLandmarks = (
         kind: 'start',
         point: arena.playerSpawn,
         onPath: true,
+        routeMembership: 'shared',
         reachable: false,
         orderHint: getPathOverride(authoredFloor, 'entry')?.pathOrder ?? 0
     });
@@ -1249,16 +1391,19 @@ const buildPathLandmarks = (
         kind: 'exit',
         point: arena.stairsPosition,
         onPath: true,
+        routeMembership: 'shared',
         reachable: false,
         orderHint: getPathOverride(authoredFloor, 'exit')?.pathOrder ?? 1000
     });
     if (arena.shrinePosition) {
         const shrineOverride = getPathOverride(authoredFloor, 'shrine');
+        const shrineRoute = resolveLandmarkRoute(shrineOverride, true, 'shared');
         addLandmark({
             id: 'shrine',
             kind: 'shrine',
             point: arena.shrinePosition,
-            onPath: shrineOverride?.onPath ?? true,
+            onPath: shrineRoute.onPath,
+            routeMembership: shrineRoute.routeMembership,
             reachable: false,
             orderHint: shrineOverride?.pathOrder ?? 150
         });
@@ -1267,12 +1412,18 @@ const buildPathLandmarks = (
     modulePlacements.forEach(placement => {
         const slot = slotById.get(placement.slotId);
         const override = getPathOverride(authoredFloor, placement.slotId);
+        const route = resolveLandmarkRoute(
+            override,
+            placement.onPath,
+            placement.slotId === 'secondary_slot' ? secondaryRouteFallback : 'primary'
+        );
         addLandmark({
             id: placement.slotId,
             kind: 'module',
             point: resolveReachablePoint(placement.anchor, placement.footprintKeys),
             sourceId: placement.moduleId,
-            onPath: placement.onPath,
+            onPath: route.onPath,
+            routeMembership: route.routeMembership,
             reachable: false,
             orderHint: override?.pathOrder ?? slot?.pathOrderDefault ?? 300
         });
@@ -1281,12 +1432,18 @@ const buildPathLandmarks = (
     logicAnchorResults.forEach(anchor => {
         const override = getPathOverride(authoredFloor, anchor.id);
         const containingPlacement = resolveContainingPlacement(anchor.point);
+        const route = resolveLandmarkRoute(
+            override,
+            anchor.onPath ?? false,
+            containingPlacement?.slotId === 'secondary_slot' ? secondaryRouteFallback : 'primary'
+        );
         addLandmark({
             id: anchor.id,
             kind: 'logic_anchor',
             point: anchor.point,
             sourceId: anchor.kind,
-            onPath: anchor.onPath ?? false,
+            onPath: route.onPath,
+            routeMembership: route.routeMembership,
             reachable: false,
             orderHint: override?.pathOrder ?? ((containingPlacement?.onPath ? 250 : 300))
         });
@@ -1306,6 +1463,12 @@ const buildPathLandmarks = (
         spatialPlan: {
             ...spatialPlan,
             mainLandmarkIds: sortedLandmarks.filter(landmark => landmark.onPath).map(landmark => landmark.id),
+            primaryLandmarkIds: sortedLandmarks
+                .filter(landmark => landmark.routeMembership === 'primary' || landmark.routeMembership === 'shared')
+                .map(landmark => landmark.id),
+            alternateLandmarkIds: sortedLandmarks
+                .filter(landmark => landmark.routeMembership === 'alternate' || landmark.routeMembership === 'shared')
+                .map(landmark => landmark.id),
             hiddenLandmarkIds: sortedLandmarks.filter(landmark => !landmark.onPath).map(landmark => landmark.id)
         }
     };
@@ -1322,14 +1485,24 @@ const findShortestPath = (
     tiles: Map<string, Tile>,
     sourceKeys: string[],
     targetKey: string,
-    reusedKeys: ReadonlySet<string>
+    reusedKeys: ReadonlySet<string>,
+    options: {
+        blockedKeys?: ReadonlySet<string>;
+        disfavoredKeys?: ReadonlySet<string>;
+        disfavorCost?: number;
+    } = {}
 ): ShortestPathResult | undefined => {
+    const blockedKeys = options.blockedKeys || new Set<string>();
+    const disfavoredKeys = options.disfavoredKeys || new Set<string>();
+    const disfavorCost = options.disfavorCost ?? 25;
     const normalizedSources = sourceKeys
         .filter((key, index, values) => values.indexOf(key) === index)
-        .filter((key) => isPathEligibleTile(tiles.get(key)))
+        .filter((key) => isPathEligibleTile(tiles.get(key)) && (!blockedKeys.has(key) || key === targetKey))
         .sort((left, right) => left.localeCompare(right));
 
-    if (normalizedSources.length === 0 || !isPathEligibleTile(tiles.get(targetKey))) return undefined;
+    if (normalizedSources.length === 0 || !isPathEligibleTile(tiles.get(targetKey)) || (blockedKeys.has(targetKey) && !normalizedSources.includes(targetKey))) {
+        return undefined;
+    }
     if (normalizedSources.includes(targetKey)) {
         return {
             sourceKey: targetKey,
@@ -1369,10 +1542,14 @@ const findShortestPath = (
         const neighbors = walkableNeighborKeys(point).sort((left, right) => left.localeCompare(right));
         neighbors.forEach(neighborKey => {
             const tile = tiles.get(neighborKey);
+            if (blockedKeys.has(neighborKey) && neighborKey !== targetKey) return;
             if (!isPathEligibleTile(tile)) return;
             const baseCost = isHazardousPathTile(tile) ? 30 : 10;
             const reuseBonus = reusedKeys.has(neighborKey) ? 5 : 0;
-            const edgeCost = Math.max(1, baseCost - reuseBonus);
+            const disfavorPenalty = disfavoredKeys.has(neighborKey) && !normalizedSources.includes(neighborKey) && neighborKey !== targetKey
+                ? disfavorCost
+                : 0;
+            const edgeCost = Math.max(1, baseCost - reuseBonus + disfavorPenalty);
             const candidateCost = current.cost + edgeCost;
             const knownCost = distanceByKey.get(neighborKey);
             if (knownCost !== undefined && candidateCost >= knownCost) return;
@@ -1427,7 +1604,12 @@ const buildOrderedMainLandmarks = (landmarks: PathLandmark[], tiles: Map<string,
     }
 
     const mainCandidates = landmarks
-        .filter(landmark => landmark.onPath && landmark.id !== 'entry' && landmark.id !== 'exit')
+        .filter(landmark =>
+            landmark.onPath
+            && landmark.routeMembership !== 'alternate'
+            && landmark.id !== 'entry'
+            && landmark.id !== 'exit'
+        )
         .sort((left, right) =>
             left.orderHint - right.orderHint
             || hexDistanceInt(start.point, left.point) - hexDistanceInt(start.point, right.point)
@@ -1475,9 +1657,195 @@ const buildOrderedMainLandmarks = (landmarks: PathLandmark[], tiles: Map<string,
     return chain;
 };
 
+const buildSegmentDirectionKey = (fromKey: string, toKey: string): string => {
+    const from = parseKeyToHex(fromKey);
+    const to = parseKeyToHex(toKey);
+    return `${to.q - from.q},${to.r - from.r}`;
+};
+
+const buildPathBendKeys = (pathNetwork: GeneratedPathNetwork): Set<string> => {
+    const bendKeys = new Set<string>();
+    pathNetwork.segments
+        .filter(segment => segment.kind !== 'spur')
+        .forEach(segment => {
+            for (let index = 1; index < segment.tileKeys.length - 1; index += 1) {
+                const previousKey = segment.tileKeys[index - 1]!;
+                const currentKey = segment.tileKeys[index]!;
+                const nextKey = segment.tileKeys[index + 1]!;
+                if (buildSegmentDirectionKey(previousKey, currentKey) !== buildSegmentDirectionKey(currentKey, nextKey)) {
+                    bendKeys.add(currentKey);
+                }
+            }
+        });
+    return bendKeys;
+};
+
+const computeMaxStraightRun = (
+    pathNetwork: GeneratedPathNetwork,
+    additionalBreakKeys: ReadonlySet<string> = new Set<string>()
+): number => {
+    const breakKeys = new Set<string>([
+        ...pathNetwork.junctionTileKeys,
+        ...Array.from(buildPathBendKeys(pathNetwork)),
+        ...Array.from(additionalBreakKeys)
+    ]);
+    let maxStraightRun = 0;
+    pathNetwork.segments
+        .filter(segment => segment.kind !== 'spur')
+        .forEach(segment => {
+            if (segment.tileKeys.length === 0) return;
+            maxStraightRun = Math.max(maxStraightRun, 1);
+            let lastDirection = '';
+            let runLength = 1;
+            for (let index = 1; index < segment.tileKeys.length; index += 1) {
+                const previousKey = segment.tileKeys[index - 1]!;
+                const currentKey = segment.tileKeys[index]!;
+                if (breakKeys.has(previousKey) || breakKeys.has(currentKey)) {
+                    lastDirection = '';
+                    runLength = 1;
+                    maxStraightRun = Math.max(maxStraightRun, runLength);
+                    continue;
+                }
+                const nextDirection = buildSegmentDirectionKey(previousKey, currentKey);
+                if (nextDirection === lastDirection) {
+                    runLength += 1;
+                } else {
+                    runLength = 2;
+                    lastDirection = nextDirection;
+                }
+                maxStraightRun = Math.max(maxStraightRun, runLength);
+            }
+        });
+    return maxStraightRun;
+};
+
+const buildStraightRunHotspotKeys = (
+    pathNetwork: Pick<GeneratedPathNetwork, 'segments'>,
+    minimumRunLength: number
+): Set<string> => {
+    const hotspots = new Set<string>();
+    if (minimumRunLength < 3) return hotspots;
+
+    for (const segment of pathNetwork.segments) {
+        if (segment.kind === 'spur' || segment.tileKeys.length < minimumRunLength) continue;
+
+        let runStartIndex = 0;
+        let currentDirection = buildSegmentDirectionKey(segment.tileKeys[0], segment.tileKeys[1]);
+
+        const flushRun = (endIndexExclusive: number) => {
+            const runTileKeys = segment.tileKeys.slice(runStartIndex, endIndexExclusive);
+            if (runTileKeys.length >= minimumRunLength) {
+                hotspots.add(runTileKeys[Math.floor(runTileKeys.length / 2)]!);
+            }
+        };
+
+        for (let index = 1; index < segment.tileKeys.length - 1; index += 1) {
+            const nextDirection = buildSegmentDirectionKey(segment.tileKeys[index], segment.tileKeys[index + 1]);
+            if (nextDirection === currentDirection) continue;
+            flushRun(index + 1);
+            runStartIndex = index;
+            currentDirection = nextDirection;
+        }
+
+        flushRun(segment.tileKeys.length);
+    }
+
+    return hotspots;
+};
+
+const buildAlternateRouteSegment = (
+    tiles: Map<string, Tile>,
+    primarySegments: PathSegment[],
+    landmarkById: Map<string, PathLandmark>,
+    routeProfile: RouteProfile
+): { segment: PathSegment; junctionTileKeys: string[]; sharedLandmarkIds: string[] } | undefined => {
+    const primaryTrail = primarySegments.reduce<string[]>((trail, segment, index) => (
+        index === 0
+            ? [...segment.tileKeys]
+            : [...trail, ...segment.tileKeys.slice(1)]
+    ), []);
+    if (routeProfile.minRouteCount < 2 || primaryTrail.length < Math.max(6, routeProfile.minBranchSeparationTiles + 3)) {
+        return undefined;
+    }
+
+    const desiredSplitIndex = Math.max(1, Math.floor((primaryTrail.length - 1) / 3));
+    const desiredMergeIndex = Math.min(
+        primaryTrail.length - 2,
+        Math.max(desiredSplitIndex + 2, Math.ceil(((primaryTrail.length - 1) * 2) / 3))
+    );
+    const pairCandidates: Array<{ splitIndex: number; mergeIndex: number; score: number }> = [];
+    for (let splitIndex = 1; splitIndex <= Math.max(1, primaryTrail.length - 4); splitIndex += 1) {
+        for (let mergeIndex = splitIndex + 2; mergeIndex <= primaryTrail.length - 2; mergeIndex += 1) {
+            const score = Math.abs(splitIndex - desiredSplitIndex) + Math.abs(mergeIndex - desiredMergeIndex);
+            pairCandidates.push({ splitIndex, mergeIndex, score });
+        }
+    }
+    pairCandidates.sort((left, right) =>
+        left.score - right.score
+        || (right.mergeIndex - right.splitIndex) - (left.mergeIndex - left.splitIndex)
+        || left.splitIndex - right.splitIndex
+    );
+
+    const primaryTileSet = new Set(primarySegments.flatMap(segment => segment.tileKeys));
+    for (const candidate of pairCandidates) {
+        const sourceKey = primaryTrail[candidate.splitIndex]!;
+        const targetKey = primaryTrail[candidate.mergeIndex]!;
+        if (sourceKey === targetKey) continue;
+        const splitSegment = primarySegments.find(segment => segment.tileKeys.includes(sourceKey));
+        const mergeSegment = [...primarySegments].reverse().find(segment => segment.tileKeys.includes(targetKey));
+        const splitLandmarkId = splitSegment?.fromLandmarkId || 'entry';
+        const mergeLandmarkId = mergeSegment?.toLandmarkId || 'exit';
+        const betweenPrimaryKeys = new Set<string>();
+        primaryTrail.slice(candidate.splitIndex, candidate.mergeIndex + 1).forEach(key => betweenPrimaryKeys.add(key));
+        betweenPrimaryKeys.delete(sourceKey);
+        betweenPrimaryKeys.delete(targetKey);
+
+        const alternatePath = findShortestPath(
+            tiles,
+            [sourceKey],
+            targetKey,
+            new Set<string>(),
+            {
+                disfavoredKeys: betweenPrimaryKeys,
+                disfavorCost: 60
+            }
+        );
+        if (!alternatePath) continue;
+
+        const offPrimaryKeys = alternatePath.tileKeys.filter(key =>
+            key !== sourceKey
+            && key !== targetKey
+            && !primaryTileSet.has(key)
+        );
+        if (new Set(offPrimaryKeys).size < routeProfile.minBranchSeparationTiles) continue;
+
+        return {
+            segment: {
+                id: `alternate:${splitLandmarkId}->${mergeLandmarkId}`,
+                fromLandmarkId: splitLandmarkId,
+                toLandmarkId: mergeLandmarkId,
+                tileKeys: alternatePath.tileKeys,
+                edges: alternatePath.edges,
+                kind: 'alternate',
+                routeMembership: 'alternate'
+            },
+            junctionTileKeys: [sourceKey, targetKey],
+            sharedLandmarkIds: Array.from(landmarkById.values())
+                .filter(landmark => {
+                    const key = pointToKey(landmark.point);
+                    return key === sourceKey || key === targetKey;
+                })
+                .map(landmark => landmark.id)
+        };
+    }
+
+    return undefined;
+};
+
 const buildTacticalPathNetwork = (
     tiles: Map<string, Tile>,
-    landmarks: PathLandmark[]
+    landmarks: PathLandmark[],
+    routeProfile: RouteProfile
 ): { pathNetwork: GeneratedPathNetwork; diagnostics: string[] } | GenerationFailure => {
     const mainChain = buildOrderedMainLandmarks(landmarks, tiles);
     if ('stage' in mainChain) return mainChain;
@@ -1488,6 +1856,7 @@ const buildTacticalPathNetwork = (
     const mainEdges = new Map<string, PathEdge>();
     const tacticalEdges = new Map<string, PathEdge>();
     const segments: PathSegment[] = [];
+    const primarySegments: PathSegment[] = [];
 
     for (let index = 1; index < mainChain.length; index += 1) {
         const fromId = mainChain[index - 1]!;
@@ -1530,19 +1899,43 @@ const buildTacticalPathNetwork = (
             mainEdges.set(signature, edge);
             tacticalEdges.set(signature, edge);
         });
-        segments.push({
-            id: `main:${fromId}->${toId}`,
+        const segment: PathSegment = {
+            id: `primary:${fromId}->${toId}`,
             fromLandmarkId: fromId,
             toLandmarkId: toId,
             tileKeys: result.tileKeys,
             edges: result.edges,
-            kind: 'main'
+            kind: 'primary',
+            routeMembership: 'primary'
+        };
+        primarySegments.push(segment);
+        segments.push(segment);
+    }
+
+    let routeCount = 1;
+    const junctionTileKeys = new Set<string>();
+    const alternateRoute = (
+        routeProfile.mode === 'dual_route'
+        || routeProfile.mode === 'dual_route_pre_arena'
+    ) ? buildAlternateRouteSegment(tiles, primarySegments, landmarkById, routeProfile) : undefined;
+
+    if (alternateRoute) {
+        routeCount = 2;
+        alternateRoute.segment.tileKeys.forEach(key => tacticalTileKeys.add(key));
+        alternateRoute.segment.edges.forEach(edge => tacticalEdges.set(buildEdgeSignature(edge), edge));
+        alternateRoute.junctionTileKeys.forEach(key => junctionTileKeys.add(key));
+        alternateRoute.sharedLandmarkIds.forEach(landmarkId => {
+            const landmark = landmarkById.get(landmarkId);
+            if (landmark && landmark.routeMembership === 'primary') {
+                landmark.routeMembership = 'shared';
+            }
         });
+        segments.push(alternateRoute.segment);
     }
 
     const landmarkOwnerByMainTile: Record<string, string> = {};
     segments
-        .filter(segment => segment.kind === 'main')
+        .filter(segment => segment.kind === 'primary')
         .forEach(segment => {
             segment.tileKeys.forEach((tileKey, index) => {
                 const distanceToStart = index;
@@ -1592,13 +1985,15 @@ const buildTacticalPathNetwork = (
         result.tileKeys.forEach(key => tacticalTileKeys.add(key));
         result.edges.forEach(edge => tacticalEdges.set(buildEdgeSignature(edge), edge));
         const fromLandmarkId = landmarkOwnerByMainTile[result.sourceKey] || 'entry';
+        const fromLandmark = landmarkById.get(fromLandmarkId);
         segments.push({
             id: `spur:${fromLandmarkId}->${landmark.id}`,
             fromLandmarkId,
             toLandmarkId: landmark.id,
             tileKeys: result.tileKeys,
             edges: result.edges,
-            kind: 'spur'
+            kind: 'spur',
+            routeMembership: fromLandmark?.routeMembership === 'alternate' ? 'alternate' : 'primary'
         });
     }
 
@@ -1614,8 +2009,13 @@ const buildTacticalPathNetwork = (
         tacticalEdges: sortPathEdges(tacticalEdges.values()),
         visualTileKeys: [],
         visualEdges: [],
-        segments: segments.sort((left, right) => left.id.localeCompare(right.id))
+        segments: segments.sort((left, right) => left.id.localeCompare(right.id)),
+        routeCount,
+        junctionTileKeys: Array.from(junctionTileKeys).sort(),
+        maxStraightRun: 0,
+        environmentalPressureClusters: []
     };
+    pathNetwork.maxStraightRun = computeMaxStraightRun(pathNetwork);
 
     return {
         pathNetwork,
@@ -1629,7 +2029,7 @@ const buildVisualPathNetwork = (
     const visualTileKeys = new Set<string>();
     const visualEdges = new Map<string, PathEdge>();
     pathNetwork.segments
-        .filter(segment => segment.kind === 'main')
+        .filter(segment => segment.kind !== 'spur')
         .forEach(segment => {
             segment.tileKeys.forEach(key => visualTileKeys.add(key));
             segment.edges.forEach(edge => visualEdges.set(buildEdgeSignature(edge), edge));
@@ -1638,12 +2038,160 @@ const buildVisualPathNetwork = (
     const nextPathNetwork: GeneratedPathNetwork = {
         ...pathNetwork,
         visualTileKeys: Array.from(visualTileKeys).sort(),
-        visualEdges: sortPathEdges(visualEdges.values())
+        visualEdges: sortPathEdges(visualEdges.values()),
+        maxStraightRun: computeMaxStraightRun({
+            ...pathNetwork,
+            visualTileKeys: Array.from(visualTileKeys).sort(),
+            visualEdges: sortPathEdges(visualEdges.values())
+        })
     };
 
     return {
         pathNetwork: nextPathNetwork,
         diagnostics: buildPathDiagnostics(nextPathNetwork)
+    };
+};
+
+const resolveTileRouteMembership = (
+    pathNetwork: GeneratedPathNetwork,
+    tileKey: string
+): Exclude<RouteMembership, 'hidden'> => {
+    const memberships = new Set<Exclude<RouteMembership, 'hidden'>>();
+    pathNetwork.segments
+        .filter(segment => segment.kind !== 'spur' && segment.tileKeys.includes(tileKey))
+        .forEach(segment => memberships.add(segment.routeMembership));
+    if (memberships.has('shared')) return 'shared';
+    if (memberships.has('primary') && memberships.has('alternate')) return 'shared';
+    if (memberships.has('alternate')) return 'alternate';
+    return 'primary';
+};
+
+const applyEnvironmentalPressure = (
+    arena: BaseArena,
+    tiles: Map<string, Tile>,
+    pathNetwork: GeneratedPathNetwork,
+    intent: FloorIntentRequest,
+    seed: string,
+    authoredFloor?: AuthoredFloor
+): { tiles: Map<string, Tile>; pathNetwork: GeneratedPathNetwork; diagnostics: string[] } => {
+    const nextTiles = new Map(tiles);
+    const clusters: EnvironmentalPressureCluster[] = [];
+    const specials = new Set<string>([
+        pointToKey(arena.playerSpawn),
+        pointToKey(arena.stairsPosition),
+        ...(arena.shrinePosition ? [pointToKey(arena.shrinePosition)] : [])
+    ]);
+    const landmarkKeys = new Set(pathNetwork.landmarks.map(landmark => pointToKey(landmark.point)));
+    const tacticalRouteTileKeys = new Set(pathNetwork.tacticalTileKeys);
+    const usedTileKeys = new Set<string>();
+    const bendKeys = Array.from(buildPathBendKeys(pathNetwork)).sort();
+    const rng = createRng32(`${seed}:route-pressure`);
+    const profile = intent.routeProfile;
+    const straightRunHotspots = Array.from(buildStraightRunHotspotKeys(pathNetwork, Math.max(3, profile.maxStraightRun))).sort();
+    const clusterCenterKeys = Array.from(new Set([...pathNetwork.junctionTileKeys, ...bendKeys, ...straightRunHotspots])).sort();
+    const mutablePathNetwork: GeneratedPathNetwork = {
+        ...pathNetwork,
+        environmentalPressureClusters: [],
+        maxStraightRun: pathNetwork.maxStraightRun
+    };
+
+    const trapPriority = intent.role === 'recovery'
+        ? ['alternate', 'shared', 'primary'] as const
+        : profile.saferRouteBias === 'strong' || profile.riskierRouteBias === 'strong'
+            ? ['alternate', 'shared', 'primary'] as const
+            : ['shared', 'alternate', 'primary'] as const;
+    const obstaclePriority = intent.role === 'recovery'
+        ? ['alternate', 'shared', 'primary'] as const
+        : intent.role === 'pressure_spike' || intent.role === 'elite'
+            ? ['shared', 'primary', 'alternate'] as const
+            : ['shared', 'alternate', 'primary'] as const;
+
+    const prioritizeHexKeys = (
+        keys: string[],
+        priority: readonly ['primary' | 'alternate' | 'shared', 'primary' | 'alternate' | 'shared', 'primary' | 'alternate' | 'shared']
+    ): Point[] => priority.flatMap(routeMembership =>
+        shuffleStable(
+            keys
+                .filter(key => resolveTileRouteMembership(pathNetwork, key) === routeMembership)
+                .sort((left, right) => left.localeCompare(right))
+                .map(parseKeyToHex),
+            rng
+        )
+    );
+
+    const pushObstacleCluster = (centerKey: string): boolean => {
+        const center = parseKeyToHex(centerKey);
+        const routeMembership = resolveTileRouteMembership(pathNetwork, centerKey);
+        const candidateKeys = walkableNeighborKeys(center)
+            .sort((left, right) => left.localeCompare(right))
+            .filter(key => !tacticalRouteTileKeys.has(key) && !specials.has(key) && !landmarkKeys.has(key) && !usedTileKeys.has(key));
+        const clusterKeys: string[] = [];
+        for (const candidateKey of candidateKeys) {
+            const tile = nextTiles.get(candidateKey);
+            if (!tile || tile.baseId !== 'STONE' || tile.traits.has('BLOCKS_MOVEMENT')) continue;
+            nextTiles.set(candidateKey, createTile('WALL', tile.position));
+            usedTileKeys.add(candidateKey);
+            clusterKeys.push(candidateKey);
+            if (clusterKeys.length >= 2) break;
+        }
+        if (clusterKeys.length === 0) return false;
+        clusters.push({
+            id: `obstacle:${clusters.length}:${centerKey}`,
+            kind: 'obstacle',
+            routeMembership,
+            tileKeys: clusterKeys
+        });
+        return true;
+    };
+
+    const trapTiles = prioritizeHexKeys(
+        pathNetwork.visualTileKeys
+            .filter(key => !specials.has(key) && !landmarkKeys.has(key) && !usedTileKeys.has(key)),
+        trapPriority
+    );
+
+    const obstacleCenters = prioritizeHexKeys(clusterCenterKeys, obstaclePriority);
+    if (!authoredFloor) {
+        let obstacleCount = 0;
+        for (const center of obstacleCenters) {
+            if (obstacleCount >= profile.obstacleClusterBudget) break;
+            if (pushObstacleCluster(pointToKey(center))) obstacleCount += 1;
+        }
+
+        let trapCount = 0;
+        for (const point of trapTiles) {
+            if (trapCount >= profile.trapClusterBudget) break;
+            const key = pointToKey(point);
+            const tile = nextTiles.get(key);
+            if (!tile || tile.baseId !== 'STONE') continue;
+            if (tile.effects.some(effect => effect.id === 'SNARE' || effect.id === 'FIRE')) continue;
+            const effectId = trapCount % 2 === 0 ? 'SNARE' : 'FIRE';
+            nextTiles.set(key, {
+                ...tile,
+                effects: [...tile.effects, { id: effectId, duration: -1, potency: 1 }]
+            });
+            usedTileKeys.add(key);
+            clusters.push({
+                id: `trap:${clusters.length}:${key}`,
+                kind: 'trap',
+                routeMembership: resolveTileRouteMembership(pathNetwork, key),
+                tileKeys: [key],
+                trapKind: effectId === 'SNARE' ? 'snare_surface' : 'fire_surface'
+            });
+            trapCount += 1;
+        }
+    }
+
+    mutablePathNetwork.environmentalPressureClusters = clusters.sort((left, right) => left.id.localeCompare(right.id));
+    mutablePathNetwork.maxStraightRun = computeMaxStraightRun(
+        mutablePathNetwork,
+        new Set(mutablePathNetwork.environmentalPressureClusters.flatMap(cluster => cluster.tileKeys))
+    );
+
+    return {
+        tiles: nextTiles,
+        pathNetwork: mutablePathNetwork,
+        diagnostics: buildPathDiagnostics(mutablePathNetwork)
     };
 };
 
@@ -1711,7 +2259,6 @@ const verifyArenaArtifact = (
             diagnostics: ['Path network dropped entry or exit from the main route.']
         };
     }
-
     const tacticalTileSet = new Set(pathNetwork.tacticalTileKeys);
     const tacticalEdgeSet = new Set(pathNetwork.tacticalEdges.map(buildEdgeSignature));
     const visualTileSet = new Set(pathNetwork.visualTileKeys);
@@ -1951,7 +2498,7 @@ const buildArtifactDigest = (
 ): string => {
     const tileSignature = Array.from(tiles.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([key, tile]) => `${key}:${tile.baseId}`)
+        .map(([key, tile]) => `${key}:${tile.baseId}:${tile.effects.map(effect => `${effect.id}:${effect.duration}:${effect.potency}`).join('&')}`)
         .join('|');
     return hashString(stableStringify({
         modules: modulePlan.placements.map(item => item.moduleId),
@@ -1961,13 +2508,19 @@ const buildArtifactDigest = (
             landmarks: pathNetwork.landmarks.map(landmark => ({
                 id: landmark.id,
                 onPath: landmark.onPath,
+                routeMembership: landmark.routeMembership,
                 reachable: landmark.reachable
             })),
             tacticalTileKeys: pathNetwork.tacticalTileKeys,
             visualTileKeys: pathNetwork.visualTileKeys,
+            routeCount: pathNetwork.routeCount,
+            junctionTileKeys: pathNetwork.junctionTileKeys,
+            maxStraightRun: pathNetwork.maxStraightRun,
+            environmentalPressureClusters: pathNetwork.environmentalPressureClusters,
             segments: pathNetwork.segments.map(segment => ({
                 id: segment.id,
                 kind: segment.kind,
+                routeMembership: segment.routeMembership,
                 fromLandmarkId: segment.fromLandmarkId,
                 toLandmarkId: segment.toLandmarkId,
                 tileKeys: segment.tileKeys
@@ -2022,6 +2575,21 @@ const encodeTileBaseIds = (
     }));
 };
 
+const encodeTileEffects = (tiles: Map<string, Tile>) =>
+    Array.from(tiles.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .flatMap(([key, tile]) => tile.effects.length > 0
+            ? [{
+                key,
+                effects: tile.effects.map(effect => ({
+                    id: effect.id,
+                    duration: effect.duration,
+                    potency: effect.potency
+                }))
+            }]
+            : []
+        );
+
 export const rebuildTilesFromArtifact = (artifact: CompiledFloorArtifact): Map<string, Tile> => {
     const grid = getGridForShape(artifact.gridWidth, artifact.gridHeight, artifact.mapShape as MapShape)
         .sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)));
@@ -2031,6 +2599,18 @@ export const rebuildTilesFromArtifact = (artifact: CompiledFloorArtifact): Map<s
         if (!point) continue;
         const baseId = TILE_ID_BY_CODE[artifact.tileBaseIds[index] ?? 0] || 'STONE';
         tiles.set(pointToKey(point), createTile(baseId, point));
+    }
+    for (const effectEntry of artifact.tileEffects || []) {
+        const tile = tiles.get(effectEntry.key);
+        if (!tile) continue;
+        tiles.set(effectEntry.key, {
+            ...tile,
+            effects: effectEntry.effects.map(effect => ({
+                id: effect.id as any,
+                duration: effect.duration,
+                potency: effect.potency
+            }))
+        });
     }
     return tiles;
 };
@@ -2439,10 +3019,11 @@ const runCompilerPass = (
                 })
             } as CompilerSessionRuntimeState;
         case 'buildTacticalPathNetwork':
-            if (!state.arena || !state.realizedTiles || !state.pathNetworkValue) return state;
+            if (!state.arena || !state.realizedTiles || !state.pathNetworkValue || !state.intent) return state;
             const tacticalPath = buildTacticalPathNetwork(
                 state.realizedTiles,
-                state.pathNetworkValue.landmarks
+                state.pathNetworkValue.landmarks,
+                state.intent.routeProfile
             );
             if ('stage' in tacticalPath) {
                 return failRuntimeState(state, tacticalPath);
@@ -2459,6 +3040,22 @@ const runCompilerPass = (
                 ...state,
                 pathNetworkValue: visualPath.pathNetwork,
                 pathDiagnosticsValue: visualPath.diagnostics
+            } as CompilerSessionRuntimeState;
+        case 'applyEnvironmentalPressure':
+            if (!state.arena || !state.realizedTiles || !state.pathNetworkValue || !state.intent) return state;
+            const pressured = applyEnvironmentalPressure(
+                state.arena,
+                state.realizedTiles,
+                state.pathNetworkValue,
+                state.intent,
+                state.input.seed,
+                state.authoredFloor
+            );
+            return {
+                ...state,
+                realizedTiles: pressured.tiles,
+                pathNetworkValue: pressured.pathNetwork,
+                pathDiagnosticsValue: pressured.diagnostics
             } as CompilerSessionRuntimeState;
         case 'verifyArenaArtifact':
             if (!state.arena || !state.realizedTiles || !state.modulePlan || !state.intent || !state.pathNetworkValue) return state;
@@ -2537,6 +3134,7 @@ const runCompilerPass = (
                 stairsPosition: state.arena.stairsPosition,
                 shrinePosition: state.arena.shrinePosition,
                 tileBaseIds: encodeTileBaseIds(state.realizedTiles, state.resolvedMap.width, state.resolvedMap.height, state.resolvedMap.mapShape),
+                tileEffects: encodeTileEffects(state.realizedTiles),
                 enemySpawns,
                 rooms: state.rooms,
                 generationDelta: nextGenerationState,
@@ -2694,7 +3292,15 @@ export const compileStandaloneFloor = (
                 pinnedFootprints: [],
                 closedPathOffsets: {}
             },
-            spatialPlan: { slotPlacements: [], anchorById: {}, gasketAnchors: {}, mainLandmarkIds: [], hiddenLandmarkIds: [] },
+            spatialPlan: {
+                slotPlacements: [],
+                anchorById: {},
+                gasketAnchors: {},
+                mainLandmarkIds: [],
+                primaryLandmarkIds: [],
+                alternateLandmarkIds: [],
+                hiddenLandmarkIds: []
+            },
             modulePlan: { placements: [] },
             claims: [],
             pathNetwork: emptyGeneratedPathNetwork(),
@@ -2719,7 +3325,15 @@ export const compileStandaloneFloor = (
             sceneRequest,
             blueprint,
             spatialBudget: budget,
-            spatialPlan: { slotPlacements: [], anchorById: {}, gasketAnchors: {}, mainLandmarkIds: [], hiddenLandmarkIds: [] },
+            spatialPlan: {
+                slotPlacements: [],
+                anchorById: {},
+                gasketAnchors: {},
+                mainLandmarkIds: [],
+                primaryLandmarkIds: [],
+                alternateLandmarkIds: [],
+                hiddenLandmarkIds: []
+            },
             modulePlan: { placements: [] },
             claims: [],
             pathNetwork: emptyGeneratedPathNetwork(),
@@ -2773,7 +3387,7 @@ export const compileStandaloneFloor = (
     const sceneSignature = buildSceneSignature(sceneRequest, intent, modulePlan);
     const closedTiles = closeUnresolvedGaskets(realizedTiles, theme, modulePlan, claims);
     const classified = buildPathLandmarks(arena, closedTiles, blueprint, spatialPlan, modulePlan, anchors, authoredFloor);
-    const tacticalPath = buildTacticalPathNetwork(closedTiles, classified.landmarks);
+    const tacticalPath = buildTacticalPathNetwork(closedTiles, classified.landmarks, intent.routeProfile);
     if ('stage' in tacticalPath) {
         return failWith(tacticalPath, {
             intent,
@@ -2791,11 +3405,13 @@ export const compileStandaloneFloor = (
         });
     }
     const visualPath = buildVisualPathNetwork(tacticalPath.pathNetwork);
-    const pathNetwork = visualPath.pathNetwork;
-    const pathDiagnostics = visualPath.diagnostics;
+    const pressured = applyEnvironmentalPressure(arena, closedTiles, visualPath.pathNetwork, intent, seed, authoredFloor);
+    const pathNetwork = pressured.pathNetwork;
+    const pathDiagnostics = pressured.diagnostics;
+    const pressuredTiles = pressured.tiles;
     const verificationReport = verifyArenaArtifact(
         arena,
-        closedTiles,
+        pressuredTiles,
         classified.modulePlan,
         claims,
         pathNetwork,
@@ -2803,7 +3419,7 @@ export const compileStandaloneFloor = (
         intent,
         authoredFloor
     );
-    const artifactDigest = buildArtifactDigest(classified.modulePlan, closedTiles, sceneSignature, pathNetwork);
+    const artifactDigest = buildArtifactDigest(classified.modulePlan, pressuredTiles, sceneSignature, pathNetwork);
     const verificationDigest = hashString(stableStringify({
         code: verificationReport.code,
         severity: verificationReport.severity,
@@ -2853,7 +3469,8 @@ export const compileStandaloneFloor = (
         playerSpawn: arena.playerSpawn,
         stairsPosition: arena.stairsPosition,
         shrinePosition: arena.shrinePosition,
-        tileBaseIds: encodeTileBaseIds(closedTiles, resolvedMap.width, resolvedMap.height, resolvedMap.mapShape),
+        tileBaseIds: encodeTileBaseIds(pressuredTiles, resolvedMap.width, resolvedMap.height, resolvedMap.mapShape),
+        tileEffects: encodeTileEffects(pressuredTiles),
         enemySpawns,
         rooms,
         generationDelta: nextGenerationState,
@@ -2902,7 +3519,7 @@ export const compileStandaloneFloor = (
         shrinePosition: arena.shrinePosition,
         playerSpawn: arena.playerSpawn,
         spawnPositions,
-        tiles: closedTiles,
+        tiles: pressuredTiles,
         artifactSummary: floorSummary,
         modulePlacements: classified.modulePlan.placements,
         logicAnchors: classified.logicAnchors,

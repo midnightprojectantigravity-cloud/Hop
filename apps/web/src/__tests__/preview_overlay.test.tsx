@@ -98,4 +98,31 @@ describe('PreviewOverlay', () => {
 
     expect(html).toContain('Combat triggered');
   });
+
+  it('shows overdrive messaging when chaining is armed', () => {
+    const gameState = generateInitialState(1, 'preview-overlay-turn-flow');
+    const target = createHex(4, 7);
+    const html = renderToStaticMarkup(
+      <svg>
+        <PreviewOverlay
+          gameState={gameState}
+          selectedSkillId={null}
+          showMovementRange={false}
+          hoveredTile={null}
+          turnFlowMode="protected_single"
+          overdriveArmed
+          enginePreviewGhost={{
+            path: [gameState.player.position, target],
+            aoe: [],
+            hasEnemy: false,
+            target,
+            resourcePreview: buildResourcePreview(),
+            turnProjection: buildProjection()
+          }}
+        />
+      </svg>
+    );
+
+    expect(html).toContain('Overdrive: chaining enabled');
+  });
 });

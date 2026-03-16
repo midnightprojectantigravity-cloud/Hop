@@ -1612,3 +1612,218 @@ body::after {
 .ires-exhausted-badge {
   animation: iresRedline 620ms ease-in-out infinite;
 }
+
+.ui-vitals-glyph-shell {
+  max-width: 100%;
+}
+
+.ui-vitals-glyph {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 22px rgba(42, 24, 12, 0.18);
+}
+
+.ui-vitals-glyph-frame {
+  min-height: 6.5rem;
+}
+
+.ui-vitals-glyph-core-shell {
+  position: relative;
+  width: 5.5rem;
+  height: 5.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-vitals-glyph-exhaustion-ring,
+.ui-vitals-glyph-projection-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+}
+
+.ui-vitals-glyph-exhaustion-ring::after,
+.ui-vitals-glyph-projection-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0.55rem;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.ui-vitals-glyph-projection-ring {
+  inset: -0.22rem;
+  opacity: 0.56;
+}
+
+.ui-vitals-glyph-core {
+  position: relative;
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(180, 110, 20, 0.32);
+  background-color: rgba(250, 204, 21, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 0 18px rgba(245, 158, 11, 0.16);
+}
+
+.ui-vitals-glyph-core-projection {
+  position: absolute;
+  inset: -0.18rem;
+  border-radius: 999px;
+  opacity: 0.54;
+  pointer-events: none;
+}
+
+.ui-vitals-glyph-core-inner {
+  position: relative;
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 244, 214, 0.85), rgba(240, 190, 72, 0.66) 62%, rgba(180, 110, 20, 0.42));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+.ui-vitals-glyph-wing {
+  width: 4.6rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 1.1rem;
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.06));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.ui-vitals-glyph-wing-left {
+  margin-right: -0.3rem;
+}
+
+.ui-vitals-glyph-wing-right {
+  margin-left: -0.3rem;
+}
+
+.ui-vitals-glyph-wing-bar {
+  margin-top: 0.3rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.ui-vitals-glyph-wing-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.ui-vitals-glyph-badge {
+  position: absolute;
+  right: -0.2rem;
+  bottom: -0.15rem;
+  border-radius: 999px;
+  padding: 0.18rem 0.45rem;
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ui-vitals-glyph-badge-burn {
+  border: 1px solid rgba(244, 63, 94, 0.55);
+  background: rgba(127, 29, 29, 0.82);
+  color: #ffe4e6;
+}
+
+.ui-vitals-glyph-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.18rem 0.45rem;
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-panel-muted);
+  color: var(--text-muted);
+}
+
+.ui-vitals-glyph-chip-travel {
+  border-color: rgba(52, 211, 153, 0.38);
+  background: rgba(6, 78, 59, 0.86);
+  color: #d1fae5;
+}
+
+.ui-vitals-glyph-chip-alert {
+  border-color: var(--accent-danger-border);
+  background: var(--accent-danger-soft);
+  color: var(--accent-danger);
+}
+
+.ui-vitals-glyph-chip-calm {
+  border-color: rgba(34, 197, 94, 0.25);
+  background: rgba(240, 253, 244, 0.86);
+  color: #166534;
+}
+
+.ui-vitals-glyph-chip-bonus {
+  border-color: rgba(103, 232, 249, 0.58);
+  background: rgba(224, 242, 254, 0.92);
+  color: #0c4a6e;
+}
+
+.ui-vitals-detail-card {
+  position: relative;
+  max-height: min(60vh, 30rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  backdrop-filter: blur(12px);
+}
+
+.ui-vitals-glyph-redline .ui-vitals-glyph-core-shell,
+.ui-vitals-glyph-redline .ui-vitals-glyph-exhaustion-ring {
+  animation: iresRedline 620ms ease-in-out infinite;
+}
+
+.ui-vitals-glyph-shell[data-layout-mode="mobile_portrait"] .ui-vitals-glyph {
+  padding: 0.45rem 0.55rem;
+  border-radius: 1.45rem;
+}
+
+.ui-vitals-glyph-shell[data-layout-mode="mobile_portrait"] .ui-vitals-glyph-frame {
+  min-height: 5.9rem;
+}
+
+.ui-vitals-glyph-shell[data-layout-mode="mobile_portrait"] .ui-vitals-glyph-core-shell {
+  width: 5.05rem;
+  height: 5.05rem;
+}
+
+.ui-vitals-glyph-shell[data-layout-mode="mobile_portrait"] .ui-vitals-glyph-core {
+  width: 3.95rem;
+  height: 3.95rem;
+}
+
+.ui-vitals-glyph-shell[data-layout-mode="mobile_portrait"] .ui-vitals-glyph-core-inner {
+  width: 2.95rem;
+  height: 2.95rem;
+}
+
+.ui-vitals-glyph-shell[data-layout-mode="mobile_portrait"] .ui-vitals-glyph-wing {
+  width: 4rem;
+  padding: 0.5rem 0.52rem;
+}
+
+.ui-vitals-glyph-shell[data-layout-mode="mobile_portrait"] .ui-vitals-detail-card {
+  border-radius: 1.2rem;
+  max-height: min(56vh, 28rem);
+}

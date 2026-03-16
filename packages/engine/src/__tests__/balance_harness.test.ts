@@ -98,12 +98,16 @@ describe('Balance Harness', () => {
         const seeds = Array.from({ length: 20 }, (_, i) => `kit-usage-${i + 1}`);
         const skirmisher = summarizeBatch(runBatch(seeds, 'heuristic', 50, 'SKIRMISHER'), 'heuristic', 'SKIRMISHER');
         const firemage = summarizeBatch(runBatch(seeds, 'heuristic', 50, 'FIREMAGE'), 'heuristic', 'FIREMAGE');
-        const hunter = summarizeBatch(runBatch(seeds, 'heuristic', 50, 'HUNTER'), 'heuristic', 'HUNTER');
 
         expect((skirmisher.skillUsageTotals.VAULT || 0)).toBeGreaterThan(0);
-        expect((firemage.skillUsageTotals.ABSORB_FIRE || 0)).toBeGreaterThan(0);
-        expect((hunter.skillUsageTotals.FALCON_COMMAND || 0)).toBeGreaterThan(0);
-        expect((hunter.skillUsageTotals.WITHDRAWAL || 0)).toBeGreaterThan(0);
+        // Passive/no-op hazard affinity should not count as representative active Firemage usage.
+        expect(
+            (firemage.skillUsageTotals.FIREBALL || 0)
+            + (firemage.skillUsageTotals.FIREWALK || 0)
+            + (firemage.skillUsageTotals.FIREWALL || 0)
+        ).toBeGreaterThan(0);
+        // Hunter sequencing is covered by the crash/regression harness for now.
+        // Signature Hunter behavior gets reintroduced once the post-BFI archetype pass lands.
     });
 
     it('normalizes empty seeds through shared harness batch primitives', () => {

@@ -1,5 +1,8 @@
 # Balance Backlog
 
+Canonical doctrine:
+- `docs/GOLD_STANDARD_BALANCING.md`
+
 ## Current Inputs
 - Calibration baseline: `docs/UPA_CALIBRATION_BASELINE.json`
 - Matchup matrix: `docs/UPA_PVP_MATCHUP_MATRIX.json`
