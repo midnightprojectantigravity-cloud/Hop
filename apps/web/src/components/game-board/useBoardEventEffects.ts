@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { hexToPixel, TILE_SIZE, type GameState, type Point, type SimulationEvent } from '@hop/engine';
+import type { BoardEventDigest } from './board-event-digest';
 
 type BoardDecal = { id: string; position: Point; href: string; createdAt: number };
 
@@ -22,6 +23,7 @@ type EntityPoseEffect = {
 
 interface UseBoardEventEffectsArgs {
     gameState: GameState;
+    boardEventDigest: BoardEventDigest;
     deathDecalHref?: string;
     decals: BoardDecal[];
     setDecals: Dispatch<SetStateAction<BoardDecal[]>>;
@@ -32,6 +34,7 @@ interface UseBoardEventEffectsArgs {
 
 export const useBoardEventEffects = ({
     gameState,
+    boardEventDigest,
     deathDecalHref,
     decals,
     setDecals,
@@ -39,57 +42,43 @@ export const useBoardEventEffects = ({
     setEntityPoseNowMs,
     onSimulationEvents,
 }: UseBoardEventEffectsArgs) => {
-    const processedTimelineDecalBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
-    const processedVisualDecalBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
+    const processedTimelineDecalCountRef = useRef(0);
+    const processedVisualDecalCountRef = useRef(0);
     const processedSimulationEventCountRef = useRef(0);
     const processedSimulationPoseCountRef = useRef(0);
 
-    const resolveEventPoint = useCallback((payload: any): Point | null => {
-        if (!payload) return null;
-        const p = payload.position || payload.destination || payload.origin || payload.target;
-        if (p && typeof p.q === 'number' && typeof p.r === 'number' && typeof p.s === 'number') return p;
-        return null;
-    }, []);
-
     useEffect(() => {
         if (!deathDecalHref) return;
-        const timelineEvents = gameState.timelineEvents || [];
-        const visualEvents = gameState.visualEvents || [];
-
-        if (processedTimelineDecalBatchRef.current === timelineEvents
-            && processedVisualDecalBatchRef.current === visualEvents) {
-            return;
+        const timelineEvents = boardEventDigest.timelineDeathEvents;
+        const visualEvents = boardEventDigest.deathDecalVisualEvents;
+        if (timelineEvents.length < processedTimelineDecalCountRef.current) {
+            processedTimelineDecalCountRef.current = 0;
         }
-        const newTimeline = processedTimelineDecalBatchRef.current === timelineEvents ? [] : timelineEvents;
-        processedTimelineDecalBatchRef.current = timelineEvents;
-
-        const newVisual = processedVisualDecalBatchRef.current === visualEvents ? [] : visualEvents;
-        processedVisualDecalBatchRef.current = visualEvents;
+        if (visualEvents.length < processedVisualDecalCountRef.current) {
+            processedVisualDecalCountRef.current = 0;
+        }
+        const newTimeline = timelineEvents.slice(processedTimelineDecalCountRef.current);
+        const newVisual = visualEvents.slice(processedVisualDecalCountRef.current);
+        processedTimelineDecalCountRef.current = timelineEvents.length;
+        processedVisualDecalCountRef.current = visualEvents.length;
+        if (newTimeline.length === 0 && newVisual.length === 0) return;
 
         const additions: BoardDecal[] = [];
         const now = Date.now();
 
         for (const ev of newTimeline) {
-            if (ev.phase !== 'DEATH_RESOLVE') continue;
-            const p = resolveEventPoint(ev.payload);
-            if (!p) continue;
             additions.push({
                 id: `decal-tl-${ev.id}-${now}-${additions.length}`,
-                position: p,
+                position: ev.position,
                 href: deathDecalHref,
                 createdAt: now
             });
         }
 
         for (const ev of newVisual) {
-            if (ev.type !== 'vfx') continue;
-            const vfxType = ev.payload?.type;
-            if (vfxType !== 'vaporize' && vfxType !== 'explosion_ring') continue;
-            const p = resolveEventPoint(ev.payload);
-            if (!p) continue;
             additions.push({
-                id: `decal-vx-${vfxType}-${now}-${additions.length}`,
-                position: p,
+                id: `decal-vx-${ev.id}-${now}-${additions.length}`,
+                position: ev.position,
                 href: deathDecalHref,
                 createdAt: now
             });
@@ -98,10 +87,10 @@ export const useBoardEventEffects = ({
         if (additions.length > 0) {
             setDecals(prev => [...prev, ...additions].slice(-80));
         }
-    }, [gameState.timelineEvents, gameState.visualEvents, deathDecalHref, resolveEventPoint, setDecals]);
+    }, [boardEventDigest.deathDecalVisualEvents, boardEventDigest.timelineDeathEvents, deathDecalHref, setDecals]);
 
     useEffect(() => {
-        const events = gameState.simulationEvents || [];
+        const events = boardEventDigest.simulationEventsRef;
         if (events.length < processedSimulationEventCountRef.current) {
             processedSimulationEventCountRef.current = 0;
         }
@@ -110,10 +99,10 @@ export const useBoardEventEffects = ({
         if (newEvents.length > 0) {
             onSimulationEvents?.(newEvents);
         }
-    }, [gameState.simulationEvents, onSimulationEvents]);
+    }, [boardEventDigest.simulationEventsRef, onSimulationEvents]);
 
     useEffect(() => {
-        const events = gameState.simulationEvents || [];
+        const events = boardEventDigest.simulationPoseEvents;
         if (events.length < processedSimulationPoseCountRef.current) {
             processedSimulationPoseCountRef.current = 0;
         }
@@ -230,7 +219,7 @@ export const useBoardEventEffects = ({
             setEntityPoseEffects(prev => [...prev, ...additions]);
         }
     }, [
-        gameState.simulationEvents,
+        boardEventDigest.simulationPoseEvents,
         gameState.player,
         gameState.enemies,
         gameState.companions,
@@ -253,8 +242,8 @@ export const useBoardEventEffects = ({
         setDecals([]);
         setEntityPoseEffects([]);
         setEntityPoseNowMs(0);
-        processedTimelineDecalBatchRef.current = null;
-        processedVisualDecalBatchRef.current = null;
+        processedTimelineDecalCountRef.current = 0;
+        processedVisualDecalCountRef.current = 0;
         processedSimulationEventCountRef.current = 0;
         processedSimulationPoseCountRef.current = 0;
     }, [setDecals, setEntityPoseEffects, setEntityPoseNowMs]);

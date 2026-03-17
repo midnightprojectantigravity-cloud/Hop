@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { GameState } from '@hop/engine';
+import type { BoardEventDigest } from './board-event-digest';
 
 export type PointerPoint = { x: number; y: number };
 
@@ -33,6 +34,7 @@ export type EntityPoseEffect = {
 
 export interface UseBoardJuicePresentationArgs {
     gameState: GameState;
+    boardEventDigest: BoardEventDigest;
 }
 
 export interface UseBoardJuicePresentationResult {
@@ -47,4 +49,3 @@ export interface UseBoardJuicePresentationResult {
     setEntityPoseNowMs: Dispatch<SetStateAction<number>>;
     resetBoardJuicePresentation: () => void;
 }
-

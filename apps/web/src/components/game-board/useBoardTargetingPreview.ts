@@ -4,14 +4,18 @@ import {
     getHexLine,
     isHexInRectangularGrid,
     pointToKey,
-    previewActionOutcome,
-    resolveMovementPreviewPath,
     SkillRegistry,
     type ActionResourcePreview,
     type GameState,
     type IresTurnProjection,
     type Point,
 } from '@hop/engine';
+import {
+    collectUniqueSkillTargetsCached,
+    getCachedActionPreviewOutcome,
+    getCachedMovementPreviewPath,
+    getCachedSkillTargets,
+} from './target-resolution-cache';
 
 interface EnginePreviewGhost {
     path: Point[];
@@ -25,25 +29,21 @@ interface EnginePreviewGhost {
 
 const collectUniqueSkillTargets = (
     gameState: GameState,
+    actorId: string,
     origin: Point,
     skillIds: ReadonlyArray<string>
 ): Point[] => {
-    const validSet = new Set<string>();
-    const results: Point[] = [];
-
-    for (const id of skillIds) {
-        const def = SkillRegistry.get(id);
-        if (!def?.getValidTargets) continue;
-        const targets = def.getValidTargets(gameState, origin);
-        for (const target of targets) {
-            const key = pointToKey(target);
-            if (validSet.has(key)) continue;
-            validSet.add(key);
-            results.push(target);
+    return collectUniqueSkillTargetsCached(
+        gameState,
+        actorId,
+        origin,
+        skillIds,
+        (skillId) => {
+            const def = SkillRegistry.get(skillId);
+            if (!def?.getValidTargets) return null;
+            return () => def.getValidTargets!(gameState, origin);
         }
-    }
-
-    return results;
+    );
 };
 
 export const extractAilmentDeltaLines = (events: GameState['simulationEvents'] | undefined): string[] => {
@@ -58,7 +58,7 @@ export const buildDefaultPassiveTargetSet = (
     const passiveSkillIds = (gameState.player.activeSkills || [])
         .filter(skill => skill.slot === 'passive')
         .map(skill => skill.id);
-    const targets = collectUniqueSkillTargets(gameState, origin, passiveSkillIds);
+    const targets = collectUniqueSkillTargets(gameState, gameState.player.id, origin, passiveSkillIds);
     return new Set(targets.map(pointToKey));
 };
 
@@ -108,7 +108,7 @@ export const useBoardTargetingPreview = ({
 
         const movementSkillIds = (['BASIC_MOVE', 'DASH'] as const)
             .filter(id => gameState.player.activeSkills.some(skill => skill.id === id));
-        return collectUniqueSkillTargets(gameState, playerPos, movementSkillIds);
+        return collectUniqueSkillTargets(gameState, gameState.player.id, playerPos, movementSkillIds);
     }, [showMovementRange, selectedSkillId, gameState, playerPos]);
 
     const movementTargetSet = useMemo(() => {
@@ -154,7 +154,13 @@ export const useBoardTargetingPreview = ({
         const visibleActorIds = new Set(gameState.visibility?.playerFog?.visibleActorIds || []);
         const detectedActorIds = new Set(gameState.visibility?.playerFog?.detectedActorIds || []);
         const enforceVisibility = !!gameState.visibility;
-        const targets = def.getValidTargets(gameState, playerPos);
+        const targets = getCachedSkillTargets({
+            gameState,
+            actorId: gameState.player.id,
+            skillId: selectedSkillId,
+            origin: playerPos,
+            resolver: () => def.getValidTargets!(gameState, playerPos),
+        });
         for (const t of targets) {
             const key = pointToKey(t);
             if (!enforceVisibility) {
@@ -194,14 +200,20 @@ export const useBoardTargetingPreview = ({
                   ? 'DASH'
                   : null;
             const previewPath = moveSkillId
-                ? resolveMovementPreviewPath(gameState, gameState.player, moveSkillId, hoveredTile)
+                ? getCachedMovementPreviewPath({
+                    gameState,
+                    actor: gameState.player,
+                    skillId: moveSkillId,
+                    target: hoveredTile,
+                })
                 : null;
             if (moveSkillId && !previewPath?.ok) return null;
             const resourcePreview = moveSkillId
-                ? previewActionOutcome(gameState, {
+                ? getCachedActionPreviewOutcome({
+                    gameState,
                     actorId: gameState.player.id,
                     skillId: moveSkillId,
-                    target: hoveredTile
+                    target: hoveredTile,
                   })
                 : null;
             return {
@@ -223,11 +235,12 @@ export const useBoardTargetingPreview = ({
             || selectedSkillId === 'JUMP'
             ? selectedSkillId
             : null;
-        const preview = previewActionOutcome(gameState, {
+        const preview = getCachedActionPreviewOutcome({
+            gameState,
             actorId: gameState.player.id,
             skillId: selectedSkillId,
             target: hoveredTile,
-            activeUpgrades: selectedSkill?.activeUpgrades || []
+            activeUpgradeIds: selectedSkill?.activeUpgrades || [],
         });
 
         if (!preview.ok) return null;
@@ -246,7 +259,12 @@ export const useBoardTargetingPreview = ({
         );
         const ailmentDeltaLines = extractAilmentDeltaLines(preview.simulationEvents);
         const movementPreview = selectedMovementSkill
-            ? resolveMovementPreviewPath(gameState, gameState.player, selectedMovementSkill, hoveredTile)
+            ? getCachedMovementPreviewPath({
+                gameState,
+                actor: gameState.player,
+                skillId: selectedMovementSkill,
+                target: hoveredTile,
+            })
             : null;
         if (selectedMovementSkill && !movementPreview?.ok) return null;
 

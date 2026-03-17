@@ -7,6 +7,7 @@ import { EntitySpear } from './entity/entity-spear';
 import { useEntityVisualState } from './entity/use-entity-visual-state';
 import type { EntityProps } from './entity/entity-types';
 import { SYNAPSE_PULSE_DURATION_MS } from '../app/synapse';
+import type { RegisteredActorNodes } from './game-board/actor-node-registry';
 
 export type { EntityVisualPose } from './entity/entity-types';
 
@@ -21,6 +22,7 @@ const EntityBase: React.FC<EntityProps> = ({
     synapseMode = false,
     onSynapseInspect,
     synapsePulseToken,
+    registerActorNodes,
 }) => {
     const isPlayer = entity.type === 'player';
     const {
@@ -76,6 +78,9 @@ const EntityBase: React.FC<EntityProps> = ({
         event.stopPropagation();
         onSynapseInspect(entity.id);
     }, [entity.id, onSynapseInspect]);
+    const handleActorNodesChange = React.useCallback((nodes: RegisteredActorNodes | null) => {
+        registerActorNodes?.(entity.id, nodes);
+    }, [entity.id, registerActorNodes]);
 
     return (
         <EntityRenderShell
@@ -102,6 +107,7 @@ const EntityBase: React.FC<EntityProps> = ({
             interactive={inspectable}
             onInspect={inspectable ? handleInspect : undefined}
             synapsePulseActive={synapsePulseActive}
+            onActorNodesChange={registerActorNodes ? handleActorNodesChange : undefined}
         />
     );
 };

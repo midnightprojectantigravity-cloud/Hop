@@ -649,6 +649,21 @@ body::after {
   animation: lavaBubble 2s ease-in-out infinite;
 }
 
+@keyframes boardDecalFade {
+
+  0% {
+    opacity: 0.75;
+  }
+
+  100% {
+    opacity: 0.18;
+  }
+}
+
+.board-decal-fade {
+  animation: boardDecalFade 12s linear forwards;
+}
+
 /* ============================================
    SHRINE GLOW ANIMATION
    ============================================ */

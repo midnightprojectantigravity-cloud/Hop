@@ -3,6 +3,7 @@ import type { TimelineEvent, SimulationEvent } from '@hop/engine';
 import type { JuiceEffect, JuiceActorSnapshot } from './juice-types';
 import { buildSignatureJuiceEffects } from './signature-effects';
 import { buildLegacyVfxEffects, buildSimulationDamageCueEffects } from './event-effect-builders';
+import type { BoardEventDigest } from '../game-board/board-event-digest';
 import {
     classifyDamageCueType,
     CRITICAL_PLAYER_DEATH_MIN_HOLD_MS,
@@ -23,6 +24,7 @@ interface UseJuiceManagerEffectsArgs {
     visualEvents: { type: string; payload: any }[];
     timelineEvents: TimelineEvent[];
     simulationEvents: SimulationEvent[];
+    boardEventDigest?: BoardEventDigest;
     actorSnapshots: JuiceActorSnapshot[];
     playerActorId: string;
     playerDefeated: boolean;
@@ -33,6 +35,7 @@ export const useJuiceManagerEffects = ({
     visualEvents,
     timelineEvents,
     simulationEvents,
+    boardEventDigest,
     actorSnapshots,
     playerActorId,
     playerDefeated,
@@ -74,10 +77,11 @@ export const useJuiceManagerEffects = ({
     }, []);
 
     useEffect(() => {
-        if (!visualEvents.length) return;
+        const movementTraceEvents = boardEventDigest?.movementTraceEvents || visualEvents;
+        if (!movementTraceEvents.length) return;
         const next = new Map(movementDurationByActor.current);
         const now = Date.now();
-        for (const ev of visualEvents) {
+        for (const ev of movementTraceEvents) {
             if (ev.type !== 'kinetic_trace') continue;
             const trace = ev.payload;
             if (!trace?.actorId) continue;
@@ -90,7 +94,7 @@ export const useJuiceManagerEffects = ({
             }
         }
         movementDurationByActor.current = next;
-    }, [visualEvents]);
+    }, [boardEventDigest?.movementTraceEvents, visualEvents]);
 
     useEffect(() => {
         onBusyStateChange?.(timelineBusy || criticalCueBusy);
@@ -184,9 +188,12 @@ export const useJuiceManagerEffects = ({
     }, [timelineEvents]);
 
     useEffect(() => {
-        if (processedJuiceSignatureBatchRef.current === visualEvents) return;
-        processedJuiceSignatureBatchRef.current = visualEvents;
-        const incoming = visualEvents;
+        const signatureBatchRef = boardEventDigest?.visualEventsRef || visualEvents;
+        if (processedJuiceSignatureBatchRef.current === signatureBatchRef) return;
+        processedJuiceSignatureBatchRef.current = signatureBatchRef;
+        const incoming = boardEventDigest?.signatureVisualEvents
+            ? Array.from(boardEventDigest.signatureVisualEvents)
+            : visualEvents;
         if (!incoming.length) return;
 
         const now = Date.now();
@@ -200,7 +207,7 @@ export const useJuiceManagerEffects = ({
         if (additions.length > 0) {
             setEffects(prev => [...prev, ...additions]);
         }
-    }, [visualEvents]);
+    }, [boardEventDigest?.signatureVisualEvents, boardEventDigest?.visualEventsRef, visualEvents]);
 
     useEffect(() => {
         if (playerDefeated && !lastPlayerDefeatedRef.current) {
@@ -211,12 +218,15 @@ export const useJuiceManagerEffects = ({
 
     useEffect(() => {
         if (timelineEvents.length > 0) {
-            processedVisualBatchRef.current = visualEvents;
+            processedVisualBatchRef.current = boardEventDigest?.visualEventsRef || visualEvents;
             return;
         }
-        if (processedVisualBatchRef.current === visualEvents) return;
-        processedVisualBatchRef.current = visualEvents;
-        const incoming = visualEvents;
+        const legacyBatchRef = boardEventDigest?.visualEventsRef || visualEvents;
+        if (processedVisualBatchRef.current === legacyBatchRef) return;
+        processedVisualBatchRef.current = legacyBatchRef;
+        const incoming = boardEventDigest?.legacyVfxVisualEvents
+            ? Array.from(boardEventDigest.legacyVfxVisualEvents)
+            : visualEvents;
         if (!incoming.length) return;
 
         const now = Date.now();
@@ -225,16 +235,17 @@ export const useJuiceManagerEffects = ({
         if (newEffects.length > 0) {
             setEffects(prev => [...prev, ...newEffects]);
         }
-    }, [visualEvents, timelineEvents.length]);
+    }, [boardEventDigest?.legacyVfxVisualEvents, boardEventDigest?.visualEventsRef, visualEvents, timelineEvents.length]);
 
     useEffect(() => {
-        if (simulationEvents.length < processedSimulationCount.current) {
+        const damageEvents = boardEventDigest?.damageSimulationEvents || simulationEvents;
+        if (damageEvents.length < processedSimulationCount.current) {
             processedSimulationCount.current = 0;
         }
         const startIndex = processedSimulationCount.current;
-        if (startIndex >= simulationEvents.length) return;
-        const incoming = simulationEvents.slice(startIndex);
-        processedSimulationCount.current = simulationEvents.length;
+        if (startIndex >= damageEvents.length) return;
+        const incoming = damageEvents.slice(startIndex);
+        processedSimulationCount.current = damageEvents.length;
 
         const now = Date.now();
         const additions = buildSimulationDamageCueEffects({
@@ -258,7 +269,7 @@ export const useJuiceManagerEffects = ({
         if (additions.length > 0) {
             setEffects(prev => [...prev, ...additions]);
         }
-    }, [simulationEvents, actorById, playerActorId, playerDefeated]);
+    }, [boardEventDigest?.damageSimulationEvents, simulationEvents, actorById, playerActorId, playerDefeated]);
 
     useEffect(() => {
         if (cleanupTimerRef.current !== null) {

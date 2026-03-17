@@ -19,6 +19,7 @@ import {
     estimateCameraDeadSpaceRatio,
     type CameraEnvelope
 } from '../../visual/camera-envelope';
+import type { RegisterActorNodes, RegisteredActorNodes } from './actor-node-registry';
 import { collectRenderableMovementBatch, createMotionBatch, sampleMovementTrace } from './board-motion-sampler';
 import { createDefaultPresentationState } from './board-local-motion';
 import type { ActorPresentationState, MotionBatch } from './board-motion-types';
@@ -227,6 +228,7 @@ export const useBoardPresentationController = ({
     const previousInsetsRef = useRef<CameraInsetsPx | null>(null);
     const cameraViewRef = useRef<CameraRect>(baseViewBox);
     const detachedCenterRef = useRef<CameraVec2 | null>(null);
+    const actorNodesByIdRef = useRef<Map<string, RegisteredActorNodes>>(new Map());
     const [viewportSizePx, setViewportSizePx] = useState({ width: 0, height: 0 });
     const [zoomMode, setZoomMode] = useState<CameraZoomMode>('tactical');
     const [isDetached, setIsDetached] = useState(false);
@@ -275,11 +277,11 @@ export const useBoardPresentationController = ({
     }, []);
 
     const applyActorPresentation = useCallback((actorId: string, state: ActorPresentationState) => {
-        const svg = svgRef.current;
-        if (!svg) return;
-        const actorNode = svg.querySelector<SVGGElement>(`[data-actor-node="${actorId}"]`);
-        const motionNode = svg.querySelector<SVGGElement>(`[data-actor-motion-node="${actorId}"]`);
-        const padNode = svg.querySelector<SVGGElement>(`[data-actor-pad-node="${actorId}"]`);
+        const nodes = actorNodesByIdRef.current.get(actorId);
+        if (!nodes) return;
+        const actorNode = nodes.actor;
+        const motionNode = nodes.motion;
+        const padNode = nodes.pad;
         if (actorNode) {
             actorNode.style.transform = `translate(${state.groundWorld.x}px, ${state.groundWorld.y}px)`;
         }
@@ -292,6 +294,14 @@ export const useBoardPresentationController = ({
             padNode.style.transform = `scale(${state.shadowScale})`;
             padNode.style.opacity = `${state.shadowOpacity}`;
         }
+    }, []);
+
+    const registerActorNodes = useCallback<RegisterActorNodes>((actorId, nodes) => {
+        if (!nodes || (!nodes.actor && !nodes.motion && !nodes.pad)) {
+            actorNodesByIdRef.current.delete(actorId);
+            return;
+        }
+        actorNodesByIdRef.current.set(actorId, nodes);
     }, []);
 
     const syncStaticActorNodes = useCallback(() => {
@@ -596,6 +606,7 @@ export const useBoardPresentationController = ({
     return {
         svgRef,
         boardViewportRef,
+        registerActorNodes,
         presentationBusy,
         cameraState: {
             zoomMode,

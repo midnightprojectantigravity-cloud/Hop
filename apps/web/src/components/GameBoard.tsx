@@ -5,9 +5,13 @@ import {
     hexToPixel,
     TILE_SIZE
 } from '@hop/engine';
+import { pointToKey } from '@hop/engine';
+import { DevRenderProfiler } from '../app/perf/dev-render-profiler';
 import { CameraZoomControls } from './game-board/CameraZoomControls';
 import { JuiceTraceOverlay } from './game-board/JuiceTraceOverlay';
 import { GameBoardSceneSvg } from './game-board/GameBoardSceneSvg';
+import { buildBoardEventDigest } from './game-board/board-event-digest';
+import type { BoardDecal, InteractionTileModel } from './game-board/InteractionTilesLayer';
 import type { VisualEchoEntry } from './game-board/VisualEchoLayer';
 import { useBoardInteractions } from './game-board/useBoardInteractions';
 import { useBoardDepthSprites } from './game-board/useBoardDepthSprites';
@@ -26,6 +30,7 @@ import {
     type CameraRect,
 } from '../visual/camera';
 import { createCameraEnvelope } from '../visual/camera-envelope';
+import { resolveTileAssetId } from '../visual/asset-selectors';
 import { resolveSynapsePreview, type SynapseDeltaEntry, type SynapsePulse, type SynapseSelection } from '../app/synapse';
 
 interface GameBoardProps {
@@ -128,7 +133,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     onSynapseInspectEntity,
     visualEchoesEnabled = false,
 }) => {
-    type BoardDecal = { id: string; position: Point; href: string; createdAt: number };
     const [hoveredTile, setHoveredTile] = useState<Point | null>(null);
     const [juiceBusy, setJuiceBusy] = useState(false);
     const [decals, setDecals] = useState<BoardDecal[]>([]);
@@ -143,6 +147,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
     // Filter cells based on dynamic diamond geometry
     const cells = useMemo(() => resolveBoardCells(gameState), [gameState]);
+    const boardEventDigest = useMemo(() => buildBoardEventDigest({
+        visualEvents: gameState.visualEvents || [],
+        timelineEvents: gameState.timelineEvents || [],
+        simulationEvents: gameState.simulationEvents || [],
+    }), [gameState.visualEvents, gameState.timelineEvents, gameState.simulationEvents]);
 
     const {
         isShaking,
@@ -155,7 +164,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         setEntityPoseEffects,
         setEntityPoseNowMs,
         resetBoardJuicePresentation,
-    } = useBoardJuicePresentation({ gameState });
+    } = useBoardJuicePresentation({
+        gameState,
+        boardEventDigest,
+    });
 
     // Dynamically calculate the Bounding Box of the actual hexes to maximize size
     const bounds = useMemo(() => {
@@ -251,6 +263,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
     const { resetBoardEventEffects } = useBoardEventEffects({
         gameState,
+        boardEventDigest,
         deathDecalHref,
         decals,
         setDecals,
@@ -273,6 +286,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const {
         svgRef,
         boardViewportRef,
+        registerActorNodes,
         presentationBusy,
         cameraState,
         beginManualPan,
@@ -290,6 +304,91 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         movementRange,
         cameraSafeInsetsPx,
     });
+
+    const interactionTiles = useMemo<InteractionTileModel[]>(() => (
+        cells.map((hex) => {
+            const tileKey = pointToKey(hex);
+            const flags = tileVisualFlags.get(tileKey) || { isWall: false, isLava: false, isFire: false };
+            const isWall = flags.isWall;
+            const isLava = flags.isLava;
+            const isFire = flags.isFire;
+            const isMoveHighlight =
+                (showMovementRange && !selectedSkillId && movementTargetSet.has(tileKey))
+                || (
+                    showMovementRange
+                    && !selectedSkillId
+                    && !hasPrimaryMovementSkills
+                    && fallbackNeighborSet.has(tileKey)
+                    && !isWall
+                );
+            const isSkillHighlight = !!selectedSkillId && selectedSkillTargetSet.has(tileKey);
+            const renderWallTile = isWall && !mountainCoveredWallKeys.has(tileKey);
+            const interactionOnly = hybridInteractionLayerEnabled && !renderWallTile;
+            const isStairs = tileKey === stairsKey;
+            const isShrine = shrineKey ? tileKey === shrineKey : false;
+            const tileAssetId = resolveTileAssetId({
+                isWall: renderWallTile,
+                isLava,
+                isFire,
+                isStairs,
+                isShrine,
+                theme: gameState.theme,
+            });
+
+            return {
+                key: tileKey,
+                hex,
+                isValidMove: isMoveHighlight || isSkillHighlight,
+                isStairs,
+                isLava,
+                isFire,
+                isShrine,
+                isWall: renderWallTile,
+                assetHref: interactionOnly ? undefined : assetById.get(tileAssetId)?.path,
+                interactionOnly,
+            };
+        })
+    ), [
+        assetById,
+        cells,
+        fallbackNeighborSet,
+        gameState.theme,
+        hasPrimaryMovementSkills,
+        hybridInteractionLayerEnabled,
+        mountainCoveredWallKeys,
+        movementTargetSet,
+        selectedSkillId,
+        selectedSkillTargetSet,
+        showMovementRange,
+        shrineKey,
+        stairsKey,
+        tileVisualFlags,
+    ]);
+
+    const visibleActorIds = useMemo(
+        () => new Set(gameState.visibility?.playerFog?.visibleActorIds || []),
+        [gameState.visibility?.playerFog?.visibleActorIds]
+    );
+    const detectedActorIds = useMemo(
+        () => new Set(gameState.visibility?.playerFog?.detectedActorIds || []),
+        [gameState.visibility?.playerFog?.detectedActorIds]
+    );
+    const hasFogVisibility = Boolean(gameState.visibility);
+    const playerDefeated = gameState.gameStatus === 'lost' && gameState.player.hp <= 0;
+    const renderedEnemies = useMemo(
+        () => hasFogVisibility
+            ? gameState.enemies.filter(enemy => visibleActorIds.has(enemy.id))
+            : gameState.enemies,
+        [gameState.enemies, hasFogVisibility, visibleActorIds]
+    );
+    const detectedOnlyEnemies = useMemo(
+        () => hasFogVisibility
+            ? gameState.enemies.filter(enemy => !visibleActorIds.has(enemy.id) && detectedActorIds.has(enemy.id))
+            : [],
+        [detectedActorIds, gameState.enemies, hasFogVisibility, visibleActorIds]
+    );
+    const dyingEntities = useMemo(() => gameState.dyingEntities || [], [gameState.dyingEntities]);
+    const handleClearHover = React.useCallback(() => setHoveredTile(null), []);
 
     useEffect(() => {
         resetPresentationRef.current = resetPresentation;
@@ -392,86 +491,91 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     }, [isSynapseMode, onSynapseInspectEntity]);
 
     return (
-        <div
-            ref={boardViewportRef}
-            className={`relative w-full h-full flex justify-center items-center overflow-hidden transition-transform duration-75 ${isShaking ? 'animate-shake' : ''} ${isCameraPanning ? 'cursor-grabbing' : ''}`}
-        >
+        <DevRenderProfiler id="board:GameBoard">
             <div
-                className="relative w-full h-full"
-                style={{
-                    transform: `translate3d(${cameraKickOffsetPx.x}px, ${cameraKickOffsetPx.y}px, 0)`,
-                    transition: 'transform 85ms ease-out',
-                    willChange: cameraKickOffsetPx.x || cameraKickOffsetPx.y ? 'transform' : undefined
-                }}
+                ref={boardViewportRef}
+                className={`relative w-full h-full flex justify-center items-center overflow-hidden transition-transform duration-75 ${isShaking ? 'animate-shake' : ''} ${isCameraPanning ? 'cursor-grabbing' : ''}`}
             >
-                {isFrozen && (
-                    <div
-                        className="absolute inset-0 z-20 pointer-events-none bg-white/10"
-                        style={{
-                            boxShadow: 'inset 0 0 60px rgba(255,255,255,0.18)',
-                            animation: 'flash 120ms ease-out'
-                        }}
-                    />
+                <div
+                    className="relative w-full h-full"
+                    style={{
+                        transform: `translate3d(${cameraKickOffsetPx.x}px, ${cameraKickOffsetPx.y}px, 0)`,
+                        transition: 'transform 85ms ease-out',
+                        willChange: cameraKickOffsetPx.x || cameraKickOffsetPx.y ? 'transform' : undefined
+                    }}
+                >
+                    {isFrozen && (
+                        <div
+                            className="absolute inset-0 z-20 pointer-events-none bg-white/10"
+                            style={{
+                                boxShadow: 'inset 0 0 60px rgba(255,255,255,0.18)',
+                                animation: 'flash 120ms ease-out'
+                            }}
+                        />
+                    )}
+                    <DevRenderProfiler id="board:GameBoardSceneSvg">
+                        <GameBoardSceneSvg
+                            svgRef={svgRef}
+                            cells={cells}
+                            interactionTiles={interactionTiles}
+                            gameState={gameState}
+                            selectedSkillId={selectedSkillId}
+                            showMovementRange={showMovementRange}
+                            hoveredTile={hoveredTile}
+                            turnFlowMode={turnFlowMode}
+                            overdriveArmed={overdriveArmed}
+                            resolvedEnginePreviewGhost={resolvedEnginePreviewGhost}
+                            decals={decals}
+                            depthSortedSprites={depthSortedSprites}
+                            boardProps={boardProps}
+                            manifestUnitToBoardScale={manifestUnitToBoardScale}
+                            assetById={assetById}
+                            mountainSettingsByAssetId={mountainSettingsByAssetId}
+                            resolveMountainSettings={resolveMountainSettings}
+                            entityVisualPoseById={entityVisualPoseById}
+                            biomeThemeKey={biomeThemeKey}
+                            player={gameState.player}
+                            playerDefeated={playerDefeated}
+                            renderedEnemies={renderedEnemies}
+                            detectedOnlyEnemies={detectedOnlyEnemies}
+                            dyingEntities={dyingEntities}
+                            lastSpearPath={gameState.lastSpearPath}
+                            spearPosition={gameState.spearPosition}
+                            juiceActorSnapshots={juiceActorSnapshots}
+                            assetManifest={assetManifest}
+                            boardEventDigest={boardEventDigest}
+                            backdropLayerProps={backdropLayerProps}
+                            gridPoints={gridPoints}
+                            isSynapseMode={isSynapseMode}
+                            synapsePreview={synapsePreview}
+                            synapseSelection={synapseSelection}
+                            synapsePulse={synapsePulse}
+                            synapseDeltasByActorId={synapseDeltasByActorId}
+                            visualEchoes={visualEchoesEnabled ? visualEchoes : []}
+                            registerActorNodes={registerActorNodes}
+                            onSynapseInspectEntity={handleSynapseInspectEntity}
+                            onTileClick={handleTileClick}
+                            onTileHover={handleHoverTile}
+                            onMouseLeave={handleClearHover}
+                            onWheel={handleBoardWheel}
+                            onPointerDown={handleBoardPointerDown}
+                            onPointerMove={handleBoardPointerMove}
+                            onPointerUp={handleBoardPointerUp}
+                            onPointerCancel={handleBoardPointerCancel}
+                            onJuiceBusyStateChange={setJuiceBusy}
+                        />
+                    </DevRenderProfiler>
+                </div>
+                {import.meta.env.DEV && juiceDebugOverlayEnabled && (
+                    <JuiceTraceOverlay entries={juiceDebugEntries} />
                 )}
-                <GameBoardSceneSvg
-                    svgRef={svgRef}
-                    cells={cells}
-                    gameState={gameState}
-                    selectedSkillId={selectedSkillId}
-                    showMovementRange={showMovementRange}
-                    hoveredTile={hoveredTile}
-                    turnFlowMode={turnFlowMode}
-                    overdriveArmed={overdriveArmed}
-                    resolvedEnginePreviewGhost={resolvedEnginePreviewGhost}
-                    tileVisualFlags={tileVisualFlags}
-                    movementTargetSet={movementTargetSet}
-                    hasPrimaryMovementSkills={hasPrimaryMovementSkills}
-                    fallbackNeighborSet={fallbackNeighborSet}
-                    selectedSkillTargetSet={selectedSkillTargetSet}
-                    stairsKey={stairsKey}
-                    shrineKey={shrineKey}
-                    mountainCoveredWallKeys={mountainCoveredWallKeys}
-                    hybridInteractionLayerEnabled={hybridInteractionLayerEnabled}
-                    assetById={assetById}
-                    decals={decals}
-                    depthSortedSprites={depthSortedSprites}
-                    boardProps={boardProps}
-                    manifestUnitToBoardScale={manifestUnitToBoardScale}
-                    mountainSettingsByAssetId={mountainSettingsByAssetId}
-                    resolveMountainSettings={resolveMountainSettings}
-                    entityVisualPoseById={entityVisualPoseById}
-                    biomeThemeKey={biomeThemeKey}
-                    juiceActorSnapshots={juiceActorSnapshots}
-                    assetManifest={assetManifest}
-                    backdropLayerProps={backdropLayerProps}
-                    gridPoints={gridPoints}
-                    isSynapseMode={isSynapseMode}
-                    synapsePreview={synapsePreview}
-                    synapseSelection={synapseSelection}
-                    synapsePulse={synapsePulse}
-                    synapseDeltasByActorId={synapseDeltasByActorId}
-                    visualEchoes={visualEchoesEnabled ? visualEchoes : []}
-                    onSynapseInspectEntity={handleSynapseInspectEntity}
-                    onTileClick={handleTileClick}
-                    onTileHover={handleHoverTile}
-                    onMouseLeave={() => setHoveredTile(null)}
-                    onWheel={handleBoardWheel}
-                    onPointerDown={handleBoardPointerDown}
-                    onPointerMove={handleBoardPointerMove}
-                    onPointerUp={handleBoardPointerUp}
-                    onPointerCancel={handleBoardPointerCancel}
-                    onJuiceBusyStateChange={setJuiceBusy}
+                <CameraZoomControls
+                    activeMode={cameraState.zoomMode}
+                    isDetached={cameraState.isDetached}
+                    onSelectMode={selectZoomMode}
+                    onRecenter={recenter}
                 />
             </div>
-            {import.meta.env.DEV && juiceDebugOverlayEnabled && (
-                <JuiceTraceOverlay entries={juiceDebugEntries} />
-            )}
-            <CameraZoomControls
-                activeMode={cameraState.zoomMode}
-                isDetached={cameraState.isDetached}
-                onSelectMode={selectZoomMode}
-                onRecenter={recenter}
-            />
-        </div>
+        </DevRenderProfiler>
     );
 };

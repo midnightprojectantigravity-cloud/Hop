@@ -4,11 +4,13 @@ import type { VisualAssetManifest, VisualAssetEntry } from '../visual/asset-mani
 import { JuiceEffectsLayer } from './juice/JuiceEffectsLayer';
 import type { JuiceActorSnapshot } from './juice/juice-types';
 import { useJuiceManagerEffects } from './juice/use-juice-manager-effects';
+import type { BoardEventDigest } from './game-board/board-event-digest';
 
 interface JuiceManagerProps {
     visualEvents: { type: string; payload: any }[];
     timelineEvents?: TimelineEvent[];
     simulationEvents?: SimulationEvent[];
+    boardEventDigest?: BoardEventDigest;
     actorSnapshots?: JuiceActorSnapshot[];
     playerActorId: string;
     playerDefeated: boolean;
@@ -20,6 +22,7 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({
     visualEvents,
     timelineEvents = [],
     simulationEvents = [],
+    boardEventDigest,
     actorSnapshots = [],
     playerActorId,
     playerDefeated,
@@ -37,6 +40,7 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({
         visualEvents,
         timelineEvents,
         simulationEvents,
+        boardEventDigest,
         actorSnapshots,
         playerActorId,
         playerDefeated,

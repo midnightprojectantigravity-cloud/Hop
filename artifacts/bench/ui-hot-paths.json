@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-03-17T16:52:27.582Z",
+  "benches": {
+    "get_valid_targets": {
+      "iterations": 400,
+      "avgMs": 0.4947,
+      "opsPerSecond": 2021.4915
+    },
+    "action_preview": {
+      "iterations": 220,
+      "avgMs": 0.7759,
+      "opsPerSecond": 1288.8304
+    },
+    "reducer_turn_execution": {
+      "iterations": 80,
+      "avgMs": 0.0477,
+      "opsPerSecond": 20968.207
+    }
+  }
+}

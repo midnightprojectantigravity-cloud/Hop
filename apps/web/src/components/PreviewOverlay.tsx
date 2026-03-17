@@ -5,6 +5,7 @@ import {
     TILE_SIZE, SkillRegistry, getSkillRange, pointToKey,
     getSkillAoE, UnifiedTileService
 } from '@hop/engine';
+import { getCachedSkillTargets } from './game-board/target-resolution-cache';
 
 interface PreviewOverlayProps {
     gameState: GameState;
@@ -56,7 +57,13 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({
             if (playerSkillIds.has(id)) {
                 const def = SkillRegistry.get(id);
                 if (def?.getValidTargets) {
-                    const targets = def.getValidTargets(gameState, playerPos);
+                    const targets = getCachedSkillTargets({
+                        gameState,
+                        actorId: gameState.player.id,
+                        skillId: id,
+                        origin: playerPos,
+                        resolver: () => def.getValidTargets!(gameState, playerPos),
+                    });
                     targets.forEach(p => {
                         const key = pointToKey(p);
                         if (!validSet.has(key)) {
@@ -95,7 +102,15 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({
         if (!selectedSkillId) return [] as Array<{ p: Point; isValidTarget: boolean; isBlocked: boolean; isWall: boolean; isEnemy: boolean }>;
         const def = SkillRegistry.get(selectedSkillId);
         const range = getSkillRange(gameState.player, selectedSkillId) || def?.baseVariables?.range || 0;
-        const validTargets: Point[] = def?.getValidTargets ? def.getValidTargets(gameState, playerPos) : [];
+        const validTargets: Point[] = def?.getValidTargets
+            ? [...getCachedSkillTargets({
+                gameState,
+                actorId: gameState.player.id,
+                skillId: selectedSkillId,
+                origin: playerPos,
+                resolver: () => def.getValidTargets!(gameState, playerPos),
+            })]
+            : [];
         const validTargetSet = new Set(validTargets.map(pointToKey));
 
         const results: Array<{ p: Point; isValidTarget: boolean; isBlocked: boolean; isWall: boolean; isEnemy: boolean }> = [];

@@ -4,6 +4,7 @@ import type { Action, GameState } from '@hop/engine';
 import type { TurnDriverState } from '../turn-driver';
 import type { TurnTraceAppender } from './use-turn-driver-trace';
 import type { PendingAutoEndState } from './turn-flow-policy';
+import { computeInteractionBlockingBudget } from './interaction-budget';
 
 interface UseTurnFlowCoordinatorArgs {
   gameState: GameState;
@@ -183,19 +184,14 @@ export const useTurnFlowCoordinator = ({
       !isBusy
       && (currentEventsHash === lastProcessedEventsHash.current)
       && (currentTimelineHash === lastProcessedTimelineHash.current);
-    const hasBlockingTimeline = (gameState.timelineEvents || []).some(ev => ev.blocking);
-    const blockingDurationMs = (gameState.timelineEvents || [])
-      .filter(ev => ev.blocking)
-      .reduce((sum, ev) => sum + (ev.suggestedDurationMs || 0), 0);
-    const movementTraceBudgetMs = (gameState.visualEvents || []).reduce((maxMs, ev) => {
-      if (ev.type !== 'kinetic_trace') return maxMs;
-      const trace = ev.payload as { startDelayMs?: number; durationMs?: number } | undefined;
-      if (!trace) return maxMs;
-      const startDelayMs = Math.max(0, Number(trace.startDelayMs || 0));
-      const durationMs = Math.max(0, Number(trace.durationMs || 0));
-      return Math.max(maxMs, startDelayMs + durationMs);
-    }, 0);
-    const interactionBudgetMs = Math.max(blockingDurationMs, movementTraceBudgetMs);
+    const {
+      hasBlockingTimeline,
+      movementTraceBudgetMs,
+      interactionBudgetMs
+    } = computeInteractionBlockingBudget({
+      timelineEvents: gameState.timelineEvents,
+      visualEvents: gameState.visualEvents,
+    });
     const requiredFallbackDelayMs = interactionBudgetMs > 0
       ? Math.max(160, Math.min(3200, interactionBudgetMs + 40))
       : 0;

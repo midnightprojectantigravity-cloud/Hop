@@ -185,6 +185,29 @@ export const resolveLayoutMode = (
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
+const normalizeCameraInsets = (insets?: Partial<CameraInsetsPx>): CameraInsetsPx => ({
+  top: Math.round(insets?.top || 0),
+  right: Math.round(insets?.right || 0),
+  bottom: Math.round(insets?.bottom || 0),
+  left: Math.round(insets?.left || 0),
+});
+
+export const hasMaterialCameraInsetDelta = (
+  prevInsets: Partial<CameraInsetsPx> | undefined,
+  nextInsets: Partial<CameraInsetsPx> | undefined,
+  boardRect: { width: number; height: number },
+): boolean => {
+  const prev = normalizeCameraInsets(prevInsets);
+  const next = normalizeCameraInsets(nextInsets);
+  const horizontalThreshold = Math.max(8, Math.round(Math.max(1, boardRect.width) * 0.02));
+  const verticalThreshold = Math.max(8, Math.round(Math.max(1, boardRect.height) * 0.02));
+
+  return Math.abs(next.top - prev.top) >= verticalThreshold
+    || Math.abs(next.bottom - prev.bottom) >= verticalThreshold
+    || Math.abs(next.left - prev.left) >= horizontalThreshold
+    || Math.abs(next.right - prev.right) >= horizontalThreshold;
+};
+
 export const resolveHudScale = (width: number, height: number): number => {
   const shortestViewportEdge = Math.max(1, Math.min(width, height));
   return clamp(shortestViewportEdge / 390, 0.82, 1.24);
@@ -443,8 +466,9 @@ export const GameScreen = ({
   React.useLayoutEffect(() => {
     const boardSurface = boardSurfaceRef.current;
     if (!boardSurface || typeof ResizeObserver === 'undefined') return undefined;
+    let rafId: number | null = null;
 
-    const measureInsets = () => {
+    const measureInsetsNow = () => {
       if (layoutMode !== 'desktop_command_center') {
         setCameraSafeInsetsPx((prev) => (
           (prev.top || 0) === 0
@@ -468,24 +492,41 @@ export const GameScreen = ({
         nextInsets.bottom = Math.max(nextInsets.bottom, Math.max(0, boardRect.bottom - trayRect.top) + 16);
       }
 
-      setCameraSafeInsetsPx((prev) => (
-        (prev.top || 0) === nextInsets.top
-        && (prev.right || 0) === nextInsets.right
-        && (prev.bottom || 0) === nextInsets.bottom
-        && (prev.left || 0) === nextInsets.left
-      ) ? prev : nextInsets);
+      setCameraSafeInsetsPx((prev) => {
+        const normalizedPrev = normalizeCameraInsets(prev);
+        const normalizedNext = normalizeCameraInsets(nextInsets);
+        const identical = normalizedPrev.top === normalizedNext.top
+          && normalizedPrev.right === normalizedNext.right
+          && normalizedPrev.bottom === normalizedNext.bottom
+          && normalizedPrev.left === normalizedNext.left;
+        if (identical) return prev;
+        return hasMaterialCameraInsetDelta(normalizedPrev, normalizedNext, boardRect)
+          ? normalizedNext
+          : prev;
+      });
     };
 
-    measureInsets();
-    const observer = new ResizeObserver(measureInsets);
+    const scheduleMeasureInsets = () => {
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        measureInsetsNow();
+      });
+    };
+
+    measureInsetsNow();
+    const observer = new ResizeObserver(scheduleMeasureInsets);
     observer.observe(boardSurface);
     if (desktopUtilityRef.current) observer.observe(desktopUtilityRef.current);
     if (desktopSynapseTrayRef.current) observer.observe(desktopSynapseTrayRef.current);
-    window.addEventListener('resize', measureInsets);
+    window.addEventListener('resize', scheduleMeasureInsets);
 
     return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
       observer.disconnect();
-      window.removeEventListener('resize', measureInsets);
+      window.removeEventListener('resize', scheduleMeasureInsets);
     };
   }, [layoutMode, isSynapseMode, synapseSelection.mode]);
 

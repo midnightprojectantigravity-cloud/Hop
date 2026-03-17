@@ -1,30 +1,43 @@
 import { useEffect } from 'react';
+import {
+  ensureDebugPerfObservers,
+  flushDebugPerfSnapshot,
+  recordDebugPerfFrameSample,
+  resolveDebugPerfConfig,
+} from './perf/debug-perf-runtime';
 
 export const useDebugPerfLogger = (deps: ReadonlyArray<unknown>) => {
   useEffect(() => {
-    const enabled = typeof window !== 'undefined' && Boolean((window as any).__HOP_DEBUG_PERF);
-    if (!enabled) return;
+    const config = resolveDebugPerfConfig();
+    if (!config.enabled || typeof window === 'undefined') return;
+    ensureDebugPerfObservers();
     let raf = 0;
     let last = performance.now();
-    let frames = 0;
-    let totalMs = 0;
-    let windowStart = last;
     const tick = (ts: number) => {
       const dt = ts - last;
       last = ts;
-      frames++;
-      totalMs += dt;
-      if (ts - windowStart >= 2000) {
-        const avgMs = totalMs / Math.max(1, frames);
-        const fps = 1000 / Math.max(1, avgMs);
-        console.log('[HOP_PERF]', { fps: Number(fps.toFixed(1)), avgFrameMs: Number(avgMs.toFixed(2)), frames });
-        windowStart = ts;
-        frames = 0;
-        totalMs = 0;
+      recordDebugPerfFrameSample(dt);
+      const snapshot = flushDebugPerfSnapshot();
+      if (snapshot) {
+        const fps = snapshot.avgFrameMs > 0 ? 1000 / snapshot.avgFrameMs : 0;
+        console.log('[HOP_PERF]', {
+          fps: Number(fps.toFixed(1)),
+          ...snapshot,
+        });
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      const snapshot = flushDebugPerfSnapshot(true);
+      if (snapshot) {
+        const fps = snapshot.avgFrameMs > 0 ? 1000 / snapshot.avgFrameMs : 0;
+        console.log('[HOP_PERF]', {
+          fps: Number(fps.toFixed(1)),
+          ...snapshot,
+        });
+      }
+    };
   }, deps);
 };
