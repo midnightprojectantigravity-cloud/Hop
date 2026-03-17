@@ -43,6 +43,7 @@ export const EntityLayer: React.FC<EntityLayerProps> = ({
     const visibleActorIds = new Set(gameState.visibility?.playerFog?.visibleActorIds || []);
     const detectedActorIds = new Set(gameState.visibility?.playerFog?.detectedActorIds || []);
     const hasFogVisibility = !!gameState.visibility;
+    const playerDefeated = gameState.gameStatus === 'lost' && gameState.player.hp <= 0;
     const renderedEnemies = hasFogVisibility
         ? gameState.enemies.filter(enemy => visibleActorIds.has(enemy.id))
         : gameState.enemies;
@@ -76,6 +77,7 @@ export const EntityLayer: React.FC<EntityLayerProps> = ({
             <Entity
                 key={`player-${gameState.floor}`}
                 entity={gameState.player}
+                isDying={playerDefeated}
                 visualPose={entityVisualPoseById.get(gameState.player.id)}
                 assetHref={assetById.get(resolveUnitAssetId(gameState.player))?.path}
                 fallbackAssetHref={resolveUnitFallbackAssetHref(gameState.player)}
@@ -124,6 +126,8 @@ export const EntityLayer: React.FC<EntityLayerProps> = ({
                 timelineEvents={gameState.timelineEvents || []}
                 simulationEvents={gameState.simulationEvents || []}
                 actorSnapshots={juiceActorSnapshots}
+                playerActorId={gameState.player.id}
+                playerDefeated={playerDefeated}
                 onBusyStateChange={onJuiceBusyStateChange}
                 assetManifest={assetManifest}
             />

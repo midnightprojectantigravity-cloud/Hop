@@ -50,6 +50,7 @@ export const createInitialIresState = (actor: Actor, config: IresRulesetConfig =
         maxMana,
         exhaustion: 0,
         actionCountThisTurn: 0,
+        sparkBurnActionsThisTurn: 0,
         actedThisTurn: false,
         movedThisTurn: false,
         isExhausted: false,
@@ -75,6 +76,7 @@ export const ensureActorIres = (actor: Actor, config: IresRulesetConfig = resolv
         maxMana: initial.maxMana,
         exhaustion: clamp(Number(current.exhaustion ?? initial.exhaustion), 0, 100),
         actionCountThisTurn: Math.max(0, Math.floor(Number(current.actionCountThisTurn || 0))),
+        sparkBurnActionsThisTurn: Math.max(0, Math.floor(Number(current.sparkBurnActionsThisTurn || 0))),
         activeRestedCritBonusPct: Math.max(0, Number(current.activeRestedCritBonusPct || 0)),
         pendingRestedBonus: current.pendingRestedBonus === true
     }, config);
@@ -100,6 +102,7 @@ export const applyIresMutationToActor = (
         manaDelta?: number;
         exhaustionDelta?: number;
         actionCountDelta?: number;
+        sparkBurnActionsThisTurnDelta?: number;
         movedThisTurn?: boolean;
         actedThisTurn?: boolean;
         pendingRestedBonus?: boolean;
@@ -117,6 +120,7 @@ export const applyIresMutationToActor = (
         mana: clamp(current.mana + Number(mutation.manaDelta || 0), 0, current.maxMana),
         exhaustion: clamp(current.exhaustion + Number(mutation.exhaustionDelta || 0), 0, 100),
         actionCountThisTurn: Math.max(0, current.actionCountThisTurn + Math.floor(Number(mutation.actionCountDelta || 0))),
+        sparkBurnActionsThisTurn: Math.max(0, current.sparkBurnActionsThisTurn + Math.floor(Number(mutation.sparkBurnActionsThisTurnDelta || 0))),
         movedThisTurn: mutation.movedThisTurn === undefined
             ? current.movedThisTurn
             : resetTurnFlags
@@ -145,6 +149,7 @@ export const beginActorTurnIres = (actor: Actor, config: IresRulesetConfig = res
     return applyIresMutationToActor(hydrated, {
         sparkDelta: bonus,
         actionCountDelta: -(hydrated.ires?.actionCountThisTurn || 0),
+        sparkBurnActionsThisTurnDelta: -(hydrated.ires?.sparkBurnActionsThisTurn || 0),
         movedThisTurn: false,
         actedThisTurn: false,
         pendingRestedBonus: false,
@@ -161,6 +166,7 @@ export const buildEndTurnIresMutation = (
     manaDelta: number;
     exhaustionDelta: number;
     actionCountDelta: number;
+    sparkBurnActionsThisTurnDelta: number;
     movedThisTurn: boolean;
     actedThisTurn: boolean;
     pendingRestedBonus: boolean;
@@ -185,6 +191,7 @@ export const buildEndTurnIresMutation = (
         manaDelta,
         exhaustionDelta,
         actionCountDelta: -current.actionCountThisTurn,
+        sparkBurnActionsThisTurnDelta: -current.sparkBurnActionsThisTurn,
         movedThisTurn: false,
         actedThisTurn: false,
         pendingRestedBonus: projected.exhaustion === 0,

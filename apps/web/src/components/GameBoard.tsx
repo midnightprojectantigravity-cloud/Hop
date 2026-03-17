@@ -1,10 +1,8 @@
 import React, { useMemo, useState, useEffect, useLayoutEffect } from 'react';
 import type { ActionResourcePreview, GameState, IresTurnProjection, Point, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
 import {
-    hexDistance,
     isHexInRectangularGrid,
     hexToPixel,
-    pointToKey,
     TILE_SIZE
 } from '@hop/engine';
 import { CameraZoomControls } from './game-board/CameraZoomControls';
@@ -14,7 +12,7 @@ import type { VisualEchoEntry } from './game-board/VisualEchoLayer';
 import { useBoardInteractions } from './game-board/useBoardInteractions';
 import { useBoardDepthSprites } from './game-board/useBoardDepthSprites';
 import { useBoardBiomeVisuals } from './game-board/useBoardBiomeVisuals';
-import { useBoardTargetingPreview } from './game-board/useBoardTargetingPreview';
+import { canDispatchBoardTileIntent, useBoardTargetingPreview } from './game-board/useBoardTargetingPreview';
 import { useBoardEventEffects } from './game-board/useBoardEventEffects';
 import { useBoardActorVisuals } from './game-board/useBoardActorVisuals';
 import { useBoardJuicePresentation } from './game-board/useBoardJuicePresentation';
@@ -27,6 +25,7 @@ import {
     type CameraInsetsPx,
     type CameraRect,
 } from '../visual/camera';
+import { createCameraEnvelope } from '../visual/camera-envelope';
 import { resolveSynapsePreview, type SynapseDeltaEntry, type SynapsePulse, type SynapseSelection } from '../app/synapse';
 
 interface GameBoardProps {
@@ -80,6 +79,34 @@ const getHexPoints = (size: number): string => {
     return points.join(' ');
 };
 
+export const resolveBoardCells = (gameState: GameState): Point[] => {
+    if (gameState.tiles.size > 0) {
+        return Array.from(gameState.tiles.values())
+            .map(tile => tile.position)
+            .filter(hex =>
+                isHexInRectangularGrid(hex, gameState.gridWidth, gameState.gridHeight, gameState.mapShape)
+            );
+    }
+
+    const roomHexes = gameState.rooms?.flatMap(room => room.hexes) || [];
+    if (roomHexes.length > 0) {
+        return roomHexes.filter(hex =>
+            isHexInRectangularGrid(hex, gameState.gridWidth, gameState.gridHeight, gameState.mapShape)
+        );
+    }
+
+    const fallback: Point[] = [];
+    for (let q = 0; q < gameState.gridWidth; q++) {
+        for (let r = 0; r < gameState.gridHeight; r++) {
+            const hex = { q, r, s: -q - r };
+            if (isHexInRectangularGrid(hex, gameState.gridWidth, gameState.gridHeight, gameState.mapShape)) {
+                fallback.push(hex);
+            }
+        }
+    }
+    return fallback;
+};
+
 export const GameBoard: React.FC<GameBoardProps> = ({
     gameState,
     onMove,
@@ -113,37 +140,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         () => Math.max(1, Math.floor(Number(gameState.player.speed) || 0)),
         [gameState.player.speed]
     );
-    const lineOfSightRange = useMemo(() => {
-        const visibleTileKeys = gameState.visibility?.playerFog?.visibleTileKeys || [];
-        if (visibleTileKeys.length === 0) return undefined;
-
-        const visibleSet = new Set(visibleTileKeys);
-        let maxDistance = 0;
-        for (const tile of gameState.tiles.values()) {
-            if (!visibleSet.has(pointToKey(tile.position))) continue;
-            maxDistance = Math.max(maxDistance, hexDistance(playerPos, tile.position));
-        }
-        return Math.max(1, Math.floor(maxDistance));
-    }, [gameState.tiles, gameState.visibility?.playerFog?.visibleTileKeys, playerPos]);
 
     // Filter cells based on dynamic diamond geometry
-    const cells = useMemo(() => {
-        let hexes = gameState.rooms?.[0]?.hexes;
-
-        // Fallback: If rooms are missing, generate the full diamond grid
-        if (!hexes || hexes.length === 0) {
-            hexes = [];
-            for (let q = 0; q < gameState.gridWidth; q++) {
-                for (let r = 0; r < gameState.gridHeight; r++) {
-                    hexes.push({ q, r, s: -q - r });
-                }
-            }
-        }
-
-        return hexes.filter(h =>
-            isHexInRectangularGrid(h, gameState.gridWidth, gameState.gridHeight, gameState.mapShape)
-        );
-    }, [gameState.rooms, gameState.gridWidth, gameState.gridHeight, gameState.mapShape]);
+    const cells = useMemo(() => resolveBoardCells(gameState), [gameState]);
 
     const {
         isShaking,
@@ -162,14 +161,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const bounds = useMemo(() => {
         if (cells.length === 0) return { minX: 0, minY: 0, width: 100, height: 100 };
 
+        const halfHeight = (Math.sqrt(3) * TILE_SIZE) / 2;
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
         cells.forEach(hex => {
             const { x, y } = hexToPixel(hex, TILE_SIZE);
             minX = Math.min(minX, x - TILE_SIZE);
-            minY = Math.min(minY, y - TILE_SIZE);
+            minY = Math.min(minY, y - halfHeight);
             maxX = Math.max(maxX, x + TILE_SIZE);
-            maxY = Math.max(maxY, y + TILE_SIZE);
+            maxY = Math.max(maxY, y + halfHeight);
         });
 
         return {
@@ -191,36 +191,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         width: bounds.width,
         height: bounds.height
     }), [bounds.minX, bounds.minY, bounds.width, bounds.height]);
-    const visibleTileBounds = useMemo<CameraRect | null>(() => {
-        const visibleTileKeys = gameState.visibility?.playerFog?.visibleTileKeys || [];
-        if (visibleTileKeys.length === 0) return null;
-
-        let minX = Number.POSITIVE_INFINITY;
-        let minY = Number.POSITIVE_INFINITY;
-        let maxX = Number.NEGATIVE_INFINITY;
-        let maxY = Number.NEGATIVE_INFINITY;
-
-        for (const key of visibleTileKeys) {
-            const tile = gameState.tiles.get(key);
-            if (!tile) continue;
-            const { x, y } = hexToPixel(tile.position, TILE_SIZE);
-            minX = Math.min(minX, x - TILE_SIZE);
-            minY = Math.min(minY, y - TILE_SIZE);
-            maxX = Math.max(maxX, x + TILE_SIZE);
-            maxY = Math.max(maxY, y + TILE_SIZE);
-        }
-
-        if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
-            return null;
-        }
-
-        return {
-            x: minX,
-            y: minY,
-            width: maxX - minX,
-            height: maxY - minY
-        };
-    }, [gameState.tiles, gameState.visibility?.playerFog?.visibleTileKeys]);
+    const cameraEnvelope = useMemo(() => createCameraEnvelope(cells, TILE_SIZE), [cells]);
     const {
         movementTargetSet,
         hasPrimaryMovementSkills,
@@ -228,6 +199,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         shrineKey,
         fallbackNeighborSet,
         selectedSkillTargetSet,
+        defaultPassiveTargetSet,
         resolvedEnginePreviewGhost,
     } = useBoardTargetingPreview({
         gameState,
@@ -312,11 +284,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     } = useBoardPresentationController({
         gameState,
         baseViewBox,
-        visibleTileBounds,
+        cameraEnvelope,
         actorPositionById,
         playerWorld,
         movementRange,
-        lineOfSightRange,
         cameraSafeInsetsPx,
     });
 
@@ -336,6 +307,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     } = useBoardInteractions({
         svgRef,
         onMove,
+        canHandleTileClick: (hex) => canDispatchBoardTileIntent({
+            tile: hex,
+            playerPos,
+            selectedSkillId,
+            selectedSkillTargetSet,
+            defaultPassiveTargetSet,
+            hasPrimaryMovementSkills,
+            fallbackNeighborSet,
+        }),
         zoomMode: cameraState.zoomMode,
         setHoveredTile,
         beginManualPan,

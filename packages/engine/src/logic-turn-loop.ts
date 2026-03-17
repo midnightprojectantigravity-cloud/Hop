@@ -397,6 +397,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 manaDelta: endTurnMutation.manaDelta,
                 exhaustionDelta: endTurnMutation.exhaustionDelta,
                 actionCountDelta: endTurnMutation.actionCountDelta,
+                sparkBurnActionsThisTurnDelta: endTurnMutation.sparkBurnActionsThisTurnDelta,
                 movedThisTurn: endTurnMutation.movedThisTurn,
                 actedThisTurn: endTurnMutation.actedThisTurn,
                 nextPendingRestedBonus: endTurnMutation.pendingRestedBonus,

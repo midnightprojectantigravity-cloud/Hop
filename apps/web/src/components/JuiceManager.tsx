@@ -10,6 +10,8 @@ interface JuiceManagerProps {
     timelineEvents?: TimelineEvent[];
     simulationEvents?: SimulationEvent[];
     actorSnapshots?: JuiceActorSnapshot[];
+    playerActorId: string;
+    playerDefeated: boolean;
     onBusyStateChange?: (busy: boolean) => void;
     assetManifest?: VisualAssetManifest | null;
 }
@@ -19,6 +21,8 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({
     timelineEvents = [],
     simulationEvents = [],
     actorSnapshots = [],
+    playerActorId,
+    playerDefeated,
     onBusyStateChange,
     assetManifest
 }) => {
@@ -34,6 +38,8 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({
         timelineEvents,
         simulationEvents,
         actorSnapshots,
+        playerActorId,
+        playerDefeated,
         onBusyStateChange
     });
 

@@ -8,6 +8,7 @@ import type { EnemyAiContext, EnemyAiDecisionResult, EnemyAiPlannedCandidate } f
 import { toEnemyIntent } from './intent-adapter';
 import type { Intent } from '../../../types/intent';
 import { hexEquals } from '../../../hex';
+import { resolveIresActionPreview } from '../../ires';
 import {
     deriveEnemyDynamicIntentBias,
     getDynamicEnemyIntentBiasStrength,
@@ -89,6 +90,16 @@ interface EnemySelectionBundle {
     selectedCandidate?: EnemyScoredCandidateInternal;
 }
 
+const resolveEnemyCandidateResourcePreview = (
+    context: EnemyAiContext,
+    decision: AiDecision
+) => {
+    if (decision.action.type === 'WAIT') return undefined;
+    const skillId = decision.action.skillId;
+    if (!skillId) return undefined;
+    return resolveIresActionPreview(context.enemy, skillId, undefined, context.state.ruleset);
+};
+
 const enemyCandidateWeights = (context: EnemyAiContext, policy: ReturnType<typeof getEnemyPolicyProfile>) => {
     const subtype = context.enemy.subtype || 'default';
     const rangedSubtype = subtype === 'archer' || subtype === 'warlock' || subtype === 'bomber';
@@ -133,6 +144,10 @@ const enemyCandidateWeights = (context: EnemyAiContext, policy: ReturnType<typeo
         cooldown_delta_positive: rangedSubtype ? 0.4 : 0.2,
         rng_consumption: 0,
         message_present: 0.1,
+        ires_blocked_action: -1000,
+        ires_spark_burn_action: -250,
+        ires_spark_burn_hp: -8,
+        ires_enters_exhausted: -35,
         // base context features retained for diagnostics
         dist_to_player: 0,
         adjacent_to_player: 0,
@@ -310,7 +325,17 @@ const scoreEnemyCandidates = (context: EnemyAiContext, options: EnemySelectorDeb
 
     const scored: EnemyScoredCandidateInternal[] = candidates.map((candidate, index) => {
         const result = plannedResultToEnemyAiDecisionResult(context.enemy, context.state, candidate.planned);
-        const candidateFeatures = deriveEnemyCandidateFeatures(context, candidate, result.decision, policy);
+        const resourcePreview = resolveEnemyCandidateResourcePreview(context, result.decision);
+        const candidateFeatures = {
+            ...deriveEnemyCandidateFeatures(context, candidate, result.decision, policy),
+            ires_blocked_action: resourcePreview?.blockedReason ? 1 : 0,
+            ires_spark_burn_action: (resourcePreview?.sparkBurnHpDelta || 0) > 0 ? 1 : 0,
+            ires_spark_burn_hp: Number(resourcePreview?.sparkBurnHpDelta || 0),
+            ires_enters_exhausted: (
+                !context.enemy.ires?.isExhausted
+                && resourcePreview?.bandAfter === 'exhausted'
+            ) ? 1 : 0
+        };
         const intentFeatures = deriveEnemyIntentLayerFeatures(context, candidate, result.decision, policy);
         const tacticalBreakdown = scoreFeatures(candidateFeatures, weights);
         const rawIntentBreakdown = scoreFeatures(intentFeatures, intentWeights as Record<string, number>);

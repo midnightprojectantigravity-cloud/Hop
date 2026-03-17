@@ -4,15 +4,21 @@ import {
     type CameraInsetsPx,
     type CameraRect,
     type CameraVec2,
+    type CameraViewportPx,
     type CameraZoomMode,
-    clampCameraCenter,
+    type ResponsiveZoomProfile,
     computeActionZoomBounds,
     computeCameraViewFromBounds,
-    computeDesiredCenterForAnchor,
     computeTacticalZoomBounds,
     computeViewBoxFromCamera,
-    resolveCameraAnchorRatio
+    normalizeInsetsPx,
+    resolveResponsiveZoomProfile
 } from '../../visual/camera';
+import {
+    clampCameraCenterToEnvelope,
+    estimateCameraDeadSpaceRatio,
+    type CameraEnvelope
+} from '../../visual/camera-envelope';
 import { collectRenderableMovementBatch, createMotionBatch, sampleMovementTrace } from './board-motion-sampler';
 import { createDefaultPresentationState } from './board-local-motion';
 import type { ActorPresentationState, MotionBatch } from './board-motion-types';
@@ -20,13 +26,181 @@ import type { ActorPresentationState, MotionBatch } from './board-motion-types';
 interface UseBoardPresentationControllerArgs {
     gameState: GameState;
     baseViewBox: CameraRect;
-    visibleTileBounds?: CameraRect | null;
+    cameraEnvelope: CameraEnvelope;
     actorPositionById: Map<string, Point>;
     playerWorld: CameraVec2;
     movementRange: number;
-    lineOfSightRange?: number;
     cameraSafeInsetsPx?: Partial<CameraInsetsPx>;
 }
+
+export interface ResolvedCameraWindow {
+    center: CameraVec2;
+    scale: number;
+    visibleWorldSize: { width: number; height: number };
+    viewBox: CameraRect;
+    zoomProfile: ResponsiveZoomProfile;
+    deadSpaceRatio: number;
+}
+
+export const MATERIAL_CAMERA_INSET_DELTA_PX = 8;
+export const MATERIAL_CAMERA_VIEWPORT_CHANGE_RATIO = 0.1;
+
+export const hasMaterialCameraViewportChange = (
+    prevViewport: { width: number; height: number },
+    nextViewport: { width: number; height: number }
+): boolean => {
+    const prevWidth = Math.max(1, prevViewport.width);
+    const prevHeight = Math.max(1, prevViewport.height);
+    return Math.abs(nextViewport.width - prevWidth) / prevWidth >= MATERIAL_CAMERA_VIEWPORT_CHANGE_RATIO
+        || Math.abs(nextViewport.height - prevHeight) / prevHeight >= MATERIAL_CAMERA_VIEWPORT_CHANGE_RATIO;
+};
+
+export const hasMaterialCameraInsetChange = (
+    prevInsets: Partial<CameraInsetsPx> | undefined,
+    nextInsets: Partial<CameraInsetsPx> | undefined
+): boolean => {
+    const prev = normalizeInsetsPx(prevInsets);
+    const next = normalizeInsetsPx(nextInsets);
+    return Math.abs(next.top - prev.top) >= MATERIAL_CAMERA_INSET_DELTA_PX
+        || Math.abs(next.right - prev.right) >= MATERIAL_CAMERA_INSET_DELTA_PX
+        || Math.abs(next.bottom - prev.bottom) >= MATERIAL_CAMERA_INSET_DELTA_PX
+        || Math.abs(next.left - prev.left) >= MATERIAL_CAMERA_INSET_DELTA_PX;
+};
+
+export const shouldResetDetachedCamera = ({
+    wasDetached,
+    prevActionLogLength,
+    nextActionLogLength,
+    prevFloor,
+    nextFloor,
+    prevGameStatus,
+    nextGameStatus,
+    prevZoomMode,
+    nextZoomMode,
+    prevViewport,
+    nextViewport,
+    prevInsets,
+    nextInsets
+}: {
+    wasDetached: boolean;
+    prevActionLogLength?: number | null;
+    nextActionLogLength?: number;
+    prevFloor?: number;
+    nextFloor?: number;
+    prevGameStatus?: string | null;
+    nextGameStatus?: string | null;
+    prevZoomMode?: CameraZoomMode;
+    nextZoomMode?: CameraZoomMode;
+    prevViewport?: { width: number; height: number };
+    nextViewport?: { width: number; height: number };
+    prevInsets?: Partial<CameraInsetsPx>;
+    nextInsets?: Partial<CameraInsetsPx>;
+}): boolean => {
+    if (!wasDetached) return false;
+    if (
+        typeof prevActionLogLength === 'number'
+        && typeof nextActionLogLength === 'number'
+        && nextActionLogLength > prevActionLogLength
+    ) {
+        return true;
+    }
+    if (
+        typeof prevFloor === 'number'
+        && typeof nextFloor === 'number'
+        && prevFloor !== nextFloor
+    ) {
+        return true;
+    }
+    if (
+        typeof prevGameStatus === 'string'
+        && typeof nextGameStatus === 'string'
+        && prevGameStatus !== nextGameStatus
+    ) {
+        return true;
+    }
+    if (
+        prevZoomMode
+        && nextZoomMode
+        && prevZoomMode !== nextZoomMode
+    ) {
+        return true;
+    }
+    if (
+        prevViewport
+        && nextViewport
+        && hasMaterialCameraViewportChange(prevViewport, nextViewport)
+    ) {
+        return true;
+    }
+    if (
+        prevInsets
+        && nextInsets
+        && hasMaterialCameraInsetChange(prevInsets, nextInsets)
+    ) {
+        return true;
+    }
+    return false;
+};
+
+export const resolveBoardCameraWindow = ({
+    viewport,
+    zoomMode,
+    playerWorld,
+    movementRange,
+    tileSize,
+    mapBounds,
+    cameraEnvelope,
+    detachedCenter,
+    extraPaddingWorld = TILE_SIZE * 0.15
+}: {
+    viewport: CameraViewportPx;
+    zoomMode: CameraZoomMode;
+    playerWorld: CameraVec2;
+    movementRange: number;
+    tileSize: number;
+    mapBounds: CameraRect;
+    cameraEnvelope: CameraEnvelope;
+    detachedCenter?: CameraVec2 | null;
+    extraPaddingWorld?: number;
+}): ResolvedCameraWindow => {
+    const zoomProfile = resolveResponsiveZoomProfile({
+        mode: zoomMode,
+        viewport,
+        tileSize,
+        movementRange,
+        extraPaddingWorld
+    });
+    const zoomBounds = zoomMode === 'action'
+        ? computeActionZoomBounds({
+            playerWorld,
+            movementRange,
+            tileSize,
+            viewport,
+            mapBounds,
+            extraPaddingWorld
+        })
+        : computeTacticalZoomBounds({
+            playerWorld,
+            movementRange,
+            mapBounds,
+            tileSize,
+            viewport,
+            extraPaddingWorld
+        });
+    const { scale, visibleWorldSize } = computeCameraViewFromBounds(viewport, zoomBounds);
+    const desiredCenter = detachedCenter || playerWorld;
+    const center = clampCameraCenterToEnvelope(desiredCenter, visibleWorldSize, cameraEnvelope, mapBounds);
+    const viewBox = computeViewBoxFromCamera(center, visibleWorldSize);
+
+    return {
+        center,
+        scale,
+        visibleWorldSize,
+        viewBox,
+        zoomProfile,
+        deadSpaceRatio: estimateCameraDeadSpaceRatio(viewBox, cameraEnvelope)
+    };
+};
 
 const isReducedMotionEnabled = (): boolean => {
     if (typeof document === 'undefined') return false;
@@ -36,11 +210,10 @@ const isReducedMotionEnabled = (): boolean => {
 export const useBoardPresentationController = ({
     gameState,
     baseViewBox,
-    visibleTileBounds,
+    cameraEnvelope,
     actorPositionById,
     playerWorld,
     movementRange,
-    lineOfSightRange,
     cameraSafeInsetsPx,
 }: UseBoardPresentationControllerArgs) => {
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -49,6 +222,9 @@ export const useBoardPresentationController = ({
     const batchRef = useRef<MotionBatch | null>(null);
     const lastBatchSignatureRef = useRef('');
     const lastActionLogLengthRef = useRef<number | null>(null);
+    const previousGameStatusRef = useRef<string | null>(null);
+    const previousViewportRef = useRef<{ width: number; height: number } | null>(null);
+    const previousInsetsRef = useRef<CameraInsetsPx | null>(null);
     const cameraViewRef = useRef<CameraRect>(baseViewBox);
     const detachedCenterRef = useRef<CameraVec2 | null>(null);
     const [viewportSizePx, setViewportSizePx] = useState({ width: 0, height: 0 });
@@ -88,6 +264,16 @@ export const useBoardPresentationController = ({
         }
     }, []);
 
+    const applyCameraDebugAttributes = useCallback((windowState: ResolvedCameraWindow, nextDetached: boolean) => {
+        if (!import.meta.env.DEV) return;
+        const viewport = boardViewportRef.current;
+        if (!viewport) return;
+        viewport.dataset.cameraMode = windowState.zoomProfile.mode;
+        viewport.dataset.cameraPreset = String(windowState.zoomProfile.preset);
+        viewport.dataset.cameraDeadSpaceRatio = windowState.deadSpaceRatio.toFixed(3);
+        viewport.dataset.cameraDetached = nextDetached ? 'true' : 'false';
+    }, []);
+
     const applyActorPresentation = useCallback((actorId: string, state: ActorPresentationState) => {
         const svg = svgRef.current;
         if (!svg) return;
@@ -114,43 +300,25 @@ export const useBoardPresentationController = ({
         });
     }, [applyActorPresentation]);
 
-    const computeCameraView = useCallback((trackedPlayerWorld: CameraVec2): CameraRect => {
-        const viewport = {
-            width: Math.max(1, viewportSizePx.width),
-            height: Math.max(1, viewportSizePx.height),
-            insets: cameraSafeInsetsPx || {}
-        };
-        const zoomBounds = zoomMode === 'action'
-            ? computeActionZoomBounds({
-                playerWorld: trackedPlayerWorld,
-                movementRange,
-                tileSize: TILE_SIZE,
-                extraPaddingWorld: TILE_SIZE * 0.15
-            })
-            : computeTacticalZoomBounds({
-                playerWorld: trackedPlayerWorld,
-                mapBounds: baseViewBox,
-                visibleTileBounds,
-                losRange: lineOfSightRange,
-                tileSize: TILE_SIZE,
-                extraPaddingWorld: TILE_SIZE * 0.15
-            });
-        const { visibleWorldSize } = computeCameraViewFromBounds(viewport, zoomBounds);
-        const center = detachedCenterRef.current
-            ? clampCameraCenter(detachedCenterRef.current, visibleWorldSize, baseViewBox)
-            : clampCameraCenter(
-                computeDesiredCenterForAnchor(
-                    trackedPlayerWorld,
-                    visibleWorldSize,
-                    resolveCameraAnchorRatio(viewport)
-                ),
-                visibleWorldSize,
-                baseViewBox
-            );
-        if (detachedCenterRef.current) {
-            detachedCenterRef.current = center;
-        }
-        return computeViewBoxFromCamera(center, visibleWorldSize);
+    const computeCameraWindow = useCallback((
+        trackedPlayerWorld: CameraVec2,
+        overrides?: { zoomMode?: CameraZoomMode; detachedCenter?: CameraVec2 | null }
+    ): ResolvedCameraWindow => {
+        const hasDetachedOverride = Boolean(overrides && Object.prototype.hasOwnProperty.call(overrides, 'detachedCenter'));
+        return resolveBoardCameraWindow({
+            viewport: {
+                width: Math.max(1, viewportSizePx.width),
+                height: Math.max(1, viewportSizePx.height),
+                insets: cameraSafeInsetsPx || {}
+            },
+            zoomMode: overrides?.zoomMode ?? zoomMode,
+            playerWorld: trackedPlayerWorld,
+            movementRange,
+            tileSize: TILE_SIZE,
+            mapBounds: baseViewBox,
+            cameraEnvelope,
+            detachedCenter: hasDetachedOverride ? overrides?.detachedCenter ?? null : detachedCenterRef.current
+        });
     }, [
         viewportSizePx.width,
         viewportSizePx.height,
@@ -158,21 +326,34 @@ export const useBoardPresentationController = ({
         zoomMode,
         movementRange,
         baseViewBox,
-        visibleTileBounds,
-        lineOfSightRange
+        cameraEnvelope
     ]);
 
-    const commitCameraNow = useCallback((trackedPlayerWorld: CameraVec2) => {
-        const nextViewBox = computeCameraView(trackedPlayerWorld);
-        applyViewBox(nextViewBox);
-    }, [applyViewBox, computeCameraView]);
+    const commitCameraNow = useCallback((
+        trackedPlayerWorld: CameraVec2,
+        overrides?: { zoomMode?: CameraZoomMode; detachedCenter?: CameraVec2 | null }
+    ) => {
+        const nextWindow = computeCameraWindow(trackedPlayerWorld, overrides);
+        const hasDetachedOverride = Boolean(overrides && Object.prototype.hasOwnProperty.call(overrides, 'detachedCenter'));
+        const resolvedDetachedCenter = hasDetachedOverride
+            ? overrides?.detachedCenter ?? null
+            : detachedCenterRef.current;
+        const nextDetached = Boolean(resolvedDetachedCenter);
+        if (nextDetached) {
+            detachedCenterRef.current = nextWindow.center;
+        } else {
+            detachedCenterRef.current = null;
+        }
+        applyViewBox(nextWindow.viewBox);
+        applyCameraDebugAttributes(nextWindow, nextDetached);
+    }, [applyCameraDebugAttributes, applyViewBox, computeCameraWindow]);
 
     const resetPresentation = useCallback(() => {
         cancelPresentationFrame();
         batchRef.current = null;
         setPresentationBusy(false);
         syncStaticActorNodes();
-        commitCameraNow(playerWorldRef.current);
+        commitCameraNow(playerWorldRef.current, { detachedCenter: detachedCenterRef.current });
     }, [cancelPresentationFrame, syncStaticActorNodes, commitCameraNow]);
 
     useEffect(() => {
@@ -234,7 +415,7 @@ export const useBoardPresentationController = ({
     const recenter = useCallback(() => {
         detachedCenterRef.current = null;
         setIsDetached(false);
-        commitCameraNow(playerWorldRef.current);
+        commitCameraNow(playerWorldRef.current, { detachedCenter: null });
     }, [commitCameraNow]);
 
     const beginManualPan = useCallback(() => {
@@ -254,7 +435,7 @@ export const useBoardPresentationController = ({
             x: (detachedCenterRef.current?.x || playerWorldRef.current.x) + deltaWorld.x,
             y: (detachedCenterRef.current?.y || playerWorldRef.current.y) + deltaWorld.y
         };
-        commitCameraNow(playerWorldRef.current);
+        commitCameraNow(playerWorldRef.current, { detachedCenter: detachedCenterRef.current });
     }, [beginManualPan, commitCameraNow]);
 
     const endManualPan = useCallback(() => {
@@ -262,8 +443,21 @@ export const useBoardPresentationController = ({
     }, []);
 
     const selectZoomMode = useCallback((mode: CameraZoomMode) => {
-        setZoomMode(prev => (prev === mode ? prev : mode));
-    }, []);
+        if (zoomMode === mode) return;
+        if (shouldResetDetachedCamera({
+            wasDetached: Boolean(detachedCenterRef.current),
+            prevZoomMode: zoomMode,
+            nextZoomMode: mode
+        })) {
+            detachedCenterRef.current = null;
+            setIsDetached(false);
+        }
+        setZoomMode(mode);
+        commitCameraNow(playerWorldRef.current, {
+            zoomMode: mode,
+            detachedCenter: detachedCenterRef.current
+        });
+    }, [commitCameraNow, zoomMode]);
 
     useEffect(() => {
         const element = boardViewportRef.current;
@@ -307,16 +501,66 @@ export const useBoardPresentationController = ({
     }, [signature, startBatch]);
 
     useEffect(() => {
+        const actionLogLength = gameState.actionLog?.length ?? 0;
         if (lastActionLogLengthRef.current === null) {
-            lastActionLogLengthRef.current = gameState.actionLog?.length ?? 0;
+            lastActionLogLengthRef.current = actionLogLength;
             return;
         }
-        const actionLogLength = gameState.actionLog?.length ?? 0;
-        if (actionLogLength > lastActionLogLengthRef.current && detachedCenterRef.current) {
+        if (shouldResetDetachedCamera({
+            wasDetached: Boolean(detachedCenterRef.current),
+            prevActionLogLength: lastActionLogLengthRef.current,
+            nextActionLogLength: actionLogLength
+        })) {
             recenter();
         }
         lastActionLogLengthRef.current = actionLogLength;
     }, [gameState.actionLog, recenter]);
+
+    useEffect(() => {
+        if (previousGameStatusRef.current === null) {
+            previousGameStatusRef.current = gameState.gameStatus;
+            return;
+        }
+        if (shouldResetDetachedCamera({
+            wasDetached: Boolean(detachedCenterRef.current),
+            prevGameStatus: previousGameStatusRef.current,
+            nextGameStatus: gameState.gameStatus
+        })) {
+            recenter();
+        }
+        previousGameStatusRef.current = gameState.gameStatus;
+    }, [gameState.gameStatus, recenter]);
+
+    useEffect(() => {
+        const nextViewport = {
+            width: viewportSizePx.width,
+            height: viewportSizePx.height
+        };
+        const nextInsets = normalizeInsetsPx(cameraSafeInsetsPx);
+        if (
+            previousViewportRef.current
+            && previousInsetsRef.current
+            && shouldResetDetachedCamera({
+                wasDetached: Boolean(detachedCenterRef.current),
+                prevViewport: previousViewportRef.current,
+                nextViewport,
+                prevInsets: previousInsetsRef.current,
+                nextInsets
+            })
+        ) {
+            recenter();
+        }
+        previousViewportRef.current = nextViewport;
+        previousInsetsRef.current = nextInsets;
+    }, [
+        viewportSizePx.width,
+        viewportSizePx.height,
+        cameraSafeInsetsPx?.top,
+        cameraSafeInsetsPx?.right,
+        cameraSafeInsetsPx?.bottom,
+        cameraSafeInsetsPx?.left,
+        recenter
+    ]);
 
     useLayoutEffect(() => {
         detachedCenterRef.current = null;
@@ -324,6 +568,7 @@ export const useBoardPresentationController = ({
         resetPresentationRef.current();
     }, [
         gameState.floor,
+        gameState.gameStatus,
         baseViewBox.x,
         baseViewBox.y,
         baseViewBox.width,
@@ -333,7 +578,18 @@ export const useBoardPresentationController = ({
     useEffect(() => {
         if (presentationBusy) return;
         commitCameraNow(playerWorldRef.current);
-    }, [zoomMode, visibleTileBounds, baseViewBox, lineOfSightRange, movementRange, presentationBusy, commitCameraNow]);
+    }, [
+        zoomMode,
+        baseViewBox,
+        cameraEnvelope,
+        movementRange,
+        presentationBusy,
+        cameraSafeInsetsPx?.top,
+        cameraSafeInsetsPx?.right,
+        cameraSafeInsetsPx?.bottom,
+        cameraSafeInsetsPx?.left,
+        commitCameraNow
+    ]);
 
     useEffect(() => () => cancelPresentationFrame(), [cancelPresentationFrame]);
 

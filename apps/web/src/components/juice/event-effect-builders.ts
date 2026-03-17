@@ -13,6 +13,7 @@ interface BuildSimulationDamageCueEffectsArgs {
     now: number;
     startIndex: number;
     actorById: Map<string, JuiceActorSnapshot>;
+    playerActorId: string;
     recentSignatureImpactByTile: Map<string, SignatureImpactMark>;
     classifyDamageCueType: (sourceSubtype: string | undefined, reason: string, distancePx: number) => JuiceEffectType | null;
 }
@@ -88,6 +89,7 @@ export const buildSimulationDamageCueEffects = ({
     now,
     startIndex,
     actorById,
+    playerActorId,
     recentSignatureImpactByTile,
     classifyDamageCueType,
 }: BuildSimulationDamageCueEffectsArgs): JuiceEffect[] => {
@@ -99,6 +101,8 @@ export const buildSimulationDamageCueEffects = ({
         const sourceId = String(ev.payload?.sourceId || '');
         const source = sourceId ? actorById.get(sourceId) : undefined;
         const reason = String(ev.payload?.reason || '');
+        const amount = Math.max(0, Math.round(Number(ev.payload?.amount || 0)));
+        const isCriticalPlayerDamage = String(ev.targetId || '') === playerActorId && amount > 0;
         const signatureImpact = recentSignatureImpactByTile.get(pointToKey(targetPos));
         const isStrikeSignature = signatureImpact?.signature === 'ATK.STRIKE.PHYSICAL.BASIC_ATTACK'
             || signatureImpact?.signature === 'ATK.STRIKE.PHYSICAL.AUTO_ATTACK';
@@ -120,7 +124,8 @@ export const buildSimulationDamageCueEffects = ({
                     payload: {
                         source: source.position,
                         sourceSubtype: source.subtype,
-                        reason
+                        reason,
+                        criticalPlayerCue: isCriticalPlayerDamage
                     },
                     startTime: now
                 });
@@ -132,7 +137,28 @@ export const buildSimulationDamageCueEffects = ({
                 id: `sim-impact-${now}-${startIndex + idx}`,
                 type: 'impact',
                 position: targetPos,
+                payload: isCriticalPlayerDamage
+                    ? {
+                        reason,
+                        criticalPlayerCue: true
+                    }
+                    : undefined,
                 startTime: now
+            });
+        }
+
+        if (isCriticalPlayerDamage) {
+            additions.push({
+                id: `sim-player-damage-${now}-${startIndex + idx}`,
+                type: 'combat_text',
+                position: targetPos,
+                payload: {
+                    text: `-${amount}`,
+                    color: '#fb7185',
+                    criticalPlayerCue: true
+                },
+                startTime: now + 30,
+                ttlMs: 960
             });
         }
     });

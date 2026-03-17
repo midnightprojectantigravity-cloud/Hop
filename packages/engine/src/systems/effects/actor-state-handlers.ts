@@ -84,6 +84,7 @@ export const actorStateEffectHandlers: AtomicEffectHandlerMap = {
             manaDelta: effect.manaDelta,
             exhaustionDelta: effect.exhaustionDelta,
             actionCountDelta: effect.actionCountDelta,
+            sparkBurnActionsThisTurnDelta: effect.sparkBurnActionsThisTurnDelta,
             movedThisTurn: effect.movedThisTurn,
             actedThisTurn: effect.actedThisTurn,
             pendingRestedBonus: effect.nextPendingRestedBonus,

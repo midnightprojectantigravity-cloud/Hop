@@ -56,6 +56,7 @@ const buildProps = (isSynapseMode: boolean, mobileDockV2Enabled = true) => {
     onQuickRestart: vi.fn(),
     onViewReplay: vi.fn(),
     onRunLostActionsReady: vi.fn(),
+    showRunLostOverlay: false,
     onSetColorMode: vi.fn(),
     onToggleOverdrive: vi.fn(),
     mobileDockV2Enabled,

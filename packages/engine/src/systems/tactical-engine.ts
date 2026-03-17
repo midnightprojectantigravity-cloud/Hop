@@ -378,6 +378,7 @@ export class TacticalEngine {
                 manaDelta: resourcePreview.manaDelta,
                 exhaustionDelta: resourcePreview.exhaustionDelta,
                 actionCountDelta,
+                sparkBurnActionsThisTurnDelta: resourcePreview.sparkBurnHpDelta > 0 ? 1 : 0,
                 movedThisTurn: resourcePreview.travelRecoveryApplied ? false : (runtimeSkillProfile?.countsAsMovement || false),
                 actedThisTurn: resourcePreview.travelRecoveryApplied ? false : (runtimeSkillProfile?.countsAsAction || false),
                 resetTurnFlags: resourcePreview.travelRecoveryApplied || undefined,

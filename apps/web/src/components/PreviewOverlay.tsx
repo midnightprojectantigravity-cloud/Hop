@@ -156,13 +156,13 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({
 
         if (showMovementRange && hoveredTile && !selectedSkillId) {
             const isMoveTile = movementTileSet.has(pointToKey(hoveredTile));
-            if (isMoveTile) {
-                const path = getHexLine(playerPos, hoveredTile);
-                return { path, aoe: [], hasEnemy: false, target: hoveredTile, ailmentDeltaLines: [] };
-            }
+            if (isMoveTile) return null;
         }
 
         if (!selectedSkillId || !hoveredTile) return null;
+        if (selectedSkillId === 'BASIC_MOVE' || selectedSkillId === 'DASH' || selectedSkillId === 'JUMP') {
+            return null;
+        }
 
         const targetEntry = skillTargetsByKey.get(pointToKey(hoveredTile));
         if (!targetEntry || !targetEntry.isValidTarget || targetEntry.isBlocked) return null;
@@ -192,6 +192,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({
                         return (
                             <g>
                                 <path
+                                    data-preview-path="intent"
                                     d={d}
                                     stroke="rgba(255,255,255,0.9)"
                                     strokeWidth="2.25"

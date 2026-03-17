@@ -19,6 +19,7 @@ type PinchPointerState = {
 interface UseBoardInteractionsArgs {
     svgRef: React.MutableRefObject<SVGSVGElement | null>;
     onMove: (hex: Point) => void;
+    canHandleTileClick?: (hex: Point) => boolean;
     zoomMode: CameraZoomMode;
     setHoveredTile: Dispatch<SetStateAction<Point | null>>;
     beginManualPan: () => void;
@@ -31,6 +32,7 @@ interface UseBoardInteractionsArgs {
 export const useBoardInteractions = ({
     svgRef,
     onMove,
+    canHandleTileClick,
     zoomMode,
     setHoveredTile,
     beginManualPan,
@@ -65,8 +67,9 @@ export const useBoardInteractions = ({
 
     const handleTileClick = useCallback((hex: Point) => {
         if (Date.now() < suppressTileClickUntilRef.current) return;
+        if (canHandleTileClick && !canHandleTileClick(hex)) return;
         onMove(hex);
-    }, [onMove]);
+    }, [canHandleTileClick, onMove]);
 
     const handleHoverTile = useCallback((hex: Point) => {
         if (isCameraPanning || isPinchingRef.current) return;

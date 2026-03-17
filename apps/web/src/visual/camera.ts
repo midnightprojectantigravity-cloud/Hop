@@ -25,7 +25,11 @@ export type CameraViewportPx = {
 };
 
 export const ACTION_VIEW_MIN_HEX_DIAMETER = 7;
-export const TACTICAL_VIEW_MIN_HEX_DIAMETER = 15;
+export const TACTICAL_VIEW_MIN_HEX_DIAMETER = 11;
+export const ACTION_VIEW_MAX_HEX_WIDTH_PX = 128;
+export const ACTION_VIEW_MAX_HEX_HEIGHT_PX = 112;
+export const TACTICAL_VIEW_MAX_HEX_WIDTH_PX = 104;
+export const TACTICAL_VIEW_MAX_HEX_HEIGHT_PX = 92;
 
 export interface ResolveBinaryZoomLevelsOptions {
     mapWidth: number;
@@ -40,7 +44,6 @@ export const resolveBinaryZoomLevels = ({
     mapWidth,
     mapHeight,
     movementRange,
-    losRange,
     tacticalMinHexDiameter = TACTICAL_VIEW_MIN_HEX_DIAMETER,
     actionMinHexDiameter = ACTION_VIEW_MIN_HEX_DIAMETER
 }: ResolveBinaryZoomLevelsOptions): { tactical: CameraZoomPreset; action: CameraZoomPreset } => {
@@ -48,21 +51,19 @@ export const resolveBinaryZoomLevels = ({
     const safeMapHeight = Math.max(1, Math.floor(Number(mapHeight) || 0));
     const safeMapMinAxis = Math.max(1, Math.min(safeMapWidth, safeMapHeight));
     const safeMovementRange = Math.max(1, Math.floor(Number(movementRange) || 0));
-    const hasLosRange = Number.isFinite(losRange);
-    const safeLosRange = hasLosRange ? Math.max(1, Math.floor(Number(losRange) || 0)) : null;
-
-    const tacticalCandidate = safeLosRange !== null
-        ? (safeLosRange * 2) + 1
-        : Math.max(
-            Math.max(1, Math.floor(tacticalMinHexDiameter)),
-            safeMapMinAxis
-        );
-    const tactical = Math.min(safeMapMinAxis, tacticalCandidate);
-
-    const actionUpperBound = Math.min(safeMapMinAxis, (safeMovementRange * 2) + 3);
     const action = Math.min(
-        tactical,
-        Math.max(Math.max(1, Math.floor(actionMinHexDiameter)), actionUpperBound)
+        safeMapMinAxis,
+        Math.max(
+            Math.max(1, Math.floor(actionMinHexDiameter)),
+            (safeMovementRange * 2) + 3
+        )
+    );
+    const tactical = Math.min(
+        safeMapMinAxis,
+        Math.max(
+            Math.max(1, Math.floor(tacticalMinHexDiameter)),
+            action + 4
+        )
     );
 
     return { tactical, action };
@@ -143,6 +144,35 @@ export const expandRect = (rect: CameraRect, paddingWorld: number): CameraRect =
     height: rect.height + paddingWorld * 2,
 });
 
+export const constrainRectToBounds = (
+    rect: CameraRect,
+    bounds: CameraRect
+): CameraRect => {
+    const width = Math.min(rect.width, bounds.width);
+    const height = Math.min(rect.height, bounds.height);
+    const halfW = width / 2;
+    const halfH = height / 2;
+    const desiredCenterX = rect.x + (rect.width / 2);
+    const desiredCenterY = rect.y + (rect.height / 2);
+    const minCenterX = bounds.x + halfW;
+    const maxCenterX = bounds.x + bounds.width - halfW;
+    const minCenterY = bounds.y + halfH;
+    const maxCenterY = bounds.y + bounds.height - halfH;
+    const centerX = minCenterX > maxCenterX
+        ? bounds.x + (bounds.width / 2)
+        : clamp(desiredCenterX, minCenterX, maxCenterX);
+    const centerY = minCenterY > maxCenterY
+        ? bounds.y + (bounds.height / 2)
+        : clamp(desiredCenterY, minCenterY, maxCenterY);
+
+    return {
+        x: centerX - halfW,
+        y: centerY - halfH,
+        width,
+        height
+    };
+};
+
 export const computeEffectiveScale = (fitScale: number, presetScale: number): number => {
     const safeFit = Math.max(1e-6, fitScale);
     const safePreset = Math.max(1e-6, presetScale);
@@ -158,6 +188,105 @@ export const computeVisibleWorldSize = (
     return {
         width: usable.width / safeScale,
         height: usable.height / safeScale
+    };
+};
+
+const resolvePresetForMaxHexSize = ({
+    viewport,
+    floorPreset,
+    tileSize,
+    maxHexWidthPx,
+    maxHexHeightPx,
+    extraPaddingWorld = 0
+}: {
+    viewport: CameraViewportPx;
+    floorPreset: CameraZoomPreset;
+    tileSize: number;
+    maxHexWidthPx: number;
+    maxHexHeightPx: number;
+    extraPaddingWorld?: number;
+}): CameraZoomPreset => {
+    const usable = getUsableViewportPx(viewport);
+    const safeTileSize = Math.max(1, tileSize);
+    const hexWidthWorld = safeTileSize * 2;
+    const hexHeightWorld = Math.sqrt(3) * safeTileSize;
+    const minVisibleWidthWorld = usable.width * (hexWidthWorld / Math.max(1, maxHexWidthPx));
+    const minVisibleHeightWorld = usable.height * (hexHeightWorld / Math.max(1, maxHexHeightPx));
+    let preset = Math.max(1, Math.floor(floorPreset));
+
+    while (
+        (computePresetVisibleWidthWorld(preset, tileSize, extraPaddingWorld) < minVisibleWidthWorld
+            || computePresetVisibleHeightWorld(preset, tileSize, extraPaddingWorld) < minVisibleHeightWorld)
+        && preset < 512
+    ) {
+        preset += 1;
+    }
+
+    return preset;
+};
+
+export interface ResponsiveZoomProfile {
+    mode: CameraZoomMode;
+    floorPreset: CameraZoomPreset;
+    preset: CameraZoomPreset;
+    maxHexWidthPx: number;
+    maxHexHeightPx: number;
+}
+
+export interface ResolveResponsiveZoomProfileOptions {
+    mode: CameraZoomMode;
+    viewport: CameraViewportPx;
+    tileSize: number;
+    movementRange: number;
+    extraPaddingWorld?: number;
+    tacticalMinHexDiameter?: number;
+    actionMinHexDiameter?: number;
+    actionMaxHexWidthPx?: number;
+    actionMaxHexHeightPx?: number;
+    tacticalMaxHexWidthPx?: number;
+    tacticalMaxHexHeightPx?: number;
+}
+
+export const resolveResponsiveZoomProfile = ({
+    mode,
+    viewport,
+    tileSize,
+    movementRange,
+    extraPaddingWorld = 0,
+    tacticalMinHexDiameter = TACTICAL_VIEW_MIN_HEX_DIAMETER,
+    actionMinHexDiameter = ACTION_VIEW_MIN_HEX_DIAMETER,
+    actionMaxHexWidthPx = ACTION_VIEW_MAX_HEX_WIDTH_PX,
+    actionMaxHexHeightPx = ACTION_VIEW_MAX_HEX_HEIGHT_PX,
+    tacticalMaxHexWidthPx = TACTICAL_VIEW_MAX_HEX_WIDTH_PX,
+    tacticalMaxHexHeightPx = TACTICAL_VIEW_MAX_HEX_HEIGHT_PX,
+}: ResolveResponsiveZoomProfileOptions): ResponsiveZoomProfile => {
+    const safeMovementRange = Math.max(1, Math.floor(Number(movementRange) || 0));
+    const actionFloorPreset = Math.max(
+        Math.max(1, Math.floor(actionMinHexDiameter)),
+        (safeMovementRange * 2) + 3
+    );
+    const tacticalFloorPreset = Math.max(
+        Math.max(1, Math.floor(tacticalMinHexDiameter)),
+        actionFloorPreset + 4
+    );
+    const floorPreset = mode === 'action' ? actionFloorPreset : tacticalFloorPreset;
+    const maxHexWidthPx = mode === 'action' ? actionMaxHexWidthPx : tacticalMaxHexWidthPx;
+    const maxHexHeightPx = mode === 'action' ? actionMaxHexHeightPx : tacticalMaxHexHeightPx;
+    const preset = resolvePresetForMaxHexSize({
+        viewport,
+        floorPreset,
+        tileSize,
+        maxHexWidthPx,
+        maxHexHeightPx,
+        extraPaddingWorld
+    });
+
+    return {
+        mode,
+        floorPreset,
+        preset,
+        maxHexWidthPx,
+        maxHexHeightPx
     };
 };
 
@@ -190,26 +319,6 @@ export const computeViewBoxFromCamera = (
     height: visibleWorldSize.height,
 });
 
-const ensureMinimumRectSize = (
-    rect: CameraRect,
-    minWidth: number,
-    minHeight: number
-): CameraRect => {
-    const safeMinWidth = Math.max(1, minWidth);
-    const safeMinHeight = Math.max(1, minHeight);
-    if (rect.width >= safeMinWidth && rect.height >= safeMinHeight) return rect;
-    const centerX = rect.x + (rect.width / 2);
-    const centerY = rect.y + (rect.height / 2);
-    const nextWidth = Math.max(rect.width, safeMinWidth);
-    const nextHeight = Math.max(rect.height, safeMinHeight);
-    return {
-        x: centerX - (nextWidth / 2),
-        y: centerY - (nextHeight / 2),
-        width: nextWidth,
-        height: nextHeight
-    };
-};
-
 export const resolveCameraAnchorRatio = (
     viewport: CameraViewportPx
 ): CameraAnchorRatio => {
@@ -233,70 +342,110 @@ export const computeDesiredCenterForAnchor = (
     y: targetWorld.y + ((0.5 - anchorRatio.y) * visibleWorldSize.height)
 });
 
-export const computeActionZoomBounds = ({
+export const computeZoomBoundsForPreset = ({
     playerWorld,
-    movementRange,
+    preset,
     tileSize,
-    minHexDiameter = ACTION_VIEW_MIN_HEX_DIAMETER,
+    mapBounds,
     extraPaddingWorld = 0
 }: {
     playerWorld: CameraVec2;
-    movementRange: number;
+    preset: CameraZoomPreset;
     tileSize: number;
-    minHexDiameter?: number;
+    mapBounds?: CameraRect;
     extraPaddingWorld?: number;
 }): CameraRect => {
-    const diameter = Math.max(
-        Math.max(1, Math.floor(minHexDiameter)),
-        (Math.max(1, Math.floor(movementRange || 0)) * 2) + 3
-    );
-    const width = computePresetVisibleWidthWorld(diameter, tileSize, extraPaddingWorld);
-    const height = computePresetVisibleHeightWorld(diameter, tileSize, extraPaddingWorld);
-    return {
+    const width = computePresetVisibleWidthWorld(preset, tileSize, extraPaddingWorld);
+    const height = computePresetVisibleHeightWorld(preset, tileSize, extraPaddingWorld);
+    const requestedBounds = {
         x: playerWorld.x - (width / 2),
         y: playerWorld.y - (height / 2),
         width,
         height
     };
+    return mapBounds
+        ? constrainRectToBounds(requestedBounds, mapBounds)
+        : requestedBounds;
+};
+
+export const computeActionZoomBounds = ({
+    playerWorld,
+    movementRange,
+    tileSize,
+    viewport,
+    mapBounds,
+    minHexDiameter = ACTION_VIEW_MIN_HEX_DIAMETER,
+    maxHexWidthPx = ACTION_VIEW_MAX_HEX_WIDTH_PX,
+    maxHexHeightPx = ACTION_VIEW_MAX_HEX_HEIGHT_PX,
+    extraPaddingWorld = 0
+}: {
+    playerWorld: CameraVec2;
+    movementRange: number;
+    tileSize: number;
+    viewport: CameraViewportPx;
+    mapBounds?: CameraRect;
+    minHexDiameter?: number;
+    maxHexWidthPx?: number;
+    maxHexHeightPx?: number;
+    extraPaddingWorld?: number;
+}): CameraRect => {
+    const profile = resolveResponsiveZoomProfile({
+        mode: 'action',
+        viewport,
+        tileSize,
+        movementRange,
+        extraPaddingWorld,
+        actionMinHexDiameter: minHexDiameter,
+        actionMaxHexWidthPx: maxHexWidthPx,
+        actionMaxHexHeightPx: maxHexHeightPx
+    });
+    return computeZoomBoundsForPreset({
+        playerWorld,
+        preset: profile.preset,
+        tileSize,
+        mapBounds,
+        extraPaddingWorld
+    });
 };
 
 export const computeTacticalZoomBounds = ({
     playerWorld,
+    movementRange,
     mapBounds,
     tileSize,
-    visibleTileBounds,
-    losRange,
+    viewport,
     minHexDiameter = TACTICAL_VIEW_MIN_HEX_DIAMETER,
+    maxHexWidthPx = TACTICAL_VIEW_MAX_HEX_WIDTH_PX,
+    maxHexHeightPx = TACTICAL_VIEW_MAX_HEX_HEIGHT_PX,
     extraPaddingWorld = 0
 }: {
     playerWorld: CameraVec2;
+    movementRange: number;
     mapBounds: CameraRect;
     tileSize: number;
-    visibleTileBounds?: CameraRect | null;
-    losRange?: number;
+    viewport: CameraViewportPx;
     minHexDiameter?: number;
+    maxHexWidthPx?: number;
+    maxHexHeightPx?: number;
     extraPaddingWorld?: number;
 }): CameraRect => {
-    const diameter = losRange
-        ? Math.max(Math.max(1, Math.floor(minHexDiameter)), (Math.max(1, Math.floor(losRange)) * 2) + 1)
-        : Math.max(1, Math.floor(minHexDiameter));
-    const minWidth = computePresetVisibleWidthWorld(diameter, tileSize, extraPaddingWorld);
-    const minHeight = computePresetVisibleHeightWorld(diameter, tileSize, extraPaddingWorld);
-
-    if (visibleTileBounds) {
-        return ensureMinimumRectSize(expandRect(visibleTileBounds, extraPaddingWorld), minWidth, minHeight);
-    }
-
-    if (Number.isFinite(losRange)) {
-        return ensureMinimumRectSize({
-            x: playerWorld.x - (minWidth / 2),
-            y: playerWorld.y - (minHeight / 2),
-            width: minWidth,
-            height: minHeight
-        }, minWidth, minHeight);
-    }
-
-    return ensureMinimumRectSize(expandRect(mapBounds, extraPaddingWorld), minWidth, minHeight);
+    const profile = resolveResponsiveZoomProfile({
+        mode: 'tactical',
+        viewport,
+        tileSize,
+        movementRange,
+        extraPaddingWorld,
+        tacticalMinHexDiameter: minHexDiameter,
+        tacticalMaxHexWidthPx: maxHexWidthPx,
+        tacticalMaxHexHeightPx: maxHexHeightPx
+    });
+    return computeZoomBoundsForPreset({
+        playerWorld,
+        preset: profile.preset,
+        tileSize,
+        mapBounds,
+        extraPaddingWorld
+    });
 };
 
 export const computeCameraViewFromBounds = (

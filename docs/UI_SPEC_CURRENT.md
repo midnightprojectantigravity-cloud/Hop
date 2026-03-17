@@ -246,7 +246,35 @@ Capability-gated:
 3. detailed reveal-bound intel fields
 4. intel mode toggles (`Force`, `Strict`) are debug controls surfaced in `Settings` (not on gameplay board surfaces).
 
-## 7. Current Telemetry Contract
+## 7. Current Camera Contract
+
+Implementation anchors:
+1. `apps/web/src/visual/camera.ts`
+2. `apps/web/src/visual/camera-envelope.ts`
+3. `apps/web/src/components/game-board/useBoardPresentationController.ts`
+
+Current law:
+1. Gameplay camera exposes exactly 2 zoom modes: `action` and `tactical`.
+2. Camera follow is player-first:
+   - keep the player centered in normal cases.
+   - if edge clamping prevents exact centering, keep the player fully visible.
+3. Zoom uses responsive local-context floors:
+   - `action` guarantees at least the immediate movement context.
+   - `tactical` guarantees a wider tactical read.
+   - larger viewports may expand beyond these floors only to avoid oversized tiles.
+4. Safe insets may widen the visible world window, but do not intentionally push the player off center during normal follow.
+5. Camera clamping must use the occupied board envelope, not only the map bounding rectangle, to minimize off-board dead space on irregular maps.
+6. Manual pan is temporary:
+   - recenter after committed actions.
+   - recenter on zoom mode changes, floor transitions, material viewport changes, and major run-state transitions.
+
+Test anchors:
+1. `apps/web/src/__tests__/camera_zoom_bounds.test.ts`
+2. `apps/web/src/__tests__/camera_envelope.test.ts`
+3. `apps/web/src/__tests__/board_camera_window.test.ts`
+4. `apps/web/src/__tests__/camera_detach_policy.test.ts`
+
+## 8. Current Telemetry Contract
 
 Implementation anchor: `apps/web/src/app/ui-telemetry.ts`.
 
@@ -261,13 +289,13 @@ Payload:
 3. `at` (ISO string)
 4. optional `details`
 
-## 7.1 Experience SLO Baseline Policy (Current)
+## 8.1 Experience SLO Baseline Policy (Current)
 
 1. Current builds emit timing telemetry but do not enforce experience SLO pass/fail gates yet.
 2. SLO thresholds are defined in `UI_SPEC_ASPIRATIONAL.md` section 9.
 3. Once a module is promoted, its SLO becomes merge-gated current law.
 
-## 8. Current Performance Contract
+## 9. Current Performance Contract
 
 Implementation anchors:
 1. `apps/web/src/app/lazy-screens.ts`
@@ -279,22 +307,22 @@ Current law:
 2. Idle-time prefetch is active.
 3. Chunking strategy is explicit for vendor/engine/ui groups.
 
-## 9. Current Accessibility Baseline
+## 10. Current Accessibility Baseline
 
 1. Mobile frequent controls target >= 44px touch height.
 2. Reduced motion mode is implemented.
 3. Keyboard shortcut exists for `INFO` toggle (`I` / `Escape` behavior).
 4. Full keyboard parity and WCAG audit remain outside current-law completeness.
 
-## 10. Merge Gates (Current)
+## 11. Merge Gates (Current)
 
-## 10.1 Required Automated Checks
+## 11.1 Required Automated Checks
 
 1. `npx vitest run apps/web/src/__tests__ --silent`
 2. `npx tsc -p apps/web/tsconfig.app.json --noEmit`
 3. `npm --prefix apps/web run build`
 
-## 10.2 Key Contract Tests
+## 11.2 Key Contract Tests
 
 1. `game_layout_mode.test.ts`
 2. `hub_start_journey.test.ts`
@@ -302,8 +330,11 @@ Current law:
 4. `replay_controls_overlay_layout.test.ts`
 5. `ui_preferences.test.ts`
 6. `run_resume_context.test.ts`
+7. `camera_zoom_bounds.test.ts`
+8. `camera_envelope.test.ts`
+9. `board_camera_window.test.ts`
 
-## 11. Deferred (Not Current Law)
+## 12. Deferred (Not Current Law)
 
 Deferred targets are tracked in `docs/UI_SPEC_ASPIRATIONAL.md`, including:
 1. Sensory tokens (audio/haptics runtime implementation).
@@ -316,7 +347,7 @@ Deferred targets are tracked in `docs/UI_SPEC_ASPIRATIONAL.md`, including:
 Note:
 1. Some deferred items now have in-code scaffolding behind flags (section 1.1), but remain deferred for current-law purposes.
 
-## 12. Promotion Protocol (Aspirational -> Current)
+## 13. Promotion Protocol (Aspirational -> Current)
 
 An item may be promoted into this document only when all conditions are met:
 1. Implemented in shipped web code paths.

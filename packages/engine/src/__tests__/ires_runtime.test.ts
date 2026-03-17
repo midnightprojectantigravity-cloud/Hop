@@ -164,6 +164,33 @@ describe('IRES runtime', () => {
         expect(preview.bandAfter).toBe('exhausted');
     });
 
+    it('caps Spark Burn actions at one per turn', () => {
+        const state = generateInitialState(1, 'ires-burn-cap-seed');
+        const config = resolveIresRuleset(state.ruleset);
+        const exhausted = applyIresMutationToActor(state.player, { exhaustionDelta: 80 }, config);
+        const firstPreview = resolveIresActionPreview(
+            exhausted,
+            'BASIC_ATTACK',
+            getSkillDefinition('BASIC_ATTACK')?.resourceProfile
+        );
+        const afterFirstBurn = applyIresMutationToActor(exhausted, {
+            actionCountDelta: 1,
+            sparkBurnActionsThisTurnDelta: 1,
+            actedThisTurn: true
+        }, config);
+        const secondPreview = resolveIresActionPreview(
+            afterFirstBurn,
+            'BASIC_ATTACK',
+            getSkillDefinition('BASIC_ATTACK')?.resourceProfile
+        );
+
+        expect(firstPreview.blockedReason).toBeUndefined();
+        expect(firstPreview.sparkBurnHpDelta).toBeGreaterThan(0);
+        expect(afterFirstBurn.ires?.sparkBurnActionsThisTurn).toBe(1);
+        expect(secondPreview.sparkBurnHpDelta).toBe(0);
+        expect(secondPreview.blockedReason).toBe('Spark Burn action cap reached (1)');
+    });
+
     it('self-settles pure movement in travel mode and resets turn burden without arming rest bonuses', () => {
         const state = prepareReadyPlayerState({
             seed: 'ires-travel-settle',

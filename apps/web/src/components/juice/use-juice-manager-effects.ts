@@ -5,7 +5,9 @@ import { buildSignatureJuiceEffects } from './signature-effects';
 import { buildLegacyVfxEffects, buildSimulationDamageCueEffects } from './event-effect-builders';
 import {
     classifyDamageCueType,
+    CRITICAL_PLAYER_DEATH_MIN_HOLD_MS,
     getEffectLifetimeMs,
+    resolveCriticalPlayerCueHoldUntil,
     waitMs,
 } from './juice-manager-utils';
 import {
@@ -22,6 +24,8 @@ interface UseJuiceManagerEffectsArgs {
     timelineEvents: TimelineEvent[];
     simulationEvents: SimulationEvent[];
     actorSnapshots: JuiceActorSnapshot[];
+    playerActorId: string;
+    playerDefeated: boolean;
     onBusyStateChange?: (busy: boolean) => void;
 }
 
@@ -30,6 +34,8 @@ export const useJuiceManagerEffects = ({
     timelineEvents,
     simulationEvents,
     actorSnapshots,
+    playerActorId,
+    playerDefeated,
     onBusyStateChange
 }: UseJuiceManagerEffectsArgs): JuiceEffect[] => {
     const [effects, setEffects] = useState<JuiceEffect[]>([]);
@@ -40,11 +46,15 @@ export const useJuiceManagerEffects = ({
     const timelineQueue = useRef<TimelineEvent[]>([]);
     const isRunningQueue = useRef(false);
     const [timelineBusy, setTimelineBusy] = useState(false);
+    const [criticalCueBusy, setCriticalCueBusy] = useState(false);
     const prefersReducedMotion = useRef(false);
     const movementDurationByActor = useRef<Map<string, { durationMs: number; seenAt: number }>>(new Map());
     const cleanupTimerRef = useRef<number | null>(null);
+    const criticalCueTimerRef = useRef<number | null>(null);
     const lastEffectTickRef = useRef<number>(Date.now());
     const recentSignatureImpactByTileRef = useRef<Map<string, { at: number; signature: string }>>(new Map());
+    const criticalCueHoldUntilRef = useRef(0);
+    const lastPlayerDefeatedRef = useRef(false);
 
     const actorById = useMemo(() => {
         const map = new Map<string, JuiceActorSnapshot>();
@@ -83,8 +93,40 @@ export const useJuiceManagerEffects = ({
     }, [visualEvents]);
 
     useEffect(() => {
-        onBusyStateChange?.(timelineBusy);
-    }, [timelineBusy, onBusyStateChange]);
+        onBusyStateChange?.(timelineBusy || criticalCueBusy);
+    }, [criticalCueBusy, timelineBusy, onBusyStateChange]);
+
+    useEffect(() => () => {
+        if (criticalCueTimerRef.current !== null) {
+            window.clearTimeout(criticalCueTimerRef.current);
+            criticalCueTimerRef.current = null;
+        }
+    }, []);
+
+    const armCriticalCueHold = (holdUntil: number) => {
+        if (typeof window === 'undefined' || !Number.isFinite(holdUntil) || holdUntil <= 0) return;
+
+        criticalCueHoldUntilRef.current = Math.max(criticalCueHoldUntilRef.current, holdUntil);
+        setCriticalCueBusy(true);
+
+        if (criticalCueTimerRef.current !== null) {
+            window.clearTimeout(criticalCueTimerRef.current);
+            criticalCueTimerRef.current = null;
+        }
+
+        const scheduleRelease = () => {
+            const remainingMs = criticalCueHoldUntilRef.current - Date.now();
+            if (remainingMs > 16) {
+                criticalCueTimerRef.current = window.setTimeout(scheduleRelease, Math.min(remainingMs, 120));
+                return;
+            }
+            criticalCueTimerRef.current = null;
+            criticalCueHoldUntilRef.current = 0;
+            setCriticalCueBusy(false);
+        };
+
+        scheduleRelease();
+    };
 
     const enqueueTimelineEffects = (ev: TimelineEvent) => {
         const now = Date.now();
@@ -161,6 +203,13 @@ export const useJuiceManagerEffects = ({
     }, [visualEvents]);
 
     useEffect(() => {
+        if (playerDefeated && !lastPlayerDefeatedRef.current) {
+            armCriticalCueHold(Date.now() + CRITICAL_PLAYER_DEATH_MIN_HOLD_MS);
+        }
+        lastPlayerDefeatedRef.current = playerDefeated;
+    }, [playerDefeated]);
+
+    useEffect(() => {
         if (timelineEvents.length > 0) {
             processedVisualBatchRef.current = visualEvents;
             return;
@@ -193,14 +242,23 @@ export const useJuiceManagerEffects = ({
             now,
             startIndex,
             actorById,
+            playerActorId,
             recentSignatureImpactByTile: recentSignatureImpactByTileRef.current,
             classifyDamageCueType,
         });
+        const criticalCueHoldUntil = resolveCriticalPlayerCueHoldUntil({
+            additions,
+            now,
+            playerDefeated,
+        });
+        if (criticalCueHoldUntil > 0) {
+            armCriticalCueHold(criticalCueHoldUntil);
+        }
 
         if (additions.length > 0) {
             setEffects(prev => [...prev, ...additions]);
         }
-    }, [simulationEvents, actorById]);
+    }, [simulationEvents, actorById, playerActorId, playerDefeated]);
 
     useEffect(() => {
         if (cleanupTimerRef.current !== null) {

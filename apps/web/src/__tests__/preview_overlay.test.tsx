@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createHex, generateInitialState, type ActionResourcePreview, type IresTurnProjection } from '@hop/engine';
+import { SkillRegistry, createHex, generateInitialState, type ActionResourcePreview, type IresTurnProjection } from '@hop/engine';
 import { renderToStaticMarkup } from 'react-dom/server';
 import PreviewOverlay from '../components/PreviewOverlay';
 
@@ -124,5 +124,22 @@ describe('PreviewOverlay', () => {
     );
 
     expect(html).toContain('Overdrive: chaining enabled');
+  });
+
+  it('does not fabricate a straight-line movement preview without engine path data', () => {
+    const gameState = generateInitialState(1, 'preview-overlay-move-safety');
+    const moveTarget = SkillRegistry.get('BASIC_MOVE')!.getValidTargets!(gameState, gameState.player.position)[0]!;
+    const html = renderToStaticMarkup(
+      <svg>
+        <PreviewOverlay
+          gameState={gameState}
+          selectedSkillId={null}
+          showMovementRange
+          hoveredTile={moveTarget}
+        />
+      </svg>
+    );
+
+    expect(html).not.toContain('data-preview-path="intent"');
   });
 });

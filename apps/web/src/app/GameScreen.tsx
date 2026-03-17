@@ -117,6 +117,7 @@ interface GameScreenProps {
   onQuickRestart: () => void;
   onViewReplay: () => void;
   onRunLostActionsReady?: () => void;
+  showRunLostOverlay: boolean;
   onSetColorMode: (mode: UiColorMode) => void;
   onToggleOverdrive: () => void;
   mobileDockV2Enabled?: boolean;
@@ -237,6 +238,7 @@ export const GameScreen = ({
   onQuickRestart,
   onViewReplay,
   onRunLostActionsReady,
+  showRunLostOverlay,
   onSetColorMode,
   onToggleOverdrive,
   mobileDockV2Enabled = true,
@@ -903,7 +905,7 @@ export const GameScreen = ({
         <UpgradeOverlay onSelect={onSelectUpgrade} gameState={gameState} />
       )}
       <RunLostOverlay
-        visible={gameState.gameStatus === 'lost'}
+        visible={showRunLostOverlay}
         onQuickRestart={onQuickRestart}
         onViewReplay={onViewReplay}
         onActionsReady={onRunLostActionsReady}

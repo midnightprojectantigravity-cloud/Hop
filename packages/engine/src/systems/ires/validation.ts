@@ -5,6 +5,7 @@ import { resolveRuntimeSkillResourceProfile } from './skill-catalog';
 import { computeSparkBurnHp, ensureActorIres, resolveExhaustionState } from './state';
 
 export const MAX_IRES_ACTIONS_PER_TURN = 8;
+export const MAX_IRES_SPARK_BURN_ACTIONS_PER_TURN = 1;
 
 const clamp = (value: number, min: number, max: number): number =>
     Math.max(min, Math.min(max, value));
@@ -51,7 +52,11 @@ export const resolveIresActionPreview = (
 
     if (!failure && profile.primaryResource === 'spark' && primaryCost > 0) {
         if (current.isExhausted) {
-            sparkBurnHpDelta = computeSparkBurnHp(hydrated, config);
+            if (current.sparkBurnActionsThisTurn >= MAX_IRES_SPARK_BURN_ACTIONS_PER_TURN) {
+                failure = `Spark Burn action cap reached (${MAX_IRES_SPARK_BURN_ACTIONS_PER_TURN})`;
+            } else {
+                sparkBurnHpDelta = computeSparkBurnHp(hydrated, config);
+            }
         } else if (current.spark < primaryCost) {
             failure = `Spark outage: requires ${primaryCost} SP`;
         } else {

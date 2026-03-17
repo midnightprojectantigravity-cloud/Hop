@@ -13,6 +13,10 @@ import {
 } from './app/worldgen-transport';
 import { useReplayController } from './app/use-replay-controller';
 import { buildReplayRecordFromGameState, useRunRecording } from './app/use-run-recording';
+import {
+  resolveRunLostOverlayVisible,
+  RUN_LOST_OVERLAY_PLAYER_DEATH_DELAY_MS,
+} from './app/run-lost-overlay-visibility';
 import { useSimulationFeedback } from './app/use-simulation-feedback';
 import { useTurnFlowCoordinator } from './app/use-turn-flow-coordinator';
 import { useTurnDriverTrace } from './app/use-turn-driver-trace';
@@ -362,6 +366,7 @@ function App() {
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [showMovementRange, setShowMovementRange] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [runLostOverlayDelayElapsed, setRunLostOverlayDelayElapsed] = useState(false);
   const [postCommitInputLock, setPostCommitInputLock] = useState(false);
   const [overdriveState, setOverdriveState] = useState<OverdriveTurnState>('idle');
   const [pendingAutoEnd, setPendingAutoEnd] = useState<PendingAutoEndState | null>(null);
@@ -1097,6 +1102,31 @@ function App() {
   }, [dispatchSensory, gameState.gameStatus]);
 
   useEffect(() => {
+    if (gameState.gameStatus !== 'lost') {
+      setRunLostOverlayDelayElapsed(false);
+      return;
+    }
+    if (gameState.player.hp > 0) {
+      setRunLostOverlayDelayElapsed(true);
+      return;
+    }
+
+    setRunLostOverlayDelayElapsed(false);
+    const timer = window.setTimeout(() => {
+      setRunLostOverlayDelayElapsed(true);
+    }, RUN_LOST_OVERLAY_PLAYER_DEATH_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [gameState.gameStatus, gameState.player.hp]);
+
+  const showRunLostOverlay = resolveRunLostOverlayVisible({
+    gameStatus: gameState.gameStatus,
+    playerHp: gameState.player.hp,
+    isBusy,
+    delayElapsed: runLostOverlayDelayElapsed,
+  });
+
+  useEffect(() => {
     if (gameState.gameStatus !== 'playing' || isReplayMode) return;
     const loadoutId = gameState.player.archetype || runResumeContext?.lastLoadoutId;
     if (!loadoutId) return;
@@ -1317,6 +1347,7 @@ function App() {
           onQuickRestart={handleQuickRestart}
           onViewReplay={handleViewReplay}
           onRunLostActionsReady={handleRunLostActionsReady}
+          showRunLostOverlay={showRunLostOverlay}
           onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
           onToggleOverdrive={toggleOverdrive}
           mobileDockV2Enabled={mobileDockV2Enabled}

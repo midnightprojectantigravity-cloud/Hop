@@ -102,6 +102,7 @@ export interface IresRuntimeState {
     maxMana: number;
     exhaustion: number;
     actionCountThisTurn: number;
+    sparkBurnActionsThisTurn: number;
     actedThisTurn: boolean;
     movedThisTurn: boolean;
     isExhausted: boolean;
@@ -290,6 +291,7 @@ export type AtomicEffect =
         manaDelta: number;
         exhaustionDelta: number;
         actionCountDelta: number;
+        sparkBurnActionsThisTurnDelta?: number;
         movedThisTurn?: boolean;
         actedThisTurn?: boolean;
         nextPendingRestedBonus?: boolean;

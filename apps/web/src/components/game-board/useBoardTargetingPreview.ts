@@ -23,9 +23,67 @@ interface EnginePreviewGhost {
     turnProjection?: IresTurnProjection;
 }
 
+const collectUniqueSkillTargets = (
+    gameState: GameState,
+    origin: Point,
+    skillIds: ReadonlyArray<string>
+): Point[] => {
+    const validSet = new Set<string>();
+    const results: Point[] = [];
+
+    for (const id of skillIds) {
+        const def = SkillRegistry.get(id);
+        if (!def?.getValidTargets) continue;
+        const targets = def.getValidTargets(gameState, origin);
+        for (const target of targets) {
+            const key = pointToKey(target);
+            if (validSet.has(key)) continue;
+            validSet.add(key);
+            results.push(target);
+        }
+    }
+
+    return results;
+};
+
 export const extractAilmentDeltaLines = (events: GameState['simulationEvents'] | undefined): string[] => {
     if (!events) return [];
     return buildAilmentDeltaSummary(events);
+};
+
+export const buildDefaultPassiveTargetSet = (
+    gameState: GameState,
+    origin: Point
+): Set<string> => {
+    const passiveSkillIds = (gameState.player.activeSkills || [])
+        .filter(skill => skill.slot === 'passive')
+        .map(skill => skill.id);
+    const targets = collectUniqueSkillTargets(gameState, origin, passiveSkillIds);
+    return new Set(targets.map(pointToKey));
+};
+
+export const canDispatchBoardTileIntent = ({
+    tile,
+    playerPos,
+    selectedSkillId,
+    selectedSkillTargetSet,
+    defaultPassiveTargetSet,
+    hasPrimaryMovementSkills,
+    fallbackNeighborSet,
+}: {
+    tile: Point;
+    playerPos: Point;
+    selectedSkillId: string | null;
+    selectedSkillTargetSet: Set<string>;
+    defaultPassiveTargetSet: Set<string>;
+    hasPrimaryMovementSkills: boolean;
+    fallbackNeighborSet: Set<string>;
+}): boolean => {
+    const tileKey = pointToKey(tile);
+    if (tileKey === pointToKey(playerPos)) return true;
+    if (selectedSkillId) return selectedSkillTargetSet.has(tileKey);
+    return defaultPassiveTargetSet.has(tileKey)
+        || (!hasPrimaryMovementSkills && fallbackNeighborSet.has(tileKey));
 };
 
 interface UseBoardTargetingPreviewArgs {
@@ -48,25 +106,9 @@ export const useBoardTargetingPreview = ({
     const movementTargets = useMemo(() => {
         if (!showMovementRange || selectedSkillId) return [] as Point[];
 
-        const movementSkillIds = ['BASIC_MOVE', 'DASH'] as const;
-        const playerSkillIds = new Set(gameState.player.activeSkills.map(s => s.id));
-        const validSet = new Set<string>();
-        const results: Point[] = [];
-
-        for (const id of movementSkillIds) {
-            if (!playerSkillIds.has(id)) continue;
-            const def = SkillRegistry.get(id);
-            if (!def?.getValidTargets) continue;
-            const targets = def.getValidTargets(gameState, playerPos);
-            for (const t of targets) {
-                const key = pointToKey(t);
-                if (!validSet.has(key)) {
-                    validSet.add(key);
-                    results.push(t);
-                }
-            }
-        }
-        return results;
+        const movementSkillIds = (['BASIC_MOVE', 'DASH'] as const)
+            .filter(id => gameState.player.activeSkills.some(skill => skill.id === id));
+        return collectUniqueSkillTargets(gameState, playerPos, movementSkillIds);
     }, [showMovementRange, selectedSkillId, gameState, playerPos]);
 
     const movementTargetSet = useMemo(() => {
@@ -132,6 +174,11 @@ export const useBoardTargetingPreview = ({
         return set;
     }, [selectedSkillId, gameState, playerPos]);
 
+    const defaultPassiveTargetSet = useMemo(
+        () => buildDefaultPassiveTargetSet(gameState, playerPos),
+        [gameState, playerPos]
+    );
+
     const resolvedEnginePreviewGhost = useMemo(() => {
         if (enginePreviewGhost) return enginePreviewGhost;
         if (!hoveredTile) return null;
@@ -146,9 +193,10 @@ export const useBoardTargetingPreview = ({
                 : gameState.player.activeSkills.some(skill => skill.id === 'DASH')
                   ? 'DASH'
                   : null;
-            const previewPath = gameState.player.activeSkills.some(skill => skill.id === 'BASIC_MOVE')
-                ? resolveMovementPreviewPath(gameState, gameState.player, 'BASIC_MOVE', hoveredTile)
+            const previewPath = moveSkillId
+                ? resolveMovementPreviewPath(gameState, gameState.player, moveSkillId, hoveredTile)
                 : null;
+            if (moveSkillId && !previewPath?.ok) return null;
             const resourcePreview = moveSkillId
                 ? previewActionOutcome(gameState, {
                     actorId: gameState.player.id,
@@ -157,7 +205,7 @@ export const useBoardTargetingPreview = ({
                   })
                 : null;
             return {
-                path: previewPath?.ok ? previewPath.path : getHexLine(playerPos, hoveredTile),
+                path: previewPath?.path || [playerPos, hoveredTile],
                 aoe: [],
                 hasEnemy: false,
                 target: hoveredTile,
@@ -200,9 +248,10 @@ export const useBoardTargetingPreview = ({
         const movementPreview = selectedMovementSkill
             ? resolveMovementPreviewPath(gameState, gameState.player, selectedMovementSkill, hoveredTile)
             : null;
+        if (selectedMovementSkill && !movementPreview?.ok) return null;
 
         return {
-            path: movementPreview?.ok ? movementPreview.path : getHexLine(playerPos, hoveredTile),
+            path: movementPreview?.path || getHexLine(playerPos, hoveredTile),
             aoe: [...aoeByKey.values()],
             hasEnemy,
             target: hoveredTile,
@@ -229,6 +278,7 @@ export const useBoardTargetingPreview = ({
         shrineKey,
         fallbackNeighborSet,
         selectedSkillTargetSet,
+        defaultPassiveTargetSet,
         resolvedEnginePreviewGhost,
     };
 };
