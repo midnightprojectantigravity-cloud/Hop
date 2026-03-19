@@ -17,7 +17,7 @@ import {
     getCachedSkillTargets,
 } from './target-resolution-cache';
 
-interface EnginePreviewGhost {
+export interface BoardEnginePreviewGhost {
     path: Point[];
     aoe: Point[];
     hasEnemy: boolean;
@@ -91,17 +91,127 @@ interface UseBoardTargetingPreviewArgs {
     playerPos: Point;
     selectedSkillId: string | null;
     showMovementRange: boolean;
-    hoveredTile: Point | null;
-    enginePreviewGhost?: EnginePreviewGhost | null;
 }
 
-export const useBoardTargetingPreview = ({
+export const resolveBoardPreviewGhost = ({
     gameState,
     playerPos,
     selectedSkillId,
     showMovementRange,
     hoveredTile,
     enginePreviewGhost,
+    movementTargetSet,
+    hasPrimaryMovementSkills,
+    fallbackNeighborSet,
+}: {
+    gameState: GameState;
+    playerPos: Point;
+    selectedSkillId: string | null;
+    showMovementRange: boolean;
+    hoveredTile: Point | null;
+    enginePreviewGhost?: BoardEnginePreviewGhost | null;
+    movementTargetSet: Set<string>;
+    hasPrimaryMovementSkills: boolean;
+    fallbackNeighborSet: Set<string>;
+}): BoardEnginePreviewGhost | null => {
+    if (enginePreviewGhost) return enginePreviewGhost;
+    if (!hoveredTile) return null;
+
+    const hoveredKey = pointToKey(hoveredTile);
+    if (showMovementRange && !selectedSkillId) {
+        const isMoveTile = movementTargetSet.has(hoveredKey)
+            || (!hasPrimaryMovementSkills && fallbackNeighborSet.has(hoveredKey));
+        if (!isMoveTile) return null;
+        const moveSkillId = gameState.player.activeSkills.some(skill => skill.id === 'BASIC_MOVE')
+            ? 'BASIC_MOVE'
+            : gameState.player.activeSkills.some(skill => skill.id === 'DASH')
+              ? 'DASH'
+              : null;
+        const previewPath = moveSkillId
+            ? getCachedMovementPreviewPath({
+                gameState,
+                actor: gameState.player,
+                skillId: moveSkillId,
+                target: hoveredTile,
+            })
+            : null;
+        if (moveSkillId && !previewPath?.ok) return null;
+        const resourcePreview = moveSkillId
+            ? getCachedActionPreviewOutcome({
+                gameState,
+                actorId: gameState.player.id,
+                skillId: moveSkillId,
+                target: hoveredTile,
+              })
+            : null;
+        return {
+            path: previewPath?.path || [playerPos, hoveredTile],
+            aoe: [],
+            hasEnemy: false,
+            target: hoveredTile,
+            ailmentDeltaLines: [],
+            resourcePreview: resourcePreview?.resourcePreview,
+            turnProjection: resourcePreview?.turnProjection
+        };
+    }
+
+    if (!selectedSkillId) return null;
+
+    const selectedSkill = gameState.player.activeSkills.find(skill => skill.id === selectedSkillId);
+    const selectedMovementSkill = selectedSkillId === 'BASIC_MOVE'
+        || selectedSkillId === 'DASH'
+        || selectedSkillId === 'JUMP'
+        ? selectedSkillId
+        : null;
+    const preview = getCachedActionPreviewOutcome({
+        gameState,
+        actorId: gameState.player.id,
+        skillId: selectedSkillId,
+        target: hoveredTile,
+        activeUpgradeIds: selectedSkill?.activeUpgrades || [],
+    });
+
+    if (!preview.ok) return null;
+
+    const aoeByKey = new Map<string, Point>();
+    for (const event of preview.simulationEvents) {
+        if (!event.position) continue;
+        if (event.type !== 'DamageTaken' && event.type !== 'StatusApplied' && event.type !== 'UnitMoved') continue;
+        aoeByKey.set(pointToKey(event.position), event.position);
+    }
+
+    const hasEnemy = preview.simulationEvents.some(event =>
+        (event.type === 'DamageTaken' || event.type === 'StatusApplied')
+        && Boolean(event.targetId)
+        && event.targetId !== gameState.player.id
+    );
+    const ailmentDeltaLines = extractAilmentDeltaLines(preview.simulationEvents);
+    const movementPreview = selectedMovementSkill
+        ? getCachedMovementPreviewPath({
+            gameState,
+            actor: gameState.player,
+            skillId: selectedMovementSkill,
+            target: hoveredTile,
+        })
+        : null;
+    if (selectedMovementSkill && !movementPreview?.ok) return null;
+
+    return {
+        path: movementPreview?.path || getHexLine(playerPos, hoveredTile),
+        aoe: [...aoeByKey.values()],
+        hasEnemy,
+        target: hoveredTile,
+        ailmentDeltaLines,
+        resourcePreview: preview.resourcePreview,
+        turnProjection: preview.turnProjection
+    };
+};
+
+export const useBoardTargetingPreview = ({
+    gameState,
+    playerPos,
+    selectedSkillId,
+    showMovementRange,
 }: UseBoardTargetingPreviewArgs) => {
     const movementTargets = useMemo(() => {
         if (!showMovementRange || selectedSkillId) return [] as Point[];
@@ -185,110 +295,6 @@ export const useBoardTargetingPreview = ({
         [gameState, playerPos]
     );
 
-    const resolvedEnginePreviewGhost = useMemo(() => {
-        if (enginePreviewGhost) return enginePreviewGhost;
-        if (!hoveredTile) return null;
-
-        const hoveredKey = pointToKey(hoveredTile);
-        if (showMovementRange && !selectedSkillId) {
-            const isMoveTile = movementTargetSet.has(hoveredKey)
-                || (!hasPrimaryMovementSkills && fallbackNeighborSet.has(hoveredKey));
-            if (!isMoveTile) return null;
-            const moveSkillId = gameState.player.activeSkills.some(skill => skill.id === 'BASIC_MOVE')
-                ? 'BASIC_MOVE'
-                : gameState.player.activeSkills.some(skill => skill.id === 'DASH')
-                  ? 'DASH'
-                  : null;
-            const previewPath = moveSkillId
-                ? getCachedMovementPreviewPath({
-                    gameState,
-                    actor: gameState.player,
-                    skillId: moveSkillId,
-                    target: hoveredTile,
-                })
-                : null;
-            if (moveSkillId && !previewPath?.ok) return null;
-            const resourcePreview = moveSkillId
-                ? getCachedActionPreviewOutcome({
-                    gameState,
-                    actorId: gameState.player.id,
-                    skillId: moveSkillId,
-                    target: hoveredTile,
-                  })
-                : null;
-            return {
-                path: previewPath?.path || [playerPos, hoveredTile],
-                aoe: [],
-                hasEnemy: false,
-                target: hoveredTile,
-                ailmentDeltaLines: [],
-                resourcePreview: resourcePreview?.resourcePreview,
-                turnProjection: resourcePreview?.turnProjection
-            };
-        }
-
-        if (!selectedSkillId) return null;
-
-        const selectedSkill = gameState.player.activeSkills.find(skill => skill.id === selectedSkillId);
-        const selectedMovementSkill = selectedSkillId === 'BASIC_MOVE'
-            || selectedSkillId === 'DASH'
-            || selectedSkillId === 'JUMP'
-            ? selectedSkillId
-            : null;
-        const preview = getCachedActionPreviewOutcome({
-            gameState,
-            actorId: gameState.player.id,
-            skillId: selectedSkillId,
-            target: hoveredTile,
-            activeUpgradeIds: selectedSkill?.activeUpgrades || [],
-        });
-
-        if (!preview.ok) return null;
-
-        const aoeByKey = new Map<string, Point>();
-        for (const event of preview.simulationEvents) {
-            if (!event.position) continue;
-            if (event.type !== 'DamageTaken' && event.type !== 'StatusApplied' && event.type !== 'UnitMoved') continue;
-            aoeByKey.set(pointToKey(event.position), event.position);
-        }
-
-        const hasEnemy = preview.simulationEvents.some(event =>
-            (event.type === 'DamageTaken' || event.type === 'StatusApplied')
-            && Boolean(event.targetId)
-            && event.targetId !== gameState.player.id
-        );
-        const ailmentDeltaLines = extractAilmentDeltaLines(preview.simulationEvents);
-        const movementPreview = selectedMovementSkill
-            ? getCachedMovementPreviewPath({
-                gameState,
-                actor: gameState.player,
-                skillId: selectedMovementSkill,
-                target: hoveredTile,
-            })
-            : null;
-        if (selectedMovementSkill && !movementPreview?.ok) return null;
-
-        return {
-            path: movementPreview?.path || getHexLine(playerPos, hoveredTile),
-            aoe: [...aoeByKey.values()],
-            hasEnemy,
-            target: hoveredTile,
-            ailmentDeltaLines,
-            resourcePreview: preview.resourcePreview,
-            turnProjection: preview.turnProjection
-        };
-    }, [
-        enginePreviewGhost,
-        hoveredTile,
-        showMovementRange,
-        selectedSkillId,
-        movementTargetSet,
-        hasPrimaryMovementSkills,
-        fallbackNeighborSet,
-        gameState,
-        playerPos
-    ]);
-
     return {
         movementTargetSet,
         hasPrimaryMovementSkills,
@@ -297,6 +303,5 @@ export const useBoardTargetingPreview = ({
         fallbackNeighborSet,
         selectedSkillTargetSet,
         defaultPassiveTargetSet,
-        resolvedEnginePreviewGhost,
     };
 };

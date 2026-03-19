@@ -3,7 +3,6 @@ import { TILE_SIZE } from '@hop/engine';
 import type { JuiceEffectType, JuiceEffect } from './juice-types';
 
 export const waitMs = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-export const CRITICAL_PLAYER_DAMAGE_MIN_HOLD_MS = 520;
 export const CRITICAL_PLAYER_DEATH_MIN_HOLD_MS = 760;
 
 export const resolveEventPoint = (payload: any): Point | null => {
@@ -51,19 +50,18 @@ export const resolveCriticalPlayerCueHoldUntil = ({
     now: number;
     playerDefeated: boolean;
 }): number => {
-    const criticalEffects = additions.filter(isCriticalPlayerCueEffect);
-    if (criticalEffects.length === 0 && !playerDefeated) return 0;
+    if (!playerDefeated) return 0;
 
-    const minimumHoldMs = playerDefeated
-        ? CRITICAL_PLAYER_DEATH_MIN_HOLD_MS
-        : CRITICAL_PLAYER_DAMAGE_MIN_HOLD_MS;
-    const minimumHoldUntil = now + minimumHoldMs;
+    const criticalEffects = additions.filter(isCriticalPlayerCueEffect);
+    const minimumHoldUntil = now + CRITICAL_PLAYER_DEATH_MIN_HOLD_MS;
     const effectHoldUntil = criticalEffects.reduce(
         (latest, effect) => Math.max(latest, effect.startTime + getEffectLifetimeMs(effect)),
         0
     );
 
-    return Math.max(minimumHoldUntil, effectHoldUntil);
+    return criticalEffects.length > 0
+        ? Math.max(minimumHoldUntil, effectHoldUntil)
+        : minimumHoldUntil;
 };
 
 export const TIMELINE_TIME_SCALE = 0.72;

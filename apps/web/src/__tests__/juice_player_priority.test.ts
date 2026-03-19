@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyDamageCueType, CRITICAL_PLAYER_DAMAGE_MIN_HOLD_MS, CRITICAL_PLAYER_DEATH_MIN_HOLD_MS, resolveCriticalPlayerCueHoldUntil } from '../components/juice/juice-manager-utils';
+import { classifyDamageCueType, CRITICAL_PLAYER_DEATH_MIN_HOLD_MS, resolveCriticalPlayerCueHoldUntil } from '../components/juice/juice-manager-utils';
 import { buildSimulationDamageCueEffects } from '../components/juice/event-effect-builders';
 
 const hex = (q: number, r: number, s: number) => ({ q, r, s });
@@ -49,7 +49,7 @@ describe('player critical juice cues', () => {
     expect(holdUntil).toBeGreaterThanOrEqual(2500 + CRITICAL_PLAYER_DEATH_MIN_HOLD_MS);
   });
 
-  it('still reserves a minimum read window for non-lethal player damage', () => {
+  it('does not block standard turn pacing for non-lethal player damage', () => {
     const holdUntil = resolveCriticalPlayerCueHoldUntil({
       additions: [{
         id: 'critical-text',
@@ -63,6 +63,6 @@ describe('player critical juice cues', () => {
       playerDefeated: false
     });
 
-    expect(holdUntil).toBeGreaterThanOrEqual(1800 + CRITICAL_PLAYER_DAMAGE_MIN_HOLD_MS);
+    expect(holdUntil).toBe(0);
   });
 });

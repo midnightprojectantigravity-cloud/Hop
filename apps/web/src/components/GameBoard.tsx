@@ -11,6 +11,7 @@ import { CameraZoomControls } from './game-board/CameraZoomControls';
 import { JuiceTraceOverlay } from './game-board/JuiceTraceOverlay';
 import { GameBoardSceneSvg } from './game-board/GameBoardSceneSvg';
 import { buildBoardEventDigest } from './game-board/board-event-digest';
+import { createHoveredTileStore } from './game-board/hovered-tile-store';
 import type { BoardDecal, InteractionTileModel } from './game-board/InteractionTilesLayer';
 import type { VisualEchoEntry } from './game-board/VisualEchoLayer';
 import { useBoardInteractions } from './game-board/useBoardInteractions';
@@ -133,10 +134,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     onSynapseInspectEntity,
     visualEchoesEnabled = false,
 }) => {
-    const [hoveredTile, setHoveredTile] = useState<Point | null>(null);
     const [juiceBusy, setJuiceBusy] = useState(false);
     const [decals, setDecals] = useState<BoardDecal[]>([]);
     const [visualEchoes, setVisualEchoes] = useState<VisualEchoEntry[]>([]);
+    const hoveredTileStore = useMemo(() => createHoveredTileStore(), []);
     const prevActorPositionsRef = React.useRef<Map<string, Point> | null>(null);
     const resetPresentationRef = React.useRef<() => void>(() => undefined);
     const playerPos = gameState.player.position;
@@ -159,10 +160,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         cameraKickOffsetPx,
         juiceDebugOverlayEnabled,
         juiceDebugEntries,
-        entityPoseEffects,
-        entityPoseNowMs,
-        setEntityPoseEffects,
-        setEntityPoseNowMs,
+        poseStore,
+        enqueueEntityPoseEffects,
         resetBoardJuicePresentation,
     } = useBoardJuicePresentation({
         gameState,
@@ -212,14 +211,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         fallbackNeighborSet,
         selectedSkillTargetSet,
         defaultPassiveTargetSet,
-        resolvedEnginePreviewGhost,
     } = useBoardTargetingPreview({
         gameState,
         playerPos,
         selectedSkillId,
         showMovementRange,
-        hoveredTile,
-        enginePreviewGhost,
     });
 
     const {
@@ -267,20 +263,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         deathDecalHref,
         decals,
         setDecals,
-        setEntityPoseEffects,
-        setEntityPoseNowMs,
+        enqueueEntityPoseEffects,
         onSimulationEvents,
     });
 
     const {
         actorPositionById,
         juiceActorSnapshots,
-        entityVisualPoseById,
     } = useBoardActorVisuals({
         gameState,
         assetById,
-        entityPoseEffects,
-        entityPoseNowMs,
         onMirrorSnapshot,
     });
     const {
@@ -388,7 +380,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         [detectedActorIds, gameState.enemies, hasFogVisibility, visibleActorIds]
     );
     const dyingEntities = useMemo(() => gameState.dyingEntities || [], [gameState.dyingEntities]);
-    const handleClearHover = React.useCallback(() => setHoveredTile(null), []);
+    const handleClearHover = React.useCallback(() => hoveredTileStore.clear(), [hoveredTileStore]);
 
     useEffect(() => {
         resetPresentationRef.current = resetPresentation;
@@ -416,7 +408,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             fallbackNeighborSet,
         }),
         zoomMode: cameraState.zoomMode,
-        setHoveredTile,
+        setHoveredTile: hoveredTileStore.setHoveredTile,
         beginManualPan,
         panByWorldDelta,
         endManualPan,
@@ -521,10 +513,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                             gameState={gameState}
                             selectedSkillId={selectedSkillId}
                             showMovementRange={showMovementRange}
-                            hoveredTile={hoveredTile}
                             turnFlowMode={turnFlowMode}
                             overdriveArmed={overdriveArmed}
-                            resolvedEnginePreviewGhost={resolvedEnginePreviewGhost}
+                            enginePreviewGhost={enginePreviewGhost}
+                            hoveredTileStore={hoveredTileStore}
+                            movementTargetSet={movementTargetSet}
+                            hasPrimaryMovementSkills={hasPrimaryMovementSkills}
+                            fallbackNeighborSet={fallbackNeighborSet}
                             decals={decals}
                             depthSortedSprites={depthSortedSprites}
                             boardProps={boardProps}
@@ -532,7 +527,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                             assetById={assetById}
                             mountainSettingsByAssetId={mountainSettingsByAssetId}
                             resolveMountainSettings={resolveMountainSettings}
-                            entityVisualPoseById={entityVisualPoseById}
+                            poseStore={poseStore}
                             biomeThemeKey={biomeThemeKey}
                             player={gameState.player}
                             playerDefeated={playerDefeated}

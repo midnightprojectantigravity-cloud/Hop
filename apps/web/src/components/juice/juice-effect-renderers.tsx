@@ -10,7 +10,6 @@ interface RenderJuiceEffectArgs {
     effect: JuiceEffect;
     assetById: Map<string, VisualAssetEntry>;
     frameAssetHref?: string;
-    nowMs: number;
 }
 
 const FX_ASSET_EFFECT_TYPES = new Set<JuiceEffectType>([
@@ -27,9 +26,7 @@ export const renderJuiceEffect = ({
     effect,
     assetById,
     frameAssetHref,
-    nowMs,
 }: RenderJuiceEffectArgs): React.ReactNode => {
-    if (nowMs < effect.startTime) return null;
     if (!effect.position && !effect.worldPosition) return null;
 
     const fallbackPoint = effect.position ? hexToPixel(effect.position, TILE_SIZE) : { x: 0, y: 0 };
@@ -45,4 +42,3 @@ export const renderJuiceEffect = ({
     }
     return renderGenericEffect({ effect, x, y, fxAssetHref, frameAssetHref });
 };
-

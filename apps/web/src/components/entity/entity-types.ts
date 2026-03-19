@@ -1,5 +1,6 @@
 import type { Actor as EntityType, MovementTrace } from '@hop/engine';
 import type { RegisterActorNodes } from '../game-board/actor-node-registry';
+import type { BoardEntityPoseStore } from '../game-board/board-entity-pose-store';
 
 export interface EntityVisualPose {
   offsetX?: number;
@@ -18,6 +19,7 @@ export interface EntityProps {
   fallbackAssetHref?: string;
   floorTheme?: string;
   visualPose?: EntityVisualPose;
+  poseStore?: BoardEntityPoseStore;
   synapseMode?: boolean;
   onSynapseInspect?: (actorId: string) => void;
   synapsePulseToken?: number;

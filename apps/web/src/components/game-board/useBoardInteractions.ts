@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type Dispatch, type PointerEvent, type SetStateAction, type WheelEvent } from 'react';
+import { useCallback, useRef, useState, type PointerEvent, type WheelEvent } from 'react';
 import type { Point } from '@hop/engine';
 import type { CameraVec2, CameraZoomMode } from '../../visual/camera';
 
@@ -21,7 +21,7 @@ interface UseBoardInteractionsArgs {
     onMove: (hex: Point) => void;
     canHandleTileClick?: (hex: Point) => boolean;
     zoomMode: CameraZoomMode;
-    setHoveredTile: Dispatch<SetStateAction<Point | null>>;
+    setHoveredTile: (tile: Point | null) => void;
     beginManualPan: () => void;
     panByWorldDelta: (deltaWorld: CameraVec2) => void;
     endManualPan: () => void;

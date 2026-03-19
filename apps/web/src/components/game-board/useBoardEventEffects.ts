@@ -1,25 +1,11 @@
 import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { hexToPixel, TILE_SIZE, type GameState, type Point, type SimulationEvent } from '@hop/engine';
 import type { BoardEventDigest } from './board-event-digest';
+import type { EntityPoseEffect } from './board-juice-presentation-types';
 
 type BoardDecal = { id: string; position: Point; href: string; createdAt: number };
 
-type PoseTransformFrame = {
-    offsetX: number;
-    offsetY: number;
-    scaleX: number;
-    scaleY: number;
-};
-
-type EntityPoseEffect = {
-    id: string;
-    actorId: string;
-    startTime: number;
-    endTime: number;
-    easing: 'out' | 'inOut';
-    from: PoseTransformFrame;
-    to: PoseTransformFrame;
-};
+type PoseTransformFrame = EntityPoseEffect['from'];
 
 interface UseBoardEventEffectsArgs {
     gameState: GameState;
@@ -27,8 +13,7 @@ interface UseBoardEventEffectsArgs {
     deathDecalHref?: string;
     decals: BoardDecal[];
     setDecals: Dispatch<SetStateAction<BoardDecal[]>>;
-    setEntityPoseEffects: Dispatch<SetStateAction<EntityPoseEffect[]>>;
-    setEntityPoseNowMs: Dispatch<SetStateAction<number>>;
+    enqueueEntityPoseEffects: (effects: ReadonlyArray<EntityPoseEffect>) => void;
     onSimulationEvents?: (events: SimulationEvent[]) => void;
 }
 
@@ -38,8 +23,7 @@ export const useBoardEventEffects = ({
     deathDecalHref,
     decals,
     setDecals,
-    setEntityPoseEffects,
-    setEntityPoseNowMs,
+    enqueueEntityPoseEffects,
     onSimulationEvents,
 }: UseBoardEventEffectsArgs) => {
     const processedTimelineDecalCountRef = useRef(0);
@@ -215,17 +199,15 @@ export const useBoardEventEffects = ({
         }
 
         if (additions.length > 0) {
-            setEntityPoseNowMs(now);
-            setEntityPoseEffects(prev => [...prev, ...additions]);
+            enqueueEntityPoseEffects(additions);
         }
     }, [
         boardEventDigest.simulationPoseEvents,
+        enqueueEntityPoseEffects,
         gameState.player,
         gameState.enemies,
         gameState.companions,
         gameState.dyingEntities,
-        setEntityPoseEffects,
-        setEntityPoseNowMs
     ]);
 
     useEffect(() => {
@@ -240,13 +222,11 @@ export const useBoardEventEffects = ({
 
     const resetBoardEventEffects = useCallback(() => {
         setDecals([]);
-        setEntityPoseEffects([]);
-        setEntityPoseNowMs(0);
         processedTimelineDecalCountRef.current = 0;
         processedVisualDecalCountRef.current = 0;
         processedSimulationEventCountRef.current = 0;
         processedSimulationPoseCountRef.current = 0;
-    }, [setDecals, setEntityPoseEffects, setEntityPoseNowMs]);
+    }, [setDecals]);
 
     return { resetBoardEventEffects };
 };

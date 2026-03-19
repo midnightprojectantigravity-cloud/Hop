@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { isStunned, hexToPixel, TILE_SIZE, getEntityVisual, isEntityFlying } from '@hop/engine';
 import { computeEntityContrastBoost } from './entity/entity-icon';
 import { areEntityPropsEqual } from './entity/entity-props-comparator';
@@ -8,6 +8,8 @@ import { useEntityVisualState } from './entity/use-entity-visual-state';
 import type { EntityProps } from './entity/entity-types';
 import { SYNAPSE_PULSE_DURATION_MS } from '../app/synapse';
 import type { RegisteredActorNodes } from './game-board/actor-node-registry';
+
+const subscribeNoop = () => () => undefined;
 
 export type { EntityVisualPose } from './entity/entity-types';
 
@@ -19,6 +21,7 @@ const EntityBase: React.FC<EntityProps> = ({
     fallbackAssetHref,
     floorTheme,
     visualPose,
+    poseStore,
     synapseMode = false,
     onSynapseInspect,
     synapsePulseToken,
@@ -35,6 +38,11 @@ const EntityBase: React.FC<EntityProps> = ({
         fallbackAssetHref
     });
     const [synapsePulseActive, setSynapsePulseActive] = React.useState(false);
+    const resolvedVisualPose = useSyncExternalStore(
+        poseStore?.subscribe ?? subscribeNoop,
+        () => poseStore?.getPose(entity.id) ?? visualPose,
+        () => poseStore?.getPose(entity.id) ?? visualPose,
+    );
 
     React.useEffect(() => {
         if (!synapsePulseToken) return undefined;
@@ -61,10 +69,10 @@ const EntityBase: React.FC<EntityProps> = ({
     const unitIconYOffset = isPlayer ? -9 : -2;
     const unitIconSize = isPlayer ? 24 : 18;
     const contrastBoost = computeEntityContrastBoost(floorTheme);
-    const poseOffsetX = visualPose?.offsetX ?? 0;
-    const poseOffsetY = visualPose?.offsetY ?? 0;
-    const poseScaleX = visualPose?.scaleX ?? 1;
-    const poseScaleY = visualPose?.scaleY ?? 1;
+    const poseOffsetX = resolvedVisualPose?.offsetX ?? 0;
+    const poseOffsetY = resolvedVisualPose?.offsetY ?? 0;
+    const poseScaleX = resolvedVisualPose?.scaleX ?? 1;
+    const poseScaleY = resolvedVisualPose?.scaleY ?? 1;
     const hasPoseTransform = Math.abs(poseOffsetX) > 0.01
         || Math.abs(poseOffsetY) > 0.01
         || Math.abs(poseScaleX - 1) > 0.01

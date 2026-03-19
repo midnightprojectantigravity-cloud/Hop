@@ -27,6 +27,8 @@ export interface TurnDriverState {
   queueAdvanceDelayMs: number;
 }
 
+export const TURN_QUEUE_ADVANCE_DELAY_MS = 80;
+
 export const deriveTurnDriverState = (input: TurnDriverInput): TurnDriverState => {
   const {
     gameStatus,
@@ -66,6 +68,6 @@ export const deriveTurnDriverState = (input: TurnDriverInput): TurnDriverState =
     canPlayerInput: phase === 'INPUT_OPEN',
     shouldAdvanceQueue: phase === 'QUEUE_ADVANCE' || phase === 'POST_COMMIT_QUEUE',
     shouldResolvePending: phase === 'INTERCEPT_READY',
-    queueAdvanceDelayMs: 380
+    queueAdvanceDelayMs: TURN_QUEUE_ADVANCE_DELAY_MS
   };
 };

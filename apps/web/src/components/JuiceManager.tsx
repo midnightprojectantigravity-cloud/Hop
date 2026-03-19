@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useSyncExternalStore } from 'react';
 import type { TimelineEvent, SimulationEvent } from '@hop/engine';
 import type { VisualAssetManifest, VisualAssetEntry } from '../visual/asset-manifest';
 import { JuiceEffectsLayer } from './juice/JuiceEffectsLayer';
@@ -36,7 +36,7 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({
         }
         return map;
     }, [assetManifest]);
-    const effects = useJuiceManagerEffects({
+    const effectsStore = useJuiceManagerEffects({
         visualEvents,
         timelineEvents,
         simulationEvents,
@@ -46,6 +46,11 @@ export const JuiceManager: React.FC<JuiceManagerProps> = ({
         playerDefeated,
         onBusyStateChange
     });
+    const { effects, nowMs } = useSyncExternalStore(
+        effectsStore.subscribe,
+        effectsStore.getSnapshot,
+        effectsStore.getSnapshot
+    );
 
-    return <JuiceEffectsLayer effects={effects} assetById={assetById} />;
+    return <JuiceEffectsLayer effects={effects} nowMs={nowMs} assetById={assetById} />;
 }

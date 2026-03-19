@@ -6,6 +6,18 @@ import type { TurnTraceAppender } from './use-turn-driver-trace';
 import type { PendingAutoEndState } from './turn-flow-policy';
 import { computeInteractionBlockingBudget } from './interaction-budget';
 
+export const POST_COMMIT_MIN_LOCK_MS = 100;
+export const POST_COMMIT_BUSY_WAIT_TIMEOUT_MS = 900;
+export const POST_COMMIT_RECHECK_INTERVAL_MS = 60;
+
+export const resolvePostCommitExpectedBusyWaitBudgetMs = (interactionBudgetMs: number): number => {
+  if (!Number.isFinite(interactionBudgetMs) || interactionBudgetMs <= 0) return 0;
+  return Math.min(
+    POST_COMMIT_BUSY_WAIT_TIMEOUT_MS,
+    Math.max(80, Math.round(interactionBudgetMs + 30))
+  );
+};
+
 interface UseTurnFlowCoordinatorArgs {
   gameState: GameState;
   turnDriver: TurnDriverState;
@@ -59,9 +71,6 @@ export const useTurnFlowCoordinator = ({
   const postCommitTimelineHashAtArmRef = useRef('');
   const pendingObservedBusy = useRef(false);
   const pendingResolveStartedAtRef = useRef<number>(0);
-
-  const POST_COMMIT_MIN_LOCK_MS = 220;
-  const POST_COMMIT_BUSY_WAIT_TIMEOUT_MS = 900;
 
   const pendingFrameCount = gameState.pendingFrames?.length ?? 0;
   const currentEventsHash = getVisualEventsSignature(gameState.visualEvents);
@@ -174,7 +183,7 @@ export const useTurnFlowCoordinator = ({
     if (!postCommitInputLock) return;
     const timer = window.setTimeout(() => {
       setPostCommitTick(v => v + 1);
-    }, 120);
+    }, POST_COMMIT_RECHECK_INTERVAL_MS);
     return () => window.clearTimeout(timer);
   }, [postCommitInputLock, postCommitTick]);
 
@@ -270,6 +279,11 @@ export const useTurnFlowCoordinator = ({
     const lockAgeMs = postCommitLockedAtRef.current !== null
       ? Math.max(0, performance.now() - postCommitLockedAtRef.current)
       : Number.POSITIVE_INFINITY;
+    const { interactionBudgetMs } = computeInteractionBlockingBudget({
+      timelineEvents: gameState.timelineEvents,
+      visualEvents: gameState.visualEvents,
+    });
+    const expectedBusyWaitBudgetMs = resolvePostCommitExpectedBusyWaitBudgetMs(interactionBudgetMs);
     const turnAdvanced = lockTurn !== null ? gameState.turnNumber > lockTurn : false;
     const actionCommitted = expectedActionLen !== null ? (gameState.actionLog?.length ?? 0) >= expectedActionLen : false;
     const minimumLockSatisfied = lockAgeMs >= POST_COMMIT_MIN_LOCK_MS;
@@ -280,7 +294,8 @@ export const useTurnFlowCoordinator = ({
     const waitForExpectedBusy =
       !postCommitObservedBusyRef.current
       && visualsChangedSinceArm
-      && lockAgeMs < POST_COMMIT_BUSY_WAIT_TIMEOUT_MS;
+      && expectedBusyWaitBudgetMs > 0
+      && lockAgeMs < expectedBusyWaitBudgetMs;
     // IMPORTANT: Do not derive this from turnDriver.canPlayerInput because
     // turnDriver itself is lock-aware and would deadlock this release path.
     const queueResolved =
@@ -294,7 +309,9 @@ export const useTurnFlowCoordinator = ({
     if (waitForExpectedBusy) {
       appendTurnTrace('LOCK_WAIT_FOR_BUSY', {
         lockAgeMs,
-        visualsChangedSinceArm
+        visualsChangedSinceArm,
+        interactionBudgetMs,
+        expectedBusyWaitBudgetMs,
       });
       return;
     }
@@ -343,6 +360,8 @@ export const useTurnFlowCoordinator = ({
     gameState.pendingFrames,
     gameState.initiativeQueue,
     gameState.actionLog,
+    gameState.timelineEvents,
+    gameState.visualEvents,
     isBusy,
     gameState.player.id,
     gameState.enemies,

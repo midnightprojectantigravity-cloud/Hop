@@ -1,6 +1,6 @@
-import type { Dispatch, SetStateAction } from 'react';
 import type { GameState } from '@hop/engine';
 import type { BoardEventDigest } from './board-event-digest';
+import type { BoardEntityPoseStore } from './board-entity-pose-store';
 
 export type PointerPoint = { x: number; y: number };
 
@@ -43,9 +43,7 @@ export interface UseBoardJuicePresentationResult {
     cameraKickOffsetPx: PointerPoint;
     juiceDebugOverlayEnabled: boolean;
     juiceDebugEntries: JuiceDebugEntry[];
-    entityPoseEffects: EntityPoseEffect[];
-    entityPoseNowMs: number;
-    setEntityPoseEffects: Dispatch<SetStateAction<EntityPoseEffect[]>>;
-    setEntityPoseNowMs: Dispatch<SetStateAction<number>>;
+    poseStore: BoardEntityPoseStore;
+    enqueueEntityPoseEffects: (effects: ReadonlyArray<EntityPoseEffect>) => void;
     resetBoardJuicePresentation: () => void;
 }

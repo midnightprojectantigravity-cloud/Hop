@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveTurnDriverState } from '../turn-driver';
+import { deriveTurnDriverState, TURN_QUEUE_ADVANCE_DELAY_MS } from '../turn-driver';
 
 describe('turn driver state machine', () => {
   it('opens input only in player control window', () => {
@@ -59,5 +59,6 @@ describe('turn driver state machine', () => {
     expect(state.phase).toBe('POST_COMMIT_QUEUE');
     expect(state.canPlayerInput).toBe(false);
     expect(state.shouldAdvanceQueue).toBe(true);
+    expect(state.queueAdvanceDelayMs).toBe(TURN_QUEUE_ADVANCE_DELAY_MS);
   });
 });

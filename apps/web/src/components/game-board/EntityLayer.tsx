@@ -1,10 +1,11 @@
 import React from 'react';
 import { hexToPixel, TILE_SIZE, type Actor, type Point } from '@hop/engine';
-import { Entity, type EntityVisualPose } from '../Entity';
+import { Entity } from '../Entity';
 import type { VisualAssetEntry } from '../../visual/asset-manifest';
 import { resolveUnitAssetId, resolveUnitFallbackAssetHref } from '../../visual/asset-selectors';
 import type { SynapsePulse } from '../../app/synapse';
 import type { RegisterActorNodes } from './actor-node-registry';
+import type { BoardEntityPoseStore } from './board-entity-pose-store';
 
 interface EntityLayerProps {
   player: Actor;
@@ -16,7 +17,7 @@ interface EntityLayerProps {
   spearPosition?: Point;
   floor: number;
   turnNumber: number;
-  entityVisualPoseById: Map<string, EntityVisualPose>;
+  poseStore: BoardEntityPoseStore;
   assetById: Map<string, VisualAssetEntry>;
   biomeThemeKey: string;
   isSynapseMode: boolean;
@@ -35,7 +36,7 @@ const EntityLayerBase: React.FC<EntityLayerProps> = ({
   spearPosition,
   floor,
   turnNumber,
-  entityVisualPoseById,
+  poseStore,
   assetById,
   biomeThemeKey,
   isSynapseMode,
@@ -71,7 +72,7 @@ const EntityLayerBase: React.FC<EntityLayerProps> = ({
         key={`player-${floor}`}
         entity={player}
         isDying={playerDefeated}
-        visualPose={entityVisualPoseById.get(player.id)}
+        poseStore={poseStore}
         assetHref={assetById.get(resolveUnitAssetId(player))?.path}
         fallbackAssetHref={resolveUnitFallbackAssetHref(player)}
         floorTheme={biomeThemeKey}
@@ -85,7 +86,7 @@ const EntityLayerBase: React.FC<EntityLayerProps> = ({
         <Entity
           key={`${enemy.id}-${floor}`}
           entity={enemy}
-          visualPose={entityVisualPoseById.get(enemy.id)}
+          poseStore={poseStore}
           assetHref={assetById.get(resolveUnitAssetId(enemy))?.path}
           fallbackAssetHref={resolveUnitFallbackAssetHref(enemy)}
           floorTheme={biomeThemeKey}
@@ -111,7 +112,7 @@ const EntityLayerBase: React.FC<EntityLayerProps> = ({
           key={`dying-${enemy.id}-${floor}-${turnNumber}`}
           entity={enemy}
           isDying={true}
-          visualPose={entityVisualPoseById.get(enemy.id)}
+          poseStore={poseStore}
           assetHref={assetById.get(resolveUnitAssetId(enemy))?.path}
           fallbackAssetHref={resolveUnitFallbackAssetHref(enemy)}
           floorTheme={biomeThemeKey}

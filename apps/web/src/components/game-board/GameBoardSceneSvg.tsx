@@ -1,10 +1,10 @@
 import React from 'react';
-import type { ActionResourcePreview, Actor, GameState, IresTurnProjection, Point, SynapseThreatPreview } from '@hop/engine';
+import type { Actor, GameState, Point, SynapseThreatPreview } from '@hop/engine';
 import type { VisualAssetManifest } from '../../visual/asset-manifest';
 import { DevRenderProfiler } from '../../app/perf/dev-render-profiler';
-import PreviewOverlay from '../PreviewOverlay';
 import { JuiceManager } from '../JuiceManager';
 import type { BoardEventDigest } from './board-event-digest';
+import { BoardHoverPreviewLayer } from './BoardHoverPreviewLayer';
 import { BiomeBackdropLayer } from './BiomeBackdropLayer';
 import { InteractionTilesLayer, type BoardDecal, type InteractionTileModel } from './InteractionTilesLayer';
 import { RoutePathLayer } from './RoutePathLayer';
@@ -19,6 +19,9 @@ import { SynapseThreadOverlay } from './SynapseThreadOverlay';
 import type { SynapseDeltaEntry, SynapsePulse, SynapseSelection } from '../../app/synapse';
 import { VisualEchoLayer, type VisualEchoEntry } from './VisualEchoLayer';
 import type { RegisterActorNodes } from './actor-node-registry';
+import type { BoardEntityPoseStore } from './board-entity-pose-store';
+import type { HoveredTileStore } from './hovered-tile-store';
+import type { BoardEnginePreviewGhost } from './useBoardTargetingPreview';
 
 type JuiceActorSnapshot = {
   id: string;
@@ -35,18 +38,13 @@ interface GameBoardSceneSvgProps {
   gameState: GameState;
   selectedSkillId: string | null;
   showMovementRange: boolean;
-  hoveredTile: Point | null;
   turnFlowMode?: 'protected_single' | 'manual_chain';
   overdriveArmed?: boolean;
-  resolvedEnginePreviewGhost: {
-    path: Point[];
-    aoe: Point[];
-    hasEnemy: boolean;
-    target: Point;
-    ailmentDeltaLines?: string[];
-    resourcePreview?: ActionResourcePreview;
-    turnProjection?: IresTurnProjection;
-  } | null;
+  enginePreviewGhost?: BoardEnginePreviewGhost | null;
+  hoveredTileStore: HoveredTileStore;
+  movementTargetSet: Set<string>;
+  hasPrimaryMovementSkills: boolean;
+  fallbackNeighborSet: Set<string>;
   decals: ReadonlyArray<BoardDecal>;
   depthSortedSprites: Array<{
     id: string;
@@ -66,7 +64,7 @@ interface GameBoardSceneSvgProps {
   assetById: Map<string, any>;
   mountainSettingsByAssetId: Map<string, any>;
   resolveMountainSettings: (asset?: any) => any;
-  entityVisualPoseById: Map<string, any>;
+  poseStore: BoardEntityPoseStore;
   biomeThemeKey: string;
   player: Actor;
   playerDefeated: boolean;
@@ -106,10 +104,13 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
   gameState,
   selectedSkillId,
   showMovementRange,
-  hoveredTile,
   turnFlowMode,
   overdriveArmed,
-  resolvedEnginePreviewGhost,
+  enginePreviewGhost,
+  hoveredTileStore,
+  movementTargetSet,
+  hasPrimaryMovementSkills,
+  fallbackNeighborSet,
   decals,
   depthSortedSprites,
   boardProps,
@@ -117,7 +118,7 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
   assetById,
   mountainSettingsByAssetId,
   resolveMountainSettings,
-  entityVisualPoseById,
+  poseStore,
   biomeThemeKey,
   player,
   playerDefeated,
@@ -169,14 +170,18 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
       {...backdropLayerProps}
     />
     <g data-layer="interaction-preview">
-      <PreviewOverlay
+      <BoardHoverPreviewLayer
+        hoveredTileStore={hoveredTileStore}
         gameState={gameState}
+        playerPos={gameState.player.position}
         selectedSkillId={selectedSkillId}
         showMovementRange={showMovementRange}
-        hoveredTile={hoveredTile}
         turnFlowMode={turnFlowMode}
         overdriveArmed={overdriveArmed}
-        enginePreviewGhost={resolvedEnginePreviewGhost}
+        enginePreviewGhost={enginePreviewGhost}
+        movementTargetSet={movementTargetSet}
+        hasPrimaryMovementSkills={hasPrimaryMovementSkills}
+        fallbackNeighborSet={fallbackNeighborSet}
       />
     </g>
     <DevRenderProfiler id="board:InteractionTilesLayer">
@@ -211,7 +216,7 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
         spearPosition={spearPosition}
         floor={gameState.floor}
         turnNumber={gameState.turnNumber}
-        entityVisualPoseById={entityVisualPoseById}
+        poseStore={poseStore}
         assetById={assetById}
         biomeThemeKey={biomeThemeKey}
         isSynapseMode={isSynapseMode}

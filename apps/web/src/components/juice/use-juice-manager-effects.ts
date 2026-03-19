@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { TimelineEvent, SimulationEvent } from '@hop/engine';
-import type { JuiceEffect, JuiceActorSnapshot } from './juice-types';
+import type { JuiceActorSnapshot } from './juice-types';
 import { buildSignatureJuiceEffects } from './signature-effects';
 import { buildLegacyVfxEffects, buildSimulationDamageCueEffects } from './event-effect-builders';
 import type { BoardEventDigest } from '../game-board/board-event-digest';
+import { createJuiceEffectsStore, type JuiceEffectsStore } from './juice-effects-store';
 import {
     classifyDamageCueType,
     CRITICAL_PLAYER_DEATH_MIN_HOLD_MS,
-    getEffectLifetimeMs,
     resolveCriticalPlayerCueHoldUntil,
     waitMs,
 } from './juice-manager-utils';
@@ -18,7 +18,6 @@ import {
     resolveTimelinePhaseDuration,
     resolveTimelineWaitDuration,
 } from './juice-timeline-utils';
-import { resolveNextCleanupDelayMs } from './juice-cleanup-utils';
 
 interface UseJuiceManagerEffectsArgs {
     visualEvents: { type: string; payload: any }[];
@@ -40,24 +39,31 @@ export const useJuiceManagerEffects = ({
     playerActorId,
     playerDefeated,
     onBusyStateChange
-}: UseJuiceManagerEffectsArgs): JuiceEffect[] => {
-    const [effects, setEffects] = useState<JuiceEffect[]>([]);
+}: UseJuiceManagerEffectsArgs): JuiceEffectsStore => {
+    const effectsStoreRef = useRef<JuiceEffectsStore | null>(null);
+    if (!effectsStoreRef.current) {
+        effectsStoreRef.current = createJuiceEffectsStore();
+    }
+    const effectsStore = effectsStoreRef.current;
     const processedTimelineBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
     const processedVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
     const processedJuiceSignatureBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
     const processedSimulationCount = useRef(0);
     const timelineQueue = useRef<TimelineEvent[]>([]);
     const isRunningQueue = useRef(false);
-    const [timelineBusy, setTimelineBusy] = useState(false);
-    const [criticalCueBusy, setCriticalCueBusy] = useState(false);
+    const busyStateRef = useRef({
+        timelineBusy: false,
+        criticalCueBusy: false,
+        combinedBusy: false,
+    });
+    const onBusyStateChangeRef = useRef(onBusyStateChange);
     const prefersReducedMotion = useRef(false);
     const movementDurationByActor = useRef<Map<string, { durationMs: number; seenAt: number }>>(new Map());
-    const cleanupTimerRef = useRef<number | null>(null);
     const criticalCueTimerRef = useRef<number | null>(null);
-    const lastEffectTickRef = useRef<number>(Date.now());
     const recentSignatureImpactByTileRef = useRef<Map<string, { at: number; signature: string }>>(new Map());
     const criticalCueHoldUntilRef = useRef(0);
     const lastPlayerDefeatedRef = useRef(false);
+    const disposedRef = useRef(false);
 
     const actorById = useMemo(() => {
         const map = new Map<string, JuiceActorSnapshot>();
@@ -66,6 +72,36 @@ export const useJuiceManagerEffects = ({
         }
         return map;
     }, [actorSnapshots]);
+
+    useEffect(() => {
+        onBusyStateChangeRef.current = onBusyStateChange;
+    }, [onBusyStateChange]);
+
+    const setBusyState = useCallback((nextPartial: Partial<{
+        timelineBusy: boolean;
+        criticalCueBusy: boolean;
+    }>) => {
+        const previous = busyStateRef.current;
+        const next = {
+            timelineBusy: nextPartial.timelineBusy ?? previous.timelineBusy,
+            criticalCueBusy: nextPartial.criticalCueBusy ?? previous.criticalCueBusy,
+        };
+        const combinedBusy = next.timelineBusy || next.criticalCueBusy;
+        if (
+            previous.timelineBusy === next.timelineBusy
+            && previous.criticalCueBusy === next.criticalCueBusy
+            && previous.combinedBusy === combinedBusy
+        ) {
+            return;
+        }
+        busyStateRef.current = {
+            ...next,
+            combinedBusy,
+        };
+        if (previous.combinedBusy !== combinedBusy) {
+            onBusyStateChangeRef.current?.(combinedBusy);
+        }
+    }, []);
 
     useEffect(() => {
         if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -97,21 +133,30 @@ export const useJuiceManagerEffects = ({
     }, [boardEventDigest?.movementTraceEvents, visualEvents]);
 
     useEffect(() => {
-        onBusyStateChange?.(timelineBusy || criticalCueBusy);
-    }, [criticalCueBusy, timelineBusy, onBusyStateChange]);
-
-    useEffect(() => () => {
-        if (criticalCueTimerRef.current !== null) {
-            window.clearTimeout(criticalCueTimerRef.current);
-            criticalCueTimerRef.current = null;
-        }
-    }, []);
+        disposedRef.current = false;
+        return () => {
+            disposedRef.current = true;
+            if (criticalCueTimerRef.current !== null) {
+                window.clearTimeout(criticalCueTimerRef.current);
+                criticalCueTimerRef.current = null;
+            }
+            effectsStore.dispose();
+            onBusyStateChangeRef.current?.(false);
+        };
+    }, [effectsStore]);
 
     const armCriticalCueHold = (holdUntil: number) => {
-        if (typeof window === 'undefined' || !Number.isFinite(holdUntil) || holdUntil <= 0) return;
+        if (
+            disposedRef.current
+            || typeof window === 'undefined'
+            || !Number.isFinite(holdUntil)
+            || holdUntil <= 0
+        ) {
+            return;
+        }
 
         criticalCueHoldUntilRef.current = Math.max(criticalCueHoldUntilRef.current, holdUntil);
-        setCriticalCueBusy(true);
+        setBusyState({ criticalCueBusy: true });
 
         if (criticalCueTimerRef.current !== null) {
             window.clearTimeout(criticalCueTimerRef.current);
@@ -119,6 +164,7 @@ export const useJuiceManagerEffects = ({
         }
 
         const scheduleRelease = () => {
+            if (disposedRef.current) return;
             const remainingMs = criticalCueHoldUntilRef.current - Date.now();
             if (remainingMs > 16) {
                 criticalCueTimerRef.current = window.setTimeout(scheduleRelease, Math.min(remainingMs, 120));
@@ -126,7 +172,7 @@ export const useJuiceManagerEffects = ({
             }
             criticalCueTimerRef.current = null;
             criticalCueHoldUntilRef.current = 0;
-            setCriticalCueBusy(false);
+            setBusyState({ criticalCueBusy: false });
         };
 
         scheduleRelease();
@@ -136,7 +182,7 @@ export const useJuiceManagerEffects = ({
         const now = Date.now();
         const additions = buildTimelinePhaseEffects(ev, now);
         if (additions.length > 0) {
-            setEffects(prev => [...prev, ...additions]);
+            effectsStore.enqueueEffects(additions);
         }
     };
 
@@ -150,12 +196,15 @@ export const useJuiceManagerEffects = ({
 
         if (isRunningQueue.current) return;
         isRunningQueue.current = true;
-        setTimelineBusy(true);
+        setBusyState({ timelineBusy: true });
 
         (async () => {
             try {
                 const queueStart = Date.now();
                 while (timelineQueue.current.length > 0) {
+                    if (disposedRef.current) {
+                        break;
+                    }
                     if ((Date.now() - queueStart) > MAX_QUEUE_RUNTIME_MS) {
                         console.warn('[HOP_JUICE] Timeline queue exceeded runtime budget; flushing remaining events.', {
                             queued: timelineQueue.current.length
@@ -182,10 +231,10 @@ export const useJuiceManagerEffects = ({
             } finally {
                 timelineQueue.current = [];
                 isRunningQueue.current = false;
-                setTimelineBusy(false);
+                setBusyState({ timelineBusy: false });
             }
         })();
-    }, [timelineEvents]);
+    }, [effectsStore, setBusyState, timelineEvents]);
 
     useEffect(() => {
         const signatureBatchRef = boardEventDigest?.visualEventsRef || visualEvents;
@@ -205,9 +254,9 @@ export const useJuiceManagerEffects = ({
         });
 
         if (additions.length > 0) {
-            setEffects(prev => [...prev, ...additions]);
+            effectsStore.enqueueEffects(additions);
         }
-    }, [boardEventDigest?.signatureVisualEvents, boardEventDigest?.visualEventsRef, visualEvents]);
+    }, [boardEventDigest?.signatureVisualEvents, boardEventDigest?.visualEventsRef, effectsStore, visualEvents]);
 
     useEffect(() => {
         if (playerDefeated && !lastPlayerDefeatedRef.current) {
@@ -233,9 +282,9 @@ export const useJuiceManagerEffects = ({
         const newEffects = buildLegacyVfxEffects({ incoming, now });
 
         if (newEffects.length > 0) {
-            setEffects(prev => [...prev, ...newEffects]);
+            effectsStore.enqueueEffects(newEffects);
         }
-    }, [boardEventDigest?.legacyVfxVisualEvents, boardEventDigest?.visualEventsRef, visualEvents, timelineEvents.length]);
+    }, [boardEventDigest?.legacyVfxVisualEvents, boardEventDigest?.visualEventsRef, effectsStore, visualEvents, timelineEvents.length]);
 
     useEffect(() => {
         const damageEvents = boardEventDigest?.damageSimulationEvents || simulationEvents;
@@ -267,47 +316,9 @@ export const useJuiceManagerEffects = ({
         }
 
         if (additions.length > 0) {
-            setEffects(prev => [...prev, ...additions]);
+            effectsStore.enqueueEffects(additions);
         }
-    }, [boardEventDigest?.damageSimulationEvents, simulationEvents, actorById, playerActorId, playerDefeated]);
+    }, [boardEventDigest?.damageSimulationEvents, simulationEvents, actorById, effectsStore, playerActorId, playerDefeated]);
 
-    useEffect(() => {
-        if (cleanupTimerRef.current !== null) {
-            window.clearTimeout(cleanupTimerRef.current);
-            cleanupTimerRef.current = null;
-        }
-
-        if (effects.length === 0) return;
-
-        const now = Date.now();
-        const nextExpiryMs = resolveNextCleanupDelayMs(effects, now);
-
-        if (!Number.isFinite(nextExpiryMs)) {
-            setEffects([]);
-            return;
-        }
-
-        const delay = Math.max(16, Math.min(180, Math.floor(nextExpiryMs)));
-        cleanupTimerRef.current = window.setTimeout(() => {
-            const tickNow = Date.now();
-            setEffects(prev => {
-                const prevTick = lastEffectTickRef.current;
-                lastEffectTickRef.current = tickNow;
-                const next = prev.filter(e => tickNow < (e.startTime + getEffectLifetimeMs(e)));
-                if (next.length !== prev.length) return next;
-
-                const startedAny = prev.some(e => prevTick < e.startTime && e.startTime <= tickNow);
-                return startedAny ? [...prev] : prev;
-            });
-        }, delay);
-
-        return () => {
-            if (cleanupTimerRef.current !== null) {
-                window.clearTimeout(cleanupTimerRef.current);
-                cleanupTimerRef.current = null;
-            }
-        };
-    }, [effects]);
-
-    return effects;
+    return effectsStore;
 };

@@ -4,6 +4,8 @@ import { resolveEventPoint, TIMELINE_TIME_SCALE } from './juice-manager-utils';
 
 export const MAX_BLOCKING_WAIT_MS = 650;
 export const MAX_QUEUE_RUNTIME_MS = 3500;
+const MOVE_END_SETTLE_MIN_MS = 25;
+const MOVE_END_SETTLE_MAX_MS = 60;
 
 export const buildTimelinePhaseEffects = (ev: TimelineEvent, now: number): JuiceEffect[] => {
     const position = resolveEventPoint(ev.payload);
@@ -55,7 +57,12 @@ export const resolveTimelineBaseDuration = (
 
 export const resolveTimelinePhaseDuration = (ev: TimelineEvent, baseDuration: number): number => {
     if (ev.phase === 'MOVE_END') {
-        return Math.min(460, Math.max(70, baseDuration));
+        // Movement traces already communicate the travel. MOVE_END only needs a
+        // short settle beat so turn handoff does not feel sticky after arrival.
+        return Math.min(
+            MOVE_END_SETTLE_MAX_MS,
+            Math.max(MOVE_END_SETTLE_MIN_MS, Math.round(baseDuration * 0.3))
+        );
     }
     if (ev.phase === 'DEATH_RESOLVE') {
         return Math.min(120, Math.max(55, baseDuration));
@@ -74,15 +81,14 @@ export const resolveTimelinePhaseDuration = (ev: TimelineEvent, baseDuration: nu
 
 export const resolveTimelineWaitDuration = (
     ev: TimelineEvent,
-    baseDuration: number,
+    _baseDuration: number,
     phaseDuration: number,
     reducedMotion: boolean
 ): number => {
     const rawWaitDuration = ev.phase === 'MOVE_END'
-        ? baseDuration
+        ? phaseDuration
         : (reducedMotion
             ? Math.min(70, Math.floor(phaseDuration * 0.5))
             : phaseDuration);
     return Math.max(0, Math.min(MAX_BLOCKING_WAIT_MS, rawWaitDuration));
 };
-

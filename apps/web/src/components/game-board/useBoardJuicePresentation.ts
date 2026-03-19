@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
-    EntityPoseEffect,
     JuiceDebugEntry,
     PointerPoint,
     UseBoardJuicePresentationArgs,
     UseBoardJuicePresentationResult,
 } from './board-juice-presentation-types';
 import { buildPoseEffectsFromVisualEvents } from './board-juice-pose-builder';
+import { createBoardEntityPoseStore } from './board-entity-pose-store';
 
 export const useBoardJuicePresentation = ({
     gameState,
@@ -17,13 +17,11 @@ export const useBoardJuicePresentation = ({
     const [cameraKickOffsetPx, setCameraKickOffsetPx] = useState<PointerPoint>({ x: 0, y: 0 });
     const [juiceDebugOverlayEnabled, setJuiceDebugOverlayEnabled] = useState(false);
     const [juiceDebugEntries, setJuiceDebugEntries] = useState<JuiceDebugEntry[]>([]);
-    const [entityPoseEffects, setEntityPoseEffects] = useState<EntityPoseEffect[]>([]);
-    const [entityPoseNowMs, setEntityPoseNowMs] = useState(0);
+    const poseStore = useMemo(() => createBoardEntityPoseStore(), []);
 
     const processedCameraCueVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
     const processedJuiceDebugVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
     const processedJuicePoseVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
-    const poseAnimFrameRef = useRef<number | null>(null);
     const juiceDebugTraceEnabledRef = useRef(false);
 
     useEffect(() => {
@@ -60,8 +58,7 @@ export const useBoardJuicePresentation = ({
         });
 
         if (additions.length > 0) {
-            setEntityPoseNowMs(now);
-            setEntityPoseEffects(prev => [...prev, ...additions]);
+            poseStore.enqueueEffects(additions);
         }
     }, [
         boardEventDigest.signatureVisualEvents,
@@ -71,33 +68,8 @@ export const useBoardJuicePresentation = ({
         gameState.enemies,
         gameState.companions,
         gameState.dyingEntities,
+        poseStore,
     ]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        if (entityPoseEffects.length === 0) return;
-
-        let cancelled = false;
-        const tick = () => {
-            if (cancelled) return;
-            const now = Date.now();
-            setEntityPoseNowMs(now);
-            setEntityPoseEffects(prev => {
-                const next = prev.filter(e => now < e.endTime + 16);
-                return next.length === prev.length ? prev : next;
-            });
-            poseAnimFrameRef.current = window.requestAnimationFrame(tick);
-        };
-        poseAnimFrameRef.current = window.requestAnimationFrame(tick);
-
-        return () => {
-            cancelled = true;
-            if (poseAnimFrameRef.current !== null) {
-                window.cancelAnimationFrame(poseAnimFrameRef.current);
-                poseAnimFrameRef.current = null;
-            }
-        };
-    }, [entityPoseEffects.length]);
 
     // Handle camera cues (signature-first, legacy fallback during migration)
     useEffect(() => {
@@ -193,16 +165,11 @@ export const useBoardJuicePresentation = ({
         setIsShaking(false);
         setIsFrozen(false);
         setCameraKickOffsetPx({ x: 0, y: 0 });
-        setEntityPoseEffects([]);
-        setEntityPoseNowMs(0);
+        poseStore.reset();
         processedCameraCueVisualBatchRef.current = null;
         processedJuiceDebugVisualBatchRef.current = null;
         processedJuicePoseVisualBatchRef.current = null;
-        if (poseAnimFrameRef.current !== null) {
-            window.cancelAnimationFrame(poseAnimFrameRef.current);
-            poseAnimFrameRef.current = null;
-        }
-    }, []);
+    }, [poseStore]);
 
     return {
         isShaking,
@@ -210,10 +177,8 @@ export const useBoardJuicePresentation = ({
         cameraKickOffsetPx,
         juiceDebugOverlayEnabled,
         juiceDebugEntries,
-        entityPoseEffects,
-        entityPoseNowMs,
-        setEntityPoseEffects,
-        setEntityPoseNowMs,
+        poseStore,
+        enqueueEntityPoseEffects: poseStore.enqueueEffects,
         resetBoardJuicePresentation,
     };
 };
