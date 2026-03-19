@@ -19,6 +19,10 @@ export function isBlockedByWall(state: GameState, position: Point): boolean {
     return !!blocksLOS;
 }
 
+export function isBlockedByMovementObstacle(state: GameState, position: Point): boolean {
+    return UnifiedTileService.getTraitsAt(state, position).has('BLOCKS_MOVEMENT');
+}
+
 /**
  * Checks if a position is blocked by lava.
  */
@@ -59,14 +63,15 @@ export function validateAxialDirection(origin: Point, target: Point): { isAxial:
  */
 export function findFirstObstacle(state: GameState, path: Point[], options: {
     checkWalls?: boolean;
+    checkMovementBlockers?: boolean;
     checkActors?: boolean;
     checkLava?: boolean;
     excludeActorId?: string;
 } = {}): { obstacle?: 'wall' | 'actor' | 'lava'; position?: Point; actor?: Actor } {
-    const { checkWalls = true, checkActors = true, checkLava = false, excludeActorId } = options;
+    const { checkWalls = true, checkMovementBlockers = false, checkActors = true, checkLava = false, excludeActorId } = options;
 
     for (const point of path) {
-        if (checkWalls && isBlockedByWall(state, point)) {
+        if ((checkMovementBlockers && isBlockedByMovementObstacle(state, point)) || (checkWalls && isBlockedByWall(state, point))) {
             return { obstacle: 'wall', position: point };
         }
         if (checkLava && isBlockedByLava(state, point)) {

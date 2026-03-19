@@ -37,6 +37,7 @@ export * from './systems/resolution-stack';
 export * from './systems/composite-skill-factory';
 export * from './systems/composite-skill-bridge';
 export * from './systems/action-preview';
+export * from './systems/passive-targeting';
 export * from './systems/state-mirror';
 export * from './systems/tactical-data-bootstrap';
 export * from './systems/capabilities';

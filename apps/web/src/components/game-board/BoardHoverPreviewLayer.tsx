@@ -17,6 +17,7 @@ interface BoardHoverPreviewLayerProps {
   overdriveArmed?: boolean;
   enginePreviewGhost?: BoardEnginePreviewGhost | null;
   movementTargetSet: Set<string>;
+  movementSkillByTargetKey: ReadonlyMap<string, string>;
   hasPrimaryMovementSkills: boolean;
   fallbackNeighborSet: Set<string>;
 }
@@ -31,6 +32,7 @@ const BoardHoverPreviewLayerBase: React.FC<BoardHoverPreviewLayerProps> = ({
   overdriveArmed,
   enginePreviewGhost,
   movementTargetSet,
+  movementSkillByTargetKey,
   hasPrimaryMovementSkills,
   fallbackNeighborSet,
 }) => {
@@ -50,6 +52,7 @@ const BoardHoverPreviewLayerBase: React.FC<BoardHoverPreviewLayerProps> = ({
         hoveredTile,
         enginePreviewGhost,
         movementTargetSet,
+        movementSkillByTargetKey,
         hasPrimaryMovementSkills,
         fallbackNeighborSet,
       }),
@@ -59,6 +62,7 @@ const BoardHoverPreviewLayerBase: React.FC<BoardHoverPreviewLayerProps> = ({
       gameState,
       hasPrimaryMovementSkills,
       hoveredTile,
+      movementSkillByTargetKey,
       movementTargetSet,
       playerPos,
       selectedSkillId,

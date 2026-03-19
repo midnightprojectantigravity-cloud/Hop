@@ -10,7 +10,7 @@ describe('board tile intent validation', () => {
       playerPos: hex(0, 0, 0),
       selectedSkillId: null,
       selectedSkillTargetSet: new Set(),
-      defaultPassiveTargetSet: new Set(['1,0']),
+      defaultPassiveSkillByTargetKey: new Map([['1,0', 'BASIC_MOVE']]),
       hasPrimaryMovementSkills: true,
       fallbackNeighborSet: new Set()
     });
@@ -24,7 +24,7 @@ describe('board tile intent validation', () => {
       playerPos: hex(0, 0, 0),
       selectedSkillId: null,
       selectedSkillTargetSet: new Set(),
-      defaultPassiveTargetSet: new Set(['1,0']),
+      defaultPassiveSkillByTargetKey: new Map([['1,0', 'BASIC_MOVE']]),
       hasPrimaryMovementSkills: true,
       fallbackNeighborSet: new Set()
     });
@@ -38,7 +38,7 @@ describe('board tile intent validation', () => {
       playerPos: hex(0, 0, 0),
       selectedSkillId: 'FIREBALL',
       selectedSkillTargetSet: new Set(['2,0']),
-      defaultPassiveTargetSet: new Set(['1,0']),
+      defaultPassiveSkillByTargetKey: new Map([['1,0', 'BASIC_MOVE']]),
       hasPrimaryMovementSkills: true,
       fallbackNeighborSet: new Set()
     });
@@ -47,7 +47,7 @@ describe('board tile intent validation', () => {
       playerPos: hex(0, 0, 0),
       selectedSkillId: 'FIREBALL',
       selectedSkillTargetSet: new Set(['2,0']),
-      defaultPassiveTargetSet: new Set(['1,0']),
+      defaultPassiveSkillByTargetKey: new Map([['1,0', 'BASIC_MOVE']]),
       hasPrimaryMovementSkills: true,
       fallbackNeighborSet: new Set()
     });

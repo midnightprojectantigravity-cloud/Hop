@@ -45,6 +45,7 @@ export interface ResolvedCameraWindow {
 
 export const MATERIAL_CAMERA_INSET_DELTA_PX = 8;
 export const MATERIAL_CAMERA_VIEWPORT_CHANGE_RATIO = 0.1;
+const CAMERA_CULL_QUANTIZE_PX = TILE_SIZE * 2;
 
 export const hasMaterialCameraViewportChange = (
     prevViewport: { width: number; height: number },
@@ -227,12 +228,14 @@ export const useBoardPresentationController = ({
     const previousViewportRef = useRef<{ width: number; height: number } | null>(null);
     const previousInsetsRef = useRef<CameraInsetsPx | null>(null);
     const cameraViewRef = useRef<CameraRect>(baseViewBox);
+    const lastCullViewKeyRef = useRef('');
     const detachedCenterRef = useRef<CameraVec2 | null>(null);
     const actorNodesByIdRef = useRef<Map<string, RegisteredActorNodes>>(new Map());
     const [viewportSizePx, setViewportSizePx] = useState({ width: 0, height: 0 });
     const [zoomMode, setZoomMode] = useState<CameraZoomMode>('tactical');
     const [isDetached, setIsDetached] = useState(false);
     const [presentationBusy, setPresentationBusy] = useState(false);
+    const [cullViewBox, setCullViewBox] = useState<CameraRect>(baseViewBox);
     const actorPositionByIdRef = useRef(actorPositionById);
     const playerWorldRef = useRef(playerWorld);
     const resetPresentationRef = useRef<() => void>(() => undefined);
@@ -260,6 +263,16 @@ export const useBoardPresentationController = ({
 
     const applyViewBox = useCallback((viewBox: CameraRect) => {
         cameraViewRef.current = viewBox;
+        const nextCullKey = [
+            Math.round(viewBox.x / CAMERA_CULL_QUANTIZE_PX),
+            Math.round(viewBox.y / CAMERA_CULL_QUANTIZE_PX),
+            Math.round(viewBox.width / CAMERA_CULL_QUANTIZE_PX),
+            Math.round(viewBox.height / CAMERA_CULL_QUANTIZE_PX)
+        ].join(':');
+        if (nextCullKey !== lastCullViewKeyRef.current) {
+            lastCullViewKeyRef.current = nextCullKey;
+            setCullViewBox(viewBox);
+        }
         const svg = svgRef.current;
         if (svg) {
             svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
@@ -610,7 +623,8 @@ export const useBoardPresentationController = ({
         presentationBusy,
         cameraState: {
             zoomMode,
-            isDetached
+            isDetached,
+            cullViewBox
         },
         beginManualPan,
         panByWorldDelta,

@@ -22,6 +22,7 @@ import { useBoardEventEffects } from './game-board/useBoardEventEffects';
 import { useBoardActorVisuals } from './game-board/useBoardActorVisuals';
 import { useBoardJuicePresentation } from './game-board/useBoardJuicePresentation';
 import { useBoardPresentationController } from './game-board/useBoardPresentationController';
+import { filterVisibleByHexPosition } from './game-board/board-render-culling';
 import type {
     VisualAssetManifest,
     VisualBlendMode
@@ -36,7 +37,7 @@ import { resolveSynapsePreview, type SynapseDeltaEntry, type SynapsePulse, type 
 
 interface GameBoardProps {
     gameState: GameState;
-    onMove: (hex: Point) => void;
+    onMove: (hex: Point, passiveSkillId?: string) => void;
     selectedSkillId: string | null;
     showMovementRange: boolean;
     turnFlowMode?: 'protected_single' | 'manual_chain';
@@ -148,6 +149,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
     // Filter cells based on dynamic diamond geometry
     const cells = useMemo(() => resolveBoardCells(gameState), [gameState]);
+    const boardTilesByKey = useMemo(
+        () => new Map(cells.map((hex) => [pointToKey(hex), hex])),
+        [cells]
+    );
     const boardEventDigest = useMemo(() => buildBoardEventDigest({
         visualEvents: gameState.visualEvents || [],
         timelineEvents: gameState.timelineEvents || [],
@@ -204,13 +209,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     }), [bounds.minX, bounds.minY, bounds.width, bounds.height]);
     const cameraEnvelope = useMemo(() => createCameraEnvelope(cells, TILE_SIZE), [cells]);
     const {
+        movementSkillByTargetKey,
         movementTargetSet,
         hasPrimaryMovementSkills,
         stairsKey,
         shrineKey,
         fallbackNeighborSet,
         selectedSkillTargetSet,
-        defaultPassiveTargetSet,
+        defaultPassiveSkillByTargetKey,
     } = useBoardTargetingPreview({
         gameState,
         playerPos,
@@ -296,7 +302,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         movementRange,
         cameraSafeInsetsPx,
     });
-
     const interactionTiles = useMemo<InteractionTileModel[]>(() => (
         cells.map((hex) => {
             const tileKey = pointToKey(hex);
@@ -356,6 +361,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         stairsKey,
         tileVisualFlags,
     ]);
+    const visibleDepthSortedSprites = useMemo(
+        () => filterVisibleByHexPosition(depthSortedSprites, (sprite) => sprite.position, cameraState.cullViewBox, TILE_SIZE * 4),
+        [cameraState.cullViewBox, depthSortedSprites]
+    );
+    const visibleBoardProps = useMemo(
+        () => filterVisibleByHexPosition(boardProps, (prop) => prop.position, cameraState.cullViewBox, TILE_SIZE * 3),
+        [boardProps, cameraState.cullViewBox]
+    );
+    const visibleDecals = useMemo(
+        () => filterVisibleByHexPosition(decals, (decal) => decal.position, cameraState.cullViewBox, TILE_SIZE * 3),
+        [cameraState.cullViewBox, decals]
+    );
+    const visibleVisualEchoes = useMemo(
+        () => filterVisibleByHexPosition(visualEchoes, (echo) => echo.position, cameraState.cullViewBox, TILE_SIZE * 3),
+        [cameraState.cullViewBox, visualEchoes]
+    );
 
     const visibleActorIds = useMemo(
         () => new Set(gameState.visibility?.playerFog?.visibleActorIds || []),
@@ -388,8 +409,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
     const {
         isCameraPanning,
-        handleTileClick,
-        handleHoverTile,
         handleBoardPointerDown,
         handleBoardPointerMove,
         handleBoardPointerUp,
@@ -397,13 +416,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         handleBoardWheel,
     } = useBoardInteractions({
         svgRef,
-        onMove,
+        boardTilesByKey,
+        onMove: (hex) => onMove(hex, defaultPassiveSkillByTargetKey.get(pointToKey(hex))),
         canHandleTileClick: (hex) => canDispatchBoardTileIntent({
             tile: hex,
             playerPos,
             selectedSkillId,
             selectedSkillTargetSet,
-            defaultPassiveTargetSet,
+            defaultPassiveSkillByTargetKey,
             hasPrimaryMovementSkills,
             fallbackNeighborSet,
         }),
@@ -518,11 +538,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                             enginePreviewGhost={enginePreviewGhost}
                             hoveredTileStore={hoveredTileStore}
                             movementTargetSet={movementTargetSet}
+                            movementSkillByTargetKey={movementSkillByTargetKey}
                             hasPrimaryMovementSkills={hasPrimaryMovementSkills}
                             fallbackNeighborSet={fallbackNeighborSet}
-                            decals={decals}
-                            depthSortedSprites={depthSortedSprites}
-                            boardProps={boardProps}
+                            decals={visibleDecals}
+                            depthSortedSprites={visibleDepthSortedSprites}
+                            boardProps={visibleBoardProps}
                             manifestUnitToBoardScale={manifestUnitToBoardScale}
                             assetById={assetById}
                             mountainSettingsByAssetId={mountainSettingsByAssetId}
@@ -546,11 +567,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                             synapseSelection={synapseSelection}
                             synapsePulse={synapsePulse}
                             synapseDeltasByActorId={synapseDeltasByActorId}
-                            visualEchoes={visualEchoesEnabled ? visualEchoes : []}
+                            visualEchoes={visualEchoesEnabled ? visibleVisualEchoes : []}
                             registerActorNodes={registerActorNodes}
                             onSynapseInspectEntity={handleSynapseInspectEntity}
-                            onTileClick={handleTileClick}
-                            onTileHover={handleHoverTile}
                             onMouseLeave={handleClearHover}
                             onWheel={handleBoardWheel}
                             onPointerDown={handleBoardPointerDown}

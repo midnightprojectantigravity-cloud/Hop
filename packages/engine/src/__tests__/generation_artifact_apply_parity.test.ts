@@ -43,6 +43,14 @@ const summarizeState = (state: ReturnType<typeof generateInitialState>) => ({
             tacticalTileCount: state.generatedPaths.tacticalTileKeys.length,
             visualTileCount: state.generatedPaths.visualTileKeys.length
         }
+        : undefined,
+    visibility: state.visibility
+        ? {
+            visibleTileKeys: [...state.visibility.playerFog.visibleTileKeys],
+            exploredTileKeys: [...state.visibility.playerFog.exploredTileKeys],
+            visibleActorIds: [...state.visibility.playerFog.visibleActorIds],
+            detectedActorIds: [...state.visibility.playerFog.detectedActorIds],
+        }
         : undefined
 });
 
@@ -136,5 +144,60 @@ describe('worldgen artifact application parity', () => {
         const direct = resolvePendingStateAction(completedFloor, { generateInitialState });
 
         expect(summarizeState(artifactApplied)).toEqual(summarizeState(direct));
+    });
+
+    it('clears prior fog exploration when applying a compiled start-run artifact', () => {
+        const hub = gameReducer(generateInitialState(1, 'artifact-fog-reset-hub'), { type: 'EXIT_TO_HUB' });
+        const staleExploredKey = '999,999';
+        const seededHub = {
+            ...hub,
+            visibility: {
+                ...(hub.visibility || {
+                    playerFog: {
+                        visibleTileKeys: [],
+                        exploredTileKeys: [],
+                        visibleActorIds: [],
+                        detectedActorIds: []
+                    },
+                    enemyAwarenessById: {}
+                }),
+                playerFog: {
+                    ...(hub.visibility?.playerFog || {
+                        visibleTileKeys: [],
+                        exploredTileKeys: [],
+                        visibleActorIds: [],
+                        detectedActorIds: []
+                    }),
+                    exploredTileKeys: [
+                        staleExploredKey,
+                        ...(hub.visibility?.playerFog.exploredTileKeys || [])
+                    ]
+                }
+            }
+        };
+
+        const artifact = compileStartRunArtifact({
+            loadoutId: 'VANGUARD',
+            mode: 'normal',
+            seed: 'artifact-fog-reset-seed',
+            mapSize: { width: seededHub.gridWidth, height: seededHub.gridHeight },
+            mapShape: seededHub.mapShape
+        });
+
+        const artifactApplied = gameReducer(seededHub, {
+            type: 'APPLY_WORLDGEN_ARTIFACT',
+            payload: artifact
+        });
+        const direct = gameReducer(hub, {
+            type: 'START_RUN',
+            payload: {
+                loadoutId: 'VANGUARD',
+                mode: 'normal',
+                seed: 'artifact-fog-reset-seed'
+            }
+        });
+
+        expect(artifactApplied.visibility?.playerFog.exploredTileKeys).not.toContain(staleExploredKey);
+        expect(artifactApplied.visibility).toEqual(direct.visibility);
     });
 });

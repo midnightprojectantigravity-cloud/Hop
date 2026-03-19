@@ -755,7 +755,7 @@ function App() {
     firstActionMeasuredRef.current = true;
   }, [isReplayMode]);
 
-  const handleTileClick = (target: Point) => {
+  const handleTileClick = (target: Point, passiveSkillId?: string) => {
     if (isInputLocked) return;
     if (isSynapseMode) {
       setSynapseSelection({ mode: 'tile', tile: target });
@@ -777,14 +777,26 @@ function App() {
       setShowMovementRange(!showMovementRange);
       return;
     }
-    trackFirstActionMetric('MOVE');
+
+    const resolvedPassiveSkillId = passiveSkillId || undefined;
+    const isResolvedMovementSkill = resolvedPassiveSkillId === 'BASIC_MOVE' || resolvedPassiveSkillId === 'DASH';
+    const metricActionType = !resolvedPassiveSkillId || isResolvedMovementSkill ? 'MOVE' : 'USE_SKILL';
+
+    trackFirstActionMetric(metricActionType);
     dispatchSensory({
       id: 'haptic-action-medium',
       intensity: 1.0,
       priority: 'low',
       context: 'run'
     });
-    dispatchPlayerActionWithTurnPolicy({ type: 'MOVE', payload: target }, 'player_move');
+    if (resolvedPassiveSkillId) {
+      dispatchPlayerActionWithTurnPolicy(
+        { type: 'USE_SKILL', payload: { skillId: resolvedPassiveSkillId, target } },
+        isResolvedMovementSkill ? 'player_move_resolved' : 'player_passive_resolved'
+      );
+    } else {
+      dispatchPlayerActionWithTurnPolicy({ type: 'MOVE', payload: target }, 'player_move');
+    }
     setShowMovementRange(false);
   };
 

@@ -1,8 +1,6 @@
 import type { Action, GameState, GridSize, MapShape, RunRulesetOverrides } from './types';
 import type { GenerationSpecInput, GenerationState } from './generation/schema';
-import { hexEquals } from './hex';
 import { getEnemyAt } from './helpers';
-import { SkillRegistry } from './skillRegistry';
 import { appendTaggedMessage } from './systems/engine-messages';
 import { StrategyRegistry } from './systems/ai/strategy-registry';
 import { isPlayerTurn } from './systems/initiative';
@@ -21,6 +19,7 @@ import type { Intent } from './types/intent';
 import { recomputeVisibility } from './systems/visibility';
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { resolveIresRuleset } from './systems/ires';
+import { resolvePassiveSkillForTarget } from './systems/passive-targeting';
 
 type ReducerDeps = {
     processNextTurn: (state: GameState, isResuming?: boolean) => GameState;
@@ -143,46 +142,19 @@ export const resolveGameStateAction = (
             if (!('payload' in a)) return s;
             const target = a.payload;
 
-            const playerSkills = s.player.activeSkills || [];
             const enemyAtTarget = getEnemyAt(s.enemies, target);
-
-            const preferredOrder = ['BASIC_ATTACK', 'BASIC_MOVE', 'DASH'];
-            const passiveSkills = playerSkills.filter(sk => sk.slot === 'passive');
-            const sortedSkills = [
-                ...passiveSkills.filter(sk => preferredOrder.includes(sk.id)),
-                ...passiveSkills.filter(sk => !preferredOrder.includes(sk.id))
-            ];
-
-            let chosenSkillId: string | undefined;
-            for (const sk of sortedSkills) {
-                const def = SkillRegistry.get(sk.id);
-                if (!def?.getValidTargets) continue;
-                const validTargets = def.getValidTargets(s, s.player.position);
-                if (validTargets.some(v => hexEquals(v, target))) {
-                    chosenSkillId = sk.id;
-                    break;
-                }
-            }
+            const chosenSkillId = resolvePassiveSkillForTarget(s, s.player, s.player.position, target);
 
             if (!chosenSkillId) {
-                const hasBasicAttack = playerSkills.some(sk => sk.id === 'BASIC_ATTACK');
-                const hasBasicMove = playerSkills.some(sk => sk.id === 'BASIC_MOVE');
-
-                if (enemyAtTarget && hasBasicAttack) {
-                    chosenSkillId = 'BASIC_ATTACK';
-                } else if (!enemyAtTarget && hasBasicMove) {
-                    chosenSkillId = 'BASIC_MOVE';
-                } else {
-                    return {
-                        ...s,
-                        message: appendTaggedMessage(
-                            s.message,
-                            enemyAtTarget ? 'No valid passive attack for target.' : 'No valid passive movement for target.',
-                            'CRITICAL',
-                            'SYSTEM'
-                        )
-                    };
-                }
+                return {
+                    ...s,
+                    message: appendTaggedMessage(
+                        s.message,
+                        enemyAtTarget ? 'No valid passive attack for target.' : 'No valid passive movement for target.',
+                        'CRITICAL',
+                        'SYSTEM'
+                    )
+                };
             }
 
             queueManualIntent(s, {

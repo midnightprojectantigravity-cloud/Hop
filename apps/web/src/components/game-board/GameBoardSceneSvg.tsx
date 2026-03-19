@@ -43,6 +43,7 @@ interface GameBoardSceneSvgProps {
   enginePreviewGhost?: BoardEnginePreviewGhost | null;
   hoveredTileStore: HoveredTileStore;
   movementTargetSet: Set<string>;
+  movementSkillByTargetKey: ReadonlyMap<string, string>;
   hasPrimaryMovementSkills: boolean;
   fallbackNeighborSet: Set<string>;
   decals: ReadonlyArray<BoardDecal>;
@@ -86,8 +87,6 @@ interface GameBoardSceneSvgProps {
   visualEchoes: VisualEchoEntry[];
   registerActorNodes: RegisterActorNodes;
   onSynapseInspectEntity: (actorId: string) => void;
-  onTileClick: (hex: Point) => void;
-  onTileHover: (hex: Point) => void;
   onMouseLeave: () => void;
   onWheel: (e: React.WheelEvent<SVGSVGElement>) => void;
   onPointerDown: (e: React.PointerEvent<SVGSVGElement>) => void;
@@ -109,6 +108,7 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
   enginePreviewGhost,
   hoveredTileStore,
   movementTargetSet,
+  movementSkillByTargetKey,
   hasPrimaryMovementSkills,
   fallbackNeighborSet,
   decals,
@@ -140,8 +140,6 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
   visualEchoes,
   registerActorNodes,
   onSynapseInspectEntity,
-  onTileClick,
-  onTileHover,
   onMouseLeave,
   onWheel,
   onPointerDown,
@@ -180,6 +178,7 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
         overdriveArmed={overdriveArmed}
         enginePreviewGhost={enginePreviewGhost}
         movementTargetSet={movementTargetSet}
+        movementSkillByTargetKey={movementSkillByTargetKey}
         hasPrimaryMovementSkills={hasPrimaryMovementSkills}
         fallbackNeighborSet={fallbackNeighborSet}
       />
@@ -187,8 +186,6 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
     <DevRenderProfiler id="board:InteractionTilesLayer">
       <InteractionTilesLayer
         tiles={interactionTiles}
-        onTileClick={onTileClick}
-        onTileHover={onTileHover}
         decals={decals}
       />
     </DevRenderProfiler>

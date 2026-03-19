@@ -96,7 +96,7 @@ interface GameScreenProps {
   synapseSelection: SynapseSelection;
   synapsePulse: SynapsePulse;
   onSetBoardBusy: (busy: boolean) => void;
-  onTileClick: (hex: Point) => void;
+  onTileClick: (hex: Point, passiveSkillId?: string) => void;
   onSimulationEvents?: (events: SimulationEvent[]) => void;
   onMirrorSnapshot?: (snapshot: StateMirrorSnapshot) => void;
   onReset: () => void;

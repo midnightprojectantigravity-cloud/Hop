@@ -61,7 +61,8 @@ export const DASH: SkillDefinition = {
 
         // findFirstObstacle returns what we hit first
         const obstacleResult = findFirstObstacle(state, fullLine.slice(1), {
-            checkWalls: !movementPolicy.ignoreWalls,
+            checkWalls: false,
+            checkMovementBlockers: !movementPolicy.ignoreWalls,
             checkActors: !movementPolicy.allowPassThroughActors,
             checkLava: false,
             excludeActorId: attacker.id

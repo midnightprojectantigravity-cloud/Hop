@@ -26,10 +26,10 @@ export type CameraViewportPx = {
 
 export const ACTION_VIEW_MIN_HEX_DIAMETER = 7;
 export const TACTICAL_VIEW_MIN_HEX_DIAMETER = 11;
-export const ACTION_VIEW_MAX_HEX_WIDTH_PX = 128;
-export const ACTION_VIEW_MAX_HEX_HEIGHT_PX = 112;
-export const TACTICAL_VIEW_MAX_HEX_WIDTH_PX = 104;
-export const TACTICAL_VIEW_MAX_HEX_HEIGHT_PX = 92;
+export const ACTION_VIEW_MAX_HEX_WIDTH_PX = 220;
+export const ACTION_VIEW_MAX_HEX_HEIGHT_PX = 192;
+export const TACTICAL_VIEW_MAX_HEX_WIDTH_PX = 184;
+export const TACTICAL_VIEW_MAX_HEX_HEIGHT_PX = 160;
 
 export interface ResolveBinaryZoomLevelsOptions {
     mapWidth: number;

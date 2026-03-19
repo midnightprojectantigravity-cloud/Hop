@@ -3,7 +3,6 @@ import { hexToPixel, type Point, TILE_SIZE, COLORS } from '@hop/engine';
 
 interface HexTileProps {
     hex: Point;
-    onClick: (hex: Point) => void;
     isCenter?: boolean;
     isSelected?: boolean;
     isValidMove?: boolean;
@@ -13,7 +12,6 @@ interface HexTileProps {
     isShrine?: boolean;
     isWall?: boolean;
     isFire?: boolean;
-    onMouseEnter?: (hex: Point) => void;
     assetHref?: string;
     interactionOnly?: boolean;
 }
@@ -71,7 +69,7 @@ const getWallReliefPoints = (size: number) => {
 };
 
 const HexTileComponent: React.FC<HexTileProps> = ({
-    hex, onClick, isValidMove, isTargeted, isStairs, isLava, isShrine, isWall, isFire, onMouseEnter, assetHref, interactionOnly
+    hex, isValidMove, isTargeted, isStairs, isLava, isShrine, isWall, isFire, assetHref, interactionOnly
 }) => {
     const [imageFailed, setImageFailed] = useState(false);
 
@@ -122,8 +120,6 @@ const HexTileComponent: React.FC<HexTileProps> = ({
 
     return (
         <g transform={`translate(${x},${y})`}
-            onClick={() => onClick(hex)}
-            onMouseEnter={() => onMouseEnter?.(hex)}
             style={{ cursor }}
             className="hex-tile transition-colors duration-200"
         >
@@ -278,8 +274,6 @@ export const HexTile = React.memo(HexTileComponent, (prev, next) => {
     return prev.hex.q === next.hex.q
         && prev.hex.r === next.hex.r
         && prev.hex.s === next.hex.s
-        && prev.onClick === next.onClick
-        && prev.onMouseEnter === next.onMouseEnter
         && prev.isCenter === next.isCenter
         && prev.isSelected === next.isSelected
         && prev.isValidMove === next.isValidMove

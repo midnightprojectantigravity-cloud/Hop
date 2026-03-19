@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import {
     buildAilmentDeltaSummary,
+    buildPassiveSkillTargetMap,
+    buildResolvedSkillTargetMap,
     getHexLine,
     isHexInRectangularGrid,
     pointToKey,
@@ -11,7 +13,6 @@ import {
     type Point,
 } from '@hop/engine';
 import {
-    collectUniqueSkillTargetsCached,
     getCachedActionPreviewOutcome,
     getCachedMovementPreviewPath,
     getCachedSkillTargets,
@@ -27,25 +28,6 @@ export interface BoardEnginePreviewGhost {
     turnProjection?: IresTurnProjection;
 }
 
-const collectUniqueSkillTargets = (
-    gameState: GameState,
-    actorId: string,
-    origin: Point,
-    skillIds: ReadonlyArray<string>
-): Point[] => {
-    return collectUniqueSkillTargetsCached(
-        gameState,
-        actorId,
-        origin,
-        skillIds,
-        (skillId) => {
-            const def = SkillRegistry.get(skillId);
-            if (!def?.getValidTargets) return null;
-            return () => def.getValidTargets!(gameState, origin);
-        }
-    );
-};
-
 export const extractAilmentDeltaLines = (events: GameState['simulationEvents'] | undefined): string[] => {
     if (!events) return [];
     return buildAilmentDeltaSummary(events);
@@ -55,11 +37,7 @@ export const buildDefaultPassiveTargetSet = (
     gameState: GameState,
     origin: Point
 ): Set<string> => {
-    const passiveSkillIds = (gameState.player.activeSkills || [])
-        .filter(skill => skill.slot === 'passive')
-        .map(skill => skill.id);
-    const targets = collectUniqueSkillTargets(gameState, gameState.player.id, origin, passiveSkillIds);
-    return new Set(targets.map(pointToKey));
+    return new Set(buildPassiveSkillTargetMap(gameState, gameState.player, origin).keys());
 };
 
 export const canDispatchBoardTileIntent = ({
@@ -67,7 +45,7 @@ export const canDispatchBoardTileIntent = ({
     playerPos,
     selectedSkillId,
     selectedSkillTargetSet,
-    defaultPassiveTargetSet,
+    defaultPassiveSkillByTargetKey,
     hasPrimaryMovementSkills,
     fallbackNeighborSet,
 }: {
@@ -75,14 +53,14 @@ export const canDispatchBoardTileIntent = ({
     playerPos: Point;
     selectedSkillId: string | null;
     selectedSkillTargetSet: Set<string>;
-    defaultPassiveTargetSet: Set<string>;
+    defaultPassiveSkillByTargetKey: ReadonlyMap<string, string>;
     hasPrimaryMovementSkills: boolean;
     fallbackNeighborSet: Set<string>;
 }): boolean => {
     const tileKey = pointToKey(tile);
     if (tileKey === pointToKey(playerPos)) return true;
     if (selectedSkillId) return selectedSkillTargetSet.has(tileKey);
-    return defaultPassiveTargetSet.has(tileKey)
+    return defaultPassiveSkillByTargetKey.has(tileKey)
         || (!hasPrimaryMovementSkills && fallbackNeighborSet.has(tileKey));
 };
 
@@ -101,6 +79,7 @@ export const resolveBoardPreviewGhost = ({
     hoveredTile,
     enginePreviewGhost,
     movementTargetSet,
+    movementSkillByTargetKey,
     hasPrimaryMovementSkills,
     fallbackNeighborSet,
 }: {
@@ -111,6 +90,7 @@ export const resolveBoardPreviewGhost = ({
     hoveredTile: Point | null;
     enginePreviewGhost?: BoardEnginePreviewGhost | null;
     movementTargetSet: Set<string>;
+    movementSkillByTargetKey: ReadonlyMap<string, string>;
     hasPrimaryMovementSkills: boolean;
     fallbackNeighborSet: Set<string>;
 }): BoardEnginePreviewGhost | null => {
@@ -122,11 +102,7 @@ export const resolveBoardPreviewGhost = ({
         const isMoveTile = movementTargetSet.has(hoveredKey)
             || (!hasPrimaryMovementSkills && fallbackNeighborSet.has(hoveredKey));
         if (!isMoveTile) return null;
-        const moveSkillId = gameState.player.activeSkills.some(skill => skill.id === 'BASIC_MOVE')
-            ? 'BASIC_MOVE'
-            : gameState.player.activeSkills.some(skill => skill.id === 'DASH')
-              ? 'DASH'
-              : null;
+        const moveSkillId = movementSkillByTargetKey.get(hoveredKey) as 'BASIC_MOVE' | 'DASH' | undefined;
         const previewPath = moveSkillId
             ? getCachedMovementPreviewPath({
                 gameState,
@@ -213,19 +189,21 @@ export const useBoardTargetingPreview = ({
     selectedSkillId,
     showMovementRange,
 }: UseBoardTargetingPreviewArgs) => {
-    const movementTargets = useMemo(() => {
-        if (!showMovementRange || selectedSkillId) return [] as Point[];
+    const movementSkillByTargetKey = useMemo(() => {
+        if (!showMovementRange || selectedSkillId) return new Map<string, string>();
 
         const movementSkillIds = (['BASIC_MOVE', 'DASH'] as const)
             .filter(id => gameState.player.activeSkills.some(skill => skill.id === id));
-        return collectUniqueSkillTargets(gameState, gameState.player.id, playerPos, movementSkillIds);
+        return buildResolvedSkillTargetMap(gameState, playerPos, movementSkillIds);
     }, [showMovementRange, selectedSkillId, gameState, playerPos]);
 
     const movementTargetSet = useMemo(() => {
         const set = new Set<string>();
-        for (const p of movementTargets) set.add(pointToKey(p));
+        for (const targetKey of movementSkillByTargetKey.keys()) {
+            set.add(targetKey);
+        }
         return set;
-    }, [movementTargets]);
+    }, [movementSkillByTargetKey]);
 
     const hasPrimaryMovementSkills = useMemo(
         () => gameState.player.activeSkills.some(s => s.id === 'BASIC_MOVE' || s.id === 'DASH'),
@@ -290,18 +268,19 @@ export const useBoardTargetingPreview = ({
         return set;
     }, [selectedSkillId, gameState, playerPos]);
 
-    const defaultPassiveTargetSet = useMemo(
-        () => buildDefaultPassiveTargetSet(gameState, playerPos),
+    const defaultPassiveSkillByTargetKey = useMemo(
+        () => buildPassiveSkillTargetMap(gameState, gameState.player, playerPos),
         [gameState, playerPos]
     );
 
     return {
+        movementSkillByTargetKey,
         movementTargetSet,
         hasPrimaryMovementSkills,
         stairsKey,
         shrineKey,
         fallbackNeighborSet,
         selectedSkillTargetSet,
-        defaultPassiveTargetSet,
+        defaultPassiveSkillByTargetKey,
     };
 };

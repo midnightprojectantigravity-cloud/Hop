@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, type PointerEvent, type WheelEvent } from 'react';
 import type { Point } from '@hop/engine';
 import type { CameraVec2, CameraZoomMode } from '../../visual/camera';
+import { resolveBoardHexAtWorldPoint } from './board-hit-testing';
 
 type PointerPoint = { x: number; y: number };
 
@@ -18,6 +19,7 @@ type PinchPointerState = {
 
 interface UseBoardInteractionsArgs {
     svgRef: React.MutableRefObject<SVGSVGElement | null>;
+    boardTilesByKey: ReadonlyMap<string, Point>;
     onMove: (hex: Point) => void;
     canHandleTileClick?: (hex: Point) => boolean;
     zoomMode: CameraZoomMode;
@@ -31,6 +33,7 @@ interface UseBoardInteractionsArgs {
 
 export const useBoardInteractions = ({
     svgRef,
+    boardTilesByKey,
     onMove,
     canHandleTileClick,
     zoomMode,
@@ -65,16 +68,23 @@ export const useBoardInteractions = ({
         return { x: transformed.x, y: transformed.y };
     }, [svgRef]);
 
-    const handleTileClick = useCallback((hex: Point) => {
+    const resolveTileAtClientPoint = useCallback((clientX: number, clientY: number): Point | null => {
+        const world = clientToWorld(clientX, clientY);
+        if (!world) return null;
+        return resolveBoardHexAtWorldPoint(world, boardTilesByKey);
+    }, [boardTilesByKey, clientToWorld]);
+
+    const handleTileClick = useCallback((hex: Point | null) => {
+        if (!hex) return;
         if (Date.now() < suppressTileClickUntilRef.current) return;
         if (canHandleTileClick && !canHandleTileClick(hex)) return;
         onMove(hex);
     }, [canHandleTileClick, onMove]);
 
-    const handleHoverTile = useCallback((hex: Point) => {
+    const handleHoverTile = useCallback((clientX: number, clientY: number) => {
         if (isCameraPanning || isPinchingRef.current) return;
-        setHoveredTile(hex);
-    }, [isCameraPanning, setHoveredTile]);
+        setHoveredTile(resolveTileAtClientPoint(clientX, clientY));
+    }, [isCameraPanning, resolveTileAtClientPoint, setHoveredTile]);
 
     const getPointerEntries = useCallback(() => Array.from(activePointersRef.current.entries()), []);
 
@@ -114,7 +124,12 @@ export const useBoardInteractions = ({
     }, [clientToWorld, getPointerEntries, zoomMode]);
 
     const handleBoardPointerMove = useCallback((event: PointerEvent<SVGSVGElement>) => {
-        if (!activePointersRef.current.has(event.pointerId)) return;
+        if (!activePointersRef.current.has(event.pointerId)) {
+            if (event.pointerType === 'mouse') {
+                handleHoverTile(event.clientX, event.clientY);
+            }
+            return;
+        }
         activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
         const pointers = getPointerEntries();
 
@@ -165,7 +180,7 @@ export const useBoardInteractions = ({
         });
         drag.lastWorld = currentWorld;
         event.preventDefault();
-    }, [beginManualPan, clientToWorld, getPointerEntries, panByWorldDelta, selectZoomMode, setHoveredTile, zoomMode]);
+    }, [beginManualPan, clientToWorld, getPointerEntries, handleHoverTile, panByWorldDelta, selectZoomMode, setHoveredTile, zoomMode]);
 
     const finishPointer = useCallback((pointerId: number) => {
         activePointersRef.current.delete(pointerId);
@@ -193,13 +208,20 @@ export const useBoardInteractions = ({
     }, [clientToWorld, endManualPan, getPointerEntries]);
 
     const handleBoardPointerUp = useCallback((event: PointerEvent<SVGSVGElement>) => {
+        const drag = dragStateRef.current;
+        const shouldHandleTileClick = !isPinchingRef.current
+            && drag.activePointerId === event.pointerId
+            && !drag.didPan;
+        if (shouldHandleTileClick) {
+            handleTileClick(resolveTileAtClientPoint(event.clientX, event.clientY));
+        }
         finishPointer(event.pointerId);
         try {
             event.currentTarget.releasePointerCapture(event.pointerId);
         } catch {
             // no-op
         }
-    }, [finishPointer]);
+    }, [finishPointer, handleTileClick, resolveTileAtClientPoint]);
 
     const handleBoardPointerCancel = useCallback((event: PointerEvent<SVGSVGElement>) => {
         finishPointer(event.pointerId);
@@ -217,8 +239,6 @@ export const useBoardInteractions = ({
     return {
         isCameraPanning,
         handleResetView: recenter,
-        handleTileClick,
-        handleHoverTile,
         handleBoardPointerDown,
         handleBoardPointerMove,
         handleBoardPointerUp,

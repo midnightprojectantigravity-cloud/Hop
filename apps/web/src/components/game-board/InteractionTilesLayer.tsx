@@ -20,15 +20,11 @@ export interface InteractionTileModel {
 
 interface InteractionTilesLayerProps {
   tiles: ReadonlyArray<InteractionTileModel>;
-  onTileClick: (hex: Point) => void;
-  onTileHover: (hex: Point) => void;
   decals: ReadonlyArray<BoardDecal>;
 }
 
 const InteractionTilesLayerBase: React.FC<InteractionTilesLayerProps> = ({
   tiles,
-  onTileClick,
-  onTileHover,
   decals,
 }) => {
   return (
@@ -37,7 +33,6 @@ const InteractionTilesLayerBase: React.FC<InteractionTilesLayerProps> = ({
         <HexTile
           key={tile.key}
           hex={tile.hex}
-          onClick={onTileClick}
           isValidMove={tile.isValidMove}
           isTargeted={false}
           isStairs={tile.isStairs}
@@ -45,7 +40,6 @@ const InteractionTilesLayerBase: React.FC<InteractionTilesLayerProps> = ({
           isFire={tile.isFire}
           isShrine={tile.isShrine}
           isWall={tile.isWall}
-          onMouseEnter={onTileHover}
           assetHref={tile.assetHref}
           interactionOnly={tile.interactionOnly}
         />

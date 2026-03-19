@@ -132,8 +132,8 @@ export const SpatialSystem = {
                 const coord = hexAdd(origin, scaleVector(d, i));
                 if (!this.isWithinBounds(state, coord)) break;
 
-                const tile = UnifiedTileService.getTileAt(state, coord);
-                const isWall = tile?.baseId === 'WALL';
+                const tileTraits = UnifiedTileService.getTraitsAt(state, coord);
+                const isWall = tileTraits.has('BLOCKS_MOVEMENT');
                 const actor = getActorAt(state, coord);
 
                 if (isWall) {

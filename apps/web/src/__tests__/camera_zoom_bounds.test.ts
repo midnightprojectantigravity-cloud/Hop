@@ -41,6 +41,25 @@ describe('camera zoom bounds', () => {
     expect(tactical.preset).toBeGreaterThan(11);
   });
 
+  it('keeps close/far modes near the authored 7/11 feel on standard desktop viewports', () => {
+    const viewport = { width: 1366, height: 768 };
+    const action = resolveResponsiveZoomProfile({
+      mode: 'action',
+      viewport,
+      tileSize: 24,
+      movementRange: 2
+    });
+    const tactical = resolveResponsiveZoomProfile({
+      mode: 'tactical',
+      viewport,
+      tileSize: 24,
+      movementRange: 2
+    });
+
+    expect(action.preset).toBeLessThanOrEqual(8);
+    expect(tactical.preset).toBeLessThanOrEqual(11);
+  });
+
   it('derives tactical sizing from the responsive preset rather than visible-tile expansion', () => {
     const viewport = { width: 860, height: 620 };
     const mapBounds = { x: 0, y: 0, width: 1400, height: 1000 };

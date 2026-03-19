@@ -1,6 +1,7 @@
 import React from 'react';
-import { hexToPixel, TILE_SIZE, pointToKey } from '@hop/engine';
+import { hexToPixel, TILE_SIZE } from '@hop/engine';
 import type { BiomeBackdropLayerProps } from './biome-backdrop-types';
+import { buildTranslatedPolygonPath, parseSvgPointList } from './board-svg-paths';
 
 type BiomeBackdropDefsProps = Pick<
     BiomeBackdropLayerProps,
@@ -69,19 +70,26 @@ export const BiomeBackdropDefs: React.FC<BiomeBackdropDefsProps> = ({
     crustMaskEnabled,
     crustMaskId,
     crustMaskHoles,
-}) => (
+}) => {
+    const clipPolygonPoints = React.useMemo(() => parseSvgPointList(biomeClipPoints), [biomeClipPoints]);
+    const maskPolygonPoints = React.useMemo(() => parseSvgPointList(maskHexPoints), [maskHexPoints]);
+    const clipPathData = React.useMemo(() => (
+        buildTranslatedPolygonPath(
+            cells.map((hex) => hexToPixel(hex, TILE_SIZE)),
+            clipPolygonPoints,
+        )
+    ), [cells, clipPolygonPoints]);
+    const maskHolePathData = React.useMemo(() => (
+        buildTranslatedPolygonPath(
+            crustMaskHoles.map((hole) => ({ x: hole.x, y: hole.y })),
+            maskPolygonPoints,
+        )
+    ), [crustMaskHoles, maskPolygonPoints]);
+
+    return (
     <defs>
         <clipPath id={biomeClipId} clipPathUnits="userSpaceOnUse">
-            {cells.map((hex) => {
-                const { x, y } = hexToPixel(hex, TILE_SIZE);
-                return (
-                    <polygon
-                        key={`biome-clip-${pointToKey(hex)}`}
-                        points={biomeClipPoints}
-                        transform={`translate(${x},${y})`}
-                    />
-                );
-            })}
+            {clipPathData && <path d={clipPathData} />}
         </clipPath>
         {undercurrentHref && undercurrentMode === 'repeat' && (
             <pattern
@@ -194,25 +202,23 @@ export const BiomeBackdropDefs: React.FC<BiomeBackdropDefsProps> = ({
                 y={biomeCoverFrame.y}
                 width={biomeCoverFrame.width}
                 height={biomeCoverFrame.height}
-            >
-                <rect
-                    x={biomeCoverFrame.x}
+                >
+                    <rect
+                        x={biomeCoverFrame.x}
                     y={biomeCoverFrame.y}
                     width={biomeCoverFrame.width}
-                    height={biomeCoverFrame.height}
-                    fill="white"
-                />
-                {crustMaskHoles.map((hole) => (
-                    <polygon
-                        key={`hole-${hole.key}`}
-                        points={maskHexPoints}
-                        transform={`translate(${hole.x},${hole.y})`}
-                        fill="black"
-                        opacity={1}
+                        height={biomeCoverFrame.height}
+                        fill="white"
                     />
-                ))}
+                    {maskHolePathData && (
+                        <path
+                            d={maskHolePathData}
+                            fill="black"
+                            opacity={1}
+                        />
+                    )}
             </mask>
         )}
     </defs>
-);
-
+    );
+};

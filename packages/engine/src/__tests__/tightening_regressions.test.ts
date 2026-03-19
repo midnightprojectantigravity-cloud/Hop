@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import { hexEquals } from '../hex';
 import { gameReducer } from '../logic';
 import { createActiveSkill, SkillRegistry } from '../skillRegistry';
 import { applyEffects } from '../systems/effect-engine';
 import { advanceInitiative, removeFromQueue } from '../systems/initiative';
+import { resolvePassiveSkillForTarget } from '../systems/passive-targeting';
 import { executePassiveWithdrawal } from '../skills/withdrawal';
 import { createMockState, p, placeTile } from './test_utils';
 import type { Actor, GameState } from '../types';
@@ -81,6 +83,31 @@ describe('Tightening regressions', () => {
     const next = applyEffects(state, execution.effects, { sourceId: state.player.id });
     expect(next.player.position).toEqual(p(6, 4));
     expect(next.player.hp).toBeGreaterThan(0);
+  });
+
+  it('resolves blocked-behind-obstacle move clicks to basic move and not dash', () => {
+    const state = createMockState();
+    state.player.position = p(4, 4);
+    state.player.previousPosition = p(4, 4);
+    state.player.speed = 3;
+    state.player.activeSkills = [
+      createActiveSkill('BASIC_MOVE') as any,
+      createActiveSkill('DASH') as any,
+    ];
+
+    const blocker = p(5, 4);
+    const target = p(6, 4);
+    placeTile(state, p(4, 4), [], 'STONE');
+    placeTile(state, blocker, ['BLOCKS_MOVEMENT'] as any, 'STONE');
+    placeTile(state, target, [], 'STONE');
+    placeTile(state, p(5, 3), [], 'STONE');
+    placeTile(state, p(6, 3), [], 'STONE');
+
+    const resolvedSkillId = resolvePassiveSkillForTarget(state, state.player, state.player.position, target);
+    const dashTargets = SkillRegistry.get('DASH')!.getValidTargets!(state, state.player.position);
+
+    expect(resolvedSkillId).toBe('BASIC_MOVE');
+    expect(dashTargets.some(point => hexEquals(point, target))).toBe(false);
   });
 
   it('rejects upgrade selections that were not offered by shrine options', () => {
