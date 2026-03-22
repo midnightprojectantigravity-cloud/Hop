@@ -3,6 +3,8 @@ import { DIRECTIONS, hexAdd, hexEquals } from '../../hex';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
 import { resolveBlockedCollisionEffects } from './collision-policy';
 import { toCanonicalDistance } from './force-contract';
+import { extractTrinityStats } from './combat-calculator';
+import { calculateForceContest } from './force-contest';
 
 export interface ForceResolutionInput {
     source: Point;
@@ -17,12 +19,18 @@ export interface ForceResolutionInput {
         stunDuration?: number;
     };
     damageReason?: string;
+    attackerBody?: number;
+    defenderBody?: number;
+    bodyContestMode?: 'strict_ratio' | 'soft_ratio';
 }
 
 export interface ForceResolutionResult {
     effects: AtomicEffect[];
     destination: Point | null;
     collided: boolean;
+    bodyContestRatio?: number;
+    resolvedKnockbackDistance?: number;
+    recoilApplied?: boolean;
 }
 
 const findActorById = (state: GameState, actorId: string) => {
@@ -55,8 +63,36 @@ export const resolveForce = (state: GameState, input: ForceResolutionInput): For
     const target = findActorById(state, input.targetActorId);
     if (!target) return { effects: [], destination: null, collided: false };
 
-    const distance = toCanonicalDistance(input.magnitude, input.maxDistance);
-    if (distance <= 0) return { effects: [], destination: target.position, collided: false };
+    const intendedDistance = toCanonicalDistance(input.magnitude, input.maxDistance);
+    const attackerBody = Number.isFinite(input.attackerBody)
+        ? Number(input.attackerBody)
+        : undefined;
+    const defenderBody = Number.isFinite(input.defenderBody)
+        ? Number(input.defenderBody)
+        : extractTrinityStats(target).body;
+    const contest = attackerBody === undefined
+        ? {
+            bodyContestRatio: undefined,
+            resolvedKnockbackDistance: intendedDistance,
+            recoilApplied: false
+        }
+        : calculateForceContest({
+            attackerBody,
+            defenderBody,
+            intendedDistance,
+            bodyContestMode: input.bodyContestMode
+        });
+    const distance = contest.resolvedKnockbackDistance;
+    if (distance <= 0) {
+        return {
+            effects: [],
+            destination: target.position,
+            collided: false,
+            bodyContestRatio: contest.bodyContestRatio,
+            resolvedKnockbackDistance: contest.resolvedKnockbackDistance,
+            recoilApplied: contest.recoilApplied
+        };
+    }
 
     const origin = target.position;
     const dir = input.mode === 'push'
@@ -106,6 +142,9 @@ export const resolveForce = (state: GameState, input: ForceResolutionInput): For
     return {
         effects,
         destination: cursor,
-        collided
+        collided,
+        bodyContestRatio: contest.bodyContestRatio,
+        resolvedKnockbackDistance: contest.resolvedKnockbackDistance,
+        recoilApplied: contest.recoilApplied
     };
 };

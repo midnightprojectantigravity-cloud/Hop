@@ -16,16 +16,28 @@ export interface MetabolicProfileTemplate {
 const WEIGHTS: MetabolicWeightClass[] = ['Light', 'Standard', 'Heavy'];
 
 export const DEFAULT_METABOLIC_PROFILE_TEMPLATES: MetabolicProfileTemplate[] = [
-    { id: 'balanced_low', label: 'Balanced Low', body: 4, mind: 4, instinct: 4 },
-    { id: 'balanced_mid', label: 'Balanced Mid', body: 7, mind: 7, instinct: 6 },
-    { id: 'balanced_high', label: 'Balanced High', body: 10, mind: 10, instinct: 8 },
-    { id: 'body_mid', label: 'Body Mid', body: 12, mind: 4, instinct: 4 },
-    { id: 'body_high', label: 'Body High', body: 16, mind: 6, instinct: 6 },
-    { id: 'mind_mid', label: 'Mind Mid', body: 4, mind: 12, instinct: 4 },
-    { id: 'mind_high', label: 'Mind High', body: 6, mind: 16, instinct: 6 },
-    { id: 'instinct_mid', label: 'Instinct Mid', body: 4, mind: 4, instinct: 12 },
-    { id: 'instinct_high', label: 'Instinct High', body: 6, mind: 6, instinct: 16 }
+    { id: 'standard_human', label: 'Standard Human', body: 10, mind: 10, instinct: 10 },
+    { id: 'bruiser_frontline', label: 'Bruiser Frontline', body: 16, mind: 4, instinct: 8 },
+    { id: 'skirmisher_light', label: 'Skirmisher Light', body: 8, mind: 6, instinct: 16 },
+    { id: 'caster_mind', label: 'Caster Mind', body: 6, mind: 16, instinct: 8 },
+    { id: 'companion_falcon', label: 'Companion Falcon', body: 4, mind: 6, instinct: 18 },
+    { id: 'companion_skeleton', label: 'Companion Skeleton', body: 12, mind: 2, instinct: 4 },
+    { id: 'boss_anchor', label: 'Boss Anchor', body: 18, mind: 14, instinct: 10 }
 ];
+
+const defaultBurdenForProfile = (
+    templateId: string,
+    weightClass: MetabolicWeightClass
+): MetabolicStatProfile['burdenTier'] => {
+    if (templateId === 'standard_human') return 'None';
+    if (templateId === 'caster_mind') return 'None';
+    if (templateId === 'companion_falcon') return 'None';
+    if (templateId === 'companion_skeleton') return 'Medium';
+    if (templateId === 'boss_anchor') return 'Heavy';
+    if (weightClass === 'Light') return 'Light';
+    if (weightClass === 'Heavy') return 'Heavy';
+    return 'Medium';
+};
 
 export const buildDefaultMetabolicProfileMatrix = (): MetabolicStatProfile[] =>
     DEFAULT_METABOLIC_PROFILE_TEMPLATES.flatMap((template) =>
@@ -35,7 +47,8 @@ export const buildDefaultMetabolicProfileMatrix = (): MetabolicStatProfile[] =>
             body: template.body,
             mind: template.mind,
             instinct: template.instinct,
-            weightClass
+            weightClass,
+            burdenTier: defaultBurdenForProfile(template.id, weightClass)
         }))
     );
 
@@ -51,91 +64,151 @@ const getResult = (
 export const scoreMetabolicTargets = (results: MetabolicCadenceResult[]): MetabolicTargetOutcome[] => {
     const targetRows: MetabolicTargetOutcome[] = [];
 
-    const walking = getResult(results, 'balanced_mid_standard', 'basic_move_x1');
-    if (walking) {
-        const restTurn = walking.firstRestTurn ?? 99;
+    const standardMoveAttack = getResult(results, 'standard_human_standard', 'standard_move_attack_loop');
+    if (standardMoveAttack) {
+        const restTurn = standardMoveAttack.firstRestTurn ?? 99;
         targetRows.push({
-            id: 'balanced_mid_standard_basic_move_x1',
-            passed: walking.avgActionsPerTurnOpening5 >= 1 && restTurn >= 5,
-            score: round3(Math.abs(walking.avgActionsPerTurnOpening5 - 1) + Math.max(0, 5 - restTurn)),
-            details: `avg=${round3(walking.avgActionsPerTurnOpening5)} rest=${restTurn}`
+            id: 'standard_human_standard_move_attack_loop',
+            passed: standardMoveAttack.avgActionsPerTurnOpening5 >= 1
+                && standardMoveAttack.avgActionsPerTurnOpening5 <= 1.4
+                && restTurn >= 3
+                && restTurn <= 5
+                && standardMoveAttack.firstFailureMode !== 'spark',
+            score: round3(
+                Math.abs(standardMoveAttack.avgActionsPerTurnOpening5 - 1.2)
+                + Math.abs(restTurn - 4)
+                + (standardMoveAttack.firstFailureMode === 'spark' ? 1 : 0)
+            ),
+            details: `avg=${round3(standardMoveAttack.avgActionsPerTurnOpening5)} rest=${restTurn} failure=${standardMoveAttack.firstFailureMode}`
         });
     }
 
-    const running = getResult(results, 'balanced_mid_standard', 'basic_move_x2');
-    if (running) {
-        const restTurn = running.firstRestTurn ?? 99;
+    const bruiserFrontline = getResult(results, 'bruiser_frontline_heavy', 'standard_move_attack_loop');
+    if (bruiserFrontline) {
+        const restTurn = bruiserFrontline.firstRestTurn ?? 99;
         targetRows.push({
-            id: 'balanced_mid_standard_basic_move_x2',
-            passed: running.avgActionsPerTurnOpening5 >= 1.1
-                && running.avgActionsPerTurnOpening5 <= 1.6
+            id: 'bruiser_frontline_heavy_standard_move_attack_loop',
+            passed: bruiserFrontline.avgActionsPerTurnOpening5 >= 1
+                && bruiserFrontline.avgActionsPerTurnOpening5 <= 1.3
                 && restTurn >= 2
-                && restTurn <= 3,
+                && restTurn <= 4
+                && bruiserFrontline.sparkSpentOnMovementOpening5 > 0,
             score: round3(
-                Math.abs(running.avgActionsPerTurnOpening5 - 1.35)
-                + Math.abs(restTurn - 2.5)
+                Math.abs(bruiserFrontline.avgActionsPerTurnOpening5 - 1.15)
+                + Math.abs(restTurn - 3)
             ),
-            details: `avg=${round3(running.avgActionsPerTurnOpening5)} rest=${restTurn}`
+            details: `avg=${round3(bruiserFrontline.avgActionsPerTurnOpening5)} rest=${restTurn} moveSpark=${round3(bruiserFrontline.sparkSpentOnMovementOpening5)}`
         });
     }
 
-    const sprint = getResult(results, 'balanced_mid_standard', 'basic_move_x3');
-    if (sprint) {
+    const skirmisherBurst = getResult(results, 'skirmisher_light_light', 'ranged_attack_spacing_loop');
+    if (skirmisherBurst) {
+        const restTurn = skirmisherBurst.firstRestTurn ?? 99;
         targetRows.push({
-            id: 'balanced_mid_standard_basic_move_x3',
-            passed: sprint.firstImmediateBurnTurn === 1 && sprint.avgActionsPerTurnOpening5 <= 1.9,
-            score: round3(
-                (sprint.firstImmediateBurnTurn === 1 ? 0 : 1)
-                + Math.max(0, sprint.avgActionsPerTurnOpening5 - 1.9)
-            ),
-            details: `burn=${sprint.firstImmediateBurnTurn ?? 0} avg=${round3(sprint.avgActionsPerTurnOpening5)}`
-        });
-    }
-
-    const committed = getResult(results, 'balanced_mid_standard', 'basic_move_then_standard_attack');
-    if (committed) {
-        const restTurn = committed.firstRestTurn ?? 99;
-        targetRows.push({
-            id: 'balanced_mid_standard_basic_move_then_standard_attack',
-            passed: committed.avgActionsPerTurnOpening5 >= 1
-                && committed.avgActionsPerTurnOpening5 <= 1.4
+            id: 'skirmisher_light_ranged_attack_spacing_loop',
+            passed: skirmisherBurst.avgActionsPerTurnOpening5 >= 0.8
+                && skirmisherBurst.avgActionsPerTurnOpening5 <= 1.2
                 && restTurn >= 2
-                && restTurn <= 3,
+                && restTurn <= 4
+                && skirmisherBurst.firstFailureMode !== 'spark',
             score: round3(
-                Math.abs(committed.avgActionsPerTurnOpening5 - 1.2)
-                + Math.abs(restTurn - 2.5)
+                Math.abs(skirmisherBurst.avgActionsPerTurnOpening5 - 1)
+                + Math.abs(restTurn - 3)
+                + (skirmisherBurst.firstFailureMode === 'spark' ? 1 : 0)
             ),
-            details: `avg=${round3(committed.avgActionsPerTurnOpening5)} rest=${restTurn}`
+            details: `avg=${round3(skirmisherBurst.avgActionsPerTurnOpening5)} rest=${restTurn} failure=${skirmisherBurst.firstFailureMode}`
         });
     }
 
-    const mindMidHeavyBattleline = getResult(results, 'mind_mid_heavy', 'heavy_mind_battleline');
-    if (mindMidHeavyBattleline) {
+    const casterSignature = getResult(results, 'caster_mind_standard', 'caster_signature_loop');
+    if (casterSignature) {
+        const restTurn = casterSignature.firstRestTurn ?? 99;
         targetRows.push({
-            id: 'mind_mid_heavy_battleline',
-            passed: mindMidHeavyBattleline.firstFailureMode !== 'mana'
-                && mindMidHeavyBattleline.movementShareOfSparkSpend >= 0.5,
+            id: 'caster_mind_caster_signature_loop',
+            passed: casterSignature.firstFailureMode !== 'mana'
+                && casterSignature.manaSpentOpening5 > 0
+                && restTurn >= 2
+                && restTurn <= 5,
             score: round3(
-                (mindMidHeavyBattleline.firstFailureMode === 'mana' ? 1 : 0)
-                + Math.max(0, 0.5 - mindMidHeavyBattleline.movementShareOfSparkSpend)
+                (casterSignature.firstFailureMode === 'mana' ? 2 : 0)
+                + Math.abs(restTurn - 3.5)
             ),
-            details: `failure=${mindMidHeavyBattleline.firstFailureMode} moveShare=${round3(mindMidHeavyBattleline.movementShareOfSparkSpend)}`
+            details: `rest=${restTurn} manaSpent=${round3(casterSignature.manaSpentOpening5)} failure=${casterSignature.firstFailureMode}`
         });
     }
 
-    const instinctMoveBurst = getResult(results, 'instinct_mid_light', 'instinct_move_burst');
-    if (instinctMoveBurst) {
-        const interval = instinctMoveBurst.avgTurnsBetweenBonusActions ?? 99;
+    const bomberSetup = getResult(results, 'caster_mind_light', 'bomber_setup_loop');
+    if (bomberSetup) {
+        const restTurn = bomberSetup.firstRestTurn ?? 99;
         targetRows.push({
-            id: 'instinct_mid_light_move_burst',
-            passed: interval >= 3 && interval <= 5 && instinctMoveBurst.avgActionsPerTurnOpening5 < 2,
-            score: round3(Math.abs(interval - 4) + Math.max(0, instinctMoveBurst.avgActionsPerTurnOpening5 - 1.7)),
-            details: `interval=${interval} avg=${round3(instinctMoveBurst.avgActionsPerTurnOpening5)}`
+            id: 'bomber_setup_loop_native_reserve',
+            passed: bomberSetup.firstFailureMode !== 'mana'
+                && bomberSetup.avgActionsPerTurnOpening5 >= 1
+                && bomberSetup.avgActionsPerTurnOpening5 <= 1.3
+                && restTurn >= 3,
+            score: round3(
+                (bomberSetup.firstFailureMode === 'mana' ? 2 : 0)
+                + Math.max(0, 3 - restTurn)
+            ),
+            details: `avg=${round3(bomberSetup.avgActionsPerTurnOpening5)} rest=${restTurn} failure=${bomberSetup.firstFailureMode}`
         });
     }
 
-    const travelBalanced = getResult(results, 'balanced_mid_standard', 'move_only_travel');
-    const battleBalanced = getResult(results, 'balanced_mid_standard', 'move_only_battle');
+    const falconSupport = getResult(results, 'companion_falcon_light', 'falcon_support_loop');
+    if (falconSupport) {
+        const restTurn = falconSupport.firstRestTurn ?? 99;
+        targetRows.push({
+            id: 'companion_falcon_support_loop',
+            passed: falconSupport.avgActionsPerTurnOpening5 >= 1
+                && falconSupport.avgActionsPerTurnOpening5 <= 1.5
+                && restTurn >= 2
+                && restTurn <= 5
+                && falconSupport.firstFailureMode !== 'mana',
+            score: round3(
+                Math.abs(falconSupport.avgActionsPerTurnOpening5 - 1.3)
+                + Math.abs(restTurn - 3.5)
+            ),
+            details: `avg=${round3(falconSupport.avgActionsPerTurnOpening5)} rest=${restTurn} failure=${falconSupport.firstFailureMode}`
+        });
+    }
+
+    const skeletonAttrition = getResult(results, 'companion_skeleton_standard', 'skeleton_attrition_loop');
+    if (skeletonAttrition) {
+        const restTurn = skeletonAttrition.firstRestTurn ?? 99;
+        targetRows.push({
+            id: 'companion_skeleton_attrition_loop',
+            passed: skeletonAttrition.avgActionsPerTurnOpening5 >= 0.4
+                && skeletonAttrition.avgActionsPerTurnOpening5 <= 1
+                && restTurn >= 1
+                && skeletonAttrition.firstFailureMode !== 'spark',
+            score: round3(
+                Math.abs(skeletonAttrition.avgActionsPerTurnOpening5 - 0.7)
+                + Math.abs(restTurn - 2)
+            ),
+            details: `avg=${round3(skeletonAttrition.avgActionsPerTurnOpening5)} rest=${restTurn} failure=${skeletonAttrition.firstFailureMode}`
+        });
+    }
+
+    const standardWalking = getResult(results, 'standard_human_standard', 'basic_move_x1');
+    const standardRunning = getResult(results, 'standard_human_standard', 'basic_move_x2');
+    const standardSprinting = getResult(results, 'standard_human_standard', 'basic_move_x3');
+    if (standardWalking && standardRunning && standardSprinting) {
+        targetRows.push({
+            id: 'standard_human_movement_gradient',
+            passed: (standardWalking.firstRestTurn ?? 99) >= 6
+                && (standardRunning.firstRestTurn ?? 99) <= 3
+                && standardSprinting.firstImmediateBurnTurn === 1,
+            score: round3(
+                Math.max(0, 6 - (standardWalking.firstRestTurn ?? 0))
+                + Math.max(0, (standardRunning.firstRestTurn ?? 99) - 3)
+                + (standardSprinting.firstImmediateBurnTurn === 1 ? 0 : 1)
+            ),
+            details: `walkRest=${standardWalking.firstRestTurn ?? '-'} runRest=${standardRunning.firstRestTurn ?? '-'} sprintBurn=${standardSprinting.firstImmediateBurnTurn ?? '-'}`
+        });
+    }
+
+    const travelBalanced = getResult(results, 'standard_human_standard', 'move_only_travel');
+    const battleBalanced = getResult(results, 'standard_human_standard', 'move_only_battle');
     if (travelBalanced && battleBalanced) {
         const travelRest = travelBalanced.firstRestTurn ?? 99;
         const battleRest = battleBalanced.firstRestTurn ?? 99;

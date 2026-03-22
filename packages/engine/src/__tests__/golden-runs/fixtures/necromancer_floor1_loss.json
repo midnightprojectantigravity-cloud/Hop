@@ -1,0 +1,30 @@
+{
+  "id": "necromancer_floor1_loss",
+  "version": 1,
+  "seed": "necromancer-4",
+  "loadoutId": "NECROMANCER",
+  "floorsTarget": 1,
+  "maxTurnsPerFloor": 20,
+  "policy": "heuristic",
+  "policyProfileId": "sp-v1-default",
+  "expected": {
+    "outcome": "lost",
+    "finalFloor": [
+      1,
+      1
+    ],
+    "totalKills": [
+      0,
+      0
+    ],
+    "totalTurns": [
+      15,
+      20
+    ],
+    "playerHp": [
+      0,
+      0
+    ],
+    "fingerprint": "111bf67d19fb133f"
+  }
+}

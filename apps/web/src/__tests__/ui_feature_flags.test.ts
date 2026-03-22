@@ -24,7 +24,8 @@ describe('ui feature flags', () => {
       ui_mobile_dock_v2: true,
       ui_defeat_loop_v2: false,
       ui_sensory_dispatcher_v1: false,
-      ui_dedicated_hub_routes_v1: false
+      ui_dedicated_hub_routes_v1: false,
+      strict_target_path_parity_v1: false
     });
   });
 
@@ -35,7 +36,8 @@ describe('ui feature flags', () => {
         ui_mobile_dock_v2: true,
         ui_defeat_loop_v2: false,
         ui_sensory_dispatcher_v1: true,
-        ui_dedicated_hub_routes_v1: false
+        ui_dedicated_hub_routes_v1: false,
+        strict_target_path_parity_v1: true
       },
       storage
     );
@@ -46,5 +48,6 @@ describe('ui feature flags', () => {
     expect(readBack.ui_defeat_loop_v2).toBe(false);
     expect(readBack.ui_sensory_dispatcher_v1).toBe(true);
     expect(readBack.ui_dedicated_hub_routes_v1).toBe(false);
+    expect(readBack.strict_target_path_parity_v1).toBe(true);
   });
 });

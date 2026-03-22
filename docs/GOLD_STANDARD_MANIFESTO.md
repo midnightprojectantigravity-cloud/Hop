@@ -65,7 +65,13 @@ Use it as the decision filter for engine, client, and balance changes.
 6. Behavior change slices should keep scenario coverage green:
    - `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent`
 7. Balance slices should keep UPA health gate green:
-   - `npm run upa:health:check`
+   - `npm run upa:health:release`
+
+## 9.1) Trinity V2 Runtime Contract
+1. The integrated runtime supports one combat ruleset: `trinity_ratio_v2`.
+2. Trinity content ships as one profile set: `core-v2-live`.
+3. Combat rollout flags and Trinity profile env overrides are retired from supported workflows.
+4. Combat/IRES formula intent is governed by `docs/COMBAT_FORMULA_LEDGER.md`.
 
 ## 10) ACAE Runtime Rules (Pilot)
 1. ACAE is state-ruleset gated (`GameState.ruleset.ailments.acaeEnabled`) and deterministic.
@@ -89,3 +95,4 @@ Use it as the decision filter for engine, client, and balance changes.
 10. Archived completed plans: `docs/archive/`
 11. Biome + bestiary + trinity contract: `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`
 12. Generated audit/test artifacts: `artifacts/upa/` (not `docs/` root)
+

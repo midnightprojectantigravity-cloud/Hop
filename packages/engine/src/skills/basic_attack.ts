@@ -94,6 +94,8 @@ export const BASIC_ATTACK: SkillDefinition = {
             trinity: extractTrinityStats(attacker),
             targetTrinity: extractTrinityStats(targetActor),
             damageClass: 'physical',
+            attackProfile: 'melee',
+            trackingSignature: 'melee',
             scaling: [{ attribute: 'body', coefficient: 0.5 }],
             statusMultipliers: [],
             inDangerPreviewHex: !!state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position)),

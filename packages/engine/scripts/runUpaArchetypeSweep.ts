@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { runBatch, summarizeBatch, type ArchetypeLoadoutId, type BotPolicy } from '../src/systems/evaluation/balance-harness';
 import { DEFAULT_LOADOUTS } from '../src/systems/loadout';
 import { computeUPAFromSummary } from '../src/systems/upa';
-import { getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
+import { TRINITY_PROFILE_SET_VERSION } from '../src/systems/combat/trinity-profiles';
 
 const count = Number(process.argv[2] || 300);
 const maxTurns = Number(process.argv[3] || 80);
@@ -11,10 +11,6 @@ const policy = (process.argv[4] || 'heuristic') as BotPolicy;
 const policyProfileId = process.argv[5] || 'sp-v1-balance';
 const outFile = process.argv[6] || 'artifacts/upa/UPA_TUNING_SWEEP.json';
 const seedPrefix = process.argv[7] || `upa-tuning-${policyProfileId}`;
-
-if (!process.env.HOP_TRINITY_PROFILE) {
-    process.env.HOP_TRINITY_PROFILE = 'live';
-}
 
 const loadouts = Object.keys(DEFAULT_LOADOUTS) as ArchetypeLoadoutId[];
 
@@ -49,7 +45,7 @@ const payload = {
         policy,
         policyProfileId,
         seedPrefix,
-        trinityProfile: getActiveTrinityProfileId(),
+        trinityProfile: TRINITY_PROFILE_SET_VERSION,
     },
     aggregates: {
         avgFloorMean: archetypes.reduce((sum, row) => sum + row.summary.avgFloor, 0) / Math.max(1, archetypes.length),

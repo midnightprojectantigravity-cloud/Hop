@@ -1,7 +1,7 @@
 import { runBatch, summarizeBatch, runHeadToHeadBatch } from '../src/systems/evaluation/balance-harness';
 import type { ArchetypeLoadoutId } from '../src/systems/evaluation/balance-harness';
 import { writeFileSync } from 'node:fs';
-import { getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
+import { TRINITY_PROFILE_SET_VERSION } from '../src/systems/combat/trinity-profiles';
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {
@@ -12,7 +12,7 @@ if (process.env.VERBOSE_ANALYSIS !== '1') {
 const count = Number(process.argv[2] || 60);
 const maxTurns = Number(process.argv[3] || 60);
 const outFile = process.argv[4] || 'docs/UPA_TRINITY_CONTRIBUTIONS.json';
-const trinityProfile = getActiveTrinityProfileId();
+const trinityProfile = TRINITY_PROFILE_SET_VERSION;
 
 const loadouts: ArchetypeLoadoutId[] = ['VANGUARD', 'SKIRMISHER', 'FIREMAGE', 'NECROMANCER', 'HUNTER', 'ASSASSIN'];
 const seeds = Array.from({ length: count }, (_, i) => `trinity-report-seed-${i + 1}`);

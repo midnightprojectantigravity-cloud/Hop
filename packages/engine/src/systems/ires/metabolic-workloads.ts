@@ -184,5 +184,68 @@ export const DEFAULT_METABOLIC_WORKLOAD_CATALOG: IresMetabolicConfig['workloadCa
         ],
         repeat: true,
         restRule: AGGRESSIVE_REST_RULE
+    },
+    standard_move_attack_loop: {
+        id: 'standard_move_attack_loop',
+        label: 'Standard Move + Attack Loop',
+        mode: 'battle',
+        turns: [{ actions: ['BASIC_MOVE', 'spark_attack_standard'] }],
+        repeat: true,
+        restRule: AGGRESSIVE_REST_RULE
+    },
+    ranged_attack_spacing_loop: {
+        id: 'ranged_attack_spacing_loop',
+        label: 'Ranged Attack Spacing Loop',
+        mode: 'battle',
+        turns: [
+            { actions: ['BASIC_MOVE', 'spark_attack_standard'] },
+            { actions: ['BASIC_MOVE'] }
+        ],
+        repeat: true,
+        restRule: DEFAULT_REST_RULE
+    },
+    caster_signature_loop: {
+        id: 'caster_signature_loop',
+        label: 'Caster Signature Loop',
+        mode: 'battle',
+        turns: [
+            { actions: ['BASIC_MOVE', 'mana_cast_standard'] },
+            { actions: ['mana_cast_standard'] }
+        ],
+        repeat: true,
+        restRule: AGGRESSIVE_REST_RULE
+    },
+    bomber_setup_loop: {
+        id: 'bomber_setup_loop',
+        label: 'Bomber Setup Loop',
+        mode: 'battle',
+        turns: [
+            { actions: ['BASIC_MOVE', 'mana_cast_light'] },
+            { actions: ['BASIC_MOVE'] }
+        ],
+        repeat: true,
+        restRule: DEFAULT_REST_RULE
+    },
+    falcon_support_loop: {
+        id: 'falcon_support_loop',
+        label: 'Falcon Support Loop',
+        mode: 'battle',
+        turns: [
+            { actions: ['BASIC_MOVE', 'mana_cast_light'] },
+            { actions: ['BASIC_MOVE', 'spark_attack_light'] }
+        ],
+        repeat: true,
+        restRule: DEFAULT_REST_RULE
+    },
+    skeleton_attrition_loop: {
+        id: 'skeleton_attrition_loop',
+        label: 'Skeleton Attrition Loop',
+        mode: 'battle',
+        turns: [
+            { actions: ['BASIC_MOVE', 'spark_attack_light'] },
+            { actions: ['BASIC_MOVE'] }
+        ],
+        repeat: true,
+        restRule: DEFAULT_REST_RULE
     }
 };

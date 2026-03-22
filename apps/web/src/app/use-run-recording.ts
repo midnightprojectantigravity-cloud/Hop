@@ -24,7 +24,8 @@ export const buildReplayRecordFromGameState = (gameState: GameState): ReplayReco
       },
       mapShape: gameState.mapShape || 'diamond',
       mode: gameState.dailyRunDate ? 'daily' : 'normal',
-      date: gameState.dailyRunDate
+      date: gameState.dailyRunDate,
+      combatVersion: gameState.ruleset?.combat?.version
     },
     actions: gameState.actionLog || [],
     meta: {

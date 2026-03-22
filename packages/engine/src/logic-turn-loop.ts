@@ -14,7 +14,7 @@ import {
     getTurnStartNeighborIds,
     getCurrentEntry,
 } from './systems/initiative';
-import { isStunned, tickStatuses } from './systems/status';
+import { consumeActionPhaseStatuses, isStunned, tickStatuses } from './systems/status';
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { buildRunSummary } from './systems/run-objectives';
 import { appendTaggedMessage, appendTaggedMessages } from './systems/engine-messages';
@@ -102,7 +102,12 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 return deps.withPendingFrame(
                     {
                         ...curState,
-                        message: appendTaggedMessage(curState.message, 'You have fallen...', 'CRITICAL', 'COMBAT')
+                        message: appendTaggedMessage(
+                            appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
+                            'You have fallen...',
+                            'CRITICAL',
+                            'COMBAT'
+                        )
                     },
                     {
                         status: 'lost',
@@ -211,6 +216,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
             let forcedStunSkip = false;
             if (isStunned(actorForIntent)) {
                 forcedStunSkip = true;
+                curState = updateActorInState(curState, consumeActionPhaseStatuses(actorForIntent, 'ACTION'));
                 intent = {
                     type: 'WAIT',
                     actorId: actorForIntent.id,

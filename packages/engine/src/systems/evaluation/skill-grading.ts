@@ -90,8 +90,9 @@ export const computeStaticSkillGrades = (
 ): StaticSkillGradeArtifact => {
     const skills: Record<string, SkillNumericGradeBreakdown> = {};
     for (const def of Object.values(registry)) {
-        if (!def.intentProfile) continue;
-        const grade = computeSkillNumericGrade(def.intentProfile);
+        const intentProfile = def.intentProfile || SkillRegistry.get(def.id)?.intentProfile;
+        if (!intentProfile) continue;
+        const grade = computeSkillNumericGrade(intentProfile);
         skills[def.id] = {
             skillId: def.id,
             ...grade

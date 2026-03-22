@@ -2,6 +2,7 @@ import type { Action, GameState, Point, SkillIntentProfile } from '../../../type
 import { getNeighbors, hexDistance, hexEquals } from '../../../hex';
 import { UnifiedTileService } from '../../tiles/unified-tile-service';
 import { SkillRegistry } from '../../../skillRegistry';
+import { getAiResourceSignals } from '../resource-signals';
 
 export type ActionCandidate = {
     action: Action;
@@ -127,15 +128,13 @@ export const preRankAction = (state: GameState, action: Action, profile?: SkillI
     const immediateBasicKill = hasImmediateBasicAttackKill(state);
     const immediateAutoKill = hasImmediateAutoAttackKill(state);
     const ires = state.player.ires;
-    const exhaustionPressure = ires
-        ? (ires.isExhausted ? 14 : ires.exhaustion >= 65 ? 10 : ires.exhaustion >= 45 ? 6 : 0)
-        : 0;
-    const sparkPressure = ires
-        ? (ires.spark <= 20 ? 8 : ires.spark <= 35 ? 5 : ires.spark <= 50 ? 2 : 0)
-        : 0;
-    const manaPressure = ires
-        ? (ires.mana <= 5 ? 8 : ires.mana <= 10 ? 5 : ires.mana <= 15 ? 2 : 0)
-        : 0;
+    const resourceSignals = getAiResourceSignals(ires);
+    const restPressure = Math.round(resourceSignals.recoveryPressure * 16);
+    const endTurnPressure = Math.round(
+        ((resourceSignals.fatiguePressure * 0.5)
+            + (resourceSignals.reservePressure * 0.3)
+            + (resourceSignals.actionChainPressure * 0.2)) * 12
+    );
     const isRestOpportunity = !!ires && !ires.actedThisTurn && !ires.movedThisTurn;
 
     if (action.type === 'WAIT') {
@@ -146,9 +145,9 @@ export const preRankAction = (state: GameState, action: Action, profile?: SkillI
         }
         let score = hasAutoAttack && adjacent > 0 ? -3 : -4;
         if (isRestOpportunity) {
-            score += exhaustionPressure + sparkPressure + manaPressure;
+            score += restPressure;
         } else if (ires && ires.actionCountThisTurn > 0) {
-            score += Math.max(2, Math.floor(exhaustionPressure * 0.75) + Math.floor(sparkPressure * 0.5) + Math.floor(manaPressure * 0.5));
+            score += Math.max(2, endTurnPressure);
         }
         return score;
     }

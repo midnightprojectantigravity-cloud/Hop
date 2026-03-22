@@ -138,9 +138,9 @@ $env:HOP_COMBAT_INTERACTION_MODEL='triangle'; npx tsx packages/engine/scripts/ru
   - `avgCritPressure`
   - `avgResistancePressure`
 
-Trinity profile mode:
-- `HOP_TRINITY_PROFILE=neutral` (default) keeps baseline-neutral trinity values.
-- `HOP_TRINITY_PROFILE=live` enables role-tuned trinity defaults for player/enemy/companion.
+Trinity runtime profile:
+- Trinity profile env overrides are retired.
+- The integrated runtime uses one shipped profile set: `core-v2-live`.
 
 ### 4) Dedicated PvP UPA system (duel arena)
 Script: `packages/engine/scripts/runPvpUpa.ts`
@@ -310,22 +310,12 @@ npm run upa:trinity:report
 Default artifact:
 - `docs/UPA_TRINITY_CONTRIBUTIONS.json`
 
-### 12) Trinity profile A/B artifact compare (`neutral` vs `live`)
-Script: `packages/engine/scripts/runTrinityProfileComparison.ts`
+### 12) Trinity runtime artifact ownership
+The integrated runtime no longer supports profile A/B comparison through ambient env toggles.
 
-NPM shortcut:
-```bash
-npm run upa:trinity:profiles:compare
-```
-
-Artifacts:
-- `docs/UPA_TRINITY_CONTRIBUTIONS_NEUTRAL.json`
-- `docs/UPA_TRINITY_CONTRIBUTIONS_LIVE.json`
-- `docs/UPA_PVP_MATCHUP_MATRIX_NEUTRAL.json`
-- `docs/UPA_PVP_MATCHUP_MATRIX_LIVE.json`
-- `docs/UPA_SKILL_HEALTH_NEUTRAL.json`
-- `docs/UPA_SKILL_HEALTH_LIVE.json`
-- `docs/UPA_TRINITY_PROFILE_COMPARE.json`
+Current contract:
+1. One Trinity content set ships: `core-v2-live`.
+2. Balance comparisons should compare candidate coefficients/content against accepted baselines, not alternate runtime profiles.
 
 ### 13) MVP baseline snapshot (`mvp-v1`)
 Script: `packages/engine/scripts/runMvpBaseline.ts`
@@ -549,8 +539,18 @@ npm run upa:evaluators
 
 Generate skill health labels (`effective`, `underutilized`, `loop-risk`, `spam-inflated`, `policy-blocked`, `no-data`):
 ```bash
-npx tsx packages/engine/scripts/runSkillHealthReport.ts 80 60 docs/UPA_SKILL_HEALTH_2026-02-09.json
+npx tsx packages/engine/scripts/runSkillHealthReport.ts full docs/UPA_SKILL_HEALTH_2026-02-09.json
 ```
+
+The report now includes per-loadout `pacingSignal` telemetry:
+- `avgSparkRatio`
+- `avgManaRatio`
+- `avgReservePressure`
+- `avgFatiguePressure`
+- `avgRecoveryPressure`
+- `restSelections`
+- `endTurnSelections`
+- `continuedActionSelections`
 
 NPM shortcut:
 ```bash
@@ -559,12 +559,17 @@ npm run upa:health
 
 Threshold mode (non-zero exit if exceeded):
 ```bash
-npx tsx packages/engine/scripts/runSkillHealthReport.ts 80 60 docs/UPA_SKILL_HEALTH_2026-02-09.json 0 0 2
+npx tsx packages/engine/scripts/runSkillHealthReport.ts check docs/UPA_SKILL_HEALTH_2026-02-09.json
 ```
-Where:
-- arg5 = `maxLoopRisk` (set `0` to fail if any loop-risk labels exist)
-- arg6 = `maxFailures` (set `0` to fail if any archetype run failures exist)
-- arg7 = `maxPlayerFacingNoData` (set to `2` to allow only baseline `AUTO_ATTACK` + `BASIC_MOVE` policy-blocked entries)
+Smoke gate mode (bounded CI/runtime-friendly sweep):
+```bash
+npx tsx packages/engine/scripts/runSkillHealthReport.ts smoke docs/UPA_SKILL_HEALTH.json
+```
+
+Modes:
+- `full`: offline analysis sweep, no threshold failure caps
+- `check`: full sweep with strict thresholds (`loopRisk=0`, `failures=0`, `playerFacingNoData=2`)
+- `smoke`: bounded gate sweep with relaxed no-data tolerance for CI practicality (`loopRisk=2`, `failures=0`, `playerFacingNoData=20`)
 
 ## CI Automation
 
@@ -572,7 +577,8 @@ PR gate:
 - `.github/workflows/upa-grade-pr-check.yml`
 - Regenerates static grades and fails the PR if `docs/UPA_SKILL_GRADES_STATIC.json` is stale.
 - Prints static-grade diff in CI logs for review.
-- Runs health thresholds via `npm run upa:health:check` and uploads `docs/UPA_SKILL_HEALTH.json`.
+- Uses `npm run upa:health:release` as the canonical fast release report.
+- Uses `npm run upa:health:full` for deep offline health analysis.
 - Runs calibration threshold summary via `npm run upa:calibration:check` (warn-only in PR workflow).
 
 Nightly refresh:
@@ -584,3 +590,4 @@ Nightly refresh:
   - `docs/UPA_PVP_MATCHUP_MATRIX.json`
   - `artifacts/upa/UPA_EVALUATOR_BASELINES.json`
   - `artifacts/upa/UPA_EVALUATOR_TREND.json`
+

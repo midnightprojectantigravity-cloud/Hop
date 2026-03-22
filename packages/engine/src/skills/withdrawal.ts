@@ -126,6 +126,9 @@ export const WITHDRAWAL: SkillDefinition = {
             trinity: extractTrinityStats(attacker),
             targetTrinity: extractTrinityStats(targetActor),
             damageClass: 'physical',
+            attackProfile: 'projectile',
+            trackingSignature: 'projectile',
+            engagementContext: { distance: dist },
             scaling: [{ attribute: 'instinct', coefficient: 0.2 }],
             statusMultipliers: []
         });

@@ -1,5 +1,9 @@
 # Inferno World Compiler Wrap-Up - March 12, 2026
 
+Historical note:
+- This is a milestone wrap-up, not current operational guidance.
+- Current release-gate and Trinity/IRES runtime guidance lives in docs/STATUS.md, docs/UPA_GUIDE.md, and docs/TRINITY_V2_INTEGRATION_SIGNOFF.md.
+
 ## Summary
 
 The inferno-only world compiler vertical slice is now implemented and hardened across engine and web:
@@ -99,7 +103,7 @@ Additional close-out validation completed after the main wrap-up pass:
 
 1. `packages/engine/src/__tests__/scenarios_runner.test.ts` is green again after restoring scenario visibility refresh and awareness-dependent enemy fixtures.
 2. `npm run mvp:replay:gate` passes with matching fingerprints.
-3. `docs/UPA_SKILL_HEALTH.json` regenerates cleanly and `npm run upa:health:check` exits cleanly again; the remaining tradeoff is runtime, not correctness.
+3. `docs/UPA_SKILL_HEALTH.json` regenerated cleanly under the historical health gate of the time; current equivalent release check is `npm run upa:health:release`.
 
 Remaining work is optional follow-on work, not completion-critical:
 
@@ -107,3 +111,4 @@ Remaining work is optional follow-on work, not completion-critical:
 2. Expand authored floor families beyond the special-floor slice.
 3. Promote path visuals from programmatic overlays to bespoke authored art only if needed.
 4. Run heavier UPA report scripts only when balance/content changes justify regenerating those artifacts.
+

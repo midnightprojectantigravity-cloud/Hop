@@ -1,4 +1,5 @@
 import { resolveForce } from '../combat/force';
+import { extractTrinityStats } from '../combat/combat-calculator';
 import type { AtomicEffectHandlerMap } from './types';
 
 export const forceEffectHandlers: AtomicEffectHandlerMap = {
@@ -17,7 +18,10 @@ export const forceEffectHandlers: AtomicEffectHandlerMap = {
             magnitude: effect.magnitude,
             maxDistance: effect.maxDistance,
             collision: effect.collision,
-            damageReason: effect.damageReason
+            damageReason: effect.damageReason,
+            attackerBody: effect.attackerBody ?? (context.sourceId ? extractTrinityStats(api.resolveActorById(state, context.sourceId) || state.player).body : undefined),
+            defenderBody: effect.defenderBody,
+            bodyContestMode: effect.bodyContestMode
         });
 
         if (resolution.effects.length === 0) return state;
@@ -28,4 +32,3 @@ export const forceEffectHandlers: AtomicEffectHandlerMap = {
         });
     }
 };
-

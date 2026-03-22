@@ -28,10 +28,12 @@ export interface GridSize {
 export type MapShape = 'diamond' | 'rectangle';
 
 export type WeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
+export type ArmorBurdenTier = 'None' | 'Light' | 'Medium' | 'Heavy';
 
 export type CombatPressureMode = 'travel' | 'battle';
 export type IresActorState = 'rested' | 'base' | 'exhausted';
 export type IresPrimaryResource = 'spark' | 'mana' | 'none';
+export type CombatRulesetVersion = 'trinity_ratio_v2';
 
 export interface SkillResourceProfile {
     primaryResource: IresPrimaryResource;
@@ -170,6 +172,10 @@ export interface StatusEffect {
 
     duration: number; // -1 for permanent
     stacks?: number;
+    durationModel?: 'tick_window' | 'action_phase';
+    remainingActionPhases?: number;
+    consumedOnPhase?: 'ACTION' | 'MOVE_AND_ACTION';
+    appliedRound?: number;
 
     // The "When" logic
     tickWindow: 'START_OF_TURN' | 'END_OF_TURN';
@@ -251,6 +257,9 @@ export type AtomicEffect =
         };
         damageReason?: string;
         expectedCollision?: boolean;
+        attackerBody?: number;
+        defenderBody?: number;
+        bodyContestMode?: 'strict_ratio' | 'soft_ratio';
     }
     | {
         type: 'AttachActors';
@@ -831,6 +840,7 @@ export interface Actor {
 
     // Weight class for hook/bash logic
     weightClass?: WeightClass;
+    armorBurdenTier?: ArmorBurdenTier;
 
     // Archetype for passive/core logic
     archetype?: ArchetypeID;
@@ -939,6 +949,7 @@ export interface GameState {
         actionLog?: Action[];
         score?: number;
         floor?: number;
+        combatVersion?: CombatRulesetVersion;
         objectives?: ObjectiveResult[];
         combatTelemetry?: {
             events: number;
@@ -972,7 +983,13 @@ export interface GameState {
             movementRuntimeEnabled: boolean;
             version: 'capabilities-v1';
         };
-        ires?: IresRulesetConfig;
+        combat?: {
+            version: CombatRulesetVersion;
+            coefficientsVersion?: string;
+        };
+        ires?: IresRulesetConfig & {
+            formulaAuthority?: 'metabolic_config_v1';
+        };
     };
 
     visibility?: VisibilityState;
@@ -1041,6 +1058,9 @@ export interface RunRulesetOverrides {
     capabilities?: {
         loadoutPassivesEnabled?: boolean;
         movementRuntimeEnabled?: boolean;
+    };
+    combat?: {
+        version?: CombatRulesetVersion;
     };
     ires?: Partial<IresRulesetConfig>;
 }

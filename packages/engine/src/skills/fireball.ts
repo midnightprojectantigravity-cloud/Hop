@@ -1,5 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { getNeighbors, hexEquals } from '../hex';
+import { getNeighbors, hexDistance, hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
@@ -55,6 +55,9 @@ export const FIREBALL: SkillDefinition = {
                 trinity,
                 targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
                 damageClass: 'magical',
+                attackProfile: 'spell',
+                trackingSignature: 'magic',
+                engagementContext: { distance: hexDistance(attacker.position, p) },
                 scaling: [{ attribute: 'mind', coefficient: 0.2 }],
                 statusMultipliers: surfaceMultiplier === 1
                     ? []

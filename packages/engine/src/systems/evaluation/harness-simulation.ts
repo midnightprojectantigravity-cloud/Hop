@@ -90,7 +90,30 @@ export const simulateHarnessRunDetailed = (
         autoAttackTriggersByActionType: telemetry.autoAttackTriggersByActionType,
         triangleSignal,
         trinityContribution,
-        combatProfileSignal
+        combatProfileSignal,
+        pacingSignal: telemetry.pacingSignal.samples > 0
+            ? {
+                samples: telemetry.pacingSignal.samples,
+                avgSparkRatio: telemetry.pacingSignal.avgSparkRatio / telemetry.pacingSignal.samples,
+                avgManaRatio: telemetry.pacingSignal.avgManaRatio / telemetry.pacingSignal.samples,
+                avgReservePressure: telemetry.pacingSignal.avgReservePressure / telemetry.pacingSignal.samples,
+                avgFatiguePressure: telemetry.pacingSignal.avgFatiguePressure / telemetry.pacingSignal.samples,
+                avgRecoveryPressure: telemetry.pacingSignal.avgRecoveryPressure / telemetry.pacingSignal.samples,
+                restSelections: telemetry.pacingSignal.restSelections,
+                endTurnSelections: telemetry.pacingSignal.endTurnSelections,
+                continuedActionSelections: telemetry.pacingSignal.continuedActionSelections
+            }
+            : {
+                samples: 0,
+                avgSparkRatio: 0,
+                avgManaRatio: 0,
+                avgReservePressure: 0,
+                avgFatiguePressure: 0,
+                avgRecoveryPressure: 0,
+                restSelections: 0,
+                endTurnSelections: 0,
+                continuedActionSelections: 0
+            }
     };
 
     return {

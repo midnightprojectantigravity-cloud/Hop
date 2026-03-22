@@ -32,10 +32,10 @@ export const runIresMetabolicSearch = (): {
 
     const candidates: MetabolicSearchCandidate[] = [
         buildCandidate('base_bfi_down', 'Lower BFI Anchor', (config) => {
-            config.baseBfiFormula.base = 9;
+            config.baseBfiFormula.ceiling = 13;
         }),
         buildCandidate('instinct_scale_up', 'Stronger Instinct Scaling', (config) => {
-            config.baseBfiFormula.instinctScale = -0.12;
+            config.baseBfiFormula.instinctWeight = 7;
         }),
         buildCandidate('maintenance_band_down', 'Cheaper Maintenance Band', (config) => {
             config.actionBands.maintenance.sparkCost = 8;
@@ -57,7 +57,7 @@ export const runIresMetabolicSearch = (): {
             config.exhaustionBleedByState.base.base = 18;
         }),
         buildCandidate('heavy_bfi_down', 'Softer Heavy BFI', (config) => {
-            config.weightBfiAdjustments.Heavy = 0;
+            config.burdenBfiAdjustments.Heavy = 2;
         }),
         buildCandidate('heavy_move_down', 'Softer Heavy Move Cost', (config) => {
             config.weightMovementSparkAdjustments.Heavy = 10;

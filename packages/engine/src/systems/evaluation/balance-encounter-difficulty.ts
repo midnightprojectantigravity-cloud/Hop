@@ -1,4 +1,5 @@
 import { compileStandaloneFloor, createGenerationState, type CompiledFloorArtifact, type CurrentFloorSummary, type GenerationSpecInput } from '../../generation';
+import { getEnemyCatalogEntry } from '../../data/enemies';
 import type { EncounterDifficultyProfile, EnemyPowerProfile, FloorDifficultyProfile } from './balance-schema';
 import { computeFloorDifficultyProfile } from './balance-floor-difficulty';
 import { computeAllEnemyPowerProfiles } from './balance-enemy-power';
@@ -20,6 +21,18 @@ export const computeEncounterDifficultyProfile = (
     floorProfile: FloorDifficultyProfile = computeFloorDifficultyProfile(summary)
 ): EncounterDifficultyProfile => {
     const enemySubtypeIds = artifact.enemySpawns.map(spawn => spawn.subtype).sort();
+    const frontlineCount = artifact.enemySpawns.reduce((sum, spawn) =>
+        sum + (getEnemyCatalogEntry(spawn.subtype)?.contract.balanceTags.includes('frontline') ? 1 : 0), 0);
+    const hazardSetterCount = artifact.enemySpawns.reduce((sum, spawn) =>
+        sum + (getEnemyCatalogEntry(spawn.subtype)?.contract.combatRole === 'hazard_setter' ? 1 : 0), 0);
+    const flankerCount = artifact.enemySpawns.reduce((sum, spawn) =>
+        sum + (getEnemyCatalogEntry(spawn.subtype)?.contract.balanceTags.includes('flanker') ? 1 : 0), 0);
+    const supportCount = artifact.enemySpawns.reduce((sum, spawn) =>
+        sum + (getEnemyCatalogEntry(spawn.subtype)?.contract.balanceTags.includes('support') ? 1 : 0), 0);
+    const bossAnchorCount = artifact.enemySpawns.reduce((sum, spawn) =>
+        sum + (getEnemyCatalogEntry(spawn.subtype)?.contract.combatRole === 'boss_anchor' ? 1 : 0), 0);
+    const rangedCount = artifact.enemySpawns.reduce((sum, spawn) =>
+        sum + ((enemyProfilesBySubtype[spawn.subtype]?.enemyType === 'ranged' || enemyProfilesBySubtype[spawn.subtype]?.enemyType === 'boss') ? 1 : 0), 0);
     const encounterEnemyPowerScore = round2(
         artifact.enemySpawns.reduce((sum, spawn) => sum + (enemyProfilesBySubtype[spawn.subtype]?.intrinsicPowerScore || 0), 0)
     );
@@ -53,6 +66,12 @@ export const computeEncounterDifficultyProfile = (
         enemyCount: artifact.enemySpawns.length,
         uniqueEnemySubtypeCount: new Set(enemySubtypeIds).size,
         enemySubtypeIds,
+        frontlineCount,
+        rangedCount,
+        hazardSetterCount,
+        flankerCount,
+        supportCount,
+        bossAnchorCount,
         encounterEnemyPowerScore,
         spawnPressureScore,
         routePressureScore,

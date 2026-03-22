@@ -167,7 +167,11 @@ const convertEffect = (
         collision: {
             onBlocked: effect.force.collision.onBlocked,
             crushDamage
-        }
+        },
+        attackerBody: scalarCtx.body,
+        defenderBody: resolveTargetActorId(state, target)
+            ? extractTrinityStats(getActorAt(state, target!)!).body
+            : undefined
     });
     return [{
         type: 'ApplyForce',
@@ -180,7 +184,11 @@ const convertEffect = (
             onBlocked: effect.force.collision.onBlocked,
             crushDamage
         },
-        expectedCollision: forcePreview.collided
+        expectedCollision: forcePreview.collided,
+        attackerBody: scalarCtx.body,
+        defenderBody: resolveTargetActorId(state, target)
+            ? extractTrinityStats(getActorAt(state, target!)!).body
+            : undefined
     }];
 };
 

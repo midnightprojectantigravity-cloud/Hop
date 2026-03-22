@@ -15,6 +15,7 @@ export * from './balance-loadout-power';
 export * from './balance-floor-difficulty';
 export * from './balance-unit-power';
 export * from './balance-enemy-power';
+export * from './balance-companion-power';
 export * from './balance-encounter-difficulty';
 export * from './balance-parity';
 export * from './balance-budget-config';

@@ -13,6 +13,7 @@ describe('balance stack report', () => {
         expect(report.summary.loadoutCount).toBe(Object.keys(DEFAULT_LOADOUTS).length);
         expect(report.summary.unitCount).toBe(Object.keys(DEFAULT_LOADOUTS).length);
         expect(report.summary.enemyCount).toBeGreaterThan(0);
+        expect(report.summary.companionCount).toBe(2);
         expect(report.summary.floorCount).toBe(2);
         expect(report.summary.encounterCount).toBe(2);
         expect(report.summary.hottestSkillId).not.toBeNull();
@@ -20,6 +21,7 @@ describe('balance stack report', () => {
         expect(report.summary.strongestEnemySubtype).not.toBeNull();
         expect(report.floorProfiles[0]?.floor).toBe(1);
         expect(report.encounterProfiles[0]?.floor).toBe(1);
+        expect(report.companionProfiles).toHaveLength(2);
         expect(report.loadoutParityProfiles).toHaveLength(Object.keys(DEFAULT_LOADOUTS).length);
         expect(report.summary.budgetViolationCount).toBe(report.budgetViolations.length);
         expect(report.summary.allowlistedBudgetViolationCount).toBe(report.allowlistedViolations.length);

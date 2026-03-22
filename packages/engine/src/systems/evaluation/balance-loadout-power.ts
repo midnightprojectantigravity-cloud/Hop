@@ -1,5 +1,5 @@
 import { SkillRegistry } from '../../skillRegistry';
-import { getActiveTrinityProfileId, getTrinityProfile } from '../combat/trinity-profiles';
+import { TRINITY_PROFILE_SET_VERSION, getTrinityProfile } from '../combat/trinity-profiles';
 import { DEFAULT_LOADOUTS } from '../loadout';
 import type { LoadoutPowerProfile, SkillPowerProfile } from './balance-schema';
 import { computeSkillPowerProfileMap } from './balance-skill-power';
@@ -20,14 +20,14 @@ const avg = (values: number[]): number => values.length ? sum(values) / values.l
 export const computeLoadoutPowerProfile = (
     loadoutId: string,
     skillProfilesById: Record<string, SkillPowerProfile> = computeSkillPowerProfileMap(),
-    trinityProfileId: string = getActiveTrinityProfileId()
+    _trinityProfileId: string = TRINITY_PROFILE_SET_VERSION
 ): LoadoutPowerProfile => {
     const loadout = DEFAULT_LOADOUTS[loadoutId];
     if (!loadout) {
         throw new Error(`Unknown loadout "${loadoutId}"`);
     }
 
-    const trinityProfile = getTrinityProfile(trinityProfileId);
+    const trinityProfile = getTrinityProfile();
     const trinity = trinityProfile.archetype[loadoutId] || trinityProfile.default;
     const skillContexts = loadout.startingSkills
         .map(skillId => {
@@ -160,7 +160,7 @@ export const computeLoadoutPowerProfile = (
 
 export const computeAllLoadoutPowerProfiles = (
     skillProfilesById: Record<string, SkillPowerProfile> = computeSkillPowerProfileMap(),
-    trinityProfileId: string = getActiveTrinityProfileId()
+    trinityProfileId: string = TRINITY_PROFILE_SET_VERSION
 ): LoadoutPowerProfile[] =>
     Object.keys(DEFAULT_LOADOUTS)
         .sort()

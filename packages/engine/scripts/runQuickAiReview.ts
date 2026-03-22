@@ -1,10 +1,6 @@
 import { runBatch, type ArchetypeLoadoutId, type BotPolicy, type RunResult } from '../src/systems/evaluation/balance-harness';
 import { buildUpaEntitySnapshot } from './lib/upaEntitySnapshot';
-import { getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
-
-if (!process.env.HOP_TRINITY_PROFILE) {
-    process.env.HOP_TRINITY_PROFILE = 'live';
-}
+import { TRINITY_PROFILE_SET_VERSION } from '../src/systems/combat/trinity-profiles';
 
 const count = Number(process.argv[2] || 8);
 const maxTurns = Number(process.argv[3] || 24);
@@ -23,7 +19,7 @@ if (!verbose) {
 
 const seeds = Array.from({ length: count }, (_, i) => `${seedPrefix}-${i + 1}`);
 const entitySnapshot = buildUpaEntitySnapshot(loadoutId);
-const trinityProfile = getActiveTrinityProfileId();
+const trinityProfile = TRINITY_PROFILE_SET_VERSION;
 const runs = runBatch(seeds, policy, maxTurns, loadoutId, policyProfileId);
 
 if (!verbose) {

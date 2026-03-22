@@ -3,14 +3,21 @@ import { getHexLine, hexEquals } from '@hop/engine';
 
 export interface MovementPathResolution {
     path: Point[] | null;
-    source: 'trace' | 'fallback' | 'none';
+    source: 'trace' | 'replay_fallback' | 'none';
     movementType?: MovementTrace['movementType'];
     hasMatchingTrace: boolean;
 }
 
+export interface MovementPathResolveOptions {
+    // Strict live mode must stay engine-authoritative.
+    // Replay compatibility may still use previousPosition fallback when old traces are absent.
+    allowReplayFallback?: boolean;
+}
+
 export const resolveMovementPath = (
     entity: EntityType,
-    movementTrace?: MovementTrace
+    movementTrace?: MovementTrace,
+    options: MovementPathResolveOptions = {}
 ): MovementPathResolution => {
     const hasMatchingTrace = Boolean(
         movementTrace
@@ -30,12 +37,12 @@ export const resolveMovementPath = (
         };
     }
 
-    if (entity.previousPosition && !hexEquals(entity.previousPosition, entity.position)) {
+    if (options.allowReplayFallback && entity.previousPosition && !hexEquals(entity.previousPosition, entity.position)) {
         const fallbackPath = getHexLine(entity.previousPosition, entity.position);
         if (fallbackPath.length > 1) {
             return {
                 path: fallbackPath,
-                source: 'fallback',
+                source: 'replay_fallback',
                 hasMatchingTrace: false
             };
         }
@@ -47,4 +54,3 @@ export const resolveMovementPath = (
         hasMatchingTrace: false
     };
 };
-

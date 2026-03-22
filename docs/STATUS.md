@@ -1,4 +1,14 @@
-# Codebase Status - March 16, 2026
+# Codebase Status - March 22, 2026
+
+## Trinity V2 Integration Status
+Trinity combat and IRES are now integrated as the only supported core runtime model.
+
+Current integrated ownership:
+1. Combat runtime supports only `trinity_ratio_v2`.
+2. Trinity content uses one shipped profile set: `core-v2-live`.
+3. Replay bootstrap and validation accept only the integrated combat contract.
+4. AI pacing keys off observable Spark/Mana/exhaustion state rather than internal formula assumptions.
+5. Release validation uses stable integrated checks instead of rollout-era combat/profile gates.
 
 ## IRES Runtime Alignment Milestone
 Beat-based IRES metabolic modeling is now bridged into live runtime skill costs and validated end-to-end.
@@ -176,14 +186,16 @@ Monorepo:
 2. Determinism/parity checks are active and should remain mandatory for AI-affecting and content-spawn-affecting PRs.
 3. Deprecated constants (`ENEMY_STATS`, `FLOOR_ENEMY_*`) are retired from source ownership and blocked by static checks; runtime ownership remains catalog/profile-backed.
 4. Diagnostics (`oracle/shadow` diff scripts/tests) are retained for investigation workflows.
-5. `npm run upa:health:check` exits cleanly again, but it remains a heavy gate with long runtime because it evaluates the full multi-loadout heuristic health sweep.
-6. Capability rollout toggles and UI feature flags remain intentionally staged outside the worldgen milestone; their retention is tracked separately and is not a blocker for inferno worldgen completion.
-7. IRES runtime skill derivation is now full-coverage for known registry skills; the main remaining tuning frontier is actor reserve alignment with the beat-band model rather than more fallback cleanup.
-8. Full engine Vitest parity/golden envelopes are not yet rebaselined to the current runtime-aligned IRES model; remaining failures are concentrated in AI corpus parity and golden/harness balance regressions rather than build integrity or scenario correctness.
+5. `npm run upa:health:release` is the canonical fast release health report.
+6. `npm run upa:health:full` remains the deep offline health analysis path.
+7. Trinity profile env overrides and combat rollout flags are retired from supported workflows.
+8. Remaining gameplay debt is concentrated in reserve tuning, parity/golden rebaseline work, and timeline audit cleanup rather than runtime architecture.
 
 ## Next Documentation Focus
 
 1. Keep architecture references aligned with grouped system directories (`ai`, `evaluation`, `combat`, `entities`, `tiles`).
 2. Keep completed implementation plans under `docs/archive/`; keep only living trackers and runbooks at `docs/` root.
 3. Keep generated/audit artifacts in `artifacts/upa/`; keep stable references in `docs/`.
-4. Keep balance operations aligned with the canonical doctrine in `docs/GOLD_STANDARD_BALANCING.md`.
+4. Keep balance operations aligned with the canonical doctrine in docs/GOLD_STANDARD_BALANCING.md.
+5. Keep Trinity/IRES references aligned with docs/COMBAT_FORMULA_LEDGER.md and docs/TRINITY_V2_INTEGRATION_SIGNOFF.md.
+

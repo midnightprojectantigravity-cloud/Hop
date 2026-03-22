@@ -55,7 +55,8 @@ describe('replay envelope v3 validation', () => {
                 startFloor: 1,
                 mapSize: { width: 9, height: 11 },
                 mapShape: 'diamond',
-                mode: 'normal'
+                mode: 'normal',
+                combatVersion: 'trinity_ratio_v2'
             },
             actions: [
                 { type: 'WAIT' },
@@ -74,6 +75,7 @@ describe('replay envelope v3 validation', () => {
         expect(result.envelope?.actions).toHaveLength(2);
         expect(result.envelope?.run.mapSize).toEqual({ width: 9, height: 11 });
         expect(result.envelope?.run.mapShape).toBe('diamond');
+        expect(result.envelope?.run.combatVersion).toBe('trinity_ratio_v2');
     });
 
     it('rejects non-v3 replay payloads', () => {

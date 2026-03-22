@@ -39,6 +39,18 @@ export interface CombatProfileSignalSummary {
     avgTotalMultiplier: number;
 }
 
+export interface PacingSignalSummary {
+    samples: number;
+    avgSparkRatio: number;
+    avgManaRatio: number;
+    avgReservePressure: number;
+    avgFatiguePressure: number;
+    avgRecoveryPressure: number;
+    restSelections: number;
+    endTurnSelections: number;
+    continuedActionSelections: number;
+}
+
 export interface RunResult {
     seed: string;
     policy: BotPolicy;
@@ -72,6 +84,7 @@ export interface RunResult {
     triangleSignal: TriangleSignalSummary;
     trinityContribution: TrinityContributionSummary;
     combatProfileSignal: CombatProfileSignalSummary;
+    pacingSignal: PacingSignalSummary;
 }
 
 export interface RunDiagnostics {
@@ -123,6 +136,7 @@ export interface BatchSummary {
     triangleSignal: TriangleSignalSummary;
     trinityContribution: TrinityContributionSummary;
     combatProfileSignal: CombatProfileSignalSummary;
+    pacingSignal: PacingSignalSummary;
     dynamicSkillGrades: Record<string, DynamicSkillMetric>;
 }
 

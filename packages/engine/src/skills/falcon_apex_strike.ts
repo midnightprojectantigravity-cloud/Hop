@@ -49,6 +49,8 @@ export const FALCON_APEX_STRIKE: SkillDefinition = {
             trinity: extractTrinityStats(attacker),
             targetTrinity: extractTrinityStats(targetActor),
             damageClass: 'physical',
+            attackProfile: 'melee',
+            trackingSignature: 'melee',
             scaling: [{ attribute: 'instinct', coefficient: 0.2 }],
             statusMultipliers: []
         });

@@ -1,9 +1,11 @@
-import type { Actor, Point, Skill, WeightClass } from '../../types';
+import type { Actor, ArmorBurdenTier, Point, Skill, WeightClass } from '../../types';
 import type { GameComponent } from '../components';
 import { deriveMaxHpFromTrinity, type TrinityStats } from '../combat/trinity-resolver';
 import { getTrinityProfile } from '../combat/trinity-profiles';
 import { resolveDefaultCombatProfile, type CombatProfile } from '../combat/combat-traits';
 import { getEnemyBestiaryEntry, getEnemyBestiarySkillLoadout } from '../../data/bestiary';
+import { getCompanionBalanceEntry } from '../../data/companions/content';
+import { getEnemyCatalogEntry } from '../../data/enemies';
 import { ensureActorIres } from '../ires';
 
 /**
@@ -27,6 +29,7 @@ export interface BaseEntityConfig {
     // Optional overrides
     initiative?: number;
     weightClass?: WeightClass;
+    armorBurdenTier?: ArmorBurdenTier;
     archetype?: string;
 
     // Skill loadout
@@ -139,21 +142,47 @@ export const ensureActorTrinity = (actor: Actor): Actor => {
     return ensureActorIres(normalizedActor);
 };
 
+const PASSIVE_SKILL_IDS = new Set<string>([
+    'ABSORB_FIRE',
+    'AUTO_ATTACK',
+    'BASIC_ATTACK',
+    'BASIC_AWARENESS',
+    'BASIC_MOVE',
+    'BLIND_FIGHTING',
+    'BURROW',
+    'COMBAT_ANALYSIS',
+    'DASH',
+    'ENEMY_AWARENESS',
+    'FALCON_APEX_STRIKE',
+    'FALCON_AUTO_ROOST',
+    'FALCON_HEAL',
+    'FALCON_PECK',
+    'FALCON_SCOUT',
+    'FLIGHT',
+    'ORACLE_SIGHT',
+    'PHASE_STEP',
+    'STANDARD_VISION',
+    'TACTICAL_INSIGHT',
+    'THEME_HAZARDS',
+    'TIME_BOMB',
+    'VIBRATION_SENSE'
+]);
+
 /**
- * Build a deterministic ActiveSkill loadout from skill IDs.
- * Uses lightweight descriptors to avoid registry import cycles in factory bootstrapping.
+ * Build ActiveSkill loadout from canonical skill definitions.
+ * Slot defaults to utility and only uses an explicit passive allowlist to avoid import cycles.
  */
 export function buildSkillLoadout(skillIds: string[]): Skill[] {
     return skillIds.map(skillId => ({
-        id: skillId as any,
-        name: String(skillId),
-        description: String(skillId),
-        slot: 'utility',
-        cooldown: 0,
-        currentCooldown: 0,
-        range: 0,
-        upgrades: [],
-        activeUpgrades: [],
+            id: skillId as any,
+            name: String(skillId),
+            description: String(skillId),
+            slot: PASSIVE_SKILL_IDS.has(skillId) ? 'passive' : 'utility',
+            cooldown: 0,
+            currentCooldown: 0,
+            range: 0,
+            upgrades: [],
+            activeUpgrades: [],
     })) as Skill[];
 }
 
@@ -230,6 +259,7 @@ export function createEntity(config: BaseEntityConfig): Actor {
         temporaryArmor: 0,
         activeSkills,
         weightClass: config.weightClass,
+        armorBurdenTier: config.armorBurdenTier,
         archetype: config.archetype as any,
         components,
         isFlying: config.isFlying,
@@ -251,6 +281,7 @@ export function createPlayer(config: {
     skills: string[];
     archetype?: string;
     trinity?: TrinityStats;
+    armorBurdenTier?: ArmorBurdenTier;
 }): Actor {
     return createEntity({
         id: 'player',
@@ -262,6 +293,7 @@ export function createPlayer(config: {
         factionId: 'player',
         skills: config.skills,
         weightClass: 'Standard',
+        armorBurdenTier: config.armorBurdenTier,
         archetype: config.archetype || 'VANGUARD',
         trinity: config.trinity,
     });
@@ -279,6 +311,7 @@ export function createEnemy(config: {
     speed: number;
     skills: string[];
     weightClass?: WeightClass;
+    armorBurdenTier?: ArmorBurdenTier;
     enemyType?: 'melee' | 'ranged' | 'boss';
     trinity?: TrinityStats;
 }): Actor {
@@ -293,6 +326,7 @@ export function createEnemy(config: {
         factionId: 'enemy',
         skills: config.skills,
         weightClass: config.weightClass || 'Standard',
+        armorBurdenTier: config.armorBurdenTier,
         trinity: config.trinity,
     });
 
@@ -311,12 +345,14 @@ export function createEnemyFromBestiary(config: {
     speed?: number;
     skills?: string[];
     weightClass?: WeightClass;
+    armorBurdenTier?: ArmorBurdenTier;
     enemyType?: 'melee' | 'ranged' | 'boss';
     trinity?: TrinityStats;
     actionCooldown?: number;
 }): Actor {
+    const catalogEntry = getEnemyCatalogEntry(config.subtype);
     const bestiary = getEnemyBestiaryEntry(config.subtype);
-    if (!bestiary) {
+    if (!bestiary || !catalogEntry) {
         throw new Error(`Unknown enemy subtype "${config.subtype}" in createEnemyFromBestiary`);
     }
 
@@ -329,6 +365,7 @@ export function createEnemyFromBestiary(config: {
         speed: config.speed ?? bestiary.stats.speed,
         skills: config.skills ?? getEnemyBestiarySkillLoadout(config.subtype),
         weightClass: config.weightClass ?? (bestiary.stats.weightClass as WeightClass),
+        armorBurdenTier: config.armorBurdenTier ?? catalogEntry.contract.metabolicProfile.armorBurdenTier,
         enemyType: config.enemyType ?? bestiary.stats.type,
         trinity: config.trinity ?? bestiary.trinity
     });
@@ -349,20 +386,25 @@ export function createCompanion(config: {
     position: Point;
     id?: string;
     trinity?: TrinityStats;
+    armorBurdenTier?: ArmorBurdenTier;
 }): Actor {
     if (config.companionType === 'falcon') {
+        const contract = getCompanionBalanceEntry('falcon');
         const entity = createEntity({
             id: config.id || `falcon-${config.ownerId}`,
             type: 'enemy', // Type is 'enemy' but factionId is 'player'
             subtype: 'falcon',
             position: config.position,
-            speed: 95, // High speed, acts after player (100)
+            speed: contract?.speed ?? 95,
             factionId: 'player',
-            skills: ['BASIC_MOVE', 'FALCON_PECK', 'FALCON_APEX_STRIKE', 'FALCON_HEAL', 'FALCON_SCOUT', 'FALCON_AUTO_ROOST'],
-            weightClass: 'Light' as WeightClass,
+            hp: contract?.hp,
+            maxHp: contract?.maxHp,
+            skills: contract?.skills ?? ['BASIC_MOVE', 'FALCON_PECK', 'FALCON_APEX_STRIKE', 'FALCON_HEAL', 'FALCON_SCOUT', 'FALCON_AUTO_ROOST'],
+            weightClass: contract?.weightClass ?? ('Light' as WeightClass),
+            armorBurdenTier: config.armorBurdenTier ?? contract?.armorBurdenTier,
             isFlying: true,
             companionOf: config.ownerId,
-            trinity: config.trinity,
+            trinity: config.trinity ?? contract?.trinity,
         });
 
         // Initialize companion state
@@ -375,19 +417,21 @@ export function createCompanion(config: {
     }
 
     if (config.companionType === 'skeleton') {
+        const contract = getCompanionBalanceEntry('skeleton');
         return createEntity({
             id: config.id || `${config.companionType}-${config.ownerId}`,
             type: 'enemy',
             subtype: 'skeleton',
             position: config.position,
-            hp: 2,
-            maxHp: 2,
-            speed: 50,
+            hp: contract?.hp ?? 2,
+            maxHp: contract?.maxHp ?? 2,
+            speed: contract?.speed ?? 50,
             factionId: 'player',
-            skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'],
+            skills: contract?.skills ?? ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'],
             companionOf: config.ownerId,
-            weightClass: 'Standard',
-            trinity: config.trinity,
+            weightClass: contract?.weightClass ?? 'Standard',
+            armorBurdenTier: config.armorBurdenTier ?? contract?.armorBurdenTier,
+            trinity: config.trinity ?? contract?.trinity,
         });
     }
 
@@ -401,6 +445,7 @@ export function createCompanion(config: {
         skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
         companionOf: config.ownerId,
         weightClass: 'Standard',
+        armorBurdenTier: config.armorBurdenTier,
         trinity: config.trinity,
     });
 }

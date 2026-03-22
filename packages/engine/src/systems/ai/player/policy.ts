@@ -5,6 +5,7 @@ import {
     aliveHostiles,
     nearestHostileDistance
 } from './candidates';
+import { getAiResourceSignals } from '../resource-signals';
 export { getStrategicPolicyProfile, type StrategicIntent, type StrategicPolicyProfile } from '../strategic-policy';
 import type { StrategicIntent, StrategicPolicyProfile } from '../strategic-policy';
 
@@ -23,6 +24,7 @@ export const chooseStrategicIntent = (state: GameState, profile: StrategicPolicy
     const hostiles = aliveHostiles(state);
     const archetype = String(state.player.archetype || '');
     const ires = state.player.ires;
+    const resourceSignals = getAiResourceSignals(ires);
 
     if (profile.version === 'sp-v1-balance' && hostiles > 0 && archetype === 'HUNTER' && hpRatio > 0.25) {
         return 'offense';
@@ -33,10 +35,9 @@ export const chooseStrategicIntent = (state: GameState, profile: StrategicPolicy
         && archetype === 'FIREMAGE'
         && ires
         && (
-            ires.isExhausted
-            || ires.exhaustion >= 70
-            || ires.spark <= 20
-            || ires.mana <= 5
+            resourceSignals.fatiguePressure >= 0.55
+            || resourceSignals.reservePressure >= 0.7
+            || resourceSignals.recoveryPressure >= 0.5
         )
     ) {
         return 'defense';

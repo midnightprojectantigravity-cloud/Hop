@@ -11,6 +11,11 @@ import { appendTaggedMessage, appendTaggedMessages, tagMessage } from '../engine
 
 
 /**
+ * @deprecated
+ * Legacy resolver kept for reference only.
+ * Canonical runtime flow is:
+ * skill `getValidTargets` -> `previewActionOutcome/resolveMovementPreviewPath` -> commit via TacticalEngine/effect engine.
+ *
  * Movement System
  * Handles all logic related to actor movement, dashing, and tackling.
  */

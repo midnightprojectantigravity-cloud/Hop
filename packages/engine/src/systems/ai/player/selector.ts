@@ -22,6 +22,7 @@ import {
 } from './candidates';
 import { transitionMetrics, type TransitionMetrics } from './features';
 import { chooseStrategicIntent } from './policy';
+import { getAiResourceSignals } from '../resource-signals';
 
 export type HarnessBotPolicy = 'random' | 'heuristic';
 
@@ -126,62 +127,59 @@ const scoreIresTransition = (
     const isWait = candidate.action.type === 'WAIT';
     const isRestAction = isWait && !current.actedThisTurn && !current.movedThisTurn;
     const isEndTurnAction = isWait && !isRestAction;
-    const pressureBand = current.isExhausted
-        ? 3
-        : current.exhaustion >= 65
-            ? 2
-            : current.exhaustion >= 45
-                ? 1
-                : 0;
+    const currentSignals = getAiResourceSignals(current);
+    const projectedSignals = getAiResourceSignals(projected);
+    const normalizedSparkSpent = sparkSpent / Math.max(1, current.maxSpark || 1);
+    const normalizedManaSpent = manaSpent / Math.max(1, current.maxMana || 1);
+    const normalizedSparkRecovered = sparkRecovered / Math.max(1, current.maxSpark || 1);
+    const normalizedManaRecovered = manaRecovered / Math.max(1, current.maxMana || 1);
+    const normalizedExhaustionGained = exhaustionGained / 100;
+    const normalizedExhaustionCleared = exhaustionCleared / 100;
 
     let value = 0;
-    value += sparkRecovered * 0.18 * weightedResource;
-    value += manaRecovered * 0.3 * weightedResource;
-    value += exhaustionCleared * 0.55 * weightedResource;
-    value -= sparkSpent * 0.1 * weightedResource;
-    value -= manaSpent * 0.2 * weightedResource;
-    value -= exhaustionGained * 0.42 * weightedResource;
+    value += normalizedSparkRecovered * 24 * weightedResource;
+    value += normalizedManaRecovered * 20 * weightedResource;
+    value += normalizedExhaustionCleared * 42 * weightedResource;
+    value -= normalizedSparkSpent * 14 * weightedResource;
+    value -= normalizedManaSpent * 16 * weightedResource;
+    value -= normalizedExhaustionGained * 34 * weightedResource;
 
     if (enteredExhausted) value -= 26;
     if (stayedExhausted && !isWait) value -= 12;
     if (clearedExhausted) value += 18;
 
-    if (projected.spark <= 25) {
-        value -= (26 - projected.spark) * 0.85;
-    }
-    if (projected.mana <= 10) {
-        value -= (11 - projected.mana) * 0.75;
-    }
+    value -= projectedSignals.reservePressure * 16;
+    value -= projectedSignals.fatiguePressure * 22;
 
     if (isRestAction) {
-        value += 6 + (pressureBand * 6);
+        value += 4 + (currentSignals.recoveryPressure * 18);
         if (hostilesRemaining > 0) {
-            value += exhaustionCleared * 0.45;
-            value += sparkRecovered * 0.2;
-            value += manaRecovered * 0.35;
+            value += normalizedExhaustionCleared * 20;
+            value += normalizedSparkRecovered * 12;
+            value += normalizedManaRecovered * 12;
         }
     }
 
     if (isEndTurnAction && current.actionCountThisTurn > 0) {
-        value += 2 + (pressureBand * 5);
+        value += 2 + (currentSignals.recoveryPressure * 12);
         if (current.actionCountThisTurn >= 2) {
             value += 5;
         }
     }
 
     if (archetype === 'FIREMAGE') {
-        value += exhaustionCleared * 0.3;
-        value -= exhaustionGained * 0.2;
+        value += normalizedExhaustionCleared * 18;
+        value -= normalizedExhaustionGained * 12;
 
         if (isWait) {
-            if (isRestAction && (current.isExhausted || current.exhaustion >= 45 || current.spark <= 35 || current.mana <= 10)) {
+            if (isRestAction && currentSignals.recoveryPressure >= 0.45) {
                 value += 16;
             }
-            if (isEndTurnAction && (current.actionCountThisTurn >= 2 || current.isExhausted || projected.isExhausted)) {
+            if (isEndTurnAction && (current.actionCountThisTurn >= 2 || projectedSignals.fatiguePressure >= 0.65)) {
                 value += 10;
             }
         } else if (candidate.action.type === 'MOVE') {
-            if (current.exhaustion >= 50) {
+            if (currentSignals.fatiguePressure >= 0.5) {
                 value -= 6;
             }
         } else if (candidate.action.type === 'USE_SKILL') {
@@ -193,7 +191,7 @@ const scoreIresTransition = (
                 if (metrics.enemyApproachProgress <= 0 && metrics.safetyDelta <= 0) {
                     value -= 10;
                 }
-                if (current.exhaustion >= 45 || current.spark <= 35) {
+                if (currentSignals.recoveryPressure >= 0.45 || currentSignals.sparkRatio <= 0.35) {
                     value -= 12;
                 }
                 if (enteredExhausted) {
@@ -203,7 +201,7 @@ const scoreIresTransition = (
             if ((skillId === 'FIREBALL' || skillId === 'FIREWALL') && metrics.enemyDamage > 0) {
                 value += 6;
             }
-            if (current.mana <= 10 && manaSpent > 0) {
+            if (currentSignals.manaRatio <= 0.25 && manaSpent > 0) {
                 value -= 8;
             }
         }
@@ -502,11 +500,11 @@ export const selectByOnePlySimulation = (
 
     if (archetype === 'FIREMAGE') {
         const current = state.player.ires;
+        const resourceSignals = getAiResourceSignals(current);
         const stableSpellWindow = !!current
-            && !current.isExhausted
-            && current.exhaustion < 55
-            && current.spark > 25
-            && current.mana > 5;
+            && resourceSignals.fatiguePressure < 0.55
+            && resourceSignals.sparkRatio > 0.25
+            && resourceSignals.manaRatio > 0.25;
         if (stableSpellWindow) {
             const fireSpells = bestPool
                 .filter(entry =>

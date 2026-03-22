@@ -48,6 +48,7 @@ export const canDispatchBoardTileIntent = ({
     defaultPassiveSkillByTargetKey,
     hasPrimaryMovementSkills,
     fallbackNeighborSet,
+    strictTargetPathParityV1Enabled = false,
 }: {
     tile: Point;
     playerPos: Point;
@@ -56,12 +57,13 @@ export const canDispatchBoardTileIntent = ({
     defaultPassiveSkillByTargetKey: ReadonlyMap<string, string>;
     hasPrimaryMovementSkills: boolean;
     fallbackNeighborSet: Set<string>;
+    strictTargetPathParityV1Enabled?: boolean;
 }): boolean => {
     const tileKey = pointToKey(tile);
     if (tileKey === pointToKey(playerPos)) return true;
     if (selectedSkillId) return selectedSkillTargetSet.has(tileKey);
     return defaultPassiveSkillByTargetKey.has(tileKey)
-        || (!hasPrimaryMovementSkills && fallbackNeighborSet.has(tileKey));
+        || (!strictTargetPathParityV1Enabled && !hasPrimaryMovementSkills && fallbackNeighborSet.has(tileKey));
 };
 
 interface UseBoardTargetingPreviewArgs {
@@ -69,6 +71,7 @@ interface UseBoardTargetingPreviewArgs {
     playerPos: Point;
     selectedSkillId: string | null;
     showMovementRange: boolean;
+    strictTargetPathParityV1Enabled?: boolean;
 }
 
 export const resolveBoardPreviewGhost = ({
@@ -82,6 +85,7 @@ export const resolveBoardPreviewGhost = ({
     movementSkillByTargetKey,
     hasPrimaryMovementSkills,
     fallbackNeighborSet,
+    strictTargetPathParityV1Enabled = false,
 }: {
     gameState: GameState;
     playerPos: Point;
@@ -93,6 +97,7 @@ export const resolveBoardPreviewGhost = ({
     movementSkillByTargetKey: ReadonlyMap<string, string>;
     hasPrimaryMovementSkills: boolean;
     fallbackNeighborSet: Set<string>;
+    strictTargetPathParityV1Enabled?: boolean;
 }): BoardEnginePreviewGhost | null => {
     if (enginePreviewGhost) return enginePreviewGhost;
     if (!hoveredTile) return null;
@@ -100,7 +105,7 @@ export const resolveBoardPreviewGhost = ({
     const hoveredKey = pointToKey(hoveredTile);
     if (showMovementRange && !selectedSkillId) {
         const isMoveTile = movementTargetSet.has(hoveredKey)
-            || (!hasPrimaryMovementSkills && fallbackNeighborSet.has(hoveredKey));
+            || (!strictTargetPathParityV1Enabled && !hasPrimaryMovementSkills && fallbackNeighborSet.has(hoveredKey));
         if (!isMoveTile) return null;
         const moveSkillId = movementSkillByTargetKey.get(hoveredKey) as 'BASIC_MOVE' | 'DASH' | undefined;
         const previewPath = moveSkillId
@@ -188,6 +193,7 @@ export const useBoardTargetingPreview = ({
     playerPos,
     selectedSkillId,
     showMovementRange,
+    strictTargetPathParityV1Enabled = false,
 }: UseBoardTargetingPreviewArgs) => {
     const movementSkillByTargetKey = useMemo(() => {
         if (!showMovementRange || selectedSkillId) return new Map<string, string>();
@@ -217,6 +223,7 @@ export const useBoardTargetingPreview = ({
     );
 
     const fallbackNeighborSet = useMemo(() => {
+        if (strictTargetPathParityV1Enabled) return new Set<string>();
         const neighbors = [
             { q: playerPos.q + 1, r: playerPos.r, s: playerPos.s - 1 },
             { q: playerPos.q + 1, r: playerPos.r - 1, s: playerPos.s },
@@ -232,7 +239,7 @@ export const useBoardTargetingPreview = ({
             }
         }
         return set;
-    }, [playerPos, gameState.gridWidth, gameState.gridHeight, gameState.mapShape]);
+    }, [playerPos, gameState.gridWidth, gameState.gridHeight, gameState.mapShape, strictTargetPathParityV1Enabled]);
 
     const selectedSkillTargetSet = useMemo(() => {
         const set = new Set<string>();

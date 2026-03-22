@@ -58,6 +58,9 @@ export const SPEAR_THROW: SkillDefinition = {
                         trinity,
                         targetTrinity: extractTrinityStats(enemy),
                         damageClass: 'physical',
+                        attackProfile: 'melee',
+                        trackingSignature: 'melee',
+                        engagementContext: { distance: hexDistance(shooter.position, target) },
                         scaling: [{ attribute: 'body', coefficient: 0.1 }, { attribute: 'instinct', coefficient: 0.2 }],
                         statusMultipliers: []
                     });
@@ -80,6 +83,9 @@ export const SPEAR_THROW: SkillDefinition = {
                                     trinity,
                                     targetTrinity: extractTrinityStats(e),
                                     damageClass: 'physical',
+                                    attackProfile: 'melee',
+                                    trackingSignature: 'melee',
+                                    engagementContext: { distance: hexDistance(target, n) },
                                     scaling: [{ attribute: 'instinct', coefficient: 0.15 }],
                                     statusMultipliers: []
                                 });
@@ -138,6 +144,9 @@ export const SPEAR_THROW: SkillDefinition = {
                     trinity,
                     targetTrinity: extractTrinityStats(hitEnemy),
                     damageClass: 'physical',
+                    attackProfile: 'projectile',
+                    trackingSignature: 'projectile',
+                    engagementContext: { distance: hexDistance(shooter.position, hitPos) },
                     scaling: [{ attribute: 'body', coefficient: 0.1 }, { attribute: 'instinct', coefficient: 0.2 }],
                     statusMultipliers: []
                 });
@@ -185,6 +194,9 @@ export const SPEAR_THROW: SkillDefinition = {
                             trinity,
                             targetTrinity: extractTrinityStats(enemy),
                             damageClass: 'physical',
+                            attackProfile: 'projectile',
+                            trackingSignature: 'projectile',
+                            engagementContext: { distance: hexDistance(shooter.position, p) },
                             scaling: [{ attribute: 'instinct', coefficient: 0.15 }],
                             statusMultipliers: []
                         });
@@ -212,6 +224,9 @@ export const SPEAR_THROW: SkillDefinition = {
                         trinity,
                         targetTrinity: extractTrinityStats(enemy),
                         damageClass: 'physical',
+                        attackProfile: 'melee',
+                        trackingSignature: 'melee',
+                        engagementContext: { distance: hexDistance(spearPos, n) },
                         scaling: [{ attribute: 'body', coefficient: 0.1 }],
                         statusMultipliers: []
                     });

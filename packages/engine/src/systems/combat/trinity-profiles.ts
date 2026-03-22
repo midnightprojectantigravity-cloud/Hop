@@ -1,10 +1,10 @@
 import type { TrinityStats } from './trinity-resolver';
+import { listCompanionBalanceEntries } from '../../data/companions/content';
+import { MVP_ENEMY_CONTENT } from '../../data/packs/mvp-enemy-content';
 
-export type TrinityProfileId = 'neutral' | 'live';
-export const TRINITY_PROFILE_SET_VERSION = 'mvp-v1';
+export const TRINITY_PROFILE_SET_VERSION = 'core-v2-live';
 
 export interface TrinityProfile {
-    id: TrinityProfileId;
     default: TrinityStats;
     archetype: Record<string, TrinityStats>;
     enemySubtype: Record<string, TrinityStats>;
@@ -21,73 +21,31 @@ const withDefault = (values: Record<string, TrinityStats>): Record<string, Trini
     return out;
 };
 
-export const TRINITY_PROFILES: Record<TrinityProfileId, TrinityProfile> = {
-    neutral: {
-        id: 'neutral',
-        default: ZERO,
-        archetype: withDefault({
-            VANGUARD: ZERO,
-            SKIRMISHER: ZERO,
-            FIREMAGE: ZERO,
-            NECROMANCER: ZERO,
-            HUNTER: ZERO,
-            ASSASSIN: ZERO,
-        }),
-        enemySubtype: withDefault({
-            footman: ZERO,
-            sprinter: ZERO,
-            raider: ZERO,
-            pouncer: ZERO,
-            shieldBearer: ZERO,
-            archer: ZERO,
-            bomber: ZERO,
-            warlock: ZERO,
-            sentinel: ZERO,
-        }),
-        companionSubtype: withDefault({
-            falcon: ZERO,
-            skeleton: ZERO,
-        }),
-    },
-    live: {
-        id: 'live',
-        default: ZERO,
-        archetype: withDefault({
-            VANGUARD: { body: 9, mind: 4, instinct: 5 },
-            SKIRMISHER: { body: 12, mind: 8, instinct: 14 },
-            FIREMAGE: { body: 2, mind: 9, instinct: 4 },
-            NECROMANCER: { body: 5, mind: 9, instinct: 5 },
-            HUNTER: { body: 4, mind: 4, instinct: 9 },
-            ASSASSIN: { body: 3, mind: 4, instinct: 10 },
-        }),
-        enemySubtype: withDefault({
-            footman: { body: 0, mind: 0, instinct: 0 },
-            sprinter: { body: 0, mind: 0, instinct: 0 },
-            raider: { body: 0.4, mind: 0, instinct: 0.2 },
-            pouncer: { body: 0.4, mind: 0, instinct: 0.2 },
-            shieldBearer: { body: 1, mind: 0, instinct: 0.4 },
-            archer: { body: 0.2, mind: 0, instinct: 0.2 },
-            bomber: { body: 0.4, mind: 0.2, instinct: 0.2 },
-            warlock: { body: 0.4, mind: 0.6, instinct: 0.2 },
-            sentinel: { body: 4, mind: 2, instinct: 2 },
-        }),
-        companionSubtype: withDefault({
-            falcon: { body: 2, mind: 2, instinct: 9 },
-            skeleton: { body: 15, mind: 1, instinct: 4 },
-        }),
-    },
+const ENEMY_TRINITY_PROFILE = withDefault(
+    Object.fromEntries(
+        Object.entries(MVP_ENEMY_CONTENT).map(([subtype, entry]) => [subtype, entry.bestiary.trinity])
+    )
+);
+ENEMY_TRINITY_PROFILE.bomb = ZERO;
+
+const COMPANION_TRINITY_PROFILE = withDefault(
+    Object.fromEntries(
+        listCompanionBalanceEntries().map(entry => [entry.subtype, entry.trinity])
+    )
+);
+
+export const LIVE_TRINITY_PROFILE: TrinityProfile = {
+    default: ZERO,
+    archetype: withDefault({
+        VANGUARD: { body: 9, mind: 4, instinct: 5 },
+        SKIRMISHER: { body: 12, mind: 8, instinct: 14 },
+        FIREMAGE: { body: 2, mind: 9, instinct: 4 },
+        NECROMANCER: { body: 5, mind: 9, instinct: 5 },
+        HUNTER: { body: 4, mind: 4, instinct: 9 },
+        ASSASSIN: { body: 3, mind: 4, instinct: 10 },
+    }),
+    enemySubtype: ENEMY_TRINITY_PROFILE,
+    companionSubtype: COMPANION_TRINITY_PROFILE,
 };
 
-const normalizeProfileId = (id: string | undefined): TrinityProfileId =>
-    id?.toLowerCase() === 'neutral' ? 'neutral' : 'live';
-
-const readProfileEnv = (): string | undefined => {
-    const maybeProcess = (globalThis as any)?.process;
-    return maybeProcess?.env?.HOP_TRINITY_PROFILE;
-};
-
-export const getActiveTrinityProfileId = (): TrinityProfileId =>
-    normalizeProfileId(readProfileEnv());
-
-export const getTrinityProfile = (id?: string): TrinityProfile =>
-    TRINITY_PROFILES[normalizeProfileId(id ?? readProfileEnv())];
+export const getTrinityProfile = (): TrinityProfile => LIVE_TRINITY_PROFILE;

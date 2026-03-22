@@ -1,8 +1,9 @@
-import { getActiveTrinityProfileId } from '../combat/trinity-profiles';
+import { TRINITY_PROFILE_SET_VERSION } from '../combat/trinity-profiles';
 import type { BalanceStackReport, BalanceViolationAllowlistEntry } from './balance-schema';
 import { computeAllSkillPowerProfiles, computeSkillPowerProfileMap } from './balance-skill-power';
 import { computeAllLoadoutPowerProfiles } from './balance-loadout-power';
 import { sampleFloorDifficultyProfiles } from './balance-floor-difficulty';
+import { computeAllCompanionPowerProfiles } from './balance-companion-power';
 import { computeAllPlayerUnitPowerProfiles } from './balance-unit-power';
 import { computeAllEnemyPowerProfiles } from './balance-enemy-power';
 import { sampleEncounterDifficultyProfiles } from './balance-encounter-difficulty';
@@ -33,7 +34,7 @@ export const buildBalanceStackReport = (
 ): BalanceStackReport => {
     const runSeed = options.runSeed || 'balance-stack';
     const maxFloor = Math.max(1, options.maxFloor || 6);
-    const trinityProfileId = options.trinityProfileId || getActiveTrinityProfileId();
+    const trinityProfileId = options.trinityProfileId || TRINITY_PROFILE_SET_VERSION;
     const allowlistEntries = options.allowlistEntries || [];
     const asOfDate = options.asOfDate || new Date().toISOString().slice(0, 10);
     const skillProfiles = computeAllSkillPowerProfiles();
@@ -41,6 +42,7 @@ export const buildBalanceStackReport = (
     const loadoutProfiles = computeAllLoadoutPowerProfiles(skillProfilesById, trinityProfileId);
     const unitProfiles = computeAllPlayerUnitPowerProfiles(skillProfilesById, trinityProfileId);
     const enemyProfiles = computeAllEnemyPowerProfiles(skillProfilesById);
+    const companionProfiles = computeAllCompanionPowerProfiles(skillProfilesById);
     const floorProfiles = sampleFloorDifficultyProfiles({ runSeed, maxFloor });
     const encounterProfiles = sampleEncounterDifficultyProfiles({ runSeed, maxFloor });
     const loadoutParityProfiles = computeLoadoutParityProfiles(loadoutProfiles);
@@ -77,6 +79,7 @@ export const buildBalanceStackReport = (
         loadoutProfiles,
         unitProfiles,
         enemyProfiles,
+        companionProfiles,
         floorProfiles,
         encounterProfiles,
         loadoutParityProfiles,
@@ -95,6 +98,7 @@ export const buildBalanceStackReport = (
             loadoutCount: loadoutProfiles.length,
             unitCount: unitProfiles.length,
             enemyCount: enemyProfiles.length,
+            companionCount: companionProfiles.length,
             floorCount: floorProfiles.length,
             encounterCount: encounterProfiles.length,
             hottestSkillId: hottestSkill?.skillId ?? null,

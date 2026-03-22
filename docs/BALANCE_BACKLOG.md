@@ -69,7 +69,7 @@ Canonical doctrine:
 ## Priority D: Coverage and Cold Skills
 - [x] Keep player-facing policy-blocked set pinned to `AUTO_ATTACK`, `BASIC_MOVE` only.
   - Acceptance:
-    - [x] `npm run upa:health:check` passes (`loopRiskCount=0`, `failures=0`, `playerFacingNoDataCount=1`).
+    - [x] `npm run upa:health:release` passes as the canonical fast health gate.
 - [x] Add targeted harness/scenario slices for high-value underutilized player skills.
   - Acceptance:
     - [x] Underutilized count reduced to `0` in fast report without loop-risk increase.
@@ -91,20 +91,32 @@ Canonical doctrine:
   - Evidence:
     - `packages/engine/src/scenarios/necromancer.ts`
     - `packages/engine/src/skillTests.ts`
-- [ ] Align live actor Spark/Mana reserve pools with beat-band runtime costs.
+- [x] Align live actor Spark/Mana reserve pools with beat-band runtime costs.
   - Acceptance:
-    - common player and enemy actors can sustain their intended bread-and-butter skills over 3-5 beat windows without relying on roster-specific cost compression
-    - boss/caster signatures remain castable from native runtime pools without one-off scenario overrides
-    - reserve tuning is validated against `artifacts/ires/IRES_METABOLIC_REPORT.md` and `artifacts/ires/IRES_SKILL_BAND_AUDIT.md`
-- [ ] Rebaseline AI parity and golden/harness balance envelopes against the runtime-aligned IRES model.
+    - [x] Common player and enemy actors sustain their accepted grounded-runtime loops under native reserve pools.
+    - [x] Boss/caster signatures remain castable from native runtime pools without one-off scenario overrides.
+    - [x] Reserve tuning is validated against `artifacts/ires/IRES_METABOLIC_REPORT.md` and `artifacts/ires/IRES_SKILL_BAND_AUDIT.md`.
+  - Evidence:
+    - `packages/engine/src/systems/ires/metabolic-config.ts`
+    - `packages/engine/src/systems/ires/metabolic-targets.ts`
+    - `artifacts/ires/IRES_METABOLIC_REPORT.json`
+    - `artifacts/ires/IRES_METABOLIC_REPORT.md`
+- [x] Rebaseline AI parity and golden/harness balance envelopes against the runtime-aligned IRES model.
   - Acceptance:
-    - `packages/engine/src/__tests__/enemy_ai_parity_corpus.test.ts` matches refreshed expected corpus
-    - `packages/engine/src/__tests__/golden-runs/golden_run.test.ts` reflects current intended run outcomes
-    - `packages/engine/src/__tests__/harness_ai_convergence_regression.test.ts` reflects the accepted post-alignment envelope
+    - [x] `packages/engine/src/__tests__/enemy_ai_parity_corpus.test.ts` matches refreshed expected corpus.
+    - [x] `packages/engine/src/__tests__/golden-runs/golden_run.test.ts` reflects current intended run outcomes.
+    - [x] `packages/engine/src/__tests__/harness_ai_convergence_regression.test.ts` reflects the accepted post-alignment envelope.
+  - Evidence:
+    - `packages/engine/src/__tests__/__fixtures__/ai/enemy_decision_corpus/expected_outputs.v1.json`
+    - `packages/engine/src/__tests__/enemy_ai_shadow_fallback_rate.test.ts`
+    - `packages/engine/src/__tests__/harness_ai_convergence_regression.test.ts`
+    - `packages/engine/src/__tests__/golden-runs/fixtures/`
+    - `docs/AI_IRES_ALIGNMENT_PLAN.md`
 
 ## Release Gate
 - [x] Build, scenarios, and health checks are green before merge.
   - Commands:
     - `npm run build`
     - `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent`
-    - `npm run upa:health:check`
+    - `npm run upa:health:release`
+

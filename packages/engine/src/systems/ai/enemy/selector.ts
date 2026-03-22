@@ -9,6 +9,7 @@ import { toEnemyIntent } from './intent-adapter';
 import type { Intent } from '../../../types/intent';
 import { hexEquals } from '../../../hex';
 import { resolveIresActionPreview } from '../../ires';
+import { getAiResourceSignals } from '../resource-signals';
 import {
     deriveEnemyDynamicIntentBias,
     getDynamicEnemyIntentBiasStrength,
@@ -100,6 +101,36 @@ const resolveEnemyCandidateResourcePreview = (
     return resolveIresActionPreview(context.enemy, skillId, undefined, context.state.ruleset);
 };
 
+const deriveEnemyProjectedResourceSignals = (
+    context: EnemyAiContext,
+    resourcePreview: ReturnType<typeof resolveEnemyCandidateResourcePreview>
+) => {
+    const current = context.enemy.ires;
+    if (!current || !resourcePreview) {
+        return {
+            currentSignals: getAiResourceSignals(current),
+            projectedSignals: getAiResourceSignals(current),
+            sparkBurnHpRatio: 0
+        };
+    }
+
+    const projectedState = {
+        ...current,
+        spark: resourcePreview.turnProjection.spark.projected,
+        mana: resourcePreview.turnProjection.mana.projected,
+        exhaustion: resourcePreview.turnProjection.exhaustion.projected,
+        currentState: resourcePreview.turnProjection.stateAfter,
+        isExhausted: resourcePreview.turnProjection.stateAfter === 'exhausted',
+        actionCountThisTurn: resourcePreview.nextActionCount
+    };
+
+    return {
+        currentSignals: getAiResourceSignals(current),
+        projectedSignals: getAiResourceSignals(projectedState),
+        sparkBurnHpRatio: resourcePreview.sparkBurnHpDelta / Math.max(1, Number(context.enemy.maxHp || 1))
+    };
+};
+
 const enemyCandidateWeights = (context: EnemyAiContext, policy: ReturnType<typeof getEnemyPolicyProfile>) => {
     const subtype = context.enemy.subtype || 'default';
     const rangedSubtype = subtype === 'archer' || subtype === 'warlock' || subtype === 'bomber';
@@ -145,9 +176,11 @@ const enemyCandidateWeights = (context: EnemyAiContext, policy: ReturnType<typeo
         rng_consumption: 0,
         message_present: 0.1,
         ires_blocked_action: -1000,
-        ires_spark_burn_action: -250,
-        ires_spark_burn_hp: -8,
-        ires_enters_exhausted: -35,
+        ires_spark_burn_ratio: -420,
+        ires_reserve_pressure_delta: -18,
+        ires_fatigue_pressure_delta: -24,
+        ires_recovery_pressure_delta: -24,
+        ires_enters_exhausted: -28,
         // base context features retained for diagnostics
         dist_to_player: 0,
         adjacent_to_player: 0,
@@ -326,11 +359,23 @@ const scoreEnemyCandidates = (context: EnemyAiContext, options: EnemySelectorDeb
     const scored: EnemyScoredCandidateInternal[] = candidates.map((candidate, index) => {
         const result = plannedResultToEnemyAiDecisionResult(context.enemy, context.state, candidate.planned);
         const resourcePreview = resolveEnemyCandidateResourcePreview(context, result.decision);
+        const resourceSignals = deriveEnemyProjectedResourceSignals(context, resourcePreview);
         const candidateFeatures = {
             ...deriveEnemyCandidateFeatures(context, candidate, result.decision, policy),
             ires_blocked_action: resourcePreview?.blockedReason ? 1 : 0,
-            ires_spark_burn_action: (resourcePreview?.sparkBurnHpDelta || 0) > 0 ? 1 : 0,
-            ires_spark_burn_hp: Number(resourcePreview?.sparkBurnHpDelta || 0),
+            ires_spark_burn_ratio: resourceSignals.sparkBurnHpRatio,
+            ires_reserve_pressure_delta: Math.max(
+                0,
+                resourceSignals.projectedSignals.reservePressure - resourceSignals.currentSignals.reservePressure
+            ),
+            ires_fatigue_pressure_delta: Math.max(
+                0,
+                resourceSignals.projectedSignals.fatiguePressure - resourceSignals.currentSignals.fatiguePressure
+            ),
+            ires_recovery_pressure_delta: Math.max(
+                0,
+                resourceSignals.projectedSignals.recoveryPressure - resourceSignals.currentSignals.recoveryPressure
+            ),
             ires_enters_exhausted: (
                 !context.enemy.ires?.isExhausted
                 && resourcePreview?.bandAfter === 'exhausted'

@@ -1,6 +1,7 @@
 export type MetabolicActorState = 'rested' | 'base' | 'exhausted';
 export type MetabolicPrimaryResource = 'spark' | 'mana' | 'none';
 export type MetabolicWeightClass = 'Light' | 'Standard' | 'Heavy';
+export type MetabolicBurdenTier = 'None' | 'Light' | 'Medium' | 'Heavy';
 export type MetabolicActionKind = 'movement' | 'attack' | 'cast' | 'hybrid' | 'rest';
 export type MetabolicResourceMode = 'spark_only' | 'mana_only' | 'hybrid' | 'none';
 
@@ -19,6 +20,18 @@ export interface ClampedInstinctDiscountFormula {
     instinctScale: number;
     minMultiplier: number;
     maxMultiplier: number;
+}
+
+export interface LogarithmicBfiFormula {
+    ceiling: number;
+    scaleFactor: number;
+    dampener: number;
+    bodyWeight: number;
+    instinctWeight: number;
+    mindWeight: number;
+    rounding: 'floor' | 'ceil' | 'round' | 'none';
+    min?: number;
+    max?: number;
 }
 
 export type MetabolicActionBandId =
@@ -98,7 +111,13 @@ export type MetabolicWorkloadId =
     | 'basic_move_then_standard_attack'
     | 'basic_move_then_standard_cast'
     | 'wait_loop'
-    | 'instinct_move_burst';
+    | 'instinct_move_burst'
+    | 'standard_move_attack_loop'
+    | 'ranged_attack_spacing_loop'
+    | 'caster_signature_loop'
+    | 'bomber_setup_loop'
+    | 'falcon_support_loop'
+    | 'skeleton_attrition_loop';
 
 export interface MetabolicWorkload {
     id: MetabolicWorkloadId;
@@ -116,6 +135,7 @@ export interface MetabolicStatProfile {
     mind: number;
     instinct: number;
     weightClass: MetabolicWeightClass;
+    burdenTier: MetabolicBurdenTier;
 }
 
 export interface MetabolicDerivedStats {
@@ -212,12 +232,12 @@ export interface MetabolicAnalysisReport {
 }
 
 export interface IresMetabolicConfig {
-    version: 'ires-metabolism-v6';
+    version: 'ires-metabolism-v7';
     sparkPoolFormula: LinearStatFormula;
     manaPoolFormula: LinearStatFormula;
     sparkRecoveryFormula: LinearStatFormula;
     manaRecoveryFormula: LinearStatFormula;
-    baseBfiFormula: LinearStatFormula;
+    baseBfiFormula: LogarithmicBfiFormula;
     sparkEfficiencyFormula: ClampedInstinctDiscountFormula;
     exhaustionBleedByState: {
         rested: LinearStatFormula;
@@ -234,7 +254,7 @@ export interface IresMetabolicConfig {
         resources: Array<'spark' | 'mana'>;
         minActionIndex: number;
     };
-    weightBfiAdjustments: Record<MetabolicWeightClass, number>;
+    burdenBfiAdjustments: Record<MetabolicBurdenTier, number>;
     weightMovementSparkAdjustments: Record<MetabolicWeightClass, number>;
     metabolicTaxLadder: Record<number, number[]>;
     travelMode: {

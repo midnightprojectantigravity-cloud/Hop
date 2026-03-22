@@ -7,6 +7,22 @@ import {
     computeSparkCostFromTrinity,
     type TrinityStats
 } from './trinity-resolver';
+import {
+    COMBAT_COEFFICIENTS_VERSION,
+    resolveDefenseProjectionCoefficients,
+    resolveHitQualityCoefficients,
+    resolveMagicalProjectionCoefficients,
+    resolvePhysicalProjectionCoefficients,
+    type ProjectionCoefficientSet
+} from './combat-coefficients';
+import { calculateBaseMagicalDamage } from './base-magical-damage';
+import { calculateBasePhysicalDamage } from './base-physical-damage';
+import { calculateCriticalOutcome } from './critical-outcome';
+import { calculateHitQuality, type HitQualityTier, type TrackingSignature } from './hit-quality';
+import { calculateStatusOutcome } from './status-outcome';
+import { calculateInitiativeScore } from './initiative-formula';
+import { resolveCombatRuleset } from './combat-ruleset';
+import type { CombatRulesetVersion } from '../../types';
 export type { TrinityStats } from './trinity-resolver';
 
 export type CombatAttribute = 'body' | 'mind' | 'instinct';
@@ -26,6 +42,8 @@ export interface CombatIntent {
     targetId: string;
     skillId: string;
     basePower: number;
+    basePowerPhys?: number;
+    basePowerMag?: number;
     trinity: TrinityStats;
     scaling: CombatScalingTerm[];
     statusMultipliers: CombatStatusMultiplier[];
@@ -42,6 +60,37 @@ export interface CombatIntent {
     optimalRangeMax?: number;
     targetOptimalRangeMin?: number;
     targetOptimalRangeMax?: number;
+    combatRulesetVersion?: CombatRulesetVersion;
+    attackProfile?: 'melee' | 'projectile' | 'spell' | 'status';
+    trackingSignature?: TrackingSignature;
+    statusProfile?: { procBase: number; potencyBase: number; durationBase: number };
+    canMultiCrit?: boolean;
+    critTierCap?: number;
+    engagementContext?: { distance: number; losOpen?: boolean };
+    projectionCoefficients?: {
+        physicalAttack?: Partial<ProjectionCoefficientSet>;
+        magicalAttack?: Partial<ProjectionCoefficientSet>;
+        physicalDefense?: Partial<ProjectionCoefficientSet>;
+        magicalDefense?: Partial<ProjectionCoefficientSet>;
+    };
+    hitQualityCoefficients?: {
+        hqFloor?: number;
+        melee?: {
+            attackerInstinct?: number;
+            defenderInstinct?: number;
+            adjacency?: number;
+        };
+        projectile?: {
+            attackerInstinct?: number;
+            defenderInstinct?: number;
+            range?: number;
+        };
+        spell?: {
+            attackerMind?: number;
+            defenderInstinct?: number;
+            distanceDodge?: number;
+        };
+    };
 }
 
 export interface CombatScoreEvent {
@@ -63,6 +112,17 @@ export interface CombatScoreEvent {
     traitOutgoingMultiplier?: number;
     traitIncomingMultiplier?: number;
     traitTotalMultiplier?: number;
+    rulesetVersion?: CombatRulesetVersion;
+    qualityTier?: HitQualityTier;
+    trackingSignature?: TrackingSignature;
+    baseDamagePressure?: number;
+    defensePressure?: number;
+    statusPressure?: number;
+    attackProjection?: number;
+    defenseProjection?: number;
+    hqPressureAtt?: number;
+    hqPressureDef?: number;
+    coefficientsVersion?: string;
 }
 
 export interface CombatCalculationResult {
@@ -77,6 +137,23 @@ export interface CombatCalculationResult {
     mitigationMultiplier: number;
     critExpectedMultiplier: number;
     finalPower: number;
+    finalDamageBeforeFloor: number;
+    finalDamageAfterMinimum: number;
+    basePhysicalDamage?: number;
+    baseMagicalDamage?: number;
+    hitQualityScore: number;
+    hitQualityTier: HitQualityTier;
+    critChance: number;
+    critSeverity: number;
+    critTiersApplied: number;
+    statusProcChance?: number;
+    statusPotencyScalar?: number;
+    rulesetVersion: CombatRulesetVersion;
+    attackProjection?: number;
+    defenseProjection?: number;
+    hqPressureAtt?: number;
+    hqPressureDef?: number;
+    coefficientsVersion?: string;
     bodyContribution: number;
     mindContribution: number;
     instinctContribution: number;
@@ -88,166 +165,34 @@ const clamp = (value: number, min: number, max: number): number =>
 
 const round3 = (value: number): number => Math.round(value * 1000) / 1000;
 
-const readCombatInteractionModelEnv = (): string | undefined => {
-    const maybeProcess = (globalThis as any)?.process;
-    return maybeProcess?.env?.HOP_COMBAT_INTERACTION_MODEL;
-};
-
 const computeStatusMultiplier = (multipliers: CombatStatusMultiplier[]): number => {
     if (multipliers.length === 0) return 1;
     return multipliers.reduce((acc, m) => acc * m.multiplier, 1);
 };
 
-const computeRiskMultiplier = (intent: CombatIntent): number => {
-    let risk = 1;
-    if (intent.inDangerPreviewHex) {
-        risk += 0.15;
-    }
+const projectTrinityValue = (
+    trinity: TrinityStats,
+    coefficients: ProjectionCoefficientSet
+): number => (
+    (Math.max(0, trinity.body) * coefficients.body)
+    + (Math.max(0, trinity.instinct) * coefficients.instinct)
+    + (Math.max(0, trinity.mind) * coefficients.mind)
+);
 
-    if (typeof intent.proximityDistance === 'number') {
-        const bounded = clamp(intent.proximityDistance, 0, 6);
-        risk += (6 - bounded) * 0.02;
-    }
+const mergeProjectionCoefficients = (
+    base: ProjectionCoefficientSet,
+    overrides?: Partial<ProjectionCoefficientSet>
+): ProjectionCoefficientSet => ({
+    body: overrides?.body ?? base.body,
+    instinct: overrides?.instinct ?? base.instinct,
+    mind: overrides?.mind ?? base.mind
+});
 
-    return risk;
-};
-
-const computeHitMultiplier = (
-    attacker: TrinityStats,
-    defender: TrinityStats | undefined,
-    damageClass: 'physical' | 'magical',
-    engagementRange: number | undefined,
-    optimalRangeMin: number | undefined,
-    optimalRangeMax: number | undefined,
-    targetOptimalRangeMin: number | undefined,
-    targetOptimalRangeMax: number | undefined
-): { multiplier: number; pressure: number; rangePressure: number; rangeMultiplier: number } => {
-    if (!defender) {
-        return {
-            multiplier: 1,
-            pressure: 0,
-            rangePressure: 0,
-            rangeMultiplier: 1
-        };
-    }
-
-    const atkAccuracy = damageClass === 'physical'
-        ? (0.85 + attacker.instinct * 0.015 + attacker.body * 0.005)
-        : (0.85 + attacker.mind * 0.015 + attacker.instinct * 0.005);
-
-    const defEvasion = damageClass === 'physical'
-        ? (defender.instinct * 0.012 + defender.body * 0.004)
-        : (defender.instinct * 0.008 + defender.mind * 0.008);
-
-    const hitChance = clamp(atkAccuracy - defEvasion, 0.1, 0.99);
-    if (typeof engagementRange !== 'number') {
-        return {
-            multiplier: hitChance,
-            pressure: round3(atkAccuracy - defEvasion),
-            rangePressure: 0,
-            rangeMultiplier: 1
-        };
-    }
-
-    const attackerBand = {
-        min: clamp(
-            optimalRangeMin ?? (damageClass === 'physical' ? 1 : 2),
-            1,
-            6
-        ),
-        max: clamp(
-            optimalRangeMax ?? (damageClass === 'physical' ? 2 : 4),
-            1,
-            6
-        )
-    };
-    if (attackerBand.max < attackerBand.min) {
-        const swap = attackerBand.min;
-        attackerBand.min = attackerBand.max;
-        attackerBand.max = swap;
-    }
-
-    const defenderBand = {
-        min: clamp(
-            targetOptimalRangeMin ?? (damageClass === 'physical' ? 1 : 2),
-            1,
-            6
-        ),
-        max: clamp(
-            targetOptimalRangeMax ?? (damageClass === 'physical' ? 3 : 5),
-            1,
-            6
-        )
-    };
-    if (defenderBand.max < defenderBand.min) {
-        const swap = defenderBand.min;
-        defenderBand.min = defenderBand.max;
-        defenderBand.max = swap;
-    }
-
-    const distance = clamp(engagementRange, 1, 6);
-    const tooClose = Math.max(0, attackerBand.min - distance);
-    const tooFar = Math.max(0, distance - attackerBand.max);
-    const bandPenalty = (tooClose * 0.06) + (tooFar * 0.1);
-    const instinctCompensation = attacker.instinct * 0.015;
-    const defenderComfort = (
-        distance >= defenderBand.min && distance <= defenderBand.max
-            ? 0.05
-            : 0
-    ) + (defender.instinct * 0.006);
-    const rangePressure = instinctCompensation - bandPenalty - defenderComfort;
-    const rangeMultiplier = clamp(1 + rangePressure, 0.55, 1.25);
-    const finalHitMultiplier = clamp(hitChance * rangeMultiplier, 0.05, 0.99);
-
-    return {
-        multiplier: finalHitMultiplier,
-        pressure: round3(atkAccuracy - defEvasion),
-        rangePressure: round3(rangePressure),
-        rangeMultiplier: round3(rangeMultiplier)
-    };
-};
-
-const computeMitigationMultiplier = (
-    defender: TrinityStats | undefined,
-    damageClass: 'physical' | 'magical'
-): { multiplier: number; pressure: number } => {
-    if (!defender) return { multiplier: 1, pressure: 0 };
-    const mitigation = damageClass === 'physical'
-        ? clamp(defender.body * 0.01 + defender.instinct * 0.004, 0, 0.75)
-        : clamp(defender.mind * 0.01 + defender.instinct * 0.004, 0, 0.75);
-    return { multiplier: 1 - mitigation, pressure: round3(mitigation) };
-};
-
-const computeCritExpectedMultiplier = (
-    attacker: TrinityStats,
-    defender: TrinityStats | undefined,
-    damageClass: 'physical' | 'magical',
-    criticalMultiplier: number
-): { multiplier: number; critPressure: number; resistancePressure: number } => {
-    if (!defender) return { multiplier: criticalMultiplier, critPressure: 0, resistancePressure: 0 };
-
-    const attackCritChance = damageClass === 'physical'
-        ? clamp(0.05 + attacker.instinct * 0.01, 0, 0.75)
-        : clamp(0.05 + attacker.mind * 0.01, 0, 0.75);
-
-    const critResilience = damageClass === 'physical'
-        ? clamp(defender.body * 0.006 + defender.instinct * 0.004, 0, 0.7)
-        : clamp(defender.mind * 0.006 + defender.instinct * 0.004, 0, 0.7);
-
-    const netCritChance = clamp(attackCritChance - critResilience, 0, 0.75);
-    const expectedMultiplier = 1 + netCritChance * (criticalMultiplier - 1);
-    return {
-        multiplier: expectedMultiplier,
-        critPressure: round3(attackCritChance),
-        resistancePressure: round3(critResilience)
-    };
-};
 
 const computeTrinityContributions = (
     intent: CombatIntent,
-    levers: ReturnType<typeof resolveTrinityLevers>,
-    bodyScaledPower: number,
-    scalingPower: number,
+    attackProjection: number,
+    defenseProjection: number,
     criticalMultiplier: number
 ): { body: number; mind: number; instinct: number } => {
     const bodyScaling = intent.scaling
@@ -261,12 +206,12 @@ const computeTrinityContributions = (
         .reduce((acc, term) => acc + (intent.trinity.instinct || 0) * term.coefficient, 0);
 
     const bodyPrimary = intent.damageClass === 'physical'
-        ? Math.max(0, intent.basePower * (levers.bodyDamageMultiplier - 1))
-        : 0;
+        ? Math.max(0, attackProjection - intent.basePower)
+        : Math.max(0, defenseProjection);
     const mindPrimary = intent.damageClass === 'magical'
-        ? Math.max(0, intent.basePower * (levers.mindMagicMultiplier - 1))
+        ? Math.max(0, attackProjection - intent.basePower)
         : 0;
-    const instinctCritLift = Math.max(0, (criticalMultiplier - 1) * (bodyScaledPower + scalingPower));
+    const instinctCritLift = Math.max(0, (criticalMultiplier - 1) * attackProjection);
 
     return {
         body: Math.max(0, bodyPrimary + bodyScaling),
@@ -294,98 +239,171 @@ export const computeSparkCost = (moveIndex: number, trinity: TrinityStats): numb
 };
 
 export const calculateCombat = (intent: CombatIntent): CombatCalculationResult => {
-    const levers = resolveTrinityLevers(intent.trinity);
+    const rulesetVersion = intent.combatRulesetVersion || resolveCombatRuleset(undefined);
     const damageClass = intent.damageClass || 'physical';
-    const defaultInteractionModel: 'legacy' | 'triangle' =
-        readCombatInteractionModelEnv() === 'triangle' ? 'triangle' : 'legacy';
-    const interactionModel = intent.interactionModel || defaultInteractionModel;
-
-    // Canonical primary scaling lever by damage class:
-    // Physical baseline  = SkillBase * (1 + Body / 20)
-    // Magical baseline   = SkillBase * (1 + Mind / 20)
-    const primaryClassMultiplier = damageClass === 'magical'
-        ? levers.mindMagicMultiplier
-        : levers.bodyDamageMultiplier;
-    const bodyScaledPower = intent.basePower * primaryClassMultiplier;
-
-    // Optional per-skill scaling overlays.
+    const defender = intent.targetTrinity || { body: 0, mind: 0, instinct: 0 };
+    const trackingSignature: TrackingSignature = intent.trackingSignature
+        || (intent.attackProfile === 'projectile' ? 'projectile'
+            : intent.attackProfile === 'spell' ? 'magic'
+                : damageClass === 'magical' ? 'magic'
+                    : 'melee');
     const scalingPower = intent.scaling.reduce((acc, term) => {
         const stat = intent.trinity[term.attribute] || 0;
         return acc + (stat * term.coefficient);
     }, 0);
-
-    const statusMultiplier = computeStatusMultiplier(intent.statusMultipliers);
-    const riskMultiplier = computeRiskMultiplier(intent);
-    const criticalMultiplier = levers.instinctCriticalMultiplier;
-    const hit = interactionModel === 'triangle'
-        ? computeHitMultiplier(
-            intent.trinity,
-            intent.targetTrinity,
-            damageClass,
-            intent.engagementRange,
-            intent.optimalRangeMin,
-            intent.optimalRangeMax,
-            intent.targetOptimalRangeMin,
-            intent.targetOptimalRangeMax
+    const attackCoefficients = damageClass === 'magical'
+        ? mergeProjectionCoefficients(
+            resolveMagicalProjectionCoefficients(intent.scaling),
+            intent.projectionCoefficients?.magicalAttack
         )
-        : { multiplier: 1, pressure: 0, rangePressure: 0, rangeMultiplier: 1 };
-    const mitigation = interactionModel === 'triangle'
-        ? computeMitigationMultiplier(intent.targetTrinity, damageClass)
-        : { multiplier: 1, pressure: 0 };
-    const crit = interactionModel === 'triangle'
-        ? computeCritExpectedMultiplier(intent.trinity, intent.targetTrinity, damageClass, criticalMultiplier)
-        : { multiplier: criticalMultiplier, critPressure: 0, resistancePressure: 0 };
-
-    const rawFinal = (bodyScaledPower + scalingPower)
+        : mergeProjectionCoefficients(
+            resolvePhysicalProjectionCoefficients(intent.scaling),
+            intent.projectionCoefficients?.physicalAttack
+        );
+    const defenseCoefficients = damageClass === 'magical'
+        ? mergeProjectionCoefficients(
+            resolveDefenseProjectionCoefficients('magical'),
+            intent.projectionCoefficients?.magicalDefense
+        )
+        : mergeProjectionCoefficients(
+            resolveDefenseProjectionCoefficients('physical'),
+            intent.projectionCoefficients?.physicalDefense
+        );
+    const basePowerProjection = damageClass === 'magical'
+        ? (intent.basePowerMag ?? intent.basePower)
+        : (intent.basePowerPhys ?? intent.basePower);
+    const projectedAttack = basePowerProjection + projectTrinityValue(intent.trinity, attackCoefficients);
+    const projectedDefense = projectTrinityValue(defender, defenseCoefficients);
+    const baseDamage = damageClass === 'magical'
+        ? calculateBaseMagicalDamage({
+            attackProjection: projectedAttack,
+            defenseProjection: projectedDefense
+        })
+        : calculateBasePhysicalDamage({
+            attackProjection: projectedAttack,
+            defenseProjection: projectedDefense
+        });
+    const hqCoefficients = resolveHitQualityCoefficients(trackingSignature);
+    const hitQuality = calculateHitQuality({
+        attackerInstinct: intent.trinity.instinct,
+        attackerMind: intent.trinity.mind,
+        defenderInstinct: defender.instinct,
+        trackingSignature,
+        distance: intent.engagementContext?.distance ?? intent.engagementRange,
+        canMultiCrit: intent.canMultiCrit,
+        hqFloor: intent.hitQualityCoefficients?.hqFloor ?? hqCoefficients.hqFloor,
+        meleeAttackerInstinctCoefficient: intent.hitQualityCoefficients?.melee?.attackerInstinct ?? ('attackerInstinct' in hqCoefficients ? hqCoefficients.attackerInstinct : undefined),
+        meleeDefenderInstinctCoefficient: intent.hitQualityCoefficients?.melee?.defenderInstinct ?? ('defenderInstinct' in hqCoefficients ? hqCoefficients.defenderInstinct : undefined),
+        meleeAdjacencyCoefficient: intent.hitQualityCoefficients?.melee?.adjacency ?? ('adjacency' in hqCoefficients ? hqCoefficients.adjacency : undefined),
+        projectileAttackerInstinctCoefficient: intent.hitQualityCoefficients?.projectile?.attackerInstinct ?? ('attackerInstinct' in hqCoefficients ? hqCoefficients.attackerInstinct : undefined),
+        projectileDefenderInstinctCoefficient: intent.hitQualityCoefficients?.projectile?.defenderInstinct ?? ('defenderInstinct' in hqCoefficients ? hqCoefficients.defenderInstinct : undefined),
+        projectileRangeCoefficient: intent.hitQualityCoefficients?.projectile?.range ?? ('range' in hqCoefficients ? hqCoefficients.range : undefined),
+        spellAttackerMindCoefficient: intent.hitQualityCoefficients?.spell?.attackerMind ?? ('attackerMind' in hqCoefficients ? hqCoefficients.attackerMind : undefined),
+        spellDefenderInstinctCoefficient: intent.hitQualityCoefficients?.spell?.defenderInstinct ?? ('defenderInstinct' in hqCoefficients ? hqCoefficients.defenderInstinct : undefined),
+        spellDistanceDodgeCoefficient: intent.hitQualityCoefficients?.spell?.distanceDodge ?? ('distanceDodge' in hqCoefficients ? hqCoefficients.distanceDodge : undefined)
+    });
+    const crit = calculateCriticalOutcome({
+        hitQualityTier: hitQuality.tier,
+        attackerInstinct: intent.trinity.instinct,
+        defenderBody: defender.body,
+        canMultiCrit: intent.canMultiCrit,
+        critTierCap: intent.critTierCap
+    });
+    const status = intent.statusProfile
+        ? calculateStatusOutcome({
+            attackerMind: intent.trinity.mind,
+            defenderMind: defender.mind,
+            procBase: intent.statusProfile.procBase,
+            potencyBase: intent.statusProfile.potencyBase,
+            durationBase: intent.statusProfile.durationBase
+        })
+        : undefined;
+    const statusMultiplier = computeStatusMultiplier(intent.statusMultipliers);
+    const rawDamage = baseDamage
+        * hitQuality.scalar
+        * crit.damageMultiplier
         * statusMultiplier
-        * riskMultiplier
-        * hit.multiplier
-        * mitigation.multiplier
-        * crit.multiplier
         * (intent.attackPowerMultiplier ?? 1)
         * (intent.targetDamageTakenMultiplier ?? 1);
-    const finalPower = Math.max(0, Math.floor(rawFinal));
-    const rawContrib = computeTrinityContributions(intent, levers, bodyScaledPower, scalingPower, criticalMultiplier);
+    const finalPower = hitQuality.tier === 'miss'
+        ? 0
+        : rawDamage > 0
+            ? Math.max(1, Math.floor(rawDamage))
+            : 0;
+    const rawContrib = computeTrinityContributions(
+        intent,
+        projectedAttack,
+        projectedDefense,
+        crit.damageMultiplier
+    );
     const contribTotal = Math.max(1e-6, rawContrib.body + rawContrib.mind + rawContrib.instinct);
     const bodyContribution = round3(rawContrib.body / contribTotal);
     const mindContribution = round3(rawContrib.mind / contribTotal);
     const instinctContribution = round3(rawContrib.instinct / contribTotal);
-    const theoreticalMax = Math.max(1, intent.theoreticalMaxPower ?? rawFinal);
+    const theoreticalMax = Math.max(1, intent.theoreticalMaxPower ?? rawDamage);
     const efficiency = clamp(finalPower / theoreticalMax, 0, 1);
 
     return {
-        basePower: intent.basePower,
-        bodyScaledPower: round3(bodyScaledPower),
-        scalingPower: round3(scalingPower),
-        statusMultiplier: round3(statusMultiplier),
-        riskMultiplier: round3(riskMultiplier),
-        criticalMultiplier: round3(criticalMultiplier),
-        hitMultiplier: round3(hit.multiplier),
-        rangeMultiplier: round3(hit.rangeMultiplier),
-        mitigationMultiplier: round3(mitigation.multiplier),
-        critExpectedMultiplier: round3(crit.multiplier),
-        finalPower,
-        bodyContribution,
-        mindContribution,
-        instinctContribution,
-        scoreEvent: {
-            skillId: intent.skillId,
-            attackerId: intent.attackerId,
-            targetId: intent.targetId,
+            basePower: intent.basePower,
+            bodyScaledPower: round3(baseDamage),
+            scalingPower: round3(scalingPower),
+            statusMultiplier: round3(statusMultiplier),
+            riskMultiplier: 1,
+            criticalMultiplier: round3(crit.damageMultiplier),
+            hitMultiplier: round3(hitQuality.scalar),
+            rangeMultiplier: round3(hitQuality.effectiveRatio),
+            mitigationMultiplier: 1,
+            critExpectedMultiplier: round3(crit.damageMultiplier),
             finalPower,
-            efficiency: round3(efficiency),
-            riskBonusApplied: !!intent.inDangerPreviewHex,
-            damageClass,
-            hitPressure: hit.pressure,
-            rangePressure: hit.rangePressure,
-            mitigationPressure: mitigation.pressure,
-            critPressure: crit.critPressure,
-            resistancePressure: crit.resistancePressure,
+            finalDamageBeforeFloor: round3(rawDamage),
+            finalDamageAfterMinimum: finalPower,
+            basePhysicalDamage: damageClass === 'physical' ? round3(baseDamage) : undefined,
+            baseMagicalDamage: damageClass === 'magical' ? round3(baseDamage) : undefined,
+            hitQualityScore: round3(hitQuality.effectiveRatio),
+            hitQualityTier: hitQuality.tier,
+            critChance: round3(crit.critChance),
+            critSeverity: round3(crit.critSeverity),
+            critTiersApplied: crit.critTiersApplied,
+            statusProcChance: status ? round3(status.statusProcChance) : undefined,
+            statusPotencyScalar: status ? round3(status.statusPotencyScalar) : undefined,
+            rulesetVersion,
+            attackProjection: round3(projectedAttack),
+            defenseProjection: round3(projectedDefense),
+            hqPressureAtt: round3(hitQuality.pressureAtt),
+            hqPressureDef: round3(hitQuality.pressureDef),
+            coefficientsVersion: COMBAT_COEFFICIENTS_VERSION,
             bodyContribution,
             mindContribution,
-            instinctContribution
-        }
-    };
+            instinctContribution,
+            scoreEvent: {
+                skillId: intent.skillId,
+                attackerId: intent.attackerId,
+                targetId: intent.targetId,
+                finalPower,
+                efficiency: round3(efficiency),
+                riskBonusApplied: false,
+                damageClass,
+                hitPressure: round3(hitQuality.rawRatio),
+                mitigationPressure: round3(damageClass === 'magical' ? defender.mind * 0.5 : defender.body * 0.2),
+                rangePressure: round3((intent.engagementContext?.distance ?? intent.engagementRange ?? 0)),
+                critPressure: round3(crit.critChance),
+                resistancePressure: round3(Math.max(0, defender.body * 0.05)),
+                bodyContribution,
+                mindContribution,
+                instinctContribution,
+                rulesetVersion,
+                qualityTier: hitQuality.tier,
+                trackingSignature,
+                baseDamagePressure: round3(baseDamage),
+                defensePressure: round3(projectedDefense),
+                statusPressure: status ? round3(status.mindRatio) : 0,
+                attackProjection: round3(projectedAttack),
+                defenseProjection: round3(projectedDefense),
+                hqPressureAtt: round3(hitQuality.pressureAtt),
+                hqPressureDef: round3(hitQuality.pressureDef),
+                coefficientsVersion: COMBAT_COEFFICIENTS_VERSION
+            }
+        };
 };
 
 export class GrandCalculator {
@@ -399,6 +417,10 @@ export class GrandCalculator {
 
     static resolveInitiativeBonus(trinity: TrinityStats): number {
         return computeInitiativeBonus(trinity);
+    }
+
+    static resolveInitiativeScore(input: { instinct: number; mind: number; speedModifier?: number }): number {
+        return calculateInitiativeScore(input);
     }
 
     static resolveCriticalMultiplier(trinity: TrinityStats): number {

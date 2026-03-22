@@ -1,13 +1,16 @@
 import {
+  ENGINE_CONTRACT_VERSION,
   DEFAULT_LOADOUTS,
   fingerprintFromState,
   gameReducer,
   generateInitialState,
+  resolveCombatRuleset,
   validateReplayEnvelopeV3
 } from '@hop/engine';
 
 export const MAX_REQUEST_BYTES = 1_000_000;
 export const MAX_REPLAY_ACTIONS = 10_000;
+export { ENGINE_CONTRACT_VERSION };
 
 const isObject = (value) => typeof value === 'object' && value !== null;
 
@@ -47,6 +50,12 @@ export const verifyReplayEnvelope = (replay) => {
     const mapShape = run.mapShape === 'rectangle' ? 'rectangle' : 'diamond';
 
     let state = generateInitialState(startFloor, seed, initialSeed, undefined, loadout, mapSize, mapShape);
+    state.ruleset = {
+      ...(state.ruleset || {}),
+      combat: {
+        version: run.combatVersion || resolveCombatRuleset(state)
+      }
+    };
     for (const action of replay.actions) {
       state = gameReducer(state, action);
     }

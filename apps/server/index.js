@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { safeParse } from '@hop/engine';
 import {
+  ENGINE_CONTRACT_VERSION,
   MAX_REQUEST_BYTES,
   validateReplaySubmissionPayload,
   verifyReplayEnvelope
@@ -143,5 +144,9 @@ const server = http.createServer((req, res) => {
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
+  if (typeof ENGINE_CONTRACT_VERSION !== 'string' || ENGINE_CONTRACT_VERSION.length === 0) {
+    throw new Error('Missing @hop/engine contract version.');
+  }
+  console.log(`[ENGINE_CONTRACT] ${ENGINE_CONTRACT_VERSION}`);
   console.log(`Validator server listening on http://localhost:${PORT}`);
 });

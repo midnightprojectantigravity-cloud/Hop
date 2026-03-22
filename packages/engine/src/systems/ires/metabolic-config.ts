@@ -7,47 +7,49 @@ import { DEFAULT_METABOLIC_TAX_LADDER } from './metabolic-tax-ladder';
 import { DEFAULT_METABOLIC_WORKLOAD_CATALOG } from './metabolic-workloads';
 
 export const DEFAULT_IRES_METABOLIC_CONFIG: IresMetabolicConfig = {
-    version: 'ires-metabolism-v6',
+    version: 'ires-metabolism-v7',
     sparkPoolFormula: {
-        base: 100,
-        bodyScale: 2,
+        base: 108,
+        bodyScale: 2.4,
         mindScale: 0,
         instinctScale: 0,
         rounding: 'round',
-        min: 100
+        min: 108
     },
     sparkRecoveryFormula: {
-        base: 20,
-        bodyScale: 0.5,
+        base: 21,
+        bodyScale: 0.6,
         mindScale: 0,
         instinctScale: 0,
         rounding: 'round',
-        min: 18
+        min: 20
     },
     manaPoolFormula: {
-        base: 10,
+        base: 12,
         bodyScale: 0,
-        mindScale: 2,
+        mindScale: 2.2,
         instinctScale: 0,
         rounding: 'round',
-        min: 10
+        min: 12
     },
     manaRecoveryFormula: {
-        base: 2,
+        base: 3,
         bodyScale: 0,
-        mindScale: 0.4,
+        mindScale: 0.45,
         instinctScale: 0,
         rounding: 'round',
-        min: 2
+        min: 3
     },
     baseBfiFormula: {
-        base: 10,
-        bodyScale: 0,
-        mindScale: 0,
-        instinctScale: -0.1,
-        rounding: 'floor',
-        min: 6,
-        max: 12
+        ceiling: 14,
+        scaleFactor: 1.87,
+        dampener: 7,
+        bodyWeight: 3,
+        instinctWeight: 6,
+        mindWeight: 1,
+        rounding: 'round',
+        min: 5,
+        max: 14
     },
     sparkEfficiencyFormula: {
         baseMultiplier: 1,
@@ -70,10 +72,11 @@ export const DEFAULT_IRES_METABOLIC_CONFIG: IresMetabolicConfig = {
         resources: ['spark', 'mana'],
         minActionIndex: 1
     },
-    weightBfiAdjustments: {
-        Light: -1,
-        Standard: 0,
-        Heavy: 1
+    burdenBfiAdjustments: {
+        None: 0,
+        Light: 1,
+        Medium: 2,
+        Heavy: 3
     },
     weightMovementSparkAdjustments: {
         Light: -5,

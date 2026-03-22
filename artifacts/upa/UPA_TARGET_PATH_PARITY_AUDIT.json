@@ -1,0 +1,94 @@
+{
+  "generatedAt": "2026-03-22T15:43:33.252Z",
+  "params": {
+    "runsPerLoadout": 2,
+    "maxSteps": 6,
+    "strict": true
+  },
+  "summary": {
+    "totalRuns": 12,
+    "totalViolations": 0,
+    "byBucket": {
+      "target_invalid_but_listed": 0,
+      "movement_preview_missing": 0,
+      "execution_reject_after_valid_target": 0,
+      "path_interrupted_unexpected": 0,
+      "occupancy_or_tilehook_divergence": 0
+    }
+  },
+  "runs": [
+    {
+      "loadoutId": "VANGUARD",
+      "seed": "target-path-parity-vanguard-1",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "VANGUARD",
+      "seed": "target-path-parity-vanguard-2",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "seed": "target-path-parity-skirmisher-1",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "SKIRMISHER",
+      "seed": "target-path-parity-skirmisher-2",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "seed": "target-path-parity-firemage-1",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "FIREMAGE",
+      "seed": "target-path-parity-firemage-2",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "seed": "target-path-parity-necromancer-1",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "NECROMANCER",
+      "seed": "target-path-parity-necromancer-2",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "seed": "target-path-parity-hunter-1",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "HUNTER",
+      "seed": "target-path-parity-hunter-2",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "seed": "target-path-parity-assassin-1",
+      "steps": 6,
+      "violations": 0
+    },
+    {
+      "loadoutId": "ASSASSIN",
+      "seed": "target-path-parity-assassin-2",
+      "steps": 6,
+      "violations": 0
+    }
+  ],
+  "violations": []
+}

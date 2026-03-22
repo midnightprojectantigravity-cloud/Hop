@@ -3,6 +3,7 @@ export interface UiFeatureFlags {
   ui_defeat_loop_v2: boolean;
   ui_sensory_dispatcher_v1: boolean;
   ui_dedicated_hub_routes_v1: boolean;
+  strict_target_path_parity_v1: boolean;
 }
 
 export const UI_FEATURE_FLAGS_STORAGE_KEY = 'hop_ui_feature_flags_v1';
@@ -11,7 +12,8 @@ const DEFAULT_UI_FEATURE_FLAGS: UiFeatureFlags = {
   ui_mobile_dock_v2: true,
   ui_defeat_loop_v2: false,
   ui_sensory_dispatcher_v1: false,
-  ui_dedicated_hub_routes_v1: false
+  ui_dedicated_hub_routes_v1: false,
+  strict_target_path_parity_v1: false
 };
 
 type FlagStorage = Pick<Storage, 'getItem' | 'setItem'>;
@@ -38,7 +40,9 @@ const normalizeFlags = (value: unknown): UiFeatureFlags => {
     ui_defeat_loop_v2: parseBoolean(source.ui_defeat_loop_v2) ?? DEFAULT_UI_FEATURE_FLAGS.ui_defeat_loop_v2,
     ui_sensory_dispatcher_v1: parseBoolean(source.ui_sensory_dispatcher_v1) ?? DEFAULT_UI_FEATURE_FLAGS.ui_sensory_dispatcher_v1,
     ui_dedicated_hub_routes_v1:
-      parseBoolean(source.ui_dedicated_hub_routes_v1) ?? DEFAULT_UI_FEATURE_FLAGS.ui_dedicated_hub_routes_v1
+      parseBoolean(source.ui_dedicated_hub_routes_v1) ?? DEFAULT_UI_FEATURE_FLAGS.ui_dedicated_hub_routes_v1,
+    strict_target_path_parity_v1:
+      parseBoolean(source.strict_target_path_parity_v1) ?? DEFAULT_UI_FEATURE_FLAGS.strict_target_path_parity_v1
   };
 };
 

@@ -7,6 +7,7 @@ import type {
     LoadoutRosterParityProfile
 } from './balance-schema';
 import { BALANCE_BUDGET_THRESHOLDS, resolveEnemyTypeBudgetModifier } from './balance-budget-config';
+import { getFloorSpawnProfile } from '../../data/enemies';
 
 const round2 = (value: number): number => Number(value.toFixed(2));
 
@@ -143,6 +144,31 @@ export const buildBalanceBudgetViolations = (
                 actual: encounter.intrinsicDifficultyScore,
                 delta: round2(encounter.intrinsicDifficultyScore - encounterBudget),
                 message: `Encounter floor ${encounter.floor} exceeds ${encounter.role} difficulty budget`
+            });
+        }
+        const spawnProfile = getFloorSpawnProfile(encounter.floor);
+        const compositionChecks = [
+            { metric: 'frontlineMin', actual: encounter.frontlineCount, expectedMax: spawnProfile.composition.frontlineMin, failed: encounter.frontlineCount < spawnProfile.composition.frontlineMin, message: `Floor ${encounter.floor} is missing required frontline presence` },
+            { metric: 'frontlineMax', actual: encounter.frontlineCount, expectedMax: spawnProfile.composition.frontlineMax, failed: encounter.frontlineCount > spawnProfile.composition.frontlineMax, message: `Floor ${encounter.floor} exceeds frontline density cap` },
+            { metric: 'rangedMax', actual: encounter.rangedCount, expectedMax: spawnProfile.composition.rangedMax, failed: encounter.rangedCount > spawnProfile.composition.rangedMax, message: `Floor ${encounter.floor} exceeds ranged density cap` },
+            { metric: 'hazardSetterMax', actual: encounter.hazardSetterCount, expectedMax: spawnProfile.composition.hazardSetterMax, failed: encounter.hazardSetterCount > spawnProfile.composition.hazardSetterMax, message: `Floor ${encounter.floor} exceeds hazard-setter density cap` },
+            { metric: 'flankerMax', actual: encounter.flankerCount, expectedMax: spawnProfile.composition.flankerMax, failed: encounter.flankerCount > spawnProfile.composition.flankerMax, message: `Floor ${encounter.floor} exceeds flanker density cap` },
+            { metric: 'supportMax', actual: encounter.supportCount, expectedMax: spawnProfile.composition.supportMax, failed: encounter.supportCount > spawnProfile.composition.supportMax, message: `Floor ${encounter.floor} exceeds support density cap` },
+            { metric: 'bossAnchorMax', actual: encounter.bossAnchorCount, expectedMax: spawnProfile.composition.bossAnchorMax, failed: encounter.bossAnchorCount > spawnProfile.composition.bossAnchorMax, message: `Floor ${encounter.floor} exceeds boss-anchor density cap` }
+        ];
+        for (const check of compositionChecks) {
+            if (!check.failed) continue;
+            violations.push({
+                category: 'encounter_composition',
+                severity: 'error',
+                subjectId: `floor_${encounter.floor}`,
+                floor: encounter.floor,
+                role: encounter.role,
+                metric: check.metric,
+                expectedMax: check.expectedMax,
+                actual: check.actual,
+                delta: undefined,
+                message: check.message
             });
         }
 

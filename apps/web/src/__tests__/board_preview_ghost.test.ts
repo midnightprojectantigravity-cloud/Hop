@@ -100,4 +100,25 @@ describe('resolveBoardPreviewGhost', () => {
     expect(preview?.path.length).toBeGreaterThan(2);
     expect(preview?.path.some(step => pointToKey(step) === pointToKey(blocker))).toBe(false);
   });
+
+  it('does not use neighbor fallback in strict target/path parity mode', () => {
+    const gameState = generateInitialState(1, 'board-preview-ghost-strict-fallback');
+    const playerPos = gameState.player.position;
+    const hovered = hex(playerPos.q + 1, playerPos.r);
+
+    const preview = resolveBoardPreviewGhost({
+      gameState,
+      playerPos,
+      selectedSkillId: null,
+      showMovementRange: true,
+      hoveredTile: hovered,
+      movementTargetSet: new Set(),
+      movementSkillByTargetKey: new Map(),
+      hasPrimaryMovementSkills: false,
+      fallbackNeighborSet: new Set([pointToKey(hovered)]),
+      strictTargetPathParityV1Enabled: true,
+    });
+
+    expect(preview).toBeNull();
+  });
 });

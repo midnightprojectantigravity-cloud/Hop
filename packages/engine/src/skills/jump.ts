@@ -78,6 +78,8 @@ export const JUMP: SkillDefinition = {
                 trinity: extractTrinityStats(attacker),
                 targetTrinity: extractTrinityStats(obstacle),
                 damageClass: 'physical',
+                attackProfile: 'melee',
+                trackingSignature: 'melee',
                 scaling: [{ attribute: 'body', coefficient: 0.15 }],
                 statusMultipliers: []
             });

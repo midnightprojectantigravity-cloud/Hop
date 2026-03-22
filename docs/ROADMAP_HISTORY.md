@@ -786,7 +786,7 @@ Goal: move from stability fixes to true balance calibration across all archetype
   - [x] Keep calibration threshold warn-only; promote health thresholds to fail-gate.
 - Acceptance tests:
   - [x] PR workflow now runs health fail-gate + calibration warn-only summary.
-  - [x] At least one high-confidence regression rule is fail-gated (`npm run upa:health:check`).
+  - [x] At least one high-confidence regression rule is fail-gated (`npm run upa:health:check` at the time; current equivalent is `npm run upa:health:release`).
 
 ### Phase 6.2 Exit Criteria
 - [x] All archetypes have stable calibrated baselines on large-sample runs (`300` seeds each).

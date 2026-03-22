@@ -42,6 +42,8 @@ export const SNEAK_ATTACK: SkillDefinition = {
             trinity: extractTrinityStats(attacker),
             targetTrinity: extractTrinityStats(enemy),
             damageClass: 'physical',
+            attackProfile: 'melee',
+            trackingSignature: 'melee',
             scaling: [{ attribute: 'instinct', coefficient: 0.25 }],
             statusMultipliers: []
         });

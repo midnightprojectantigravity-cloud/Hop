@@ -9,11 +9,7 @@ import {
 } from '../src/systems/evaluation/balance-harness';
 import { computeUPAFromSummary } from '../src/systems/upa';
 import { buildUpaEntitySnapshot } from './lib/upaEntitySnapshot';
-import { getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
-
-if (!process.env.HOP_TRINITY_PROFILE) {
-    process.env.HOP_TRINITY_PROFILE = 'live';
-}
+import { TRINITY_PROFILE_SET_VERSION } from '../src/systems/combat/trinity-profiles';
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {
@@ -33,7 +29,7 @@ const rightPolicyProfileId = process.argv[9] || 'sp-v1-default';
 const seeds = Array.from({ length: count }, (_, i) => `upa-matchup-${i + 1}`);
 const leftEntitySnapshot = buildUpaEntitySnapshot(leftLoadout);
 const rightEntitySnapshot = buildUpaEntitySnapshot(rightLoadout);
-const trinityProfile = getActiveTrinityProfileId();
+const trinityProfile = TRINITY_PROFILE_SET_VERSION;
 
 const leftRuns = runBatch(seeds, leftPolicy, maxTurns, leftLoadout, leftPolicyProfileId);
 const rightRuns = runBatch(seeds, rightPolicy, maxTurns, rightLoadout, rightPolicyProfileId);

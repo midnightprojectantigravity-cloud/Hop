@@ -1,5 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { getNeighbors } from '../hex';
+import { getNeighbors, hexDistance } from '../hex';
 import { pointToKey } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
@@ -48,6 +48,9 @@ export const MULTI_SHOOT: SkillDefinition = {
                 trinity,
                 targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
                 damageClass: 'physical',
+                attackProfile: 'projectile',
+                trackingSignature: 'projectile',
+                engagementContext: { distance: hexDistance(attacker.position, p) },
                 scaling: [{ attribute: 'instinct', coefficient: 0.1 }, { attribute: 'mind', coefficient: 0.1 }],
                 statusMultipliers: []
             });

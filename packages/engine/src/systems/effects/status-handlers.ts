@@ -1,11 +1,16 @@
 import type { Actor, Point } from '../../types';
 import { addStatus } from '../entities/actor';
 import { computeStatusDuration, extractTrinityStats } from '../combat/combat-calculator';
+import { calculateStatusOutcome } from '../combat/status-outcome';
+import { resolveCombatRuleset } from '../combat/combat-ruleset';
 import { appendTaggedMessage } from '../engine-messages';
 import { buildStatusBreakReleaseEffects } from '../movement/attachment-system';
 import type { AtomicEffectHandlerMap } from './types';
-
-const CONTROL_STATUSES = new Set(['stunned', 'blinded', 'rooted', 'slowed', 'frozen', 'silenced']);
+import {
+    isActionPhaseControlStatus,
+    isControlTelemetryStatus,
+    isMovementInterdictionStatus,
+} from '../status';
 
 export const statusEffectHandlers: AtomicEffectHandlerMap = {
     Heal: (state, effect, context, api) => {
@@ -89,7 +94,7 @@ export const statusEffectHandlers: AtomicEffectHandlerMap = {
 
         let resolvedPos = targetPos;
         const sourceActor = context.sourceId ? api.resolveActorById(nextState, context.sourceId) : undefined;
-        const adjustedDuration = sourceActor
+        let adjustedDuration = sourceActor
             ? computeStatusDuration(effect.duration, extractTrinityStats(sourceActor))
             : effect.duration;
 
@@ -100,13 +105,43 @@ export const statusEffectHandlers: AtomicEffectHandlerMap = {
 
             if (targetActor) {
                 resolvedPos = targetActor.position;
+                const combatRuleset = resolveCombatRuleset(nextState);
+                const isActionControl = isActionPhaseControlStatus(effect.status);
+                const isMovementControl = isMovementInterdictionStatus(effect.status);
+                if (combatRuleset === 'trinity_ratio_v2' && sourceActor) {
+                    adjustedDuration = calculateStatusOutcome({
+                        attackerMind: extractTrinityStats(sourceActor).mind,
+                        defenderMind: extractTrinityStats(targetActor).mind,
+                        procBase: 1,
+                        potencyBase: 1,
+                        durationBase: effect.duration
+                    }).statusDuration;
+                }
                 const name = targetActorId === nextState.player.id ? 'You' : `${targetActor.subtype || 'enemy'}#${targetActor.id}`;
                 const suffix = targetActorId === nextState.player.id ? 'are' : 'is';
                 nextState.message = appendTaggedMessage(nextState.message, `${name} ${suffix} ${effect.status}!`, 'INFO', 'COMBAT');
 
                 if (targetActorId === nextState.player.id) {
                     nextState.player = addStatus(nextState.player, effect.status as any, adjustedDuration);
-                    if (CONTROL_STATUSES.has(effect.status)) {
+                    if (combatRuleset === 'trinity_ratio_v2' && (isActionControl || isMovementControl)) {
+                        nextState.player = {
+                            ...nextState.player,
+                            statusEffects: nextState.player.statusEffects.map(status => status.type === effect.status
+                                ? {
+                                    ...status,
+                                    ...(isActionControl
+                                        ? {
+                                            durationModel: 'action_phase' as const,
+                                            remainingActionPhases: adjustedDuration,
+                                            consumedOnPhase: 'ACTION' as const,
+                                        }
+                                        : {}),
+                                    appliedRound: nextState.initiativeQueue?.round
+                                }
+                                : status)
+                        };
+                    }
+                    if (isControlTelemetryStatus(effect.status)) {
                         nextState.runTelemetry = {
                             ...(nextState.runTelemetry || {
                                 damageTaken: 0,
@@ -127,6 +162,30 @@ export const statusEffectHandlers: AtomicEffectHandlerMap = {
                     nextState.enemies = nextState.enemies.map(updateStatus);
                     if (nextState.companions) {
                         nextState.companions = nextState.companions.map(updateStatus);
+                    }
+                    if (combatRuleset === 'trinity_ratio_v2' && (isActionControl || isMovementControl)) {
+                        const patchControlStatus = (e: Actor) => e.id === targetActorId
+                            ? {
+                                ...e,
+                                statusEffects: e.statusEffects.map(status => status.type === effect.status
+                                    ? {
+                                        ...status,
+                                        ...(isActionControl
+                                            ? {
+                                                durationModel: 'action_phase' as const,
+                                                remainingActionPhases: adjustedDuration,
+                                                consumedOnPhase: 'ACTION' as const,
+                                            }
+                                            : {}),
+                                        appliedRound: nextState.initiativeQueue?.round
+                                    }
+                                    : status)
+                            }
+                            : e;
+                        nextState.enemies = nextState.enemies.map(patchControlStatus);
+                        if (nextState.companions) {
+                            nextState.companions = nextState.companions.map(patchControlStatus);
+                        }
                     }
                 }
             }

@@ -1,6 +1,7 @@
 import type { GameState } from '../types';
 import type { ScenarioCollection } from './types';
 import { hexEquals } from '../hex';
+import type { PhysicsComponent, TrinityComponent } from '../systems/components';
 
 /**
  * Basic Move Scenarios
@@ -157,6 +158,23 @@ export const basicMoveScenarios: ScenarioCollection = {
             setup: (engine: any) => {
                 engine.setPlayer({ q: 4, r: 5, s: -9 }, []);
                 engine.spawnEnemy('footman', { q: 7, r: 5, s: -12 }, 'single_actor');
+                const enemy = engine.getEnemy('single_actor');
+                if (enemy?.components) {
+                    enemy.components.set('trinity', {
+                        type: 'trinity',
+                        body: 10,
+                        instinct: 60,
+                        mind: 10
+                    } satisfies TrinityComponent);
+                    const physics = enemy.components.get('physics') as PhysicsComponent | undefined;
+                    if (physics) {
+                        enemy.components.set('physics', {
+                            ...physics,
+                            weightClass: 'Light'
+                        });
+                    }
+                    enemy.weightClass = 'Light';
+                }
             },
             run: (engine: any) => {
                 engine.wait();

@@ -1,3 +1,5 @@
+export const ENGINE_CONTRACT_VERSION = 'target-path-parity-v1';
+
 export * from './types';
 export * from './types/juice-signature';
 export * from './hex';
@@ -46,6 +48,7 @@ export * from './systems/synapse-threat';
 export * from './systems/visibility';
 export * from './systems/ires';
 export * from './systems/free-move';
+export * from './systems/targeting-path-parity';
 
 // Juice & VFX
 

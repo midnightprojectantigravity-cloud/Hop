@@ -1,7 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fingerprintFromState, gameReducer, generateInitialState } from '@hop/engine';
 import {
+  applyEffects,
+  fingerprintFromState,
+  gameReducer,
+  generateInitialState,
+  previewActionOutcome,
+  resolveMovementPreviewPath,
+  SkillRegistry
+} from '@hop/engine';
+import {
+  ENGINE_CONTRACT_VERSION,
   validateReplaySubmissionPayload,
   verifyReplayEnvelope
 } from './replay-validator.js';
@@ -76,4 +85,30 @@ test('rejects invalid action payloads through replay validator', () => {
   const validated = validateReplaySubmissionPayload({ replay });
   assert.equal(validated.valid, false);
   assert.match(String(validated.error), /Invalid replay/);
+});
+
+test('exports a non-empty engine contract version', () => {
+  assert.equal(typeof ENGINE_CONTRACT_VERSION, 'string');
+  assert.ok(ENGINE_CONTRACT_VERSION.length > 0);
+});
+
+test('keeps movement preview and committed MOVE intent in parity for destination', () => {
+  const seed = 'server-preview-commit-parity';
+  const state = generateInitialState(1, seed, seed);
+  const target = SkillRegistry.get('BASIC_MOVE')?.getValidTargets?.(state, state.player.position)?.[0];
+  assert.ok(target, 'expected at least one valid BASIC_MOVE target');
+  const movementPreview = resolveMovementPreviewPath(state, state.player, 'BASIC_MOVE', target);
+  assert.equal(movementPreview.ok, true);
+
+  const preview = previewActionOutcome(state, {
+    actorId: state.player.id,
+    skillId: 'BASIC_MOVE',
+    target
+  });
+  assert.equal(preview.ok, true);
+  assert.ok(preview.predictedState);
+  const committed = applyEffects(state, preview.effects, { sourceId: state.player.id });
+
+  assert.deepEqual(committed.player.position, preview.predictedState.player.position);
+  assert.deepEqual(committed.player.position, movementPreview.destination);
 });

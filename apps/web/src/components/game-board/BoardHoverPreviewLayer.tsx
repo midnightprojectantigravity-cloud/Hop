@@ -20,6 +20,7 @@ interface BoardHoverPreviewLayerProps {
   movementSkillByTargetKey: ReadonlyMap<string, string>;
   hasPrimaryMovementSkills: boolean;
   fallbackNeighborSet: Set<string>;
+  strictTargetPathParityV1Enabled?: boolean;
 }
 
 const BoardHoverPreviewLayerBase: React.FC<BoardHoverPreviewLayerProps> = ({
@@ -35,6 +36,7 @@ const BoardHoverPreviewLayerBase: React.FC<BoardHoverPreviewLayerProps> = ({
   movementSkillByTargetKey,
   hasPrimaryMovementSkills,
   fallbackNeighborSet,
+  strictTargetPathParityV1Enabled = false,
 }) => {
   const hoveredTile = useSyncExternalStore(
     hoveredTileStore.subscribe,
@@ -55,6 +57,7 @@ const BoardHoverPreviewLayerBase: React.FC<BoardHoverPreviewLayerProps> = ({
         movementSkillByTargetKey,
         hasPrimaryMovementSkills,
         fallbackNeighborSet,
+        strictTargetPathParityV1Enabled,
       }),
     [
       enginePreviewGhost,
@@ -67,6 +70,7 @@ const BoardHoverPreviewLayerBase: React.FC<BoardHoverPreviewLayerProps> = ({
       playerPos,
       selectedSkillId,
       showMovementRange,
+      strictTargetPathParityV1Enabled,
     ],
   );
 

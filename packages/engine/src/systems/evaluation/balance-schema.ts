@@ -1,5 +1,13 @@
 import type { CurrentFloorSummary } from '../../generation/schema';
-import type { IresPrimaryResource, SkillIntentTag, WeightClass } from '../../types';
+import type { ArmorBurdenTier, IresPrimaryResource, SkillIntentTag, WeightClass } from '../../types';
+import type {
+    EnemyBalanceTag,
+    EnemyCombatRole
+} from '../../data/packs/mvp-enemy-content';
+import type {
+    CompanionPowerBudgetClass,
+    CompanionRole
+} from '../../data/companions/content';
 
 export type BalanceBudgetBand = 'trivial' | 'low' | 'medium' | 'high' | 'spike';
 
@@ -64,10 +72,22 @@ export interface EnemyPowerProfile extends UnitPowerProfile {
     subtype: string;
     enemyType: 'melee' | 'ranged' | 'boss';
     budgetCost: number;
+    combatRole?: EnemyCombatRole;
+    balanceTags?: EnemyBalanceTag[];
+    armorBurdenTier?: ArmorBurdenTier;
     threatProjectionScore: number;
     spikePressureScore: number;
     zoneDenialScore: number;
     reliabilityScore: number;
+    spawnedHazardPressureScore?: number;
+}
+
+export interface CompanionPowerProfile extends UnitPowerProfile {
+    unitKind: 'companion';
+    subtype: string;
+    companionRole: CompanionRole;
+    powerBudgetClass: CompanionPowerBudgetClass;
+    evaluationExcludedFromEnemyBudget: boolean;
 }
 
 export interface FloorDifficultyProfile {
@@ -96,6 +116,12 @@ export interface EncounterDifficultyProfile {
     enemyCount: number;
     uniqueEnemySubtypeCount: number;
     enemySubtypeIds: string[];
+    frontlineCount: number;
+    rangedCount: number;
+    hazardSetterCount: number;
+    flankerCount: number;
+    supportCount: number;
+    bossAnchorCount: number;
     encounterEnemyPowerScore: number;
     spawnPressureScore: number;
     routePressureScore: number;
@@ -131,6 +157,7 @@ export interface LoadoutRosterParityProfile {
 export type BalanceBudgetViolationCategory =
     | 'enemy_floor_budget'
     | 'encounter_floor_budget'
+    | 'encounter_composition'
     | 'loadout_parity'
     | 'enemy_parity';
 
@@ -206,6 +233,7 @@ export interface BalanceStackReport {
     loadoutProfiles: LoadoutPowerProfile[];
     unitProfiles: UnitPowerProfile[];
     enemyProfiles: EnemyPowerProfile[];
+    companionProfiles: CompanionPowerProfile[];
     floorProfiles: FloorDifficultyProfile[];
     encounterProfiles: EncounterDifficultyProfile[];
     loadoutParityProfiles: LoadoutRosterParityProfile[];
@@ -219,6 +247,7 @@ export interface BalanceStackReport {
         loadoutCount: number;
         unitCount: number;
         enemyCount: number;
+        companionCount: number;
         floorCount: number;
         encounterCount: number;
         hottestSkillId: string | null;

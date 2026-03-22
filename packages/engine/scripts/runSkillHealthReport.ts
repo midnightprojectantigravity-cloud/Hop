@@ -30,13 +30,76 @@ interface SkillAggregate {
     archetypesObserved: string[];
 }
 
+type SkillHealthMode = 'full' | 'check' | 'smoke';
+
+interface SkillHealthRunConfig {
+    mode: SkillHealthMode | 'legacy';
+    count: number;
+    maxTurns: number;
+    outFile: string;
+    maxLoopRisk: number;
+    maxFailures: number;
+    maxPlayerFacingNoData: number;
+}
+
+const MODE_PRESETS: Record<SkillHealthMode, Omit<SkillHealthRunConfig, 'mode' | 'outFile'>> = {
+    full: {
+        count: 80,
+        maxTurns: 60,
+        maxLoopRisk: -1,
+        maxFailures: -1,
+        maxPlayerFacingNoData: -1
+    },
+    check: {
+        count: 80,
+        maxTurns: 60,
+        maxLoopRisk: 0,
+        maxFailures: 0,
+        maxPlayerFacingNoData: 2
+    },
+    smoke: {
+        count: 3,
+        maxTurns: 24,
+        maxLoopRisk: 2,
+        maxFailures: 0,
+        maxPlayerFacingNoData: 20
+    }
+};
+
+const resolveRunConfig = (): SkillHealthRunConfig => {
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const modeArg = process.argv[2] as SkillHealthMode | undefined;
+    if (modeArg === 'full' || modeArg === 'check' || modeArg === 'smoke') {
+        const preset = MODE_PRESETS[modeArg];
+        return {
+            mode: modeArg,
+            ...preset,
+            outFile: process.argv[3] || `docs/UPA_SKILL_HEALTH_${dateStamp}.json`
+        };
+    }
+
+    return {
+        mode: 'legacy',
+        count: Number(process.argv[2] || 80),
+        maxTurns: Number(process.argv[3] || 60),
+        outFile: process.argv[4] || `docs/UPA_SKILL_HEALTH_${dateStamp}.json`,
+        maxLoopRisk: Number(process.argv[5] || -1),
+        maxFailures: Number(process.argv[6] || -1),
+        maxPlayerFacingNoData: Number(process.argv[7] || -1)
+    };
+};
+
 const dateStamp = new Date().toISOString().slice(0, 10);
-const count = Number(process.argv[2] || 80);
-const maxTurns = Number(process.argv[3] || 60);
-const outFile = process.argv[4] || `docs/UPA_SKILL_HEALTH_${dateStamp}.json`;
-const maxLoopRisk = Number(process.argv[5] || -1);
-const maxFailures = Number(process.argv[6] || -1);
-const maxPlayerFacingNoData = Number(process.argv[7] || -1);
+void dateStamp;
+const {
+    mode,
+    count,
+    maxTurns,
+    outFile,
+    maxLoopRisk,
+    maxFailures,
+    maxPlayerFacingNoData
+} = resolveRunConfig();
 const loadouts = Object.keys(DEFAULT_LOADOUTS) as ArchetypeLoadoutId[];
 
 const skillDefs = Array.isArray(COMPOSITIONAL_SKILLS)
@@ -147,12 +210,13 @@ const archetypeSummary = summaries.map(({ loadoutId, summary }) => ({
     winRate: summary.winRate,
     timeoutRate: summary.timeoutRate,
     avgFloor: summary.avgFloor,
-    avgHazardBreaches: summary.avgHazardBreaches
+    avgHazardBreaches: summary.avgHazardBreaches,
+    pacingSignal: summary.pacingSignal
 }));
 
 const payload = {
     generatedAt: new Date().toISOString(),
-    params: { count, maxTurns, policy: 'heuristic', maxLoopRisk, maxFailures, maxPlayerFacingNoData },
+    params: { mode, count, maxTurns, policy: 'heuristic', maxLoopRisk, maxFailures, maxPlayerFacingNoData },
     archetypeSummary,
     failures,
     rows
@@ -162,7 +226,14 @@ const target = resolve(process.cwd(), outFile);
 writeFileSync(target, JSON.stringify(payload, null, 2), 'utf8');
 const loopRiskCount = rows.filter(r => r.labels.includes('loop-risk')).length;
 const playerFacingNoDataCount = rows.filter(r => r.labels.includes('policy-blocked') && loadoutSkills.has(r.skillId)).length;
-const summary = JSON.stringify({ wrote: target, rows: rows.length, failures: failures.length, loopRiskCount, playerFacingNoDataCount }, null, 2);
+const summary = JSON.stringify({
+    mode,
+    wrote: target,
+    rows: rows.length,
+    failures: failures.length,
+    loopRiskCount,
+    playerFacingNoDataCount
+}, null, 2);
 
 const exitCode = (
     (maxFailures >= 0 && failures.length > maxFailures)

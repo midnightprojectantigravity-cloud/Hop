@@ -65,26 +65,26 @@ const toMarkdown = (report: ReturnType<typeof buildIresMetabolicAnalysisReport>)
     });
     lines.push('');
 
-    const walking = findResult(report, 'balanced_mid_standard', 'basic_move_x1');
-    const running = findResult(report, 'balanced_mid_standard', 'basic_move_x2');
-    const sprinting = findResult(report, 'balanced_mid_standard', 'basic_move_x3');
+    const walking = findResult(report, 'standard_human_standard', 'basic_move_x1');
+    const running = findResult(report, 'standard_human_standard', 'basic_move_x2');
+    const sprinting = findResult(report, 'standard_human_standard', 'basic_move_x3');
     appendResultTable(lines, 'Walking / Running / Sprinting', [
         {
-            label: 'Balanced Mid Standard / BASIC_MOVE x1',
+            label: 'Standard Human Standard / BASIC_MOVE x1',
             avg: walking?.avgActionsPerTurnOpening5 || 0,
             rest: walking?.firstRestTurn || null,
             peak: walking?.peakExhaustionOpening5 || 0,
             burn: walking?.firstImmediateBurnTurn || null
         },
         {
-            label: 'Balanced Mid Standard / BASIC_MOVE x2',
+            label: 'Standard Human Standard / BASIC_MOVE x2',
             avg: running?.avgActionsPerTurnOpening5 || 0,
             rest: running?.firstRestTurn || null,
             peak: running?.peakExhaustionOpening5 || 0,
             burn: running?.firstImmediateBurnTurn || null
         },
         {
-            label: 'Balanced Mid Standard / BASIC_MOVE x3',
+            label: 'Standard Human Standard / BASIC_MOVE x3',
             avg: sprinting?.avgActionsPerTurnOpening5 || 0,
             rest: sprinting?.firstRestTurn || null,
             peak: sprinting?.peakExhaustionOpening5 || 0,
@@ -92,18 +92,18 @@ const toMarkdown = (report: ReturnType<typeof buildIresMetabolicAnalysisReport>)
         }
     ]);
 
-    const bodyRun = findResult(report, 'body_mid_standard', 'basic_move_x2');
-    const instinctRun = findResult(report, 'instinct_mid_standard', 'basic_move_x2');
+    const bodyRun = findResult(report, 'bruiser_frontline_standard', 'basic_move_x2');
+    const instinctRun = findResult(report, 'skirmisher_light_standard', 'basic_move_x2');
     appendResultTable(lines, 'Body Vs Instinct', [
         {
-            label: 'Body Mid Standard / BASIC_MOVE x2',
+            label: 'Bruiser Frontline Standard / BASIC_MOVE x2',
             avg: bodyRun?.avgActionsPerTurnOpening5 || 0,
             rest: bodyRun?.firstRestTurn || null,
             peak: bodyRun?.peakExhaustionOpening5 || 0,
             burn: bodyRun?.firstImmediateBurnTurn || null
         },
         {
-            label: 'Instinct Mid Standard / BASIC_MOVE x2',
+            label: 'Skirmisher Light Standard / BASIC_MOVE x2',
             avg: instinctRun?.avgActionsPerTurnOpening5 || 0,
             rest: instinctRun?.firstRestTurn || null,
             peak: instinctRun?.peakExhaustionOpening5 || 0,
@@ -111,19 +111,19 @@ const toMarkdown = (report: ReturnType<typeof buildIresMetabolicAnalysisReport>)
         }
     ]);
 
-    const mindHeavy = findResult(report, 'mind_mid_heavy', 'heavy_mind_battleline');
-    const mindCast = findResult(report, 'mind_mid_standard', 'basic_move_then_standard_cast');
-    const instinctCast = findResult(report, 'instinct_mid_standard', 'basic_move_then_standard_cast');
+    const mindHeavy = findResult(report, 'boss_anchor_heavy', 'caster_signature_loop');
+    const mindCast = findResult(report, 'caster_mind_standard', 'caster_signature_loop');
+    const instinctCast = findResult(report, 'skirmisher_light_standard', 'ranged_attack_spacing_loop');
     appendResultTable(lines, 'Mind Vs Instinct', [
         {
-            label: 'Mind Mid Standard / BASIC_MOVE Then Standard Cast',
+            label: 'Caster Mind Standard / Caster Signature Loop',
             avg: mindCast?.avgActionsPerTurnOpening5 || 0,
             rest: mindCast?.firstRestTurn || null,
             peak: mindCast?.peakExhaustionOpening5 || 0,
             burn: mindCast?.firstImmediateBurnTurn || null
         },
         {
-            label: 'Instinct Mid Standard / BASIC_MOVE Then Standard Cast',
+            label: 'Skirmisher Light Standard / Ranged Attack Spacing Loop',
             avg: instinctCast?.avgActionsPerTurnOpening5 || 0,
             rest: instinctCast?.firstRestTurn || null,
             peak: instinctCast?.peakExhaustionOpening5 || 0,
@@ -140,26 +140,26 @@ const toMarkdown = (report: ReturnType<typeof buildIresMetabolicAnalysisReport>)
     }
     lines.push('');
 
-    const lightMoveAttack = findResult(report, 'balanced_mid_light', 'basic_move_then_standard_attack');
-    const standardMoveAttack = findResult(report, 'balanced_mid_standard', 'basic_move_then_standard_attack');
-    const heavyMoveAttack = findResult(report, 'balanced_mid_heavy', 'basic_move_then_standard_attack');
+    const lightMoveAttack = findResult(report, 'standard_human_light', 'standard_move_attack_loop');
+    const standardMoveAttack = findResult(report, 'standard_human_standard', 'standard_move_attack_loop');
+    const heavyMoveAttack = findResult(report, 'standard_human_heavy', 'standard_move_attack_loop');
     appendResultTable(lines, 'Light Vs Standard Vs Heavy', [
         {
-            label: 'Balanced Mid Light / BASIC_MOVE Then Standard Attack',
+            label: 'Standard Human Light / Standard Move + Attack',
             avg: lightMoveAttack?.avgActionsPerTurnOpening5 || 0,
             rest: lightMoveAttack?.firstRestTurn || null,
             peak: lightMoveAttack?.peakExhaustionOpening5 || 0,
             burn: lightMoveAttack?.firstImmediateBurnTurn || null
         },
         {
-            label: 'Balanced Mid Standard / BASIC_MOVE Then Standard Attack',
+            label: 'Standard Human Standard / Standard Move + Attack',
             avg: standardMoveAttack?.avgActionsPerTurnOpening5 || 0,
             rest: standardMoveAttack?.firstRestTurn || null,
             peak: standardMoveAttack?.peakExhaustionOpening5 || 0,
             burn: standardMoveAttack?.firstImmediateBurnTurn || null
         },
         {
-            label: 'Balanced Mid Heavy / BASIC_MOVE Then Standard Attack',
+            label: 'Standard Human Heavy / Standard Move + Attack',
             avg: heavyMoveAttack?.avgActionsPerTurnOpening5 || 0,
             rest: heavyMoveAttack?.firstRestTurn || null,
             peak: heavyMoveAttack?.peakExhaustionOpening5 || 0,
@@ -167,18 +167,18 @@ const toMarkdown = (report: ReturnType<typeof buildIresMetabolicAnalysisReport>)
         }
     ]);
 
-    const travel = findResult(report, 'balanced_mid_standard', 'move_only_travel');
-    const battle = findResult(report, 'balanced_mid_standard', 'move_only_battle');
+    const travel = findResult(report, 'standard_human_standard', 'move_only_travel');
+    const battle = findResult(report, 'standard_human_standard', 'move_only_battle');
     appendResultTable(lines, 'Travel Vs Battle Movement', [
         {
-            label: 'Balanced Mid Standard / Move Only Battle',
+            label: 'Standard Human Standard / Move Only Battle',
             avg: battle?.avgActionsPerTurnOpening5 || 0,
             rest: battle?.firstRestTurn || null,
             peak: battle?.peakExhaustionOpening5 || 0,
             burn: battle?.firstImmediateBurnTurn || null
         },
         {
-            label: 'Balanced Mid Standard / Move Only Travel',
+            label: 'Standard Human Standard / Move Only Travel',
             avg: travel?.avgActionsPerTurnOpening5 || 0,
             rest: travel?.firstRestTurn || null,
             peak: travel?.peakExhaustionOpening5 || 0,

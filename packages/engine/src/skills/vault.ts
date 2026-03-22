@@ -66,6 +66,7 @@ export const VAULT: SkillDefinition = {
             destination: target,
             path: vaultPath,
             simulatePath: movementPolicy.simulatePath,
+            ignoreCollision: true,
             ignoreGroundHazards: movementPolicy.ignoreGroundHazards,
             animationDuration: 250  // Slower, acrobatic leap
         });

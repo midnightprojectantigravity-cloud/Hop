@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect, Suspense, useMemo } from 'react';
-import { hexEquals } from '@hop/engine';
+import { ENGINE_CONTRACT_VERSION, hexEquals } from '@hop/engine';
 import type { Point, Action, GameState, GridSize, MapShape } from '@hop/engine';
 import { useAssetManifest } from './app/use-asset-manifest';
 import { useDebugPerfLogger } from './app/use-debug-perf-logger';
@@ -275,10 +275,17 @@ function App() {
   const defeatLoopV2Enabled = featureFlags.ui_defeat_loop_v2;
   const sensoryDispatcherEnabled = featureFlags.ui_sensory_dispatcher_v1;
   const dedicatedHubRoutesEnabled = featureFlags.ui_dedicated_hub_routes_v1;
+  const strictTargetPathParityV1Enabled = featureFlags.strict_target_path_parity_v1 || import.meta.env.MODE === 'test';
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
     document.documentElement.dataset.uiMaterial = 'v2';
+  }, []);
+
+  useEffect(() => {
+    if (typeof ENGINE_CONTRACT_VERSION !== 'string' || ENGINE_CONTRACT_VERSION.length === 0) {
+      throw new Error('Missing @hop/engine contract version.');
+    }
   }, []);
 
   const [gameState, dispatch] = usePersistedGameState();
@@ -1364,6 +1371,7 @@ function App() {
           onToggleOverdrive={toggleOverdrive}
           mobileDockV2Enabled={mobileDockV2Enabled}
           replayChronicleEnabled={defeatLoopV2Enabled}
+          strictTargetPathParityV1Enabled={strictTargetPathParityV1Enabled}
         />
       </Suspense>
         <WorldgenErrorOverlay

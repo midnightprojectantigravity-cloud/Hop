@@ -25,13 +25,13 @@ export const buildIresMetabolicAnalysisReport = (
     );
     const targetOutcomes = scoreMetabolicTargets(results);
 
-    const moveX1 = findResult(results, 'balanced_mid_standard', 'basic_move_x1');
-    const moveX2 = findResult(results, 'balanced_mid_standard', 'basic_move_x2');
-    const moveX3 = findResult(results, 'balanced_mid_standard', 'basic_move_x3');
-    const bodyMoveX2 = findResult(results, 'body_mid_standard', 'basic_move_x2');
-    const instinctMoveX2 = findResult(results, 'instinct_mid_standard', 'basic_move_x2');
-    const moveAttackLight = findResult(results, 'balanced_mid_light', 'basic_move_then_standard_attack');
-    const moveAttackHeavy = findResult(results, 'balanced_mid_heavy', 'basic_move_then_standard_attack');
+    const moveX1 = findResult(results, 'standard_human_standard', 'basic_move_x1');
+    const moveX2 = findResult(results, 'standard_human_standard', 'basic_move_x2');
+    const moveX3 = findResult(results, 'standard_human_standard', 'basic_move_x3');
+    const bodyMoveX2 = findResult(results, 'bruiser_frontline_standard', 'basic_move_x2');
+    const instinctMoveX2 = findResult(results, 'skirmisher_light_standard', 'basic_move_x2');
+    const moveAttackLight = findResult(results, 'standard_human_light', 'standard_move_attack_loop');
+    const moveAttackHeavy = findResult(results, 'standard_human_heavy', 'standard_move_attack_loop');
 
     const sensitivity: MetabolicSensitivityResult[] = [
         {
@@ -40,7 +40,7 @@ export const buildIresMetabolicAnalysisReport = (
             deltaAvgActionsPerTurnOpening5: Number((((moveX2?.avgActionsPerTurnOpening5 || 0) - (moveX1?.avgActionsPerTurnOpening5 || 0)) || 0).toFixed(3)),
             deltaFirstRestTurn: Number((((moveX2?.firstRestTurn || 0) - (moveX1?.firstRestTurn || 0)) || 0).toFixed(3)),
             deltaPeakExhaustionOpening5: Number((((moveX2?.peakExhaustionOpening5 || 0) - (moveX1?.peakExhaustionOpening5 || 0)) || 0).toFixed(3)),
-            mostAffectedProfiles: ['balanced_mid_standard']
+            mostAffectedProfiles: ['standard_human_standard']
         },
         {
             id: 'running_vs_sprinting',
@@ -48,7 +48,7 @@ export const buildIresMetabolicAnalysisReport = (
             deltaAvgActionsPerTurnOpening5: Number((((moveX3?.avgActionsPerTurnOpening5 || 0) - (moveX2?.avgActionsPerTurnOpening5 || 0)) || 0).toFixed(3)),
             deltaFirstRestTurn: Number((((moveX3?.firstRestTurn || 0) - (moveX2?.firstRestTurn || 0)) || 0).toFixed(3)),
             deltaPeakExhaustionOpening5: Number((((moveX3?.peakExhaustionOpening5 || 0) - (moveX2?.peakExhaustionOpening5 || 0)) || 0).toFixed(3)),
-            mostAffectedProfiles: ['balanced_mid_standard']
+            mostAffectedProfiles: ['standard_human_standard']
         },
         {
             id: 'body_vs_instinct_compression',
@@ -56,7 +56,7 @@ export const buildIresMetabolicAnalysisReport = (
             deltaAvgActionsPerTurnOpening5: Number((((instinctMoveX2?.avgActionsPerTurnOpening5 || 0) - (bodyMoveX2?.avgActionsPerTurnOpening5 || 0)) || 0).toFixed(3)),
             deltaFirstRestTurn: Number((((instinctMoveX2?.firstRestTurn || 0) - (bodyMoveX2?.firstRestTurn || 0)) || 0).toFixed(3)),
             deltaPeakExhaustionOpening5: Number((((instinctMoveX2?.peakExhaustionOpening5 || 0) - (bodyMoveX2?.peakExhaustionOpening5 || 0)) || 0).toFixed(3)),
-            mostAffectedProfiles: ['body_mid_standard', 'instinct_mid_standard']
+            mostAffectedProfiles: ['bruiser_frontline_standard', 'skirmisher_light_standard']
         },
         {
             id: 'weight_move_attack_gradient',
@@ -64,13 +64,19 @@ export const buildIresMetabolicAnalysisReport = (
             deltaAvgActionsPerTurnOpening5: Number((((moveAttackLight?.avgActionsPerTurnOpening5 || 0) - (moveAttackHeavy?.avgActionsPerTurnOpening5 || 0)) || 0).toFixed(3)),
             deltaFirstRestTurn: Number((((moveAttackLight?.firstRestTurn || 0) - (moveAttackHeavy?.firstRestTurn || 0)) || 0).toFixed(3)),
             deltaPeakExhaustionOpening5: Number((((moveAttackHeavy?.peakExhaustionOpening5 || 0) - (moveAttackLight?.peakExhaustionOpening5 || 0)) || 0).toFixed(3)),
-            mostAffectedProfiles: ['balanced_mid_light', 'balanced_mid_heavy']
+            mostAffectedProfiles: ['standard_human_light', 'standard_human_heavy']
         }
     ];
 
     const recommendedNextCandidateChanges = targetOutcomes
         .filter((outcome) => !outcome.passed)
         .map((outcome) => {
+            if (outcome.id.includes('movement_gradient')) {
+                return 'Tune the maintenance band and BFI ladder together so walking stays free, running becomes effortful, and sprinting burns immediately.';
+            }
+            if (outcome.id.includes('standard_move_attack_loop')) {
+                return 'Tune Spark pool/recovery before lowering attack bands if standard melee loops are collapsing too early.';
+            }
             if (outcome.id.includes('basic_move_x1')) {
                 return 'Adjust maintenance-band strain or passive base bleed before touching attack or cast bands.';
             }
@@ -80,8 +86,11 @@ export const buildIresMetabolicAnalysisReport = (
             if (outcome.id.includes('basic_move_x3')) {
                 return 'Use BFI ladder pressure and heavy-band values to keep sprinting in overdrive territory.';
             }
-            if (outcome.id.includes('heavy_battleline')) {
-                return 'Reduce heavy movement Spark adjustment or maintenance-band strain before touching mana pools.';
+            if (outcome.id.includes('caster_signature') || outcome.id.includes('bomber_setup')) {
+                return 'Increase native Mana pool or recovery before hand-authoring caster reserve exceptions.';
+            }
+            if (outcome.id.includes('falcon') || outcome.id.includes('skeleton')) {
+                return 'Keep companion loops role-bounded by tuning reserve formulas and light-band costs rather than special-casing companions.';
             }
             if (outcome.id.includes('instinct')) {
                 return 'Adjust the Instinct BFI slope before adding more Spark reserve.';

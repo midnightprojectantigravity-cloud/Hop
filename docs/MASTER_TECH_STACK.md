@@ -59,7 +59,13 @@ This document is the high-level source of truth for current engine/runtime archi
 - Web start-run and stairs transitions use artifact-only worker transport; full `GameState` does not cross the worker boundary.
 - Tactical + visual path networks are compiler outputs and renderer inputs, not client-derived overlays.
 
-6. ACAE runtime (feature-flagged pilot)
+6. Combat and IRES runtime
+- Combat runtime is integrated on `trinity_ratio_v2` only.
+- Trinity content ships as one profile set: `core-v2-live`.
+- IRES runtime is config-driven through the metabolic config path.
+- AI pacing reads observable Spark/Mana/exhaustion state rather than internal formula coefficients.
+
+7. ACAE runtime (feature-flagged pilot)
 - Data contracts and catalog:
   - `packages/engine/src/data/ailments/contracts.ts`
   - `packages/engine/src/data/ailments/mvp-ailments.ts`

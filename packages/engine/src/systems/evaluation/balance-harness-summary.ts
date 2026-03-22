@@ -3,6 +3,7 @@ import type {
     BatchSummary,
     BotPolicy,
     CombatProfileSignalSummary,
+    PacingSignalSummary,
     RunResult,
     SkillTelemetry,
     TriangleSignalSummary,
@@ -52,6 +53,18 @@ const zeroCombatProfileSignal = (): CombatProfileSignalSummary => ({
     samples: 0, avgOutgoingMultiplier: 0, avgIncomingMultiplier: 0, avgTotalMultiplier: 0
 });
 
+const zeroPacingSignal = (): PacingSignalSummary => ({
+    samples: 0,
+    avgSparkRatio: 0,
+    avgManaRatio: 0,
+    avgReservePressure: 0,
+    avgFatiguePressure: 0,
+    avgRecoveryPressure: 0,
+    restSelections: 0,
+    endTurnSelections: 0,
+    continuedActionSelections: 0
+});
+
 export const summarizeBatch = (
     results: RunResult[],
     policy: BotPolicy,
@@ -73,6 +86,7 @@ export const summarizeBatch = (
     const triangleSignalTotals = zeroTriangleSignal();
     const trinityContributionTotals = zeroTrinityContribution();
     const combatProfileSignalTotals = zeroCombatProfileSignal();
+    const pacingSignalTotals = zeroPacingSignal();
 
     for (const run of results) {
         mergeHistogram(actionTypeTotals, run.playerActionCounts || {});
@@ -96,6 +110,15 @@ export const summarizeBatch = (
         combatProfileSignalTotals.avgOutgoingMultiplier += run.combatProfileSignal?.avgOutgoingMultiplier || 0;
         combatProfileSignalTotals.avgIncomingMultiplier += run.combatProfileSignal?.avgIncomingMultiplier || 0;
         combatProfileSignalTotals.avgTotalMultiplier += run.combatProfileSignal?.avgTotalMultiplier || 0;
+        pacingSignalTotals.samples += run.pacingSignal?.samples || 0;
+        pacingSignalTotals.avgSparkRatio += run.pacingSignal?.avgSparkRatio || 0;
+        pacingSignalTotals.avgManaRatio += run.pacingSignal?.avgManaRatio || 0;
+        pacingSignalTotals.avgReservePressure += run.pacingSignal?.avgReservePressure || 0;
+        pacingSignalTotals.avgFatiguePressure += run.pacingSignal?.avgFatiguePressure || 0;
+        pacingSignalTotals.avgRecoveryPressure += run.pacingSignal?.avgRecoveryPressure || 0;
+        pacingSignalTotals.restSelections += run.pacingSignal?.restSelections || 0;
+        pacingSignalTotals.endTurnSelections += run.pacingSignal?.endTurnSelections || 0;
+        pacingSignalTotals.continuedActionSelections += run.pacingSignal?.continuedActionSelections || 0;
     }
 
     const divisor = results.length || 1;
@@ -124,6 +147,17 @@ export const summarizeBatch = (
         avgOutgoingMultiplier: combatProfileSignalTotals.avgOutgoingMultiplier / divisor,
         avgIncomingMultiplier: combatProfileSignalTotals.avgIncomingMultiplier / divisor,
         avgTotalMultiplier: combatProfileSignalTotals.avgTotalMultiplier / divisor
+    };
+    const pacingSignal: PacingSignalSummary = {
+        samples: pacingSignalTotals.samples,
+        avgSparkRatio: pacingSignalTotals.avgSparkRatio / divisor,
+        avgManaRatio: pacingSignalTotals.avgManaRatio / divisor,
+        avgReservePressure: pacingSignalTotals.avgReservePressure / divisor,
+        avgFatiguePressure: pacingSignalTotals.avgFatiguePressure / divisor,
+        avgRecoveryPressure: pacingSignalTotals.avgRecoveryPressure / divisor,
+        restSelections: pacingSignalTotals.restSelections,
+        endTurnSelections: pacingSignalTotals.endTurnSelections,
+        continuedActionSelections: pacingSignalTotals.continuedActionSelections
     };
 
     const summary: BatchSummary = {
@@ -167,6 +201,7 @@ export const summarizeBatch = (
         triangleSignal,
         trinityContribution,
         combatProfileSignal,
+        pacingSignal,
         dynamicSkillGrades: {}
     };
 

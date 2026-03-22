@@ -299,7 +299,9 @@ Use this as the quick reference for what a knob actually does.
 Current source: [bfi.ts](../packages/engine/src/systems/ires/bfi.ts)
 
 Current meaning:
-- current default curve is `clamp(6 - floor(Instinct / 5), 2, 10)`
+- current default curve is the grounded logarithmic weighted model
+- `baseBfi = round(14 - (1.87 * ln(1 + weightedSum / 7)))`
+- `weightedSum = body * 3 + instinct * 6 + mind * 1`
 - higher BFI increases the effective Fibonacci tax earlier
 - lower BFI allows longer turns before exhaustion pressure spikes
 
@@ -307,17 +309,24 @@ What it feels like:
 - raising BFI makes every extra action feel more expensive, shortens greedy turns, and makes resting matter earlier
 - lowering BFI makes actors feel freer, more spammy, and more willing to chain
 
-#### Weight-class BFI modifier
-Current source: [bfi.ts](../packages/engine/src/systems/ires/bfi.ts)
+#### Burden and movement adjustments
+Current source: [metabolic-config.ts](../packages/engine/src/systems/ires/metabolic-config.ts)
 
 Current defaults:
-- `Light`: `-1` BFI and cheaper movement Spark
-- `Medium`: neutral
-- `Heavy`: `+2` BFI and more expensive movement Spark
+- burden tiers:
+  - `None`: `+0` BFI
+  - `Light`: `+1` BFI
+  - `Medium`: `+2` BFI
+  - `Heavy`: `+3` BFI
+- movement Spark adjustments still follow weight class:
+  - `Light`: `-5`
+  - `Standard`: `0`
+  - `Heavy`: `+15`
 
 What it feels like:
-- `Light` units feel nimble and permissive
-- `Heavy` units feel deliberate, committed, and more punished for greed
+- low-burden units hit the tax ladder later
+- heavy-burden units feel deliberate, committed, and more punished for greed
+- heavy movement shells still pay extra Spark even when their burden tier is authored separately
 
 #### Fibonacci growth
 Current source: [config.ts](../packages/engine/src/systems/ires/config.ts)
@@ -576,6 +585,15 @@ Use it for:
 - detecting redline abuse
 - seeing whether a loadout survives through discipline or through luck
 
+Runtime-aligned IRES signoff:
+- after a reserve or BFI refactor, treat [IRES_METABOLIC_REPORT.md](../artifacts/ires/IRES_METABOLIC_REPORT.md) as the first acceptance artifact
+- confirm grounded anchor loops before rebaselining AI parity, harness envelopes, or golden runs
+- preferred sequence:
+  1. metabolic targets and reserve formulas
+  2. parity corpus refresh
+  3. harness convergence envelope refresh
+  4. golden run rebaseline
+
 ### Balance harness summaries
 Purpose:
 - deterministic run summaries and archetype behavior evidence
@@ -589,6 +607,7 @@ Use it for:
 - skill usage totals
 - Director stress signals
 - comparing candidate vs accepted behavior
+- locking accepted runtime envelopes after a deliberate rebaseline, not before
 
 ### Director telemetry
 Purpose:

@@ -20,6 +20,7 @@ import { recomputeVisibility } from './systems/visibility';
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { resolveIresRuleset } from './systems/ires';
 import { resolvePassiveSkillForTarget } from './systems/passive-targeting';
+import { mergeCombatRulesetOverride, resolveCombatRuleset } from './systems/combat/combat-ruleset';
 
 type ReducerDeps = {
     processNextTurn: (state: GameState, isResuming?: boolean) => GameState;
@@ -98,10 +99,13 @@ const mergeRunRulesetOverrides = (
         }
         : undefined;
     return {
-        ...(base || {}),
+        ...mergeCombatRulesetOverride(base, overrides),
         ...(nextAilments ? { ailments: nextAilments } : {}),
         ...(nextAttachments ? { attachments: nextAttachments } : {}),
         ...(nextCapabilities ? { capabilities: nextCapabilities } : {}),
+        combat: {
+            version: overrides.combat?.version || resolveCombatRuleset(base)
+        },
         ires: {
             ...baseIres,
             ...(overrides.ires || {}),
@@ -150,7 +154,7 @@ export const resolveGameStateAction = (
                     ...s,
                     message: appendTaggedMessage(
                         s.message,
-                        enemyAtTarget ? 'No valid passive attack for target.' : 'No valid passive movement for target.',
+                        enemyAtTarget ? 'No valid passive attack for target.' : 'Target out of reach or blocked!',
                         'CRITICAL',
                         'SYSTEM'
                     )

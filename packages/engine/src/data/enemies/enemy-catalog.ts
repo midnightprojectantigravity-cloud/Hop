@@ -31,6 +31,9 @@ export const getEnemyCatalogEntry = (subtype: string): EnemyCatalogEntry | undef
 export const getEnemyCatalogBestiaryEntry = (subtype: string): EnemyBestiaryDefinition | undefined =>
     getEnemyCatalogEntry(subtype)?.bestiary;
 
+export const getEnemyCatalogContract = (subtype: string): EnemyCatalogEntry['contract'] | undefined =>
+    getEnemyCatalogEntry(subtype)?.contract;
+
 export const getEnemyCatalogSkillLoadout = (
     subtype: string,
     options: {

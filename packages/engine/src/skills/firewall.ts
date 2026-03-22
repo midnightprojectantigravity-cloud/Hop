@@ -1,5 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
-import { hexAdd, hexDirection } from '../hex';
+import { hexAdd, hexDirection, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, isBlockedByWall } from '../systems/validation';
@@ -68,6 +68,9 @@ export const FIREWALL: SkillDefinition = {
                         trinity: extractTrinityStats(attacker),
                         targetTrinity: extractTrinityStats(actor),
                         damageClass: 'magical',
+                        attackProfile: 'spell',
+                        trackingSignature: 'magic',
+                        engagementContext: { distance: hexDistance(attacker.position, p) },
                         scaling: [{ attribute: 'mind', coefficient: 0.15 }],
                         statusMultipliers: surfaceMultiplier === 1
                             ? []

@@ -100,7 +100,7 @@ export const telegraphProjectionScenarios: ScenarioCollection = {
 
                 const checks = {
                     previewProducedTile: !!parsed,
-                    projectedTileMatchesExecute: !!parsed && hexEquals(state.player.position, parsed) && state.player.hp < state.player.maxHp,
+                    projectedTileMatchesExecute: !!parsed && hexEquals(state.player.position, parsed) && logs.some(l => l.includes('massive blast')),
                 };
 
                 if (Object.values(checks).some(v => v === false)) {

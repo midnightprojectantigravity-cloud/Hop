@@ -224,6 +224,8 @@ export const AUTO_ATTACK: SkillDefinition = {
                     trinity: extractTrinityStats(attacker),
                     targetTrinity: extractTrinityStats(targetActor),
                     damageClass: 'physical',
+                    attackProfile: 'melee',
+                    trackingSignature: 'melee',
                     scaling: [{ attribute: 'body', coefficient: 0.4 }],
                     statusMultipliers: []
                 });
@@ -270,6 +272,8 @@ export const AUTO_ATTACK: SkillDefinition = {
                     trinity: extractTrinityStats(attacker),
                     targetTrinity: extractTrinityStats(targetActor),
                     damageClass: 'physical',
+                    attackProfile: 'melee',
+                    trackingSignature: 'melee',
                     scaling: [{ attribute: 'body', coefficient: 0.4 }],
                     statusMultipliers: []
                 });

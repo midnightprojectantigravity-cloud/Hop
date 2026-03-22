@@ -1,11 +1,7 @@
 import type { ArchetypeLoadoutId, BotPolicy } from '../src/systems/evaluation/balance-harness';
 import { runPvpBatch, summarizePvpBatch } from '../src/systems/evaluation/pvp-harness';
 import { buildUpaEntitySnapshot } from './lib/upaEntitySnapshot';
-import { getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
-
-if (!process.env.HOP_TRINITY_PROFILE) {
-    process.env.HOP_TRINITY_PROFILE = 'live';
-}
+import { TRINITY_PROFILE_SET_VERSION } from '../src/systems/combat/trinity-profiles';
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {
@@ -31,7 +27,7 @@ const rightPolicy = (process.argv[7] || 'heuristic') as BotPolicy;
 const seeds = Array.from({ length: count }, (_, i) => `pvp-upa-seed-${i + 1}`);
 const leftEntitySnapshot = buildUpaEntitySnapshot(leftLoadoutId);
 const rightEntitySnapshot = buildUpaEntitySnapshot(rightLoadoutId);
-const trinityProfile = getActiveTrinityProfileId();
+const trinityProfile = TRINITY_PROFILE_SET_VERSION;
 const runs = runPvpBatch(
     seeds,
     leftLoadoutId,

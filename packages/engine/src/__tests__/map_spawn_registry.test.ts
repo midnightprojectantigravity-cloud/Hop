@@ -88,6 +88,7 @@ describe('map spawn registry', () => {
         expect(archer.maxHp).toBe(2); // override respected
         expect(archer.enemyType).toBe('ranged');
         expect(archer.speed).toBe(1); // baseline preserved
+        expect(archer.armorBurdenTier).toBe('Light');
         expect(archer.activeSkills.map(s => s.id)).toContain('ARCHER_SHOT');
     });
 });

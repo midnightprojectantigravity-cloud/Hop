@@ -43,14 +43,25 @@ describe('resolveMovementPath', () => {
         expect(resolved.movementType).toBe('slide');
     });
 
-    it('falls back to previous->current line when no valid trace exists', () => {
+    it('keeps live mode strict and returns none without a matching trace', () => {
         const entity = mkActor({
             position: { q: 1, r: 9, s: -10 },
             previousPosition: { q: 3, r: 7, s: -10 }
         });
 
         const resolved = resolveMovementPath(entity, undefined);
-        expect(resolved.source).toBe('fallback');
+        expect(resolved.source).toBe('none');
+        expect(resolved.path).toBeNull();
+    });
+
+    it('allows replay compatibility fallback when explicitly enabled', () => {
+        const entity = mkActor({
+            position: { q: 1, r: 9, s: -10 },
+            previousPosition: { q: 3, r: 7, s: -10 }
+        });
+
+        const resolved = resolveMovementPath(entity, undefined, { allowReplayFallback: true });
+        expect(resolved.source).toBe('replay_fallback');
         expect((resolved.path?.length || 0) > 1).toBe(true);
     });
 

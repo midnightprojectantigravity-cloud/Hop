@@ -76,6 +76,7 @@ export const addStatus = (
             ...s,
             duration: Math.max(s.duration, duration),
             tickWindow,
+            durationModel: s.durationModel || 'tick_window',
             stacks: stacks || s.stacks,
             onTick: buildStatusOnTick(type) || s.onTick
           }
@@ -88,6 +89,7 @@ export const addStatus = (
     id,
     type,
     duration,
+    durationModel: 'tick_window',
     tickWindow,
     stacks: stacks || 1,
     onTick: buildStatusOnTick(type)

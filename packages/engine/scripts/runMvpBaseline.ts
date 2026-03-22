@@ -4,7 +4,7 @@ import { DEFAULT_LOADOUTS } from '../src/systems/loadout';
 import { runBatch, summarizeBatch, type ArchetypeLoadoutId } from '../src/systems/evaluation/balance-harness';
 import { computeUPAFromSummary } from '../src/systems/upa';
 import { COMBAT_PROFILE_SET_VERSION } from '../src/systems/combat/combat-traits';
-import { TRINITY_PROFILE_SET_VERSION, getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
+import { TRINITY_PROFILE_SET_VERSION } from '../src/systems/combat/trinity-profiles';
 
 const originalLog = console.log.bind(console);
 if (process.env.VERBOSE_ANALYSIS !== '1') {
@@ -64,7 +64,7 @@ const payload = {
     seedCount: seeds.length,
     trinityProfileSetVersion: TRINITY_PROFILE_SET_VERSION,
     combatProfileSetVersion: COMBAT_PROFILE_SET_VERSION,
-    activeTrinityProfile: getActiveTrinityProfileId(),
+    activeTrinityProfile: TRINITY_PROFILE_SET_VERSION,
     archetypes
 };
 

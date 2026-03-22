@@ -1,0 +1,30 @@
+{
+  "id": "vanguard_floor5_timeout",
+  "version": 1,
+  "seed": "vanguard-17",
+  "loadoutId": "VANGUARD",
+  "floorsTarget": 5,
+  "maxTurnsPerFloor": 20,
+  "policy": "heuristic",
+  "policyProfileId": "sp-v1-default",
+  "expected": {
+    "outcome": "timeout",
+    "finalFloor": [
+      5,
+      5
+    ],
+    "totalKills": [
+      0,
+      0
+    ],
+    "totalTurns": [
+      100,
+      100
+    ],
+    "playerHp": [
+      1,
+      5
+    ],
+    "fingerprint": "dbe83ef7657d2322"
+  }
+}

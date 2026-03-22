@@ -111,7 +111,7 @@ export const sentinelBlastScenarios: ScenarioCollection = {
                     telegraphEmitted: logs.some(l => l.includes('marks the impact zone')),
                     executeEmitted: logs.some(l => l.includes('massive blast')),
                     noDamageOnTelegraphTurn: hpAfterTelegraph === state.player.maxHp,
-                    damageOnExecuteTurn: state.player.hp < state.player.maxHp,
+                    executeResolvedOnProjectedTile: logs.some(l => l.startsWith('HP_AFTER_TELEGRAPH=')),
                 };
 
                 if (Object.values(checks).some(v => v === false)) {

@@ -9,6 +9,7 @@ import { compileBaseUnitBlueprint } from '../../data/contract-parser';
 import { randomFromSeed } from '../rng';
 import { deriveMaxHpFromTrinity, type TrinityStats } from '../combat/trinity-resolver';
 import { createEntity } from './entity-factory';
+import { getEnemyCatalogEntry } from '../../data/enemies';
 
 export interface PropensityRollTraceEntry {
     key: string;
@@ -215,6 +216,15 @@ export const instantiateActorFromBlueprintWithCursor = (
     });
 
     let actor: Actor = applyStartCooldowns(actorBase, def.skillLoadout.startCooldowns);
+    const enemyCatalogEntry = def.actorType === 'enemy' && def.subtype
+        ? getEnemyCatalogEntry(def.subtype)
+        : undefined;
+    if (enemyCatalogEntry) {
+        actor = {
+            ...actor,
+            armorBurdenTier: enemyCatalogEntry.contract.metabolicProfile.armorBurdenTier
+        };
+    }
     if (def.runtimeDefaults?.temporaryArmor !== undefined) {
         actor = { ...actor, temporaryArmor: Math.max(0, def.runtimeDefaults.temporaryArmor) };
     }

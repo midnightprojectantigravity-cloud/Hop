@@ -46,6 +46,7 @@ interface GameBoardSceneSvgProps {
   movementSkillByTargetKey: ReadonlyMap<string, string>;
   hasPrimaryMovementSkills: boolean;
   fallbackNeighborSet: Set<string>;
+  strictTargetPathParityV1Enabled?: boolean;
   decals: ReadonlyArray<BoardDecal>;
   depthSortedSprites: Array<{
     id: string;
@@ -111,6 +112,7 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
   movementSkillByTargetKey,
   hasPrimaryMovementSkills,
   fallbackNeighborSet,
+  strictTargetPathParityV1Enabled = false,
   decals,
   depthSortedSprites,
   boardProps,
@@ -181,6 +183,7 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
         movementSkillByTargetKey={movementSkillByTargetKey}
         hasPrimaryMovementSkills={hasPrimaryMovementSkills}
         fallbackNeighborSet={fallbackNeighborSet}
+        strictTargetPathParityV1Enabled={strictTargetPathParityV1Enabled}
       />
     </g>
     <DevRenderProfiler id="board:InteractionTilesLayer">

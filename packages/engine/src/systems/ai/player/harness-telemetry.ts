@@ -1,6 +1,7 @@
 import type { Action, GameState } from '../../../types';
 import type { TransitionMetrics } from './features';
 import type { StrategicIntent } from '../strategic-policy';
+import { getAiResourceSignals } from '../resource-signals';
 
 export interface PlayerSkillTelemetry {
     casts: number;
@@ -36,6 +37,18 @@ export interface CombatProfileSignalSummaryLike {
     avgTotalMultiplier: number;
 }
 
+export interface PlayerPacingSignalSummaryLike {
+    samples: number;
+    avgSparkRatio: number;
+    avgManaRatio: number;
+    avgReservePressure: number;
+    avgFatiguePressure: number;
+    avgRecoveryPressure: number;
+    restSelections: number;
+    endTurnSelections: number;
+    continuedActionSelections: number;
+}
+
 export interface PlayerCombatSignals {
     triangleSignal: TriangleSignalSummaryLike;
     trinityContribution: TrinityContributionSummaryLike;
@@ -49,6 +62,7 @@ export interface PlayerTurnTelemetryAccumulator {
     totalPlayerSkillCasts: number;
     playerSkillTelemetry: Record<string, PlayerSkillTelemetry>;
     autoAttackTriggersByActionType: Record<string, number>;
+    pacingSignal: PlayerPacingSignalSummaryLike;
 }
 
 const incrementHistogram = (hist: Record<string, number>, key: string): void => {
@@ -89,6 +103,18 @@ const zeroCombatProfileSignal = (): CombatProfileSignalSummaryLike => ({
     avgTotalMultiplier: 0
 });
 
+const zeroPacingSignal = (): PlayerPacingSignalSummaryLike => ({
+    samples: 0,
+    avgSparkRatio: 0,
+    avgManaRatio: 0,
+    avgReservePressure: 0,
+    avgFatiguePressure: 0,
+    avgRecoveryPressure: 0,
+    restSelections: 0,
+    endTurnSelections: 0,
+    continuedActionSelections: 0
+});
+
 export const createPlayerTurnTelemetryAccumulator = (): PlayerTurnTelemetryAccumulator => ({
     playerActionCounts: {},
     playerSkillUsage: {},
@@ -100,16 +126,37 @@ export const createPlayerTurnTelemetryAccumulator = (): PlayerTurnTelemetryAccum
     },
     totalPlayerSkillCasts: 0,
     playerSkillTelemetry: {},
-    autoAttackTriggersByActionType: {}
+    autoAttackTriggersByActionType: {},
+    pacingSignal: zeroPacingSignal()
 });
 
 export const recordPlayerActionSelectionTelemetry = (
     accumulator: PlayerTurnTelemetryAccumulator,
+    state: GameState,
     action: Action,
     strategicIntent: StrategicIntent
 ): void => {
     accumulator.strategicIntentCounts[strategicIntent] += 1;
     incrementHistogram(accumulator.playerActionCounts, action.type);
+    const signals = getAiResourceSignals(state.player.ires);
+    accumulator.pacingSignal.samples += 1;
+    accumulator.pacingSignal.avgSparkRatio += signals.sparkRatio;
+    accumulator.pacingSignal.avgManaRatio += signals.manaRatio;
+    accumulator.pacingSignal.avgReservePressure += signals.reservePressure;
+    accumulator.pacingSignal.avgFatiguePressure += signals.fatiguePressure;
+    accumulator.pacingSignal.avgRecoveryPressure += signals.recoveryPressure;
+
+    if (action.type === 'WAIT') {
+        const isRestSelection = !!state.player.ires && !state.player.ires.actedThisTurn && !state.player.ires.movedThisTurn;
+        if (isRestSelection) {
+            accumulator.pacingSignal.restSelections += 1;
+        } else {
+            accumulator.pacingSignal.endTurnSelections += 1;
+        }
+    } else {
+        accumulator.pacingSignal.continuedActionSelections += 1;
+    }
+
     if (action.type === 'USE_SKILL') {
         incrementHistogram(accumulator.playerSkillUsage, action.payload.skillId);
         accumulator.totalPlayerSkillCasts += 1;

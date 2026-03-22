@@ -64,6 +64,9 @@ export const ARCHER_SHOT: SkillDefinition = {
             trinity,
             targetTrinity: extractTrinityStats(targetActor),
             damageClass: 'physical',
+            attackProfile: 'projectile',
+            trackingSignature: 'projectile',
+            engagementContext: { distance: hexDistance(shooter.position, target) },
             scaling: [{ attribute: 'instinct', coefficient: 0.2 }],
             statusMultipliers: []
         });

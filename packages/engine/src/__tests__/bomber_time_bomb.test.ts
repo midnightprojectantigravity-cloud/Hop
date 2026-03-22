@@ -27,6 +27,7 @@ describe('bomber summon contract', () => {
         if (!spawn || spawn.type !== 'SpawnActor') return;
 
         expect(spawn.actor.subtype).toBe('bomb');
+        expect(spawn.actor.armorBurdenTier).toBe('None');
         expect(spawn.actor.activeSkills.some(s => s.id === 'TIME_BOMB')).toBe(true);
         const fuse = spawn.actor.statusEffects.find(s => s.type === 'time_bomb');
         expect(fuse?.duration).toBe(2);

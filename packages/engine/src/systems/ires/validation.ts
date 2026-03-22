@@ -29,7 +29,7 @@ export const resolveIresActionPreview = (
         skillDefInput || (profileInput ? { resourceProfile: profileInput } : undefined),
         ruleset
     );
-    const weight = resolveIresWeightModifier(hydrated.weightClass);
+    const weight = resolveIresWeightModifier(hydrated);
     const costAdjustment = profile.primaryResource === 'spark' && profile.countsAsMovement
         ? weight.movementSpark
         : 0;

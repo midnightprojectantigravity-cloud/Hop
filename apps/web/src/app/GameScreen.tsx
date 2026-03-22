@@ -122,6 +122,7 @@ interface GameScreenProps {
   onToggleOverdrive: () => void;
   mobileDockV2Enabled?: boolean;
   replayChronicleEnabled?: boolean;
+  strictTargetPathParityV1Enabled?: boolean;
 }
 
 interface GuardedActionButtonProps {
@@ -266,6 +267,7 @@ export const GameScreen = ({
   onToggleOverdrive,
   mobileDockV2Enabled = true,
   replayChronicleEnabled = false,
+  strictTargetPathParityV1Enabled = false,
 }: GameScreenProps) => {
   const showWorldgenDebug = React.useMemo(() => {
     if (!import.meta.env.DEV || typeof window === 'undefined') return false;
@@ -749,6 +751,7 @@ export const GameScreen = ({
               onMove={onTileClick}
               selectedSkillId={selectedSkillId}
               showMovementRange={showMovementRange}
+              strictTargetPathParityV1Enabled={strictTargetPathParityV1Enabled}
               turnFlowMode={turnFlowMode}
               overdriveArmed={overdriveArmed}
               onBusyStateChange={onSetBoardBusy}

@@ -11,7 +11,7 @@ import { applyAutoAttack } from '../../skills/auto_attack';
 import { getTurnStartNeighborIds } from '../initiative';
 import { SkillRegistry } from '../../skillRegistry';
 import { applyEffects } from '../effect-engine';
-import { isStunned, tickStatuses, handleStunReset } from '../status';
+import { consumeActionPhaseStatuses, isStunned, tickStatuses, handleStunReset } from '../status';
 import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../visual/juice-manifest';
 import { TileResolver } from '../tiles/tile-effects';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
@@ -172,7 +172,7 @@ export const resolveSingleEnemyTurn = (
     nextEnemy = tickStatuses({ ...enemy, intent: undefined, intentPosition: undefined });
   } else if (isStunned(enemy)) {
     // Tick down statuses and clear intent
-    nextEnemy = handleStunReset(tickStatuses(enemy));
+    nextEnemy = handleStunReset(tickStatuses(consumeActionPhaseStatuses(enemy)));
   } else if (enemy.intent === 'Bombing' && enemy.intentPosition) {
     const occupied = getActorAt(curState, enemy.intentPosition);
     if (!occupied) {

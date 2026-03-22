@@ -3,6 +3,7 @@ import { getActorAt } from '../helpers';
 import { validateRange } from '../systems/validation';
 import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { createEntity } from '../systems/entities/entity-factory';
+import { BOMB_ACTOR_CONTRACT } from '../data/hazards/ephemeral-actors';
 
 /**
  * BOMB_TOSS
@@ -48,15 +49,19 @@ export const BOMB_TOSS: SkillDefinition = {
             subtype: 'bomb',
             factionId: attacker.factionId,
             position: target,
-            speed: 10,
+            hp: 1,
+            maxHp: 1,
+            speed: BOMB_ACTOR_CONTRACT.speed,
             skills: ['TIME_BOMB'],
-            weightClass: 'Standard',
+            weightClass: BOMB_ACTOR_CONTRACT.weightClass,
+            armorBurdenTier: BOMB_ACTOR_CONTRACT.armorBurdenTier,
+            trinity: BOMB_ACTOR_CONTRACT.trinity
         });
         bomb.statusEffects = [
             {
                 id: 'TIME_BOMB',
                 type: 'time_bomb',
-                duration: 2,
+                duration: BOMB_ACTOR_CONTRACT.fuseTurns,
                 tickWindow: 'END_OF_TURN',
             },
         ];
@@ -82,4 +87,3 @@ export const BOMB_TOSS: SkillDefinition = {
     },
     upgrades: {},
 };
-

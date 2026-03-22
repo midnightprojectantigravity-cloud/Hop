@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { DEFAULT_LOADOUTS, generateInitialState, validateReplayEnvelopeV3 } from '@hop/engine';
+import { DEFAULT_LOADOUTS, generateInitialState, resolveCombatRuleset, validateReplayEnvelopeV3 } from '@hop/engine';
 import type { Action, GameState } from '@hop/engine';
 import type { ReplayRecord } from '../components/ReplayManager';
 
@@ -51,6 +51,12 @@ export const validateReplayRecordForPlayback = (record: ReplayRecord): ReplayPla
   const loadout = run.loadoutId ? (DEFAULT_LOADOUTS as any)[run.loadoutId] : undefined;
   const startFloor = run.startFloor ?? 1;
   const init = generateInitialState(startFloor, seed, run.initialSeed || seed, undefined, loadout, run.mapSize, run.mapShape);
+  init.ruleset = {
+    ...(init.ruleset || {}),
+    combat: {
+      version: run.combatVersion || resolveCombatRuleset(init)
+    }
+  };
 
   return {
     ok: true,

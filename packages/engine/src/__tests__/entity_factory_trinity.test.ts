@@ -7,32 +7,6 @@ const readTrinity = (components?: Map<string, any>): TrinityComponent | undefine
     components?.get('trinity') as TrinityComponent | undefined;
 
 describe('entity-factory trinity defaults', () => {
-    it('supports neutral trinity profile activation via env flag', () => {
-        const prev = process.env.HOP_TRINITY_PROFILE;
-        process.env.HOP_TRINITY_PROFILE = 'neutral';
-        try {
-            const player = createPlayer({
-                position: { q: 0, r: 0, s: 0 },
-                skills: ['BASIC_MOVE'],
-                archetype: 'FIREMAGE',
-            });
-            expect(readTrinity(player.components)).toEqual({
-                type: 'trinity',
-                body: 0,
-                mind: 0,
-                instinct: 0,
-            });
-            expect(player.maxHp).toBe(1);
-            expect(player.hp).toBe(1);
-        } finally {
-            if (prev === undefined) {
-                delete process.env.HOP_TRINITY_PROFILE;
-            } else {
-                process.env.HOP_TRINITY_PROFILE = prev;
-            }
-        }
-    });
-
     it('assigns deterministic live trinity to player entities by default', () => {
         const player = createPlayer({
             position: { q: 0, r: 0, s: 0 },
@@ -61,9 +35,9 @@ describe('entity-factory trinity defaults', () => {
 
         expect(readTrinity(enemy.components)).toEqual({
             type: 'trinity',
-            body: 0,
-            mind: 0,
-            instinct: 0,
+            body: 12,
+            mind: 3,
+            instinct: 6,
         });
     });
 
@@ -81,18 +55,18 @@ describe('entity-factory trinity defaults', () => {
 
         expect(readTrinity(falcon.components)).toEqual({
             type: 'trinity',
-            body: 2,
-            mind: 2,
-            instinct: 9,
+            body: 4,
+            mind: 6,
+            instinct: 18,
         });
         expect(readTrinity(skeleton.components)).toEqual({
             type: 'trinity',
-            body: 15,
-            mind: 1,
+            body: 12,
+            mind: 2,
             instinct: 4,
         });
-        expect(skeleton.hp).toBe(2);
-        expect(skeleton.maxHp).toBe(2);
+        expect(skeleton.hp).toBe(86);
+        expect(skeleton.maxHp).toBe(86);
         expect(skeleton.speed).toBe(50);
         const skeletonSkills = new Set((skeleton.activeSkills || []).map(s => s.id));
         expect(skeletonSkills.has('BASIC_MOVE')).toBe(true);
@@ -139,9 +113,9 @@ describe('entity-factory trinity defaults', () => {
         const normalized = ensureActorTrinity(enemy);
         expect(readTrinity(normalized.components)).toEqual({
             type: 'trinity',
-            body: 0,
-            mind: 0,
-            instinct: 0,
+            body: 12,
+            mind: 3,
+            instinct: 6,
         });
     });
 });

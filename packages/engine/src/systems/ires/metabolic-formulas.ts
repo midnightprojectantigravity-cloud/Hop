@@ -1,10 +1,12 @@
-import type { Actor, WeightClass } from '../../types';
+import type { Actor, ArmorBurdenTier, WeightClass } from '../../types';
 import { extractTrinityStats } from '../combat/combat-calculator';
 import type {
     ClampedInstinctDiscountFormula,
     IresMetabolicConfig,
+    LogarithmicBfiFormula,
     LinearStatFormula,
     MetabolicDerivedStats,
+    MetabolicBurdenTier,
     MetabolicStatProfile,
     MetabolicWeightClass
 } from './metabolic-types';
@@ -24,6 +26,19 @@ export const normalizeMetabolicWeightClass = (weightClass?: WeightClass | Metabo
     if (weightClass === 'Light') return 'Light';
     if (weightClass === 'Heavy' || weightClass === 'Anchored' || weightClass === 'OuterWall') return 'Heavy';
     return 'Standard';
+};
+
+export const normalizeMetabolicBurdenTier = (
+    burdenTier?: ArmorBurdenTier | MetabolicBurdenTier,
+    weightClass?: WeightClass | MetabolicWeightClass
+): MetabolicBurdenTier => {
+    if (burdenTier === 'None') return 'None';
+    if (burdenTier === 'Light') return 'Light';
+    if (burdenTier === 'Medium') return 'Medium';
+    if (burdenTier === 'Heavy') return 'Heavy';
+    if (weightClass === 'Light') return 'Light';
+    if (weightClass === 'Heavy' || weightClass === 'Anchored' || weightClass === 'OuterWall') return 'Heavy';
+    return 'Medium';
 };
 
 export const evaluateLinearStatFormula = (
@@ -51,14 +66,30 @@ export const evaluateClampedInstinctDiscount = (
     formula.maxMultiplier
 );
 
+export const evaluateLogarithmicBfiFormula = (
+    formula: LogarithmicBfiFormula,
+    profile: Pick<MetabolicStatProfile, 'body' | 'mind' | 'instinct'>
+): number => {
+    const weightedSum = (formula.bodyWeight * profile.body)
+        + (formula.instinctWeight * profile.instinct)
+        + (formula.mindWeight * profile.mind);
+    const raw = formula.ceiling - (formula.scaleFactor * Math.log(1 + (weightedSum / formula.dampener)));
+    const rounded = applyRounding(raw, formula.rounding);
+    return clamp(
+        rounded,
+        formula.min ?? Number.NEGATIVE_INFINITY,
+        formula.max ?? Number.POSITIVE_INFINITY
+    );
+};
+
 export const resolveMetabolicDerivedStats = (
     config: IresMetabolicConfig,
     profile: MetabolicStatProfile
 ): MetabolicDerivedStats => {
-    const baseBfi = evaluateLinearStatFormula(config.baseBfiFormula, profile);
+    const baseBfi = evaluateLogarithmicBfiFormula(config.baseBfiFormula, profile);
     const { min, max } = resolveMetabolicBfiBounds(config.metabolicTaxLadder);
     const effectiveBfi = clamp(
-        baseBfi + config.weightBfiAdjustments[profile.weightClass],
+        baseBfi + config.burdenBfiAdjustments[profile.burdenTier],
         min,
         max
     );
@@ -80,12 +111,14 @@ export const resolveMetabolicDerivedStats = (
 
 export const createMetabolicProfileFromActor = (actor: Actor): MetabolicStatProfile => {
     const stats = extractTrinityStats(actor);
+    const weightClass = normalizeMetabolicWeightClass(actor.weightClass);
     return {
         id: actor.id,
         label: actor.id,
         body: Number(stats.body || 0),
         mind: Number(stats.mind || 0),
         instinct: Number(stats.instinct || 0),
-        weightClass: normalizeMetabolicWeightClass(actor.weightClass)
+        weightClass,
+        burdenTier: normalizeMetabolicBurdenTier(actor.armorBurdenTier, actor.weightClass)
     };
 };

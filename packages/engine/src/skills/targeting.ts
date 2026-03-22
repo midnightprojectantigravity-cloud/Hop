@@ -2,6 +2,13 @@ import type { Point, GameState } from '../types';
 import { hexAdd, scaleVector, isHexInRectangularGrid, hexEquals, pointToKey } from '../hex';
 
 /**
+ * @deprecated
+ * Use `SpatialSystem.getAxialTargets` and skill-local `getValidTargets`.
+ * Canonical flow is:
+ * `getValidTargets` -> `previewActionOutcome/resolveMovementPreviewPath` -> commit.
+ */
+
+/**
  * Return axial targets from origin up to range in the 6 primary hex directions.
  * Stops searching down a direction when a wall is encountered or grid bounds are exceeded.
  */

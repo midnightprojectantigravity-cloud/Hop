@@ -1,4 +1,4 @@
-import type { Action, GridSize, MapShape } from '../types';
+import type { Action, CombatRulesetVersion, GridSize, MapShape } from '../types';
 
 export const REPLAYABLE_ACTION_TYPES = new Set<Action['type']>([
     'MOVE',
@@ -23,6 +23,7 @@ export interface ReplayRunV3 {
     mapShape?: MapShape;
     mode?: 'normal' | 'daily';
     date?: string;
+    combatVersion?: CombatRulesetVersion;
 }
 
 export interface ReplayMetaV3 {
@@ -161,6 +162,9 @@ export const validateReplayEnvelopeV3 = (
         }
         if (run.date !== undefined && typeof run.date !== 'string') {
             errors.push('Replay run.date must be a string when provided.');
+        }
+        if (run.combatVersion !== undefined && run.combatVersion !== 'trinity_ratio_v2') {
+            errors.push('Replay run.combatVersion must be "trinity_ratio_v2" when provided.');
         }
     }
 

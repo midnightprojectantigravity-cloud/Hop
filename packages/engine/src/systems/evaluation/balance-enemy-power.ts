@@ -33,6 +33,11 @@ export const computeEnemyPowerProfile = (
         const profile = skillProfilesById[skillId];
         return count + (profile?.intentTags.includes('hazard') ? 1 : 0);
     }, 0);
+    const spawnedHazardPressureScore = round2(
+        (entry.contract.spawnedHazardProfile?.budgetContribution || 0) * 3
+        + (entry.contract.spawnedHazardProfile?.radius || 0) * 2
+        + (entry.contract.spawnedHazardProfile?.delayTurns === 2 ? 1 : 0)
+    );
     const threatProjectionScore = round2(
         (entry.bestiary.stats.range * 1.6)
         + (unitProfile.offenseScore * 0.38)
@@ -46,6 +51,7 @@ export const computeEnemyPowerProfile = (
     const zoneDenialScore = round2(
         (unitProfile.controlScore * 0.8)
         + (hazardSkillCount * 1.4)
+        + spawnedHazardPressureScore
         + (entry.bestiary.stats.type === 'ranged' ? 0.6 : 0)
     );
     const reliabilityScore = round2(
@@ -68,10 +74,14 @@ export const computeEnemyPowerProfile = (
         subtype,
         enemyType: entry.bestiary.stats.type,
         budgetCost: entry.bestiary.stats.cost,
+        combatRole: entry.contract.combatRole,
+        balanceTags: [...entry.contract.balanceTags],
+        armorBurdenTier: entry.contract.metabolicProfile.armorBurdenTier,
         threatProjectionScore,
         spikePressureScore,
         zoneDenialScore,
         reliabilityScore,
+        spawnedHazardPressureScore,
         intrinsicPowerScore
     };
 };

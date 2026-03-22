@@ -1,4 +1,4 @@
-import { getActiveTrinityProfileId, getTrinityProfile, type TrinityProfileId } from '../combat/trinity-profiles';
+import { TRINITY_PROFILE_SET_VERSION, getTrinityProfile } from '../combat/trinity-profiles';
 import type { TrinityStats } from '../combat/trinity-resolver';
 import { DEFAULT_LOADOUTS } from '../loadout';
 import type { WeightClass } from '../../types';
@@ -127,9 +127,9 @@ export const computeUnitPowerProfile = (
 
 export const computeAllPlayerUnitPowerProfiles = (
     skillProfilesById: Record<string, SkillPowerProfile> = computeSkillPowerProfileMap(),
-    trinityProfileId: TrinityProfileId | string = getActiveTrinityProfileId()
+    _trinityProfileId: string = TRINITY_PROFILE_SET_VERSION
 ): UnitPowerProfile[] => {
-    const profile = getTrinityProfile(trinityProfileId);
+    const profile = getTrinityProfile();
     return Object.values(DEFAULT_LOADOUTS)
         .map(loadout => {
             const trinity = profile.archetype[loadout.id] || profile.default;

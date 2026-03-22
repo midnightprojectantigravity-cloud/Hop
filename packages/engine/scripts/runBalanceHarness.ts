@@ -1,11 +1,7 @@
 import { runBatch, summarizeBatch } from '../src/systems/evaluation/balance-harness';
 import type { ArchetypeLoadoutId } from '../src/systems/evaluation/balance-harness';
 import { buildUpaEntitySnapshot } from './lib/upaEntitySnapshot';
-import { getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
-
-if (!process.env.HOP_TRINITY_PROFILE) {
-    process.env.HOP_TRINITY_PROFILE = 'live';
-}
+import { TRINITY_PROFILE_SET_VERSION } from '../src/systems/combat/trinity-profiles';
 
 const count = Number(process.argv[2] || 20);
 const maxTurns = Number(process.argv[3] || 80);
@@ -19,6 +15,6 @@ const heuristicResults = runBatch(seeds, 'heuristic', maxTurns, loadoutId, polic
 const randomSummary = summarizeBatch(randomResults, 'random', loadoutId);
 const heuristicSummary = summarizeBatch(heuristicResults, 'heuristic', loadoutId);
 const entitySnapshot = buildUpaEntitySnapshot(loadoutId);
-const trinityProfile = getActiveTrinityProfileId();
+const trinityProfile = TRINITY_PROFILE_SET_VERSION;
 
 console.log(JSON.stringify({ loadoutId, policyProfileId, trinityProfile, entitySnapshot, randomSummary, heuristicSummary }, null, 2));

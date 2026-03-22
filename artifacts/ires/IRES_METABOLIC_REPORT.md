@@ -23,8 +23,8 @@ Passive recovery and passive exhaustion bleed happen every beat. WAIT adds extra
 
 ## Recovery Model
 
-- passive Spark recovery base: 20
-- passive Mana recovery base: 2
+- passive Spark recovery base: 21
+- passive Mana recovery base: 3
 - passive base Exhaustion bleed: 15
 - WAIT Spark bonus: 30
 - WAIT Exhaustion bonus: 40
@@ -33,35 +33,37 @@ Passive recovery and passive exhaustion bleed happen every beat. WAIT adds extra
 
 | Target | Passed | Score | Details |
 | --- | --- | ---: | --- |
-| balanced_mid_standard_basic_move_x1 | yes | 0.000 | avg=1 rest=12 |
-| balanced_mid_standard_basic_move_x2 | yes | 0.650 | avg=1.2 rest=2 |
-| balanced_mid_standard_basic_move_x3 | yes | 0.000 | burn=1 avg=1.8 |
-| balanced_mid_standard_basic_move_then_standard_attack | yes | 0.500 | avg=1.2 rest=3 |
-| mind_mid_heavy_battleline | yes | 0.000 | failure=exhaustion moveShare=1 |
-| instinct_mid_light_move_burst | yes | 1.000 | interval=3 avg=1.2 |
+| standard_human_standard_move_attack_loop | yes | 1.000 | avg=1.2 rest=3 failure=exhaustion |
+| bruiser_frontline_heavy_standard_move_attack_loop | yes | 1.050 | avg=1.2 rest=2 moveSpark=75 |
+| skirmisher_light_ranged_attack_spacing_loop | yes | 0.200 | avg=0.8 rest=3 failure=exhaustion |
+| caster_mind_caster_signature_loop | yes | 0.500 | rest=3 manaSpent=32 failure=exhaustion |
+| bomber_setup_loop_native_reserve | yes | 0.000 | avg=1.2 rest=3 failure=exhaustion |
+| companion_falcon_support_loop | yes | 1.600 | avg=1.2 rest=2 failure=exhaustion |
+| companion_skeleton_attrition_loop | yes | 1.300 | avg=0.4 rest=1 failure=exhaustion |
+| standard_human_movement_gradient | yes | 0.000 | walkRest=12 runRest=2 sprintBurn=1 |
 | travel_move_relief | yes | 0.000 | travel=1 battle=1 |
 
 ## Walking / Running / Sprinting
 
 | Scenario | Avg Events / Beat (5) | First Rest | Peak EX (5) | First Burn |
 | --- | ---: | ---: | ---: | ---: |
-| Balanced Mid Standard / BASIC_MOVE x1 | 1.000 | 12 | 30.000 | - |
-| Balanced Mid Standard / BASIC_MOVE x2 | 1.200 | 2 | 51.000 | - |
-| Balanced Mid Standard / BASIC_MOVE x3 | 1.800 | 2 | 92.000 | 1 |
+| Standard Human Standard / BASIC_MOVE x1 | 1.000 | 12 | 30.000 | - |
+| Standard Human Standard / BASIC_MOVE x2 | 1.200 | 2 | 51.000 | - |
+| Standard Human Standard / BASIC_MOVE x3 | 1.800 | 2 | 92.000 | 1 |
 
 ## Body Vs Instinct
 
 | Scenario | Avg Events / Beat (5) | First Rest | Peak EX (5) | First Burn |
 | --- | ---: | ---: | ---: | ---: |
-| Body Mid Standard / BASIC_MOVE x2 | 1.200 | 2 | 51.000 | - |
-| Instinct Mid Standard / BASIC_MOVE x2 | 1.200 | 3 | 77.000 | 2 |
+| Bruiser Frontline Standard / BASIC_MOVE x2 | 0.800 | 2 | 84.000 | 1 |
+| Skirmisher Light Standard / BASIC_MOVE x2 | 0.800 | 2 | 72.000 | 1 |
 
 ## Mind Vs Instinct
 
 | Scenario | Avg Events / Beat (5) | First Rest | Peak EX (5) | First Burn |
 | --- | ---: | ---: | ---: | ---: |
-| Mind Mid Standard / BASIC_MOVE Then Standard Cast | 1.200 | 3 | 92.000 | 4 |
-| Instinct Mid Standard / BASIC_MOVE Then Standard Cast | 1.200 | 3 | 92.000 | 2 |
+| Caster Mind Standard / Caster Signature Loop | 1.200 | 3 | 92.000 | 5 |
+| Skirmisher Light Standard / Ranged Attack Spacing Loop | 0.400 | 1 | 10.000 | - |
 
 ## Heavy Mind Move+Cast
 
@@ -73,25 +75,25 @@ Passive recovery and passive exhaustion bleed happen every beat. WAIT adds extra
 
 | Scenario | Avg Events / Beat (5) | First Rest | Peak EX (5) | First Burn |
 | --- | ---: | ---: | ---: | ---: |
-| Balanced Mid Light / BASIC_MOVE Then Standard Attack | 1.200 | 3 | 92.000 | 2 |
-| Balanced Mid Standard / BASIC_MOVE Then Standard Attack | 1.200 | 3 | 92.000 | 4 |
-| Balanced Mid Heavy / BASIC_MOVE Then Standard Attack | 1.200 | 2 | 92.000 | 1 |
+| Standard Human Light / Standard Move + Attack | 1.200 | 3 | 92.000 | 4 |
+| Standard Human Standard / Standard Move + Attack | 1.200 | 3 | 92.000 | 4 |
+| Standard Human Heavy / Standard Move + Attack | 1.200 | 3 | 92.000 | 4 |
 
 ## Travel Vs Battle Movement
 
 | Scenario | Avg Events / Beat (5) | First Rest | Peak EX (5) | First Burn |
 | --- | ---: | ---: | ---: | ---: |
-| Balanced Mid Standard / Move Only Battle | 1.000 | 12 | 30.000 | - |
-| Balanced Mid Standard / Move Only Travel | 1.000 | - | 0.000 | - |
+| Standard Human Standard / Move Only Battle | 1.000 | 12 | 30.000 | - |
+| Standard Human Standard / Move Only Travel | 1.000 | - | 0.000 | - |
 
 ## Sensitivity
 
 | Lever | Avg Events / Beat Delta | First Rest Delta | Peak EX Delta | Profiles |
 | --- | ---: | ---: | ---: | --- |
-| Walking Vs Running | 0.200 | -10.000 | 21.000 | balanced_mid_standard |
-| Running Vs Sprinting | 0.600 | 0.000 | 41.000 | balanced_mid_standard |
-| Body Vs Instinct Compression | 0.000 | 1.000 | 26.000 | body_mid_standard, instinct_mid_standard |
-| Weight Move+Attack Gradient | 0.000 | 1.000 | 0.000 | balanced_mid_light, balanced_mid_heavy |
+| Walking Vs Running | 0.200 | -10.000 | 21.000 | standard_human_standard |
+| Running Vs Sprinting | 0.600 | 0.000 | 41.000 | standard_human_standard |
+| Body Vs Instinct Compression | 0.000 | 0.000 | -12.000 | bruiser_frontline_standard, skirmisher_light_standard |
+| Weight Move+Attack Gradient | 0.000 | 0.000 | 0.000 | standard_human_light, standard_human_heavy |
 
 ## Recommended Next Candidate Changes
 

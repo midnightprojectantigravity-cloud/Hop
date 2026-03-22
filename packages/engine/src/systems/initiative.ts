@@ -19,6 +19,8 @@ import type { Actor, Point, GameState, InitiativeEntry, InitiativeQueue } from '
 import { getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
 import { extractTrinityStats, computeInitiativeBonus } from './combat/combat-calculator';
+import { calculateInitiativeScore } from './combat/initiative-formula';
+import { resolveCombatRuleset } from './combat/combat-ruleset';
 
 /** Default initiative values by actor type */
 export const DEFAULT_INITIATIVE = {
@@ -35,7 +37,7 @@ export const DEFAULT_INITIATIVE = {
  * Calculate initiative score for an actor.
  * Can be modified by status effects, equipment, etc.
  */
-export const getInitiativeScore = (actor: Actor): number => {
+export const getInitiativeScore = (actor: Actor, ruleset?: GameState['ruleset']): number => {
     // Base initiative from actor speed or default subtype
     let initiative = actor.speed;
 
@@ -52,8 +54,18 @@ export const getInitiativeScore = (actor: Actor): number => {
         initiative -= 100; // Stunned actors act last (or not at all)
     }
 
-    // Instinct lever: deterministic initiative bonus from canonical trinity stats.
-    initiative += computeInitiativeBonus(extractTrinityStats(actor));
+    const combatVersion = resolveCombatRuleset(ruleset);
+    if (combatVersion === 'trinity_ratio_v2') {
+        const trinity = extractTrinityStats(actor);
+        initiative = calculateInitiativeScore({
+            instinct: trinity.instinct,
+            mind: trinity.mind,
+            speedModifier: initiative
+        });
+    } else {
+        // Instinct lever: deterministic initiative bonus from canonical trinity stats.
+        initiative += computeInitiativeBonus(extractTrinityStats(actor));
+    }
 
     // Could add: speed boosts, slow debuffs, equipment bonuses, etc.
 
@@ -70,7 +82,7 @@ export const buildInitiativeQueue = (state: GameState): InitiativeQueue => {
     // Add player
     entries.push({
         actorId: state.player.id,
-        initiative: getInitiativeScore(state.player),
+        initiative: getInitiativeScore(state.player, state.ruleset),
         hasActed: false,
         turnStartPosition: undefined, // Will be set when their turn starts
     });
@@ -79,7 +91,7 @@ export const buildInitiativeQueue = (state: GameState): InitiativeQueue => {
     for (const enemy of state.enemies) {
         entries.push({
             actorId: enemy.id,
-            initiative: getInitiativeScore(enemy),
+            initiative: getInitiativeScore(enemy, state.ruleset),
             hasActed: false,
             turnStartPosition: undefined,
         });

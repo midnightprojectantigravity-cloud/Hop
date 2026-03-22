@@ -32,6 +32,21 @@ describe('board tile intent validation', () => {
     expect(allowed).toBe(true);
   });
 
+  it('blocks fallback-neighbor movement when strict target/path parity is enabled', () => {
+    const allowed = canDispatchBoardTileIntent({
+      tile: hex(1, 0, -1),
+      playerPos: hex(0, 0, 0),
+      selectedSkillId: null,
+      selectedSkillTargetSet: new Set(),
+      defaultPassiveSkillByTargetKey: new Map(),
+      hasPrimaryMovementSkills: false,
+      fallbackNeighborSet: new Set(['1,0']),
+      strictTargetPathParityV1Enabled: true
+    });
+
+    expect(allowed).toBe(false);
+  });
+
   it('switches to selected-skill validation when a skill is armed', () => {
     const blocked = canDispatchBoardTileIntent({
       tile: hex(1, 0, -1),

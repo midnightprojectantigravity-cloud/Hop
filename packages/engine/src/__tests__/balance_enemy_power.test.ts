@@ -8,10 +8,19 @@ describe('balance enemy power', () => {
 
         expect(sentinel.intrinsicPowerScore).toBeGreaterThan(footman.intrinsicPowerScore);
         expect(sentinel.threatProjectionScore).toBeGreaterThan(footman.threatProjectionScore);
+        expect(sentinel.combatRole).toBe('boss_anchor');
     });
 
     it('builds the full enemy roster profile list', () => {
         const profiles = computeAllEnemyPowerProfiles();
         expect(profiles.length).toBeGreaterThan(0);
+    });
+
+    it('accounts for bomber spawned-hazard pressure in roster scoring', () => {
+        const bomber = computeEnemyPowerProfile('bomber');
+        const archer = computeEnemyPowerProfile('archer');
+
+        expect(bomber.spawnedHazardPressureScore).toBeGreaterThan(0);
+        expect(bomber.zoneDenialScore).toBeGreaterThan(archer.zoneDenialScore);
     });
 });

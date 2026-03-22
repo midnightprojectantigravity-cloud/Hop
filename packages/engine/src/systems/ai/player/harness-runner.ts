@@ -75,7 +75,7 @@ export const runHarnessPlayerLoop = ({
             const prevTurnsSpent = state.turnsSpent || 0;
             const selection = selectHarnessPlayerAction(state, policy, profile, `${seed}:${policy}`, decisionCounter++);
             const action = selection.action;
-            recordPlayerActionSelectionTelemetry(telemetry, action, selection.strategicIntent);
+            recordPlayerActionSelectionTelemetry(telemetry, state, action, selection.strategicIntent);
 
             state = gameReducer(state, action);
             state = resolvePending(state);

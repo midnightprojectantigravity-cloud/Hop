@@ -50,6 +50,7 @@ import {
     initializeGenerationForState
 } from './generation';
 import { hydrateGameStateIres, resolveIresRuleset, withResolvedIresRuleset } from './systems/ires';
+import { mergeCombatRulesetOverride, resolveCombatRuleset } from './systems/combat/combat-ruleset';
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
@@ -117,10 +118,13 @@ const mergeRunRulesetOverrides = (
         }
         : undefined;
     return {
-        ...(base || {}),
+        ...mergeCombatRulesetOverride(base, overrides),
         ...(nextAilments ? { ailments: nextAilments } : {}),
         ...(nextAttachments ? { attachments: nextAttachments } : {}),
         ...(nextCapabilities ? { capabilities: nextCapabilities } : {}),
+        combat: {
+            version: overrides.combat?.version || resolveCombatRuleset(base)
+        },
         ires: {
             ...baseIres,
             ...(overrides.ires || {}),
@@ -134,6 +138,12 @@ const finalizeArtifactAppliedState = (state: GameState): GameState => {
         ...state,
         ruleset: resolveAcaeRuleset(state)
     });
+    withRuleset.ruleset = {
+        ...(withRuleset.ruleset || {}),
+        combat: {
+            version: resolveCombatRuleset(withRuleset)
+        }
+    };
     const hydrated = hydrateGameStateIres(withRuleset);
     const withInitiative = {
         ...hydrated,
@@ -480,6 +490,12 @@ export const generateInitialState = (
         ...tempState,
         ruleset: resolveAcaeRuleset(tempState)
     }).ruleset;
+    tempState.ruleset = {
+        ...(tempState.ruleset || {}),
+        combat: {
+            version: resolveCombatRuleset(tempState)
+        }
+    };
     if (loadout && !preservePlayer?.activeSkills) {
         const resolvedLoadout = applyLoadoutToPlayer(loadout, {
             capabilityPassivesEnabled: tempState.ruleset?.capabilities?.loadoutPassivesEnabled === true

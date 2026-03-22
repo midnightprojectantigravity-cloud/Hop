@@ -75,6 +75,7 @@ interface GameBoardProps {
     synapseDeltasByActorId?: Record<string, SynapseDeltaEntry>;
     onSynapseInspectEntity?: (actorId: string) => void;
     visualEchoesEnabled?: boolean;
+    strictTargetPathParityV1Enabled?: boolean;
 }
 
 const getHexPoints = (size: number): string => {
@@ -134,6 +135,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     synapseDeltasByActorId = {},
     onSynapseInspectEntity,
     visualEchoesEnabled = false,
+    strictTargetPathParityV1Enabled = false,
 }) => {
     const [juiceBusy, setJuiceBusy] = useState(false);
     const [decals, setDecals] = useState<BoardDecal[]>([]);
@@ -222,6 +224,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         playerPos,
         selectedSkillId,
         showMovementRange,
+        strictTargetPathParityV1Enabled,
     });
 
     const {
@@ -314,6 +317,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 || (
                     showMovementRange
                     && !selectedSkillId
+                    && !strictTargetPathParityV1Enabled
                     && !hasPrimaryMovementSkills
                     && fallbackNeighborSet.has(tileKey)
                     && !isWall
@@ -359,6 +363,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         showMovementRange,
         shrineKey,
         stairsKey,
+        strictTargetPathParityV1Enabled,
         tileVisualFlags,
     ]);
     const visibleDepthSortedSprites = useMemo(
@@ -426,6 +431,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             defaultPassiveSkillByTargetKey,
             hasPrimaryMovementSkills,
             fallbackNeighborSet,
+            strictTargetPathParityV1Enabled,
         }),
         zoomMode: cameraState.zoomMode,
         setHoveredTile: hoveredTileStore.setHoveredTile,
@@ -541,6 +547,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                             movementSkillByTargetKey={movementSkillByTargetKey}
                             hasPrimaryMovementSkills={hasPrimaryMovementSkills}
                             fallbackNeighborSet={fallbackNeighborSet}
+                            strictTargetPathParityV1Enabled={strictTargetPathParityV1Enabled}
                             decals={visibleDecals}
                             depthSortedSprites={visibleDepthSortedSprites}
                             boardProps={visibleBoardProps}

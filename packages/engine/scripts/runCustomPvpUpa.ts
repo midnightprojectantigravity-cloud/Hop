@@ -2,11 +2,7 @@ import type { BotPolicy } from '../src/systems/evaluation/balance-harness';
 import { runPvpBatch, summarizePvpBatch } from '../src/systems/evaluation/pvp-harness';
 import { DEFAULT_LOADOUTS, type Loadout } from '../src/systems/loadout';
 import { buildUpaEntitySnapshot } from './lib/upaEntitySnapshot';
-import { TRINITY_PROFILES, getActiveTrinityProfileId } from '../src/systems/combat/trinity-profiles';
-
-if (!process.env.HOP_TRINITY_PROFILE) {
-    process.env.HOP_TRINITY_PROFILE = 'live';
-}
+import { LIVE_TRINITY_PROFILE, TRINITY_PROFILE_SET_VERSION } from '../src/systems/combat/trinity-profiles';
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const computePvpUpa = (winRate: number, drawRate: number, avgRounds: number, maxRounds: number): number => {
@@ -40,8 +36,8 @@ const rightTrinityRaw = process.argv[11];
 const leftTrinity = parseTrinity(leftTrinityRaw);
 const rightTrinity = parseTrinity(rightTrinityRaw);
 
-if (leftTrinity) TRINITY_PROFILES.live.archetype[leftArchetype] = leftTrinity;
-if (rightTrinity) TRINITY_PROFILES.live.archetype[rightArchetype] = rightTrinity;
+if (leftTrinity) LIVE_TRINITY_PROFILE.archetype[leftArchetype] = leftTrinity;
+if (rightTrinity) LIVE_TRINITY_PROFILE.archetype[rightArchetype] = rightTrinity;
 
 const leftKey = 'CUSTOM_LEFT';
 const rightKey = 'CUSTOM_RIGHT';
@@ -75,7 +71,7 @@ const runs = runPvpBatch(
     maxRounds
 );
 const summary = summarizePvpBatch(runs);
-const trinityProfile = getActiveTrinityProfileId();
+const trinityProfile = TRINITY_PROFILE_SET_VERSION;
 
 const leftEntitySnapshot = buildUpaEntitySnapshot(leftKey as any);
 const rightEntitySnapshot = buildUpaEntitySnapshot(rightKey as any);
