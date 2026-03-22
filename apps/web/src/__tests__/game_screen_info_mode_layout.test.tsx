@@ -65,25 +65,36 @@ const buildProps = (isSynapseMode: boolean, mobileDockV2Enabled = true) => {
 };
 
 describe('game screen info mode layout', () => {
-  it('shows bottom actions and skills tray when info mode is off', () => {
+  it('shows the streamlined mobile top and bottom HUD when info mode is off', () => {
     const html = renderToStaticMarkup(<GameScreen {...buildProps(false)} />);
 
     expect(html).toContain('Toggle vitals details');
+    expect(html).toContain('Floor');
+    expect(html).toContain('HP');
+    expect(html).toContain('Spark');
+    expect(html).toContain('MP');
+    expect(html).toContain('Info');
+    expect(html).toContain('Rest');
+    expect(html).toContain('Hub');
+    expect(html).toContain('Override');
+    expect(html).toContain('Skills');
+    expect(html).toContain('Clear');
+  });
+
+  it('keeps legacy controls on the non-v2 mobile dock', () => {
+    const html = renderToStaticMarkup(<GameScreen {...buildProps(false, false)} />);
+
     expect(html).toContain('Rest');
     expect(html).toContain('Hub');
     expect(html).toContain('Reset');
-    expect(html).toContain('Skills');
     expect(html).toContain('Travel Mode');
-    expect(html).toContain('Tap glyph for detail');
-    expect(html).toContain('Protected');
-    expect(html).toContain('Arm Overdrive');
   });
 
-  it('shows the compact vitals glyph in mobile dock v2 without the old alert chip', () => {
+  it('shows the compact top rail in mobile dock v2 without the old alert chip', () => {
     const html = renderToStaticMarkup(<GameScreen {...buildProps(false, true)} />);
 
     expect(html).toContain('Toggle vitals details');
-    expect(html).toContain('Alert Off');
+    expect(html).not.toContain('Alert Off');
     expect(html).toContain('Spark');
     expect(html).toContain('HP');
     expect(html).toContain('MP');

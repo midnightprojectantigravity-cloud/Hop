@@ -34,7 +34,7 @@ import {
 import { WorldgenBoardOverlay } from './WorldgenBoardOverlay';
 import { WorldgenDebugPanel } from './WorldgenDebugPanel';
 import { UiTriResourceHeader, getWaitDirectiveLabel } from '../components/ui/ui-status-panel-sections';
-import { UiVitalsGlyph } from '../components/ui/ui-vitals-glyph';
+import { UiVitalsDetailCard } from '../components/ui/ui-vitals-detail-card';
 
 type MobileToast = {
   id: string;
@@ -174,6 +174,29 @@ const GuardedActionButton = ({ disabled, onConfirm, label, className, style }: G
   );
 };
 
+const MobileChevronButton = ({
+  expanded,
+  onClick,
+  label,
+  style
+}: {
+  expanded: boolean;
+  onClick: () => void;
+  label: string;
+  style?: React.CSSProperties;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    style={style}
+    aria-expanded={expanded}
+    aria-label={label}
+    className="inline-flex items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2.5 py-1 text-[var(--text-muted)] transition-colors active:bg-[var(--surface-panel-hover)]"
+  >
+    <span className="text-base leading-none">{expanded ? '^' : 'v'}</span>
+  </button>
+);
+
 export const resolveLayoutMode = (
   width: number,
   height: number
@@ -275,6 +298,8 @@ export const GameScreen = ({
   }, []);
   const [intelMode, setIntelMode] = React.useState<UiInformationRevealMode>(() => getUiInformationRevealMode());
   const [showVitalsDetail, setShowVitalsDetail] = React.useState(false);
+  const [mobileTopRailExpanded, setMobileTopRailExpanded] = React.useState(false);
+  const [mobileBottomDockExpanded, setMobileBottomDockExpanded] = React.useState(false);
   const [viewportSize, setViewportSize] = React.useState(() => {
     if (typeof window === 'undefined') return { width: 390, height: 844 };
     return { width: window.innerWidth, height: window.innerHeight };
@@ -581,8 +606,8 @@ export const GameScreen = ({
         )}
         {mobileDockV2Enabled && (
           <div className="px-3 pb-3 pt-2.5">
-            <div className="grid grid-cols-[minmax(4.75rem,1fr)_auto_minmax(4rem,1fr)] items-start gap-2">
-              <div className="min-w-0 self-center text-left">
+            <div className="grid grid-cols-[minmax(4.75rem,1fr)_minmax(0,1.3fr)_auto] items-center gap-2">
+              <div className="min-w-0 text-left">
                 <div className="uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold" style={{ fontSize: 'var(--hud-label-font)' }}>Floor</div>
                 <div className="font-black text-[var(--text-primary)] leading-none" style={{ fontSize: 'var(--hud-value-font)' }}>
                   {gameState.floor}
@@ -597,18 +622,37 @@ export const GameScreen = ({
                   </div>
                 )}
               </div>
-              <div className="relative flex justify-center">
-                <UiVitalsGlyph
-                  gameState={gameState}
-                  layoutMode={layoutMode}
-                  showDetail={showVitalsDetail}
-                  onToggleDetail={() => setShowVitalsDetail((value) => !value)}
-                  resourcePreview={resourcePreview}
-                  turnFlowMode={turnFlowMode}
-                  overdriveArmed={overdriveArmed}
-                />
+              <div className="min-w-0 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowVitalsDetail((value) => !value)}
+                  aria-expanded={showVitalsDetail}
+                  aria-label="Toggle vitals details"
+                  className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2.5 py-2 active:bg-[var(--surface-panel-hover)]"
+                >
+                  <div className="grid grid-cols-3 gap-1.5 text-center">
+                    <div className="min-w-0">
+                      <div className="uppercase tracking-[0.18em] text-[var(--text-muted)] font-black" style={{ fontSize: 'var(--hud-label-font)' }}>HP</div>
+                      <div className="font-black text-[var(--accent-danger)] leading-none" style={{ fontSize: 'calc(var(--hud-value-font) * 0.86)' }}>
+                        {gameState.player.hp}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="uppercase tracking-[0.18em] text-[var(--text-muted)] font-black" style={{ fontSize: 'var(--hud-label-font)' }}>Spark</div>
+                      <div className="font-black text-amber-500 leading-none" style={{ fontSize: 'calc(var(--hud-value-font) * 0.86)' }}>
+                        {Math.round(gameState.player.ires?.spark || 0)}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="uppercase tracking-[0.18em] text-[var(--text-muted)] font-black" style={{ fontSize: 'var(--hud-label-font)' }}>MP</div>
+                      <div className="font-black text-cyan-400 leading-none" style={{ fontSize: 'calc(var(--hud-value-font) * 0.86)' }}>
+                        {Math.round(gameState.player.ires?.mana || 0)}
+                      </div>
+                    </div>
+                  </div>
+                </button>
               </div>
-              <div className="flex justify-end pt-2">
+              <div className="flex items-center justify-end gap-1.5">
                 <button
                   onClick={onToggleSynapseMode}
                   style={hudActionButtonStyle}
@@ -619,64 +663,80 @@ export const GameScreen = ({
                 >
                   Info
                 </button>
+                <MobileChevronButton
+                  expanded={mobileTopRailExpanded}
+                  onClick={() => setMobileTopRailExpanded((value) => !value)}
+                  label={mobileTopRailExpanded ? 'Collapse top HUD' : 'Expand top HUD'}
+                  style={hudActionButtonStyle}
+                />
               </div>
             </div>
 
-            <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-              <div
-                className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
-                style={{ fontSize: 'var(--hud-label-font)' }}
-              >
-                {waitLabel}: {isInputLocked ? 'Resolving' : 'Ready'}
+            {showVitalsDetail ? (
+              <div className="mt-2.5">
+                <UiVitalsDetailCard
+                  gameState={gameState}
+                  resourcePreview={resourcePreview}
+                  compact
+                  turnFlowMode={turnFlowMode}
+                  overdriveArmed={overdriveArmed}
+                />
               </div>
-              <div
-                className={`rounded-lg border px-2 py-1.5 font-black uppercase tracking-[0.16em] ${Math.abs(sigmaValue) >= 2 ? 'border-[var(--accent-danger)] text-[var(--accent-danger)] bg-[var(--accent-danger-soft)]' : 'border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--surface-panel-muted)]'}`}
-                style={{ fontSize: 'var(--hud-label-font)' }}
-              >
-                Sigma {sigmaValue >= 0 ? '+' : ''}{sigmaValue.toFixed(1)}
-              </div>
-            </div>
+            ) : null}
 
-            <div className="mt-2 flex items-center justify-between gap-2 px-0.5">
-              <div className="font-black uppercase tracking-[0.18em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
-                Tactical HUD
-              </div>
-              <div className="font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
-                Tap glyph for detail
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span
-                  className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
-                  style={{ fontSize: 'var(--hud-label-font)' }}
-                >
-                  {turnFlowLabel}
-                </span>
-                {turnFlowMode === 'protected_single' ? (
+            {mobileTopRailExpanded ? (
+              <>
+                <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+                  <div
+                    className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
+                    style={{ fontSize: 'var(--hud-label-font)' }}
+                  >
+                    {waitLabel}: {isInputLocked ? 'Resolving' : 'Ready'}
+                  </div>
+                  <div
+                    className={`rounded-lg border px-2 py-1.5 font-black uppercase tracking-[0.16em] ${Math.abs(sigmaValue) >= 2 ? 'border-[var(--accent-danger)] text-[var(--accent-danger)] bg-[var(--accent-danger-soft)]' : 'border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--surface-panel-muted)]'}`}
+                    style={{ fontSize: 'var(--hud-label-font)' }}
+                  >
+                    Sigma {sigmaValue >= 0 ? '+' : ''}{sigmaValue.toFixed(1)}
+                  </div>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   <span
                     className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
                     style={{ fontSize: 'var(--hud-label-font)' }}
                   >
-                    Auto-End: 1
+                    {turnFlowLabel}
                   </span>
+                  {turnFlowMode === 'protected_single' ? (
+                    <span
+                      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
+                      style={{ fontSize: 'var(--hud-label-font)' }}
+                    >
+                      Auto-End: 1
+                    </span>
+                  ) : null}
+                  <EnemyAlertChip alerted={enemyAlertActive} />
+                </div>
+
+                {turnFlowMode === 'protected_single' ? (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={onToggleOverdrive}
+                      style={hudActionButtonStyle}
+                      className={`w-full rounded-lg border font-black uppercase tracking-[0.16em] ${
+                        overdriveArmed
+                          ? 'bg-emerald-950/60 border-emerald-400/50 text-emerald-100'
+                          : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {overdriveButtonLabel}
+                    </button>
+                  </div>
                 ) : null}
-              </div>
-              {turnFlowMode === 'protected_single' ? (
-                <button
-                  type="button"
-                  onClick={onToggleOverdrive}
-                  style={hudActionButtonStyle}
-                  className={`px-3 rounded-lg border font-black uppercase tracking-[0.16em] ${
-                    overdriveArmed
-                      ? 'bg-emerald-950/60 border-emerald-400/50 text-emerald-100'
-                      : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-primary)]'
-                  }`}
-                >
-                  {overdriveButtonLabel}
-                </button>
-              ) : null}
-            </div>
+              </>
+            ) : null}
           </div>
         )}
       </div>
@@ -833,28 +893,6 @@ export const GameScreen = ({
           )}
           {!isSynapseMode && mobileDockV2Enabled && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <div className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
-                  Skills
-                </div>
-                <div className="font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
-                  Thumb Row
-                </div>
-              </div>
-              {turnFlowMode === 'protected_single' ? (
-                <button
-                  type="button"
-                  onClick={onToggleOverdrive}
-                  style={hudActionButtonStyle}
-                  className={`w-full rounded-lg border font-black uppercase tracking-widest ${
-                    overdriveArmed
-                      ? 'bg-emerald-950/60 border-emerald-400/50 text-emerald-100'
-                      : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-primary)]'
-                  }`}
-                >
-                  {overdriveButtonLabel}
-                </button>
-              ) : null}
               <div className="grid grid-cols-3 gap-1.5">
                 <button
                   disabled={isInputLocked}
@@ -875,16 +913,53 @@ export const GameScreen = ({
                   className="px-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] font-black uppercase tracking-widest text-[var(--text-primary)]"
                 />
                 <GuardedActionButton
-                  disabled={false}
-                  onConfirm={onReset}
-                  label="Reset"
+                  disabled={turnFlowMode !== 'protected_single'}
+                  onConfirm={onToggleOverdrive}
+                  label={overdriveArmed ? 'Override Armed' : 'Override'}
                   style={hudActionButtonStyle}
-                  className="px-2 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] font-black uppercase tracking-widest text-[var(--accent-danger)]"
+                  className={`px-2 rounded-lg border font-black uppercase tracking-widest ${
+                    overdriveArmed
+                      ? 'border-emerald-400/50 bg-emerald-950/60 text-emerald-100'
+                      : 'border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[var(--text-primary)]'
+                  }`}
                 />
               </div>
+              <div className="grid grid-cols-[1fr_auto] gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setMobileBottomDockExpanded((value) => !value)}
+                  style={hudActionButtonStyle}
+                  aria-expanded={mobileBottomDockExpanded}
+                  className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
+                >
+                  <span>{selectedSkillId ? `Skill: ${selectedSkillId}` : 'Skills'}</span>
+                  <span className="text-base leading-none">{mobileBottomDockExpanded ? '^' : 'v'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSelectSkill(null)}
+                  style={hudActionButtonStyle}
+                  className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
+                >
+                  Clear
+                </button>
+              </div>
+              {mobileBottomDockExpanded ? (
+                <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-2">
+                  <SkillTray
+                    skills={gameState.player.activeSkills || []}
+                    selectedSkillId={selectedSkillId}
+                    onSelectSkill={onSelectSkill}
+                    hasSpear={gameState.hasSpear}
+                    gameState={gameState}
+                    inputLocked={isInputLocked}
+                    compact
+                  />
+                </div>
+              ) : null}
             </div>
           )}
-          {!isSynapseMode && (
+          {!isSynapseMode && !mobileDockV2Enabled && (
             <SkillTray
               skills={gameState.player.activeSkills || []}
               selectedSkillId={selectedSkillId}
@@ -972,3 +1047,4 @@ export const GameScreen = ({
     </div>
   );
 };
+
