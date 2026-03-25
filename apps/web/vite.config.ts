@@ -68,8 +68,6 @@ export default defineConfig(({ mode }) => ({
 
           if (normalized.includes('/packages/engine/src/data/')) return 'engine-data';
           if (normalized.includes('/packages/engine/src/generation/')) return 'engine-generation';
-          if (normalized.includes('/packages/engine/src/generated/')) return 'engine-generated';
-
           // Keep engine runtime in a single chunk to avoid cross-chunk ESM TDZ issues
           // from circular imports between engine core/systems modules.
           if (normalized.includes('/packages/engine/src/')) return 'engine';
