@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createHex, generateInitialState, recomputeVisibility } from '@hop/engine';
+import { DEFAULT_LOADOUTS } from '../../../../packages/engine/src/systems/loadout';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { SkillTray } from '../components/SkillTray';
 
@@ -17,6 +18,8 @@ describe('SkillTray', () => {
     );
 
     expect(html).toContain('Travel');
+    expect(html).toMatch(/\b(?:\d+ SP|\d+ MP|Burn \d+ HP)\b/);
+    expect(html).not.toMatch(/\+\d+\sEX|\+0\sEX/);
   });
 
   it('hides the Travel pill once enemy alert is active', () => {
@@ -44,5 +47,27 @@ describe('SkillTray', () => {
     );
 
     expect(html).not.toContain('Travel');
+  });
+
+  it('shows explicit no-target feedback for Necromancer opening skills', () => {
+    const necromancer = recomputeVisibility(
+      generateInitialState(1, 'skill-tray-necro-start', 'skill-tray-necro-start', undefined, DEFAULT_LOADOUTS.NECROMANCER)
+    );
+
+    const html = renderToStaticMarkup(
+      <SkillTray
+        skills={necromancer.player.activeSkills || []}
+        selectedSkillId={null}
+        onSelectSkill={vi.fn()}
+        hasSpear={necromancer.hasSpear}
+        gameState={necromancer}
+        compact
+      />
+    );
+
+    expect(html).toContain('Corpse Explosion');
+    expect(html).toContain('Raise Dead');
+    expect(html).toContain('Soul Swap');
+    expect(html.match(/No Target/g)?.length).toBe(3);
   });
 });

@@ -12,6 +12,7 @@ export interface InteractionTileModel {
   isStairs: boolean;
   isLava: boolean;
   isFire: boolean;
+  isVoid: boolean;
   isShrine: boolean;
   isWall: boolean;
   assetHref?: string;
@@ -38,6 +39,7 @@ const InteractionTilesLayerBase: React.FC<InteractionTilesLayerProps> = ({
           isStairs={tile.isStairs}
           isLava={tile.isLava}
           isFire={tile.isFire}
+          isVoid={tile.isVoid}
           isShrine={tile.isShrine}
           isWall={tile.isWall}
           assetHref={tile.assetHref}

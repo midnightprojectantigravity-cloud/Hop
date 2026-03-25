@@ -1,32 +1,36 @@
 import type { GameState, SkillDefinition, SkillMetabolicBandProfile, SkillResourceProfile } from '../../types';
 import type { SkillID } from '../../types/registry';
 import { DEFAULT_IRES_METABOLIC_CONFIG } from './metabolic-config';
-import type { IresMetabolicConfig } from './metabolic-types';
+import type { IresMetabolicConfig, MetabolicActionBandId } from './metabolic-types';
 
 const buildLegacyProfile = (
     primaryResource: SkillResourceProfile['primaryResource'],
     primaryCost: number,
     baseStrain: number,
+    sparkWalkScalar: number,
+    manaCost: number,
     countsAsMovement: boolean,
     countsAsAction: boolean
 ): SkillResourceProfile => ({
     primaryResource,
     primaryCost,
     baseStrain,
+    sparkWalkScalar,
+    manaCost,
     countsAsMovement,
     countsAsAction,
     profileSource: 'legacy'
 });
 
-const PROFILE_NONE = buildLegacyProfile('none', 0, 0, false, false);
-const PROFILE_SPARK_MOVE = buildLegacyProfile('spark', 20, 10, true, false);
-const PROFILE_SPARK_ATTACK = buildLegacyProfile('spark', 30, 10, false, true);
-const PROFILE_SPARK_HEAVY_UTILITY = buildLegacyProfile('spark', 30, 15, false, true);
-const PROFILE_SPARK_HYBRID_MOVE = buildLegacyProfile('spark', 30, 15, true, true);
-const PROFILE_MANA_STANDARD = buildLegacyProfile('mana', 5, 5, false, true);
-const PROFILE_MANA_MOVE = buildLegacyProfile('mana', 5, 5, true, false);
-const PROFILE_MANA_HEAVY = buildLegacyProfile('mana', 10, 15, false, true);
-const PROFILE_MANA_HEAVY_MOVE = buildLegacyProfile('mana', 10, 15, true, true);
+const PROFILE_NONE = buildLegacyProfile('none', 0, 0, 0, 0, false, false);
+const PROFILE_SPARK_MOVE = buildLegacyProfile('spark', 20, 10, 0, 0, true, false);
+const PROFILE_SPARK_ATTACK = buildLegacyProfile('spark', 30, 10, 0.5, 0, false, true);
+const PROFILE_SPARK_HEAVY_UTILITY = buildLegacyProfile('spark', 30, 15, 1, 0, false, true);
+const PROFILE_SPARK_HYBRID_MOVE = buildLegacyProfile('spark', 30, 15, 1, 0, true, true);
+const PROFILE_MANA_STANDARD = buildLegacyProfile('mana', 5, 5, 0.25, 5, false, true);
+const PROFILE_MANA_MOVE = buildLegacyProfile('mana', 5, 5, 0.25, 5, true, false);
+const PROFILE_MANA_HEAVY = buildLegacyProfile('mana', 10, 15, 1, 10, false, true);
+const PROFILE_MANA_HEAVY_MOVE = buildLegacyProfile('mana', 10, 15, 1, 10, true, true);
 
 const LEGACY_SKILL_PROFILE_ENTRIES: Array<[SkillID, SkillResourceProfile]> = [
     ['BASIC_AWARENESS', PROFILE_NONE],
@@ -341,6 +345,22 @@ export const SKILL_BAND_MAP = new Map<string, SkillMetabolicBandProfile>([
     }, ['companion_runtime'])]
 ]);
 
+const LIGHTER_BAND_BY_BAND: Record<MetabolicActionBandId, MetabolicActionBandId> = {
+    maintenance: 'maintenance',
+    light: 'maintenance',
+    standard: 'light',
+    heavy: 'standard',
+    redline: 'heavy'
+};
+
+const SPARK_WALK_SCALAR_BY_BAND: Record<MetabolicActionBandId, number> = {
+    maintenance: 0,
+    light: 0.25,
+    standard: 0.5,
+    heavy: 1,
+    redline: 1.5
+};
+
 const cloneSkillResourceProfile = (profile: SkillResourceProfile): SkillResourceProfile => ({ ...profile });
 
 const resolveDefaultTravelEligibility = (profile: Pick<SkillResourceProfile, 'countsAsMovement' | 'countsAsAction'>): boolean =>
@@ -371,6 +391,60 @@ const resolveBandPrimaryCost = (
     return 0;
 };
 
+const resolveBandSparkWalkBandId = (profile: SkillMetabolicBandProfile): MetabolicActionBandId | 'none' => {
+    if (profile.sparkWalkBandId) return profile.sparkWalkBandId;
+    if (profile.resourceMode === 'spark_only' || profile.resourceMode === 'hybrid') return profile.bandId;
+    if (profile.resourceMode === 'mana_only') return LIGHTER_BAND_BY_BAND[profile.bandId];
+    return 'none';
+};
+
+const resolveBandManaBandId = (profile: SkillMetabolicBandProfile): MetabolicActionBandId | 'none' => {
+    if (profile.manaBandId) return profile.manaBandId;
+    if (profile.resourceMode === 'mana_only' || profile.resourceMode === 'hybrid') return profile.bandId;
+    return 'none';
+};
+
+const resolveBandSparkWalkScalar = (
+    profile: SkillMetabolicBandProfile,
+    metabolicConfig: IresMetabolicConfig
+): number => {
+    const sparkBandId = resolveBandSparkWalkBandId(profile);
+    if (sparkBandId === 'none') return 0;
+
+    const baseScalar = SPARK_WALK_SCALAR_BY_BAND[sparkBandId] || 0;
+    const band = metabolicConfig.actionBands[sparkBandId];
+    const legacyOffsetScalar = band && profile.sparkCostOffset
+        ? profile.sparkCostOffset / Math.max(1, band.sparkCost)
+        : 0;
+    return Math.max(0, baseScalar + (profile.sparkWalkScalarOffset || 0) + legacyOffsetScalar);
+};
+
+const resolveBandManaCost = (
+    profile: SkillMetabolicBandProfile,
+    metabolicConfig: IresMetabolicConfig
+): number => {
+    const manaBandId = resolveBandManaBandId(profile);
+    if (manaBandId === 'none') return 0;
+    const band = metabolicConfig.actionBands[manaBandId];
+    return Math.max(0, (band?.manaCost || 0) + (profile.manaCostOffset || 0));
+};
+
+const deriveLegacySparkWalkScalar = (profile: SkillResourceProfile): number => {
+    if (typeof profile.sparkWalkScalar === 'number') {
+        return Math.max(0, profile.sparkWalkScalar);
+    }
+    if (profile.primaryResource === 'none') return 0;
+    if (profile.primaryResource === 'mana') {
+        if (profile.baseStrain >= 15) return 1;
+        if (profile.baseStrain >= 10) return 0.5;
+        return 0.25;
+    }
+    if (profile.countsAsMovement && !profile.countsAsAction) return 0;
+    if (profile.baseStrain >= 15) return 1;
+    if (profile.baseStrain >= 10) return 0.5;
+    return 0.25;
+};
+
 export const resolveLegacySkillResourceProfile = (skillId: string): SkillResourceProfile =>
     cloneSkillResourceProfile(LEGACY_SKILL_PROFILE_MAP.get(skillId) || PROFILE_NONE);
 
@@ -387,10 +461,14 @@ export const deriveSkillResourceProfileFromBand = (
     const primaryResource = resolveBandPrimaryResource(profile.resourceMode);
     const primaryCost = resolveBandPrimaryCost(profile, metabolicConfig);
     const baseStrain = Math.max(0, (band?.baseExhaustion || 0) + (profile.baseStrainOffset || 0));
+    const sparkWalkScalar = resolveBandSparkWalkScalar(profile, metabolicConfig);
+    const manaCost = resolveBandManaCost(profile, metabolicConfig);
     return {
         primaryResource,
         primaryCost,
         baseStrain,
+        sparkWalkScalar,
+        manaCost,
         countsAsMovement: profile.countsAsMovement,
         countsAsAction: profile.countsAsAction,
         redlineAllowed: profile.bandId === 'redline' ? true : undefined,
@@ -427,6 +505,8 @@ export const resolveRuntimeSkillResourceProfile = (
     const legacyProfile = skillDef?.resourceProfile || resolveLegacySkillResourceProfile(skillId);
     return {
         ...legacyProfile,
+        sparkWalkScalar: deriveLegacySparkWalkScalar(legacyProfile),
+        manaCost: legacyProfile.manaCost ?? (legacyProfile.primaryResource === 'mana' ? legacyProfile.primaryCost : 0),
         travelEligible: legacyProfile.travelEligible ?? resolveDefaultTravelEligibility(legacyProfile),
         profileSource: legacyProfile.profileSource || 'legacy'
     };

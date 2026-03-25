@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "tokens": {
+    "ui-parchment-slide": { "type": "oscillator", "waveform": "triangle", "frequency": 280, "durationMs": 70, "gain": 0.06 },
+    "ui-brass-clink": { "type": "oscillator", "waveform": "square", "frequency": 520, "durationMs": 60, "gain": 0.05 },
+    "ui-danger-drum": { "type": "oscillator", "waveform": "sawtooth", "frequency": 150, "durationMs": 120, "gain": 0.08 },
+    "ui-synapse-chime": { "type": "oscillator", "waveform": "sine", "frequency": 640, "durationMs": 90, "gain": 0.05 },
+    "ui-tap": { "type": "oscillator", "waveform": "triangle", "frequency": 420, "durationMs": 45, "gain": 0.04 },
+    "ui-confirm": { "type": "oscillator", "waveform": "triangle", "frequency": 600, "durationMs": 65, "gain": 0.05 },
+    "ui-cancel": { "type": "oscillator", "waveform": "sawtooth", "frequency": 240, "durationMs": 70, "gain": 0.05 },
+    "combat-hit-light": { "type": "oscillator", "waveform": "square", "frequency": 220, "durationMs": 55, "gain": 0.07 },
+    "combat-hit-heavy": { "type": "oscillator", "waveform": "sawtooth", "frequency": 170, "durationMs": 95, "gain": 0.09 },
+    "combat-receive": { "type": "oscillator", "waveform": "square", "frequency": 190, "durationMs": 75, "gain": 0.08 },
+    "combat-kill": { "type": "oscillator", "waveform": "triangle", "frequency": 720, "durationMs": 110, "gain": 0.06 },
+    "run-floor-transition": { "type": "oscillator", "waveform": "sine", "frequency": 360, "durationMs": 130, "gain": 0.05 },
+    "run-victory": { "type": "oscillator", "waveform": "triangle", "frequency": 760, "durationMs": 160, "gain": 0.07 },
+    "run-defeat": { "type": "oscillator", "waveform": "sawtooth", "frequency": 130, "durationMs": 180, "gain": 0.08 }
+  }
+}

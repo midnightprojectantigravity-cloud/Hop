@@ -5,6 +5,7 @@ export type TileVisualFlags = {
   isWall?: boolean;
   isLava?: boolean;
   isFire?: boolean;
+  isVoid?: boolean;
   isStairs?: boolean;
   isShrine?: boolean;
   theme?: string;
@@ -13,6 +14,7 @@ export type TileVisualFlags = {
 export const resolveTileAssetId = (flags: TileVisualFlags): string => {
   const biome = resolveBiomeColor(flags.theme);
   if (flags.isWall) return 'tile.catacombs.wall.01';
+  if (flags.isVoid) return 'tile.void.floor.01';
   if (flags.isLava) return BIOME_VISUALS[biome].hazardAssetId;
   if (flags.isFire) return 'tile.catacombs.fire.01';
   return BIOME_VISUALS[biome].floorAssetId;

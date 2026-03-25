@@ -1,10 +1,10 @@
 import { describe, test, expect } from 'vitest';
 import { SCENARIO_COLLECTIONS } from '../scenarios';
-import { ScenarioEngine } from '../skillTests';
+import { primeScenarioPlayerTurn, ScenarioEngine } from '../skillTests';
 import { generateInitialState } from '../logic';
-import { buildInitiativeQueue, isPlayerTurn } from '../systems/initiative';
 import { SpatialSystem } from '../systems/spatial-system';
 import { StrategyRegistry } from '../systems/ai/strategy-registry';
+import { recomputeVisibilityFromScratch } from '../systems/visibility';
 
 const SCENARIO_GRID_WIDTH = 9;
 const SCENARIO_GRID_HEIGHT = 11;
@@ -36,14 +36,8 @@ describe('ACAE Scenario Integration', () => {
             const engine = new ScenarioEngine(initialState);
             scenario.setup(engine);
             engine.state.occupancyMask = SpatialSystem.refreshOccupancyMask(engine.state);
-            engine.state.initiativeQueue = buildInitiativeQueue(engine.state);
-
-            let safety = 0;
-            while (safety < 100) {
-                if (isPlayerTurn(engine.state)) break;
-                engine.state = engine.dispatchSync({ type: 'ADVANCE_TURN' });
-                safety += 1;
-            }
+            engine.state = recomputeVisibilityFromScratch(engine.state);
+            engine.state = primeScenarioPlayerTurn(engine.state);
 
             scenario.run(engine);
             const passed = scenario.verify(engine.state, engine.logs, engine.events);
@@ -51,4 +45,3 @@ describe('ACAE Scenario Integration', () => {
         });
     });
 });
-

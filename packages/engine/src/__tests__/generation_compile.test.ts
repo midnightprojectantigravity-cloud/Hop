@@ -1,10 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { compileStandaloneFloor, createGenerationState } from '../generation';
+import { createHex, pointToKey } from '../hex';
+import { compileStandaloneFloor, createCompilerSession, createGenerationState } from '../generation';
 
 const summarizeTiles = (tiles: Map<string, { baseId: string }>) =>
     Array.from(tiles.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([key, tile]) => `${key}:${tile.baseId}`);
+
+const createSyntheticTile = (baseId: 'STONE' | 'WALL', position: ReturnType<typeof createHex>) => ({
+    baseId,
+    position,
+    traits: new Set(baseId === 'WALL' ? ['BLOCKS_MOVEMENT', 'BLOCKS_LOS'] : ['WALKABLE']),
+    effects: []
+});
+
+const getRuntimeSessionState = (session: ReturnType<typeof createCompilerSession>) =>
+    session.getState() as any;
+
+const advanceSessionToPass = (
+    session: ReturnType<typeof createCompilerSession>,
+    pass: string
+) => {
+    while (!session.isComplete() && getRuntimeSessionState(session).currentPass !== pass) {
+        session.step(1);
+    }
+    expect(getRuntimeSessionState(session).currentPass).toBe(pass);
+};
 
 describe('world compiler facade', () => {
     it('produces deterministic artifacts for the same floor seed', () => {
@@ -105,5 +126,126 @@ describe('world compiler facade', () => {
         expect(result.generationState.currentFloorSummary?.role).toBe('pressure_spike');
         expect(result.generationState.currentFloorSummary?.sceneSignature.motif).toBe('siege_breach');
         expect(result.generationState.currentFloorSummary?.moduleIds.some(id => id === 'inferno_reset_pocket')).toBe(false);
+    });
+
+    it('preserves hard-claim tiles when optional gaskets close over them', () => {
+        const session = createCompilerSession({
+            floor: 1,
+            seed: 'world-compiler-hard-claim-gasket'
+        });
+
+        advanceSessionToPass(session, 'realizeSceneEvidence');
+        const runtimeState = getRuntimeSessionState(session);
+        const gasketAnchor = createHex(6, 6);
+        const gasketPoint = createHex(7, 7);
+        const gasketKey = pointToKey(gasketPoint);
+
+        runtimeState.theme = 'inferno';
+        runtimeState.modulePlan = {
+            placements: [{
+                moduleId: 'inferno_watch_post',
+                slotId: 'watch_slot',
+                anchor: gasketAnchor,
+                footprintKeys: [],
+                onPath: false
+            }]
+        };
+        runtimeState.claims = [{
+            id: 'primary_slot:reset_lane',
+            kind: 'reset_access',
+            hardness: 'hard',
+            sourceModuleId: 'inferno_reset_pocket',
+            from: gasketPoint,
+            to: gasketPoint,
+            cells: [gasketPoint]
+        }];
+        runtimeState.realizedTiles = new Map([
+            [gasketKey, createSyntheticTile('STONE', gasketPoint)]
+        ]);
+
+        session.step(1);
+
+        const closedState = getRuntimeSessionState(session);
+        expect(closedState.currentPass).toBe('closeUnresolvedGaskets');
+        expect(closedState.realizedTiles?.get(gasketKey)?.baseId).toBe('STONE');
+    });
+
+    it('keeps environmental pressure off hard reset lanes', () => {
+        const session = createCompilerSession({
+            floor: 1,
+            seed: 'world-compiler-hard-claim-pressure'
+        });
+
+        advanceSessionToPass(session, 'buildVisualPathNetwork');
+        const runtimeState = getRuntimeSessionState(session);
+        const center = createHex(30, 30);
+        const centerKey = pointToKey(center);
+        const claimCells = [createHex(31, 30), createHex(30, 31)];
+        const claimKeys = claimCells.map(pointToKey);
+        const routedKeys = [
+            pointToKey(createHex(31, 29)),
+            pointToKey(createHex(30, 29)),
+            pointToKey(createHex(29, 30)),
+            pointToKey(createHex(29, 31))
+        ];
+
+        runtimeState.claims = [{
+            id: 'primary_slot:reset_lane',
+            kind: 'reset_access',
+            hardness: 'hard',
+            sourceModuleId: 'inferno_reset_pocket',
+            from: claimCells[0],
+            to: claimCells[1],
+            cells: claimCells
+        }];
+        runtimeState.realizedTiles = new Map([
+            [centerKey, createSyntheticTile('STONE', center)],
+            [claimKeys[0], createSyntheticTile('STONE', claimCells[0]!)],
+            [claimKeys[1], createSyntheticTile('STONE', claimCells[1]!)],
+            [routedKeys[0], createSyntheticTile('STONE', createHex(31, 29))],
+            [routedKeys[1], createSyntheticTile('STONE', createHex(30, 29))],
+            [routedKeys[2], createSyntheticTile('STONE', createHex(29, 30))],
+            [routedKeys[3], createSyntheticTile('STONE', createHex(29, 31))]
+        ]);
+        runtimeState.pathNetworkValue = {
+            landmarks: [],
+            tacticalTileKeys: routedKeys,
+            tacticalEdges: [],
+            visualTileKeys: [],
+            visualEdges: [],
+            segments: [{
+                id: 'primary-segment',
+                fromLandmarkId: 'start',
+                toLandmarkId: 'exit',
+                tileKeys: [centerKey],
+                edges: [],
+                kind: 'primary',
+                routeMembership: 'primary'
+            }],
+            routeCount: 1,
+            junctionTileKeys: [centerKey],
+            maxStraightRun: 1,
+            environmentalPressureClusters: []
+        };
+        runtimeState.intent = {
+            ...runtimeState.intent,
+            role: 'pressure_spike',
+            routeProfile: {
+                ...runtimeState.intent!.routeProfile,
+                obstacleClusterBudget: 1,
+                trapClusterBudget: 0,
+                maxStraightRun: 3,
+                saferRouteBias: 'none',
+                riskierRouteBias: 'none'
+            }
+        };
+
+        session.step(1);
+
+        const pressuredState = getRuntimeSessionState(session);
+        expect(pressuredState.currentPass).toBe('applyEnvironmentalPressure');
+        expect(pressuredState.realizedTiles?.get(claimKeys[0])?.baseId).toBe('STONE');
+        expect(pressuredState.realizedTiles?.get(claimKeys[1])?.baseId).toBe('STONE');
+        expect(pressuredState.pathNetworkValue?.environmentalPressureClusters).toHaveLength(0);
     });
 });

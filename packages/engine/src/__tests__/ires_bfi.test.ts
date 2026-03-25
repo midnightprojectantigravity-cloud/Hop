@@ -103,7 +103,7 @@ describe('IRES BFI tuning', () => {
             trinity: { body: 0, instinct: 0, mind: 0 }
         });
 
-        expect(resolveEffectiveBfi(falcon)).toBe(resolveBaseBfi(falcon) + 1);
+        expect(resolveEffectiveBfi(falcon)).toBe(resolveBaseBfi(falcon));
         expect(resolveBaseBfi(sentinel)).toBe(14);
         expect(resolveEffectiveBfi(sentinel)).toBe(12);
     });

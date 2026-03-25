@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { isPlayerTurn } from '@hop/engine';
 import type { Action, GameState } from '@hop/engine';
+import { isPlayerTurn } from '../../../../packages/engine/src/systems/initiative';
 import type { TurnDriverState } from '../turn-driver';
 import type { TurnTraceAppender } from './use-turn-driver-trace';
 import type { PendingAutoEndState } from './turn-flow-policy';

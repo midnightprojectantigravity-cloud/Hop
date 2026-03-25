@@ -5,7 +5,7 @@
 **Status Taxonomy:** `[SHIP]` = Shipped, `[DEV]` = In Development, `[SPEC]` = Finalized Specification  
 **RFC Process:** Changes to this law require a corresponding PR update and an audit against Aspirational SLOs.
 
-Last updated: March 5, 2026  
+Last updated: March 23, 2026  
 Authority: Canonical for shipped `apps/web` behavior.  
 Companion vision doc: `docs/UI_SPEC_ASPIRATIONAL.md`.
 
@@ -144,13 +144,22 @@ Primary implementation anchor: `apps/web/src/app/GameScreen.tsx`.
 ## 5.3 In-Run Shell (Current)
 
 Mobile portrait:
-1. Top strip: floor (left), HP (center), `INFO` toggle (right).
+1. Top strip:
+   - fixed-height compact rail sized from the shared HUD scale.
+   - floor info on the left (`Floor` + `current / 10`).
+   - compact vitals in the center:
+     - HP bar fills right-to-left and keeps the numeric readout inside the bar.
+     - Spark renders as a yellow bubble that fills bottom-to-top without numeric text.
+     - MP bar fills left-to-right and keeps the numeric readout inside the bar.
+     - Exhaustion spans the full vitals width as a five-segment bar without numeric text.
+   - right-side stack with `INFO` on the first line and the top-tray chevron on the second line.
+   - expanding the top tray does not change the compact rail height; the tray floats beneath it.
 2. Center: board.
 3. Bottom dock:
    - viewport-derived height with hard clamp range `176px` to `320px`.
    - viewport-derived shared scaling for tray fonts/buttons (`resolveHudScale`, `resolveBottomDockHeightPx`).
    - `INFO` OFF:
-     - action row with `Wait`, `Hub`, `Reset`.
+     - action row with `Wait`, `Home`, `Override`.
      - skill tray.
    - `INFO` ON:
      - action row hidden.

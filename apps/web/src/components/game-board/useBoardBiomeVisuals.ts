@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { hexToPixel, pointToKey, TILE_SIZE, UnifiedTileService } from '@hop/engine';
+import { hexToPixel, pointToKey, TILE_SIZE, UnifiedTileService, type GameState, type Point } from '@hop/engine';
 import type {
     VisualAssetEntry,
     VisualBiomeClutterLayer,
@@ -34,6 +34,29 @@ import {
 } from './biome-visuals-utils';
 import { buildMountainRenderSettings } from './biome-mountain-settings';
 
+export const resolveBoardTileVisualFlags = (
+    gameState: GameState,
+    cells: ReadonlyArray<Point>
+): Map<string, TileVisualFlags> => {
+    const out = new Map<string, TileVisualFlags>();
+    for (const hex of cells) {
+        const key = pointToKey(hex);
+        const tile = UnifiedTileService.getTileAt(gameState, hex);
+        const traits = UnifiedTileService.getTraitsAt(gameState, hex);
+        const isWall = traits.has('BLOCKS_MOVEMENT') && traits.has('BLOCKS_LOS');
+        const isVoid = tile?.baseId === 'VOID' || traits.has('VOID');
+        const hasLava = traits.has('LAVA') || (traits.has('HAZARDOUS') && traits.has('LIQUID'));
+        const hasFire = traits.has('FIRE');
+        out.set(key, {
+            isWall,
+            isLava: !isWall && !isVoid && hasLava,
+            isFire: !isWall && !isVoid && hasFire,
+            isVoid: !isWall && isVoid
+        });
+    }
+    return out;
+};
+
 export const useBoardBiomeVisuals = ({
     cells,
     gameState,
@@ -41,22 +64,10 @@ export const useBoardBiomeVisuals = ({
     assetManifest,
     biomeDebug,
 }: UseBoardBiomeVisualsArgs) => {
-    const tileVisualFlags = useMemo(() => {
-        const out = new Map<string, TileVisualFlags>();
-        for (const hex of cells) {
-            const key = pointToKey(hex);
-            const traits = UnifiedTileService.getTraitsAt(gameState, hex);
-            const isWall = traits.has('BLOCKS_MOVEMENT') && traits.has('BLOCKS_LOS');
-            const hasLava = traits.has('LAVA') || (traits.has('HAZARDOUS') && traits.has('LIQUID'));
-            const hasFire = traits.has('FIRE');
-            out.set(key, {
-                isWall,
-                isLava: !isWall && hasLava,
-                isFire: !isWall && hasFire
-            });
-        }
-        return out;
-    }, [cells, gameState.tiles]);
+    const tileVisualFlags = useMemo(
+        () => resolveBoardTileVisualFlags(gameState, cells),
+        [cells, gameState.tiles, gameState.gridWidth, gameState.gridHeight, gameState.mapShape]
+    );
 
     const assetById = useMemo(() => {
         const map = new Map<string, VisualAssetEntry>();
@@ -334,7 +345,7 @@ export const useBoardBiomeVisuals = ({
         for (const hex of cells) {
             const key = pointToKey(hex);
             const flags = tileVisualFlags.get(key);
-            if (!flags || (!flags.isLava && !flags.isFire)) continue;
+            if (!flags || (!flags.isLava && !flags.isFire && !flags.isVoid)) continue;
             const { x, y } = hexToPixel(hex, TILE_SIZE);
             holes.push({ key, x, y });
         }

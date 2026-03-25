@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { hexDistance, pointToKey } from '../hex';
+import { hexDistance, hexEquals, pointToKey } from '../hex';
 import { gameReducer, generateInitialState } from '../logic';
 import { createActiveSkill, COMPOSITIONAL_SKILLS, SkillRegistry } from '../skillRegistry';
 import type { AtomicEffect, Actor, GameState, Point, SkillDefinition } from '../types';
 import { clearCapabilityStateCacheForTests } from '../systems/capabilities/cache';
 import { getDefaultMovementCapabilityModel, resolveMovementCapabilities } from '../systems/capabilities/movement';
 import { resolveSkillMovementPolicy } from '../systems/capabilities/movement-policy';
+import { applyEffects } from '../systems/effect-engine';
+import { createMockState, p, placeTile } from './test_utils';
 
 const TEST_REPLACE_SKILL_ID = 'TEST_MOVE_REPLACE_CAP';
 const TEST_EXTEND_SKILL_ID = 'TEST_MOVE_EXTEND_CAP';
@@ -232,6 +234,115 @@ describe('movement capability runtime integration', () => {
         expect(displacement?.destination).toEqual(farTarget);
         expect(displacement?.simulatePath).toBe(false);
         expect(displacement?.ignoreGroundHazards).toBe(true);
+    });
+
+    it('applies ignoreWalls capabilities during displacement runtime for BASIC_MOVE', () => {
+        const state = createMockState();
+        state.player = {
+            ...state.player,
+            position: p(4, 4),
+            previousPosition: p(4, 4),
+            speed: 2,
+            activeSkills: [
+                createActiveSkill('BASIC_MOVE') as any,
+                createActiveSkill('BURROW') as any
+            ]
+        };
+        state.ruleset = {
+            ...state.ruleset,
+            capabilities: {
+                ...(state.ruleset?.capabilities || {
+                    loadoutPassivesEnabled: false,
+                    movementRuntimeEnabled: false,
+                    version: 'capabilities-v1' as const
+                }),
+                movementRuntimeEnabled: true
+            }
+        };
+
+        for (let q = 0; q < 10; q++) {
+            for (let r = 0; r < 10; r++) {
+                placeTile(state, p(q, r), [], 'STONE');
+            }
+        }
+
+        const target = p(6, 4);
+        const lava = p(6, 5);
+        placeTile(state, p(5, 4), ['BLOCKS_MOVEMENT'] as any, 'WALL');
+        placeTile(state, p(5, 3), ['BLOCKS_MOVEMENT'] as any, 'WALL');
+        placeTile(state, p(6, 3), ['BLOCKS_MOVEMENT'] as any, 'WALL');
+        placeTile(state, p(4, 5), ['BLOCKS_MOVEMENT'] as any, 'WALL');
+        placeTile(state, p(5, 5), ['BLOCKS_MOVEMENT'] as any, 'WALL');
+        placeTile(state, lava, ['HAZARDOUS', 'LAVA', 'LIQUID'] as any, 'LAVA');
+
+        const basicMoveDef = SkillRegistry.get('BASIC_MOVE');
+        expect(basicMoveDef?.getValidTargets).toBeTruthy();
+        const validTargets = basicMoveDef!.getValidTargets!(state, state.player.position);
+        expect(validTargets).toContainEqual(target);
+        expect(validTargets.some(point => hexEquals(point, p(5, 4)))).toBe(false);
+        expect(validTargets.some(point => hexEquals(point, lava))).toBe(false);
+
+        const execution = basicMoveDef!.execute(state, state.player, target);
+        expect(execution.consumesTurn).toBe(true);
+
+        const displacement = execution.effects.find(
+            (effect): effect is Extract<AtomicEffect, { type: 'Displacement' }> => effect.type === 'Displacement'
+        );
+        expect(displacement?.ignoreWalls).toBe(true);
+
+        const next = applyEffects(state, execution.effects, { sourceId: state.player.id });
+        expect(next.player.position).toEqual(target);
+    });
+
+    it('prefers a walkable route around blockers before tunneling through them', () => {
+        const state = createMockState();
+        state.player = {
+            ...state.player,
+            position: p(4, 4),
+            previousPosition: p(4, 4),
+            speed: 3,
+            activeSkills: [
+                createActiveSkill('BASIC_MOVE') as any,
+                createActiveSkill('BURROW') as any
+            ]
+        };
+        state.ruleset = {
+            ...state.ruleset,
+            capabilities: {
+                ...(state.ruleset?.capabilities || {
+                    loadoutPassivesEnabled: false,
+                    movementRuntimeEnabled: false,
+                    version: 'capabilities-v1' as const
+                }),
+                movementRuntimeEnabled: true
+            }
+        };
+
+        for (let q = 0; q < 10; q++) {
+            for (let r = 0; r < 10; r++) {
+                placeTile(state, p(q, r), [], 'STONE');
+            }
+        }
+
+        const target = p(6, 4);
+        placeTile(state, p(5, 4), ['BLOCKS_MOVEMENT'] as any, 'WALL');
+
+        const basicMoveDef = SkillRegistry.get('BASIC_MOVE');
+        const execution = basicMoveDef!.execute(state, state.player, target);
+        expect(execution.consumesTurn).toBe(true);
+
+        const displacement = execution.effects.find(
+            (effect): effect is Extract<AtomicEffect, { type: 'Displacement' }> => effect.type === 'Displacement'
+        );
+        expect(displacement?.path).toEqual([
+            p(4, 4),
+            p(5, 3),
+            p(6, 3),
+            p(6, 4)
+        ]);
+
+        const next = applyEffects(state, execution.effects, { sourceId: state.player.id });
+        expect(next.player.position).toEqual(target);
     });
 
     it('applies movement capability runtime when enabled through START_RUN overrides', () => {

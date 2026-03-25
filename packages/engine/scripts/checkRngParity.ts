@@ -2,6 +2,11 @@
 import { createRng, randomFromSeed, consumeRandom, nextIdFromState } from '../src/systems/rng.ts';
 import crypto from 'crypto';
 
+type RngProbeState = {
+  rngSeed: string;
+  rngCounter: number;
+};
+
 const args = process.argv.slice(2);
 if (args.length < 1) {
   console.log('Usage: checkRngParity <seed> [count]');
@@ -20,15 +25,15 @@ for (let i = 0; i < count; i++) {
 }
 
 // Also exercise stateful consumeRandom/nextIdFromState
-let state: any = { rngSeed: seed, rngCounter: 0 };
+let state: RngProbeState = { rngSeed: seed, rngCounter: 0 };
 for (let i = 0; i < Math.min(10, count); i++) {
-  const res = consumeRandom(state as any);
+  const res = consumeRandom(state);
   values.push(res.value);
   state = res.nextState;
 }
 
 // deterministic id from state
-const idRes = nextIdFromState({ rngSeed: seed, rngCounter: 0 } as any, Math.min(9, count));
+const idRes = nextIdFromState({ rngSeed: seed, rngCounter: 0 }, Math.min(9, count));
 ids.push(idRes.id);
 
 const out = { seed, count, values, ids };

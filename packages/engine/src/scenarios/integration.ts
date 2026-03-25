@@ -94,7 +94,7 @@ export const integrationScenarios: ScenarioCollection = {
                 engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'safe');
 
                 // This enemy starts adjacent and will remain adjacent after the player moves, so they should get auto-attacked
-                engine.spawnEnemy('footman', { q: 4, r: 5, s: -9 }, 'auto-attacked');
+                engine.spawnEnemy('footman', { q: 4, r: 5, s: -9 }, 'auto-attacked', { hp: 1, maxHp: 1 });
 
                 // This enemy starts non-adjacent and will become adjacent after the player moves, so they should be safe
                 engine.spawnEnemy('footman', { q: 5, r: 5, s: -10 }, 'safe2');

@@ -37,7 +37,7 @@ const COMPANION_TRINITY_PROFILE = withDefault(
 export const LIVE_TRINITY_PROFILE: TrinityProfile = {
     default: ZERO,
     archetype: withDefault({
-        VANGUARD: { body: 9, mind: 4, instinct: 5 },
+        VANGUARD: { body: 30, mind: 5, instinct: 15 },
         SKIRMISHER: { body: 12, mind: 8, instinct: 14 },
         FIREMAGE: { body: 2, mind: 9, instinct: 4 },
         NECROMANCER: { body: 5, mind: 9, instinct: 5 },

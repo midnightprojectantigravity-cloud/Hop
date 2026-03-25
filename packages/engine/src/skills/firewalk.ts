@@ -63,6 +63,7 @@ export const FIREWALK: SkillDefinition = {
             destination: target,
             source: attacker.position,
             simulatePath: movementPolicy.simulatePath,
+            ignoreWalls: movementPolicy.ignoreWalls,
             ignoreGroundHazards: movementPolicy.ignoreGroundHazards,
             presentationKind: 'teleport',
             pathStyle: 'blink',

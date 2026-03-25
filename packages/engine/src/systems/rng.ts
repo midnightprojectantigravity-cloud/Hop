@@ -1,5 +1,7 @@
 import type { GameState } from '../types';
 
+export type RandomStateLike = Pick<GameState, 'rngSeed' | 'rngCounter'>;
+
 // 1. Unified Hash Function (xfnv1a)
 const hashStrToUint = (str: string): number => {
     let h = 2166136261 >>> 0;
@@ -75,7 +77,7 @@ export const randomFromSeed = (seed: string | number, counter: number): number =
 /**
  * Consumes the next random value from the state's entropy pool.
  */
-export const consumeRandom = (state: GameState): { value: number; nextState: GameState } => {
+export const consumeRandom = <T extends RandomStateLike>(state: T): { value: number; nextState: T } => {
     const seed = state.rngSeed || 'default';
     const counter = state.rngCounter || 0;
 
@@ -86,7 +88,7 @@ export const consumeRandom = (state: GameState): { value: number; nextState: Gam
         nextState: {
             ...state,
             rngCounter: counter + 1
-        }
+        } as T
     };
 };
 
@@ -95,9 +97,9 @@ export const consumeRandom = (state: GameState): { value: number; nextState: Gam
  * This satisfies the test's expectation for { id, nextState }
  */
 export const nextIdFromState = (
-    state: GameState,
+    state: RandomStateLike,
     len = 9
-): { id: string; nextState: GameState } => {
+): { id: string; nextState: RandomStateLike } => {
     const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
     let s = '';
     let cur = state;

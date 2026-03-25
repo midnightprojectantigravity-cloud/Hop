@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 export interface AppRoutingState {
   pathname: string;
+  homePath: string;
   hubPath: string;
   arcadePath: string;
   biomesPath: string;
@@ -9,6 +10,7 @@ export interface AppRoutingState {
   settingsPath: string;
   leaderboardPath: string;
   tutorialsPath: string;
+  isHubRoute: boolean;
   isArcadeRoute: boolean;
   isBiomesRoute: boolean;
   isThemeLabRoute: boolean;
@@ -18,9 +20,13 @@ export interface AppRoutingState {
   navigateTo: (path: string) => void;
 }
 
-const normalizeRoute = (path: string): string => path.toLowerCase().replace(/\/+$/, '');
+const normalizeRoute = (path: string): string => {
+  const normalized = path.toLowerCase().replace(/\/+$/, '');
+  return normalized || '/';
+};
 
 export interface DerivedAppRouting {
+  homePath: string;
   hubPath: string;
   arcadePath: string;
   biomesPath: string;
@@ -28,6 +34,7 @@ export interface DerivedAppRouting {
   settingsPath: string;
   leaderboardPath: string;
   tutorialsPath: string;
+  isHubRoute: boolean;
   isArcadeRoute: boolean;
   isBiomesRoute: boolean;
   isThemeLabRoute: boolean;
@@ -38,7 +45,8 @@ export interface DerivedAppRouting {
 
 export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
   const hubBase = pathname.toLowerCase().startsWith('/hop') ? '/Hop' : '';
-  const hubPath = `${hubBase || ''}` || '/';
+  const homePath = hubBase || '/';
+  const hubPath = `${hubBase}/Hub` || '/Hub';
   const arcadePath = `${hubBase}/Arcade` || '/Arcade';
   const biomesPath = `${hubBase}/Biomes` || '/Biomes';
   const themeLabPath = `${hubBase}/ThemeLab` || '/ThemeLab';
@@ -47,8 +55,14 @@ export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
   const tutorialsPath = `${hubBase}/Tutorials` || '/Tutorials';
 
   const normalizedPathname = normalizeRoute(pathname);
+  const normalizedHomePath = normalizeRoute(homePath);
+  const normalizedHubPath = normalizeRoute(hubPath);
 
-  const isArcadeRoute = normalizedPathname.endsWith('/arcade') || normalizedPathname.endsWith('/arcarde');
+  const isHubRoute = normalizedPathname === normalizedHubPath;
+  const isArcadeRoute =
+    normalizedPathname === normalizedHomePath
+    || normalizedPathname.endsWith('/arcade')
+    || normalizedPathname.endsWith('/arcarde');
   const isBiomesRoute = normalizedPathname.endsWith('/biomes');
   const isThemeLabRoute =
     normalizedPathname.endsWith('/themelab')
@@ -59,6 +73,7 @@ export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
   const isTutorialsRoute = normalizedPathname.endsWith('/tutorials');
 
   return {
+    homePath,
     hubPath,
     arcadePath,
     biomesPath,
@@ -66,6 +81,7 @@ export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
     settingsPath,
     leaderboardPath,
     tutorialsPath,
+    isHubRoute,
     isArcadeRoute,
     isBiomesRoute,
     isThemeLabRoute,

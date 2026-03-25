@@ -154,8 +154,14 @@ export class TileResolver {
     /**
      * Process tile transition (unit passes through)
      */
-    static processTransition(actor: Actor, tile: Tile, state: GameState, momentum?: number, options: { ignoreActors?: boolean, ignoreGroundHazards?: boolean } = {}): TileHookResult {
-        const { ignoreActors = false, ignoreGroundHazards = false } = options;
+    static processTransition(
+        actor: Actor,
+        tile: Tile,
+        state: GameState,
+        momentum?: number,
+        options: { ignoreActors?: boolean, ignoreGroundHazards?: boolean, ignoreWalls?: boolean } = {}
+    ): TileHookResult {
+        const { ignoreActors = false, ignoreGroundHazards = false, ignoreWalls = false } = options;
         const combinedResult: TileHookResult = {
             effects: [],
             messages: [],
@@ -168,7 +174,7 @@ export class TileResolver {
         let appliedHeatInjection = false;
 
         // 1. Physical Collision (Wall/Environment)
-        if (traits.has('BLOCKS_MOVEMENT')) {
+        if (!ignoreWalls && traits.has('BLOCKS_MOVEMENT')) {
             combinedResult.interrupt = true;
             combinedResult.newMomentum = 0;
             return combinedResult;
@@ -468,7 +474,13 @@ export class TileResolver {
      * @param momentum Initial movement energy
      * @param options Transition options (ignoreActors, ignoreGroundHazards)
      */
-    static processPath(actor: Actor, path: Point[], state: GameState, momentum?: number, options: { ignoreActors?: boolean, ignoreGroundHazards?: boolean } = {}): {
+    static processPath(
+        actor: Actor,
+        path: Point[],
+        state: GameState,
+        momentum?: number,
+        options: { ignoreActors?: boolean, ignoreGroundHazards?: boolean, ignoreWalls?: boolean } = {}
+    ): {
         lastValidPos: Point,
         result: TileHookResult,
         interrupt: boolean

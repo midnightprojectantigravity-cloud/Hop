@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, type PointerEvent, type WheelEvent } from 'react';
 import type { Point } from '@hop/engine';
 import type { CameraVec2, CameraZoomMode } from '../../visual/camera';
-import { resolveBoardHexAtWorldPoint } from './board-hit-testing';
+import { clientPointToSvgWorldPoint, resolveBoardHexAtWorldPoint } from './board-hit-testing';
 
 type PointerPoint = { x: number; y: number };
 
@@ -58,14 +58,8 @@ export const useBoardInteractions = ({
 
     const clientToWorld = useCallback((clientX: number, clientY: number): CameraVec2 | null => {
         const svg = svgRef.current;
-        if (!svg || !svg.getScreenCTM) return null;
-        const ctm = svg.getScreenCTM();
-        if (!ctm) return null;
-        const point = svg.createSVGPoint();
-        point.x = clientX;
-        point.y = clientY;
-        const transformed = point.matrixTransform(ctm.inverse());
-        return { x: transformed.x, y: transformed.y };
+        if (!svg) return null;
+        return clientPointToSvgWorldPoint({ x: clientX, y: clientY }, svg);
     }, [svgRef]);
 
     const resolveTileAtClientPoint = useCallback((clientX: number, clientY: number): Point | null => {

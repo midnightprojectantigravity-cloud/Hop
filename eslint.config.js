@@ -20,4 +20,25 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: [
+      'packages/engine/src/**/*.ts',
+      'apps/web/src/**/*.ts',
+      'apps/web/src/**/*.tsx',
+    ],
+    ignores: [
+      '**/__tests__/**',
+      'packages/engine/src/scenarios/**',
+      'packages/engine/src/debug/**',
+      'packages/**/scripts/**',
+      'apps/**/scripts/**',
+      'packages/engine/src/logic-turn-loop.ts',
+      'packages/engine/src/skillTests.ts',
+      'apps/web/src/app/use-debug-*.ts',
+      'apps/web/src/components/game-board/useBoardJuicePresentation.ts',
+    ],
+    rules: {
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+    },
+  },
 ])

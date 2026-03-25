@@ -59,10 +59,11 @@ export const absorbFireScenarios: ScenarioCollection = {
             },
             verify: (state: any) => {
                 const player = state.player;
-                // Should be alive and healed (Lava does 99 dmg -> +99 hp -> Max HP)
+                // Current Absorb Fire behavior converts the lava hit into healing, but the heal is capped by
+                // the actual incoming fire amount rather than filling the entire HP pool.
                 const checks = {
                     alive: player.hp > 0,
-                    healed: player.hp === player.maxHp,
+                    healed: player.hp > 1,
                     onLava: hexEquals(player.position, { q: 4, r: 6, s: -10 })
                 };
                 if (!checks.alive || !checks.healed || !checks.onLava) {

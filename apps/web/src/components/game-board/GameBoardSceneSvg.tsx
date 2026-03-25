@@ -17,7 +17,6 @@ import { SynapseHeatmapLayer } from './SynapseHeatmapLayer';
 import { SynapseUnitScoreLayer } from './SynapseUnitScoreLayer';
 import { SynapseThreadOverlay } from './SynapseThreadOverlay';
 import type { SynapseDeltaEntry, SynapsePulse, SynapseSelection } from '../../app/synapse';
-import { VisualEchoLayer, type VisualEchoEntry } from './VisualEchoLayer';
 import type { RegisterActorNodes } from './actor-node-registry';
 import type { BoardEntityPoseStore } from './board-entity-pose-store';
 import type { HoveredTileStore } from './hovered-tile-store';
@@ -85,7 +84,6 @@ interface GameBoardSceneSvgProps {
   synapseSelection: SynapseSelection;
   synapsePulse: SynapsePulse;
   synapseDeltasByActorId: Record<string, SynapseDeltaEntry>;
-  visualEchoes: VisualEchoEntry[];
   registerActorNodes: RegisterActorNodes;
   onSynapseInspectEntity: (actorId: string) => void;
   onMouseLeave: () => void;
@@ -139,7 +137,6 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
   synapseSelection,
   synapsePulse,
   synapseDeltasByActorId,
-  visualEchoes,
   registerActorNodes,
   onSynapseInspectEntity,
   onMouseLeave,
@@ -248,11 +245,6 @@ const GameBoardSceneSvgBase: React.FC<GameBoardSceneSvgProps> = ({
       enabled={isSynapseMode}
       gameState={gameState}
       selection={synapseSelection}
-    />
-    <VisualEchoLayer
-      echoes={visualEchoes}
-      currentTurn={gameState.turnNumber}
-      enhanced={isSynapseMode}
     />
     <UiGridLayer cells={cells} gridPoints={gridPoints} />
     <ObjectiveMarkersLayer boardProps={boardProps} />

@@ -1,8 +1,14 @@
 import type { ActionResourcePreview, Actor, CombatPressureMode, GameState, SkillDefinition, SkillResourceProfile } from '../../types';
 import { resolveIresRuleset } from './config';
-import { resolveExhaustionTax, resolveEffectiveBfi, resolveIresWeightModifier } from './bfi';
+import { resolveExhaustionTax, resolveEffectiveBfi, resolveWalkUnit } from './bfi';
 import { resolveRuntimeSkillResourceProfile } from './skill-catalog';
-import { computeSparkBurnHp, ensureActorIres, resolveExhaustionState } from './state';
+import {
+    computeManaRecoveryIfEndedNow,
+    computeSparkBurnHp,
+    computeSparkRecoveryIfEndedNow,
+    ensureActorIres,
+    resolveExhaustionState
+} from './state';
 
 export const MAX_IRES_ACTIONS_PER_TURN = 8;
 export const MAX_IRES_SPARK_BURN_ACTIONS_PER_TURN = 1;
@@ -12,6 +18,46 @@ const clamp = (value: number, min: number, max: number): number =>
 
 const incrementsActionCount = (profile: SkillResourceProfile): boolean =>
     profile.countsAsAction || profile.countsAsMovement;
+
+const resolveProjection = (
+    actor: Actor,
+    current: NonNullable<Actor['ires']>,
+    sparkDelta: number,
+    manaDelta: number,
+    nextActionCount: number,
+    config: ReturnType<typeof resolveIresRuleset>
+): ActionResourcePreview['turnProjection'] => {
+    const projected = resolveExhaustionState({
+        ...current,
+        spark: clamp(current.spark + sparkDelta, 0, current.maxSpark),
+        mana: clamp(current.mana + manaDelta, 0, current.maxMana),
+        exhaustion: 0
+    }, config);
+
+    return {
+        spark: {
+            current: current.spark,
+            projected: projected.spark,
+            delta: sparkDelta
+        },
+        mana: {
+            current: current.mana,
+            projected: projected.mana,
+            delta: manaDelta
+        },
+        exhaustion: {
+            current: current.exhaustion,
+            projected: projected.exhaustion,
+            delta: projected.exhaustion - current.exhaustion
+        },
+        sparkStateBefore: current.currentState,
+        sparkStateAfter: projected.currentState,
+        projectedSparkRecoveryIfEndedNow: computeSparkRecoveryIfEndedNow(actor, projected, config),
+        stateAfter: projected.currentState,
+        actionCountAfter: nextActionCount,
+        wouldRest: false
+    };
+};
 
 export const resolveIresActionPreview = (
     actor: Actor,
@@ -29,17 +75,16 @@ export const resolveIresActionPreview = (
         skillDefInput || (profileInput ? { resourceProfile: profileInput } : undefined),
         ruleset
     );
-    const weight = resolveIresWeightModifier(hydrated);
-    const costAdjustment = profile.primaryResource === 'spark' && profile.countsAsMovement
-        ? weight.movementSpark
-        : 0;
-    const primaryCost = Math.max(0, profile.primaryCost + costAdjustment);
+
     const actionCountIncrement = incrementsActionCount(profile) ? 1 : 0;
-    const tax = actionCountIncrement > 0
-        ? resolveExhaustionTax(hydrated, current.actionCountThisTurn)
+    const effectiveBfi = resolveEffectiveBfi(hydrated, ruleset);
+    const tempoSparkCost = actionCountIncrement > 0
+        ? resolveExhaustionTax(hydrated, current.actionCountThisTurn, ruleset)
         : 0;
-    const exhaustionDelta = actionCountIncrement > 0 ? profile.baseStrain + tax : 0;
-    const effectiveBfi = resolveEffectiveBfi(hydrated);
+    const walkUnit = resolveWalkUnit(hydrated, ruleset);
+    const skillSparkSurcharge = Math.max(0, Math.round(walkUnit * Number(profile.sparkWalkScalar || 0)));
+    const sparkCostTotal = tempoSparkCost + skillSparkSurcharge;
+    const manaCost = Math.max(0, Number(profile.manaCost || 0));
     const nextActionCount = current.actionCountThisTurn + actionCountIncrement;
     const blockedReason = current.actionCountThisTurn >= MAX_IRES_ACTIONS_PER_TURN
         ? `Action cap reached (${MAX_IRES_ACTIONS_PER_TURN})`
@@ -48,72 +93,72 @@ export const resolveIresActionPreview = (
     let sparkDelta = 0;
     let manaDelta = 0;
     let sparkBurnHpDelta = 0;
+    let sparkBurnOutcome: NonNullable<ActionResourcePreview['sparkBurnOutcome']> = 'none';
     let failure = blockedReason;
 
-    if (!failure && profile.primaryResource === 'spark' && primaryCost > 0) {
-        if (current.isExhausted) {
-            if (current.sparkBurnActionsThisTurn >= MAX_IRES_SPARK_BURN_ACTIONS_PER_TURN) {
-                failure = `Spark Burn action cap reached (${MAX_IRES_SPARK_BURN_ACTIONS_PER_TURN})`;
+    if (!failure && sparkCostTotal > current.spark) {
+        failure = `Spark outage: requires ${sparkCostTotal} SP`;
+    }
+
+    if (!failure && manaCost > current.mana) {
+        failure = `Mana outage: requires ${manaCost} MP`;
+    }
+
+    if (!failure) {
+        sparkDelta = -sparkCostTotal;
+        manaDelta = -manaCost;
+        const projectedAfterSpend = resolveExhaustionState({
+            ...current,
+            spark: clamp(current.spark + sparkDelta, 0, current.maxSpark),
+            mana: clamp(current.mana + manaDelta, 0, current.maxMana),
+            exhaustion: 0
+        }, config);
+        const taxingAction = actionCountIncrement > 0 && (tempoSparkCost > 0 || skillSparkSurcharge > 0 || manaCost > 0);
+
+        if (taxingAction && current.currentState === 'exhausted') {
+            if (mode === 'travel' && config.travelSuppressesSparkBurn) {
+                sparkBurnOutcome = 'travel_suppressed';
+            } else if (current.sparkBurnActionsThisTurn >= MAX_IRES_SPARK_BURN_ACTIONS_PER_TURN) {
+                sparkBurnOutcome = 'burn_blocked_cap';
             } else {
+                sparkBurnOutcome = 'burn_now';
                 sparkBurnHpDelta = computeSparkBurnHp(hydrated, config);
             }
-        } else if (current.spark < primaryCost) {
-            failure = `Spark outage: requires ${primaryCost} SP`;
-        } else {
-            sparkDelta = -primaryCost;
+        } else if (taxingAction && current.currentState !== 'exhausted' && projectedAfterSpend.currentState === 'exhausted') {
+            sparkBurnOutcome = 'enter_exhausted_free';
         }
     }
 
-    if (!failure && profile.primaryResource === 'mana' && primaryCost > 0) {
-        if (current.mana < primaryCost) {
-            failure = `Mana outage: requires ${primaryCost} MP`;
-        } else {
-            manaDelta = -primaryCost;
-        }
-    }
-
-    const projected = resolveExhaustionState({
-        ...current,
-        spark: clamp(current.spark + sparkDelta, 0, current.maxSpark),
-        mana: clamp(current.mana + manaDelta, 0, current.maxMana),
-        exhaustion: clamp(current.exhaustion + exhaustionDelta, 0, 100)
-    }, config);
+    const turnProjection = resolveProjection(
+        hydrated,
+        current,
+        sparkDelta,
+        manaDelta,
+        nextActionCount,
+        config
+    );
 
     return {
         primaryResource: profile.primaryResource,
-        primaryCost,
+        primaryCost: profile.primaryResource === 'mana' ? manaCost : sparkCostTotal,
         sparkDelta,
         manaDelta,
-        exhaustionDelta,
+        exhaustionDelta: turnProjection.exhaustion.delta,
+        tempoSparkCost,
+        skillSparkSurcharge,
+        sparkCostTotal,
+        manaCost,
+        sparkBurnOutcome,
         sparkBurnHpDelta,
-        tax,
+        tax: tempoSparkCost,
         effectiveBfi,
         nextActionCount,
         blockedReason: failure,
-        bandAfter: projected.currentState,
+        bandAfter: turnProjection.stateAfter,
         modeBefore: mode,
         modeAfter: mode,
         travelRecoveryApplied: false,
-        turnProjection: {
-            spark: {
-                current: current.spark,
-                projected: projected.spark,
-                delta: sparkDelta
-            },
-            mana: {
-                current: current.mana,
-                projected: projected.mana,
-                delta: manaDelta
-            },
-            exhaustion: {
-                current: current.exhaustion,
-                projected: projected.exhaustion,
-                delta: exhaustionDelta
-            },
-            stateAfter: projected.currentState,
-            actionCountAfter: nextActionCount,
-            wouldRest: false
-        }
+        turnProjection
     };
 };
 
@@ -126,14 +171,13 @@ export const resolveWaitPreview = (
     const hydrated = ensureActorIres(actor, config);
     const current = hydrated.ires!;
     const isRest = !current.actedThisTurn && !current.movedThisTurn;
-    const sparkDelta = current.isExhausted ? 0 : config.sparkRecoveryPerTurn;
-    const manaDelta = config.manaRecoveryPerTurn;
-    const exhaustionDelta = isRest ? -config.restExhaustionClear : 0;
+    const sparkDelta = computeSparkRecoveryIfEndedNow(hydrated, current, config);
+    const manaDelta = computeManaRecoveryIfEndedNow(hydrated, current, config);
     const projected = resolveExhaustionState({
         ...current,
         spark: clamp(current.spark + sparkDelta, 0, current.maxSpark),
         mana: clamp(current.mana + manaDelta, 0, current.maxMana),
-        exhaustion: clamp(current.exhaustion + exhaustionDelta, 0, 100)
+        exhaustion: 0
     }, config);
 
     return {
@@ -141,10 +185,15 @@ export const resolveWaitPreview = (
         primaryCost: 0,
         sparkDelta,
         manaDelta,
-        exhaustionDelta,
+        exhaustionDelta: projected.exhaustion - current.exhaustion,
+        tempoSparkCost: 0,
+        skillSparkSurcharge: 0,
+        sparkCostTotal: 0,
+        manaCost: 0,
+        sparkBurnOutcome: 'none',
         sparkBurnHpDelta: 0,
         tax: 0,
-        effectiveBfi: resolveEffectiveBfi(hydrated),
+        effectiveBfi: resolveEffectiveBfi(hydrated, ruleset),
         nextActionCount: 0,
         bandAfter: projected.currentState,
         modeBefore: mode,
@@ -153,7 +202,14 @@ export const resolveWaitPreview = (
         turnProjection: {
             spark: { current: current.spark, projected: projected.spark, delta: sparkDelta },
             mana: { current: current.mana, projected: projected.mana, delta: manaDelta },
-            exhaustion: { current: current.exhaustion, projected: projected.exhaustion, delta: exhaustionDelta },
+            exhaustion: {
+                current: current.exhaustion,
+                projected: projected.exhaustion,
+                delta: projected.exhaustion - current.exhaustion
+            },
+            sparkStateBefore: current.currentState,
+            sparkStateAfter: projected.currentState,
+            projectedSparkRecoveryIfEndedNow: sparkDelta,
             stateAfter: projected.currentState,
             actionCountAfter: 0,
             wouldRest: isRest

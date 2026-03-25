@@ -12,6 +12,7 @@ interface HexTileProps {
     isShrine?: boolean;
     isWall?: boolean;
     isFire?: boolean;
+    isVoid?: boolean;
     assetHref?: string;
     interactionOnly?: boolean;
 }
@@ -69,7 +70,7 @@ const getWallReliefPoints = (size: number) => {
 };
 
 const HexTileComponent: React.FC<HexTileProps> = ({
-    hex, isValidMove, isTargeted, isStairs, isLava, isShrine, isWall, isFire, assetHref, interactionOnly
+    hex, isValidMove, isTargeted, isStairs, isLava, isShrine, isWall, isFire, isVoid, assetHref, interactionOnly
 }) => {
     const [imageFailed, setImageFailed] = useState(false);
 
@@ -91,6 +92,9 @@ const HexTileComponent: React.FC<HexTileProps> = ({
     if (isWall) {
         fill = COLORS.wall;
         stroke = '#1f2937';
+    } else if (isVoid) {
+        fill = '#020617';
+        stroke = '#475569';
     } else if (isLava) {
         fill = '#7f1d1d';
         stroke = '#7f1d1d';
@@ -283,6 +287,7 @@ export const HexTile = React.memo(HexTileComponent, (prev, next) => {
         && prev.isShrine === next.isShrine
         && prev.isWall === next.isWall
         && prev.isFire === next.isFire
+        && prev.isVoid === next.isVoid
         && prev.assetHref === next.assetHref
         && prev.interactionOnly === next.interactionOnly;
 });

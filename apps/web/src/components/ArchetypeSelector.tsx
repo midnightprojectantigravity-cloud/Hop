@@ -1,6 +1,8 @@
 
 import React from 'react';
-import { DEFAULT_LOADOUTS, type Loadout, getEntityVisual } from '@hop/engine';
+import type { Loadout } from '@hop/engine';
+import { DEFAULT_LOADOUTS } from '../../../../packages/engine/src/systems/loadout';
+import { getEntityVisual } from '../../../../packages/engine/src/systems/visual/visual-registry';
 
 interface ArchetypeSelectorProps {
     onSelect: (loadout: Loadout) => void;

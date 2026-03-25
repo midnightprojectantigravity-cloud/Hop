@@ -1,4 +1,4 @@
-export const ENGINE_CONTRACT_VERSION = 'target-path-parity-v1';
+export { ENGINE_CONTRACT_VERSION } from './contract-version';
 
 export * from './types';
 export * from './types/juice-signature';

@@ -216,6 +216,14 @@ export const recomputeVisibility = (state: GameState): GameState => {
     };
 };
 
+// Scenario and test setup frequently reposition actors wholesale. In those cases,
+// preserving prior awareness memory from an unrelated layout leaks stale alert state.
+export const recomputeVisibilityFromScratch = (state: GameState): GameState =>
+    recomputeVisibility({
+        ...state,
+        visibility: undefined
+    });
+
 export const resolveEnemyTrackingTarget = (
     state: GameState,
     enemy: Actor

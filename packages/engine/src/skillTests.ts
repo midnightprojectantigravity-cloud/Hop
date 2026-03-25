@@ -2,17 +2,36 @@ import type { Action, GameState, Point, Entity, VisualEvent } from './types';
 import { gameReducer, generateInitialState } from './logic';
 import { getEnemyCatalogEntry } from './data/enemies';
 import { hexEquals } from './hex';
-import { isPlayerTurn } from './systems/initiative';
+import { buildInitiativeQueue } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
 import { addStatus } from './systems/entities/actor';
 import { pointToKey, UnifiedTileService } from './systems/tiles/unified-tile-service';
 import { createEnemy, createEnemyFromBestiary, createFalcon, createPlayer } from './systems/entities/entity-factory';
-import { recomputeVisibility } from './systems/visibility';
+import { recomputeVisibilityFromScratch } from './systems/visibility';
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { SpatialSystem } from './systems/spatial-system';
 
 const SCENARIO_GRID_WIDTH = 9;
 const SCENARIO_GRID_HEIGHT = 11;
+
+export const primeScenarioPlayerTurn = (state: GameState): GameState => {
+    const queue = buildInitiativeQueue(state);
+    const playerIndex = queue.entries.findIndex(entry => entry.actorId === state.player.id);
+
+    return {
+        ...state,
+        initiativeQueue: {
+            ...queue,
+            currentIndex: playerIndex >= 0 ? playerIndex : queue.currentIndex,
+            entries: queue.entries.map(entry => ({
+                ...entry,
+                hasActed: false,
+                turnStartPosition: undefined,
+                turnStartNeighborIds: undefined
+            }))
+        }
+    };
+};
 
 /**
  * Headless Engine wrapper for functional Skill Scenarios.
@@ -306,8 +325,9 @@ async function runTests() {
                 scenario.setup(engine);
                 engine.state.initiativeQueue = undefined;
                 engine.state.occupancyMask = SpatialSystem.refreshOccupancyMask(engine.state);
-                engine.state = recomputeVisibility(engine.state);
+                engine.state = recomputeVisibilityFromScratch(engine.state);
                 engine.state.intentPreview = buildIntentPreview(engine.state);
+                engine.state = primeScenarioPlayerTurn(engine.state);
 
                 scenario.run(engine);
 

@@ -136,10 +136,6 @@ export function prepareKineticSimulation(
     // Sort by position for deterministic processing
     scenario.sort((a, b) => a.pos - b.pos);
 
-    console.log(`--- KINETIC BRIDGE: START ---`);
-    console.log(`Direction: ${dirKey} | Target Hex: q:${targetHex.q}, r:${targetHex.r}`);
-    console.log(`Entities projected:`, scenario.map(e => `ID: ${e.id}, 1D-Pos: ${e.pos}, Type: ${e.type}`));
-
     return {
         direction: dirKey as DirectionKey,
         state: {
@@ -232,7 +228,7 @@ function projectToLine(origin: Point, dirVec: Point, target: Point): number | nu
  * Throws if target is not on an axial line from start.
  */
 export function getDirectionKey(start: Point, target: Point): DirectionKey {
-    for (const [key, _vec] of Object.entries(HEX_DIRECTIONS)) {
+    for (const [key] of Object.entries(HEX_DIRECTIONS)) {
         // Use the centralized strict axial check from hex.ts
         const dirIdx = HEX_DIRECTIONS_MAP[key];
         const checkIdx = getDirectionFromTo(start, target);

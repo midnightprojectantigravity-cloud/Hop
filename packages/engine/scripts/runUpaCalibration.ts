@@ -19,7 +19,7 @@ type Guardrails = {
 const count = Number(process.argv[2] || 300);
 const maxTurns = Number(process.argv[3] || 80);
 const policy = (process.argv[4] || 'heuristic') as 'heuristic' | 'random';
-const outFile = process.argv[5] || 'docs/UPA_CALIBRATION_BASELINE.json';
+const outFile = process.argv[5] || 'artifacts/upa/UPA_CALIBRATION_BASELINE.json';
 const waiverArg = process.argv[6] || '';
 const strict = (process.argv[7] || '0') === '1';
 const waiverLoadouts = new Set(

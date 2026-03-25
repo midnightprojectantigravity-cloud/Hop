@@ -50,6 +50,7 @@ export const SWIFT_ROLL: SkillDefinition = {
             target: 'self',
             destination: target,
             simulatePath: movementPolicy.simulatePath,
+            ignoreWalls: movementPolicy.ignoreWalls,
             ignoreGroundHazards: movementPolicy.ignoreGroundHazards
         });
         effects.push({

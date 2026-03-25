@@ -1,0 +1,296 @@
+body {
+  position: relative;
+  background:
+    var(--surface-vignette),
+    radial-gradient(circle at 12% 10%, rgba(180, 141, 80, 0.15), transparent 24%),
+    radial-gradient(circle at 88% 18%, rgba(150, 106, 50, 0.1), transparent 28%),
+    linear-gradient(180deg, var(--surface-app), var(--surface-board));
+  background-blend-mode: normal, normal, normal, normal;
+  background-size: cover, cover, cover, cover;
+  color: var(--text-primary);
+  margin: 0;
+  font-family: var(--font-body);
+}
+
+/* Global parchment veil so texture reads across app panels/surfaces. */
+body::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background-image: var(--surface-texture);
+  background-size: var(--surface-texture-overlay-size);
+  background-position: 50% 50%;
+  background-repeat: var(--surface-texture-overlay-repeat);
+  filter: var(--surface-texture-char-filter) contrast(1.04) brightness(0.98);
+  mix-blend-mode: var(--surface-texture-overlay-blend);
+  opacity: var(--surface-texture-overlay-opacity);
+  z-index: 1;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+#root {
+  position: relative;
+  z-index: 0;
+}
+
+/* Materialized surfaces: parchment tooth + dark soot + subtle paper fibers. */
+.surface-app-material,
+.surface-board-material,
+.surface-panel-material {
+  /* background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.08));
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-blend-mode: normal; */
+  background-image: var(--surface-texture);
+  background-size: var(--surface-texture-overlay-size);
+  background-position: 50% 50%;
+  background-repeat: var(--surface-texture-overlay-repeat);
+}
+
+.surface-board-material {
+  background-image: radial-gradient(circle at 50% 48%, rgba(255, 245, 225, 0.08), rgba(0, 0, 0, 0.16));
+}
+
+.surface-panel-material {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.06));
+}
+
+.torn-edge-shell {
+  position: relative;
+}
+
+/* Wax seal motif for strategy skill toggles. */
+.skill-card {
+  background-color: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.14),
+    0 8px 16px rgba(45, 30, 12, 0.18);
+  filter: drop-shadow(0 0 1px rgba(80, 46, 22, 0.34));
+}
+
+.skill-card:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 3px 6px rgba(0, 0, 0, 0.16),
+    0 10px 20px rgba(45, 30, 12, 0.2);
+}
+
+.skill-card:active:not(:disabled) {
+  background-color: var(--surface-panel-hover);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.14),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    0 5px 10px rgba(45, 30, 12, 0.16);
+}
+
+.skill-card-selected {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.52),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    0 3px 8px rgba(0, 0, 0, 0.18),
+    0 9px 18px rgba(26, 60, 105, 0.14);
+}
+
+.skill-card-selected::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-royal) 82%, white 18%);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-royal) 42%, transparent);
+}
+
+.skill-wax-label {
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.24);
+  filter: blur(0.2px) contrast(1.1);
+  opacity: 0.92;
+}
+
+.skill-icon-stain {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  margin-top: 0.35rem;
+}
+
+/* Threat-linked grim filter (z >= 2) to constrict the battlefield. */
+.grim-filter-active {
+  position: relative;
+  isolation: isolate;
+}
+
+.grim-filter-active::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 56%, rgba(0, 0, 0, 0.06) 24%, rgba(0, 0, 0, 0.42) 74%, rgba(0, 0, 0, 0.68) 100%),
+    radial-gradient(circle at 50% 50%, rgba(124, 28, 17, 0.08), rgba(0, 0, 0, 0) 55%);
+  mix-blend-mode: multiply;
+  animation: grimFilterPulse 1600ms ease-in-out infinite;
+  opacity: 0.58;
+  z-index: 15;
+}
+
+@keyframes grimFilterPulse {
+  0%,
+  100% {
+    opacity: 0.48;
+  }
+
+  50% {
+    opacity: 0.68;
+  }
+}
+
+/* Shared button depth/contrast treatment across UI surfaces. */
+button {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 1px 2px rgba(0, 0, 0, 0.14);
+  transition:
+    transform var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+button:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 5px rgba(0, 0, 0, 0.16);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 2px rgba(0, 0, 0, 0.14),
+    0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-royal) 70%, white 30%);
+  outline-offset: 1px;
+}
+
+button:disabled {
+  opacity: 0.66;
+  box-shadow: none;
+}
+
+/* Movement animation for hex tiles */
+.hex-tile {
+  transition: transform var(--motion-fast) ease-out, fill var(--motion-fast) ease-out, stroke var(--motion-fast) ease-out;
+}
+
+/* Entity HP bars */
+.hp-bar-bg {
+  fill: color-mix(in srgb, var(--surface-panel) 88%, black 12%);
+}
+
+.hp-bar-fill {
+  fill: var(--accent-danger);
+  transition: width var(--motion-fast) ease;
+}
+
+.entity-emoji {
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.7));
+}
+
+/* Enemy HP color override */
+rect[fill="#fb7185"] {
+  fill: color-mix(in srgb, var(--accent-danger) 80%, white 20%);
+}
+
+/* Subtle grain overlay for apocalyptic feel */
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.03"/></svg>');
+  mix-blend-mode: multiply;
+  opacity: 0.18;
+  z-index: 2;
+}
+
+.arcade-splash-layer {
+  animation:
+    arcadeKenBurns 11s ease-out forwards,
+    arcadeIgnition 4s ease-in-out infinite;
+  transform-origin: center;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+.arcade-ready-pulse {
+  animation: arcadeReadyPulse 1100ms ease-in-out infinite;
+}
+
+.arcade-splash-panel {
+  --splash-title-color: #f4ddae;
+  --splash-title-shadow:
+    0 1px 0 rgba(255, 244, 214, 0.3),
+    0 4px 12px rgba(0, 0, 0, 0.48),
+    0 0 30px rgba(180, 141, 80, 0.22);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2.5rem;
+}
+
+.arcade-splash-title-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.arcade-splash-action-stack {
+  margin-top: auto;
+  padding-bottom: clamp(0.25rem, 1.5vh, 1rem);
+}
+
+.splash-title-main {
+  font-size: min(15svh, 25svw);
+  font-weight: 800;
+  color: var(--splash-title-color);
+  text-shadow: var(--splash-title-shadow);
+  line-height: 1;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.splash-title-connector {
+  font-size: min(5svh, 8svw);
+  font-weight: 600;
+  color: var(--splash-title-color);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  line-height: 1;
+  margin: -0.12em 0;
+  text-transform: uppercase;
+  letter-spacing: 0.4em;
+}
+

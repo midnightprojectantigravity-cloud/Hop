@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import type { ActionResourcePreview, GameState, IresTurnProjection, Point } from '@hop/engine';
-import {
-    hexToPixel, getHexLine, hexAdd, scaleVector, isHexInRectangularGrid,
-    TILE_SIZE, SkillRegistry, getSkillRange, pointToKey,
-    getSkillAoE, UnifiedTileService
-} from '@hop/engine';
+import { TILE_SIZE } from '../../../../packages/engine/src/constants';
+import { getSkillAoE } from '../../../../packages/engine/src/helpers';
+import { hexAdd, getHexLine, hexToPixel, isHexInRectangularGrid, pointToKey, scaleVector } from '../../../../packages/engine/src/hex';
+import { SkillRegistry, getSkillRange } from '../../../../packages/engine/src/skillRegistry';
+import { UnifiedTileService } from '../../../../packages/engine/src/systems/tiles/unified-tile-service';
 import { getCachedSkillTargets } from './game-board/target-resolution-cache';
 
 interface PreviewOverlayProps {
@@ -280,13 +280,29 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({
                         const { x, y } = hexToPixel(intentPreview.target, TILE_SIZE);
                         const projection = intentPreview.turnProjection!;
                         const lines = [
+                            typeof intentPreview.resourcePreview?.tempoSparkCost === 'number'
+                                ? `Tempo +${intentPreview.resourcePreview.tempoSparkCost} SP`
+                                : null,
+                            typeof intentPreview.resourcePreview?.skillSparkSurcharge === 'number'
+                                ? `Skill +${intentPreview.resourcePreview.skillSparkSurcharge} SP`
+                                : null,
+                            typeof intentPreview.resourcePreview?.sparkCostTotal === 'number' && intentPreview.resourcePreview.sparkCostTotal > 0
+                                ? `Total ${intentPreview.resourcePreview.sparkCostTotal} SP`
+                                : null,
+                            typeof intentPreview.resourcePreview?.manaCost === 'number' && intentPreview.resourcePreview.manaCost > 0
+                                ? `Mana ${intentPreview.resourcePreview.manaCost} MP`
+                                : null,
                             `Spark ${projection.spark.current} -> ${projection.spark.projected} (${projection.spark.delta > 0 ? '+' : ''}${projection.spark.delta})`,
                             `Mana ${projection.mana.current} -> ${projection.mana.projected} (${projection.mana.delta > 0 ? '+' : ''}${projection.mana.delta})`,
-                            `Ex ${projection.exhaustion.current} -> ${projection.exhaustion.projected} (${projection.exhaustion.delta > 0 ? '+' : ''}${projection.exhaustion.delta})`,
-                            `${projection.stateAfter.toUpperCase()}`
-                        ];
+                            `State ${(projection.sparkStateBefore || gameState.player.ires?.currentState || 'base').toUpperCase()} -> ${(projection.sparkStateAfter || projection.stateAfter).toUpperCase()}`,
+                            typeof projection.projectedSparkRecoveryIfEndedNow === 'number'
+                                ? `Recover +${projection.projectedSparkRecoveryIfEndedNow} SP`
+                                : null
+                        ].filter(Boolean) as string[];
                         const burnLine = intentPreview.resourcePreview?.sparkBurnHpDelta
                             ? `Burn ${intentPreview.resourcePreview.sparkBurnHpDelta} HP`
+                            : intentPreview.resourcePreview?.sparkBurnOutcome === 'travel_suppressed'
+                                ? 'Burn suppressed in travel'
                             : null;
                         const travelLine = intentPreview.resourcePreview?.travelRecoveryApplied
                             ? 'Travel recovery applies'
@@ -297,7 +313,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({
                             ? (overdriveArmed ? 'Overdrive: chaining enabled' : 'Turn will auto-end after this action')
                             : 'Manual chain: turn stays open';
                         const panelWidth = 172;
-                        const panelHeight = 50 + (burnLine ? 12 : 0) + (travelLine ? 12 : 0) + 12;
+                        const panelHeight = 8 + (lines.length * 11) + (burnLine ? 12 : 0) + (travelLine ? 12 : 0) + 12;
                         return (
                             <g transform={`translate(${x + TILE_SIZE * 0.95},${y - TILE_SIZE * 1.15})`}>
                                 <rect
@@ -325,9 +341,9 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({
                                 {burnLine && (
                                     <text
                                         x={8}
-                                        y={54}
+                                        y={12 + (lines.length * 11)}
                                         fontSize={8.5}
-                                        fill="#fecdd3"
+                                        fill={intentPreview.resourcePreview?.sparkBurnOutcome === 'travel_suppressed' ? '#bbf7d0' : '#fecdd3'}
                                         style={{ fontWeight: 800 }}
                                     >
                                         {burnLine}
@@ -336,7 +352,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({
                                 {travelLine && (
                                     <text
                                         x={8}
-                                        y={burnLine ? 66 : 54}
+                                        y={12 + (lines.length * 11) + (burnLine ? 12 : 0)}
                                         fontSize={8.5}
                                         fill={intentPreview.resourcePreview?.travelRecoveryApplied ? '#bbf7d0' : '#fde68a'}
                                         style={{ fontWeight: 800 }}
@@ -346,7 +362,7 @@ const PreviewOverlay: React.FC<PreviewOverlayProps> = ({
                                 )}
                                 <text
                                     x={8}
-                                    y={burnLine ? (travelLine ? 78 : 66) : (travelLine ? 66 : 54)}
+                                    y={12 + (lines.length * 11) + (burnLine ? 12 : 0) + (travelLine ? 12 : 0)}
                                     fontSize={8.5}
                                     fill={overdriveArmed ? '#bbf7d0' : '#f8fafc'}
                                     style={{ fontWeight: 800 }}

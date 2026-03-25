@@ -1,11 +1,7 @@
 import React, { useMemo, useState, useEffect, useLayoutEffect } from 'react';
 import type { ActionResourcePreview, GameState, IresTurnProjection, Point, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
-import {
-    isHexInRectangularGrid,
-    hexToPixel,
-    TILE_SIZE
-} from '@hop/engine';
-import { pointToKey } from '@hop/engine';
+import { TILE_SIZE } from '../../../../packages/engine/src/constants';
+import { hexToPixel, isHexInRectangularGrid, pointToKey } from '../../../../packages/engine/src/hex';
 import { DevRenderProfiler } from '../app/perf/dev-render-profiler';
 import { CameraZoomControls } from './game-board/CameraZoomControls';
 import { JuiceTraceOverlay } from './game-board/JuiceTraceOverlay';
@@ -13,7 +9,6 @@ import { GameBoardSceneSvg } from './game-board/GameBoardSceneSvg';
 import { buildBoardEventDigest } from './game-board/board-event-digest';
 import { createHoveredTileStore } from './game-board/hovered-tile-store';
 import type { BoardDecal, InteractionTileModel } from './game-board/InteractionTilesLayer';
-import type { VisualEchoEntry } from './game-board/VisualEchoLayer';
 import { useBoardInteractions } from './game-board/useBoardInteractions';
 import { useBoardDepthSprites } from './game-board/useBoardDepthSprites';
 import { useBoardBiomeVisuals } from './game-board/useBoardBiomeVisuals';
@@ -74,7 +69,6 @@ interface GameBoardProps {
     synapsePulse?: SynapsePulse;
     synapseDeltasByActorId?: Record<string, SynapseDeltaEntry>;
     onSynapseInspectEntity?: (actorId: string) => void;
-    visualEchoesEnabled?: boolean;
     strictTargetPathParityV1Enabled?: boolean;
 }
 
@@ -134,14 +128,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     synapsePulse = null,
     synapseDeltasByActorId = {},
     onSynapseInspectEntity,
-    visualEchoesEnabled = false,
     strictTargetPathParityV1Enabled = false,
 }) => {
     const [juiceBusy, setJuiceBusy] = useState(false);
     const [decals, setDecals] = useState<BoardDecal[]>([]);
-    const [visualEchoes, setVisualEchoes] = useState<VisualEchoEntry[]>([]);
     const hoveredTileStore = useMemo(() => createHoveredTileStore(), []);
-    const prevActorPositionsRef = React.useRef<Map<string, Point> | null>(null);
     const resetPresentationRef = React.useRef<() => void>(() => undefined);
     const playerPos = gameState.player.position;
     const movementRange = useMemo(
@@ -308,10 +299,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const interactionTiles = useMemo<InteractionTileModel[]>(() => (
         cells.map((hex) => {
             const tileKey = pointToKey(hex);
-            const flags = tileVisualFlags.get(tileKey) || { isWall: false, isLava: false, isFire: false };
+            const flags = tileVisualFlags.get(tileKey) || { isWall: false, isLava: false, isFire: false, isVoid: false };
             const isWall = flags.isWall;
             const isLava = flags.isLava;
             const isFire = flags.isFire;
+            const isVoid = flags.isVoid;
             const isMoveHighlight =
                 (showMovementRange && !selectedSkillId && movementTargetSet.has(tileKey))
                 || (
@@ -321,16 +313,20 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     && !hasPrimaryMovementSkills
                     && fallbackNeighborSet.has(tileKey)
                     && !isWall
+                    && !isVoid
+                    && !isLava
+                    && !isFire
                 );
             const isSkillHighlight = !!selectedSkillId && selectedSkillTargetSet.has(tileKey);
             const renderWallTile = isWall && !mountainCoveredWallKeys.has(tileKey);
-            const interactionOnly = hybridInteractionLayerEnabled && !renderWallTile;
+            const interactionOnly = hybridInteractionLayerEnabled && !renderWallTile && !isVoid;
             const isStairs = tileKey === stairsKey;
             const isShrine = shrineKey ? tileKey === shrineKey : false;
             const tileAssetId = resolveTileAssetId({
                 isWall: renderWallTile,
                 isLava,
                 isFire,
+                isVoid,
                 isStairs,
                 isShrine,
                 theme: gameState.theme,
@@ -343,6 +339,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 isStairs,
                 isLava,
                 isFire,
+                isVoid,
                 isShrine,
                 isWall: renderWallTile,
                 assetHref: interactionOnly ? undefined : assetById.get(tileAssetId)?.path,
@@ -378,11 +375,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         () => filterVisibleByHexPosition(decals, (decal) => decal.position, cameraState.cullViewBox, TILE_SIZE * 3),
         [cameraState.cullViewBox, decals]
     );
-    const visibleVisualEchoes = useMemo(
-        () => filterVisibleByHexPosition(visualEchoes, (echo) => echo.position, cameraState.cullViewBox, TILE_SIZE * 3),
-        [cameraState.cullViewBox, visualEchoes]
-    );
-
     const visibleActorIds = useMemo(
         () => new Set(gameState.visibility?.playerFog?.visibleActorIds || []),
         [gameState.visibility?.playerFog?.visibleActorIds]
@@ -441,54 +433,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         selectZoomMode,
         recenter,
     });
-
-    useEffect(() => {
-        if (!visualEchoesEnabled) {
-            prevActorPositionsRef.current = null;
-            setVisualEchoes([]);
-            return;
-        }
-        const nextActorPositions = new Map<string, Point>();
-        nextActorPositions.set(gameState.player.id, gameState.player.position);
-        gameState.enemies.forEach((enemy) => {
-            nextActorPositions.set(enemy.id, enemy.position);
-        });
-        (gameState.companions || []).forEach((companion) => {
-            nextActorPositions.set(companion.id, companion.position);
-        });
-
-        const prevPositions = prevActorPositionsRef.current;
-        if (!prevPositions) {
-            prevActorPositionsRef.current = nextActorPositions;
-            return;
-        }
-
-        const nextEchoes: VisualEchoEntry[] = [];
-        nextActorPositions.forEach((position, actorId) => {
-            const prev = prevPositions.get(actorId);
-            if (!prev) return;
-            if (prev.q === position.q && prev.r === position.r && prev.s === position.s) return;
-            nextEchoes.push({
-                id: `${actorId}-${gameState.turnNumber}-${prev.q}-${prev.r}-${prev.s}`,
-                actorId,
-                position: prev,
-                expireTurn: gameState.turnNumber + 1
-            });
-        });
-
-        prevActorPositionsRef.current = nextActorPositions;
-        setVisualEchoes((existing) => {
-            const active = existing.filter((echo) => echo.expireTurn >= gameState.turnNumber);
-            return [...active, ...nextEchoes].slice(-48);
-        });
-    }, [
-        gameState.companions,
-        gameState.enemies,
-        gameState.player.id,
-        gameState.player.position,
-        gameState.turnNumber,
-        visualEchoesEnabled
-    ]);
 
     useEffect(() => {
         onBusyStateChange?.(presentationBusy || juiceBusy);
@@ -574,7 +518,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                             synapseSelection={synapseSelection}
                             synapsePulse={synapsePulse}
                             synapseDeltasByActorId={synapseDeltasByActorId}
-                            visualEchoes={visualEchoesEnabled ? visibleVisualEchoes : []}
                             registerActorNodes={registerActorNodes}
                             onSynapseInspectEntity={handleSynapseInspectEntity}
                             onMouseLeave={handleClearHover}

@@ -1,11 +1,8 @@
 import React from 'react';
 import {
-  isEnemyAlertActive,
-  resolveCombatPressureMode,
   type ActionResourcePreview,
   type GameState
 } from '@hop/engine';
-import { UiStateBadge } from './ui-status-panel-sections';
 import { UiVitalsDetailCard } from './ui-vitals-detail-card';
 
 interface UiVitalsGlyphProps {
@@ -36,30 +33,21 @@ export const UiVitalsGlyph: React.FC<UiVitalsGlyphProps> = ({
   const ires = gameState.player.ires;
   if (!ires) return null;
 
-  const combatPressureMode = resolveCombatPressureMode(gameState);
-  const enemyAlert = isEnemyAlertActive(gameState);
-  const stateLabel = ires.currentState === 'exhausted'
-    ? 'Exhausted'
-    : ires.currentState === 'rested'
-      ? 'Rested'
-      : 'Base';
   const sparkPct = toPct(ires.spark, ires.maxSpark);
   const hpPct = toPct(gameState.player.hp, gameState.player.maxHp);
   const manaPct = toPct(ires.mana, ires.maxMana);
-  const exhaustionPct = toPct(ires.exhaustion, 100);
+  const hpProjectionDelta = Number((gameState.intentPreview as { playerHpDelta?: number } | undefined)?.playerHpDelta || 0);
+  const projectedHpPct = hpProjectionDelta !== 0
+    ? toPct(gameState.player.hp + hpProjectionDelta, gameState.player.maxHp)
+    : undefined;
   const projectedSparkPct = resourcePreview?.turnProjection ? toPct(resourcePreview.turnProjection.spark.projected, ires.maxSpark) : undefined;
-  const projectedExhaustionPct = resourcePreview?.turnProjection ? toPct(resourcePreview.turnProjection.exhaustion.projected, 100) : undefined;
+  const projectedManaPct = resourcePreview?.turnProjection ? toPct(resourcePreview.turnProjection.mana.projected, ires.maxMana) : undefined;
   const compactMode = layoutMode !== 'desktop_command_center';
   const isMobilePortrait = layoutMode === 'mobile_portrait';
-  const sparkGradient = `conic-gradient(from 210deg, rgba(245, 158, 11, 0.12) 0deg, rgba(245, 158, 11, 0.12) ${sparkPct * 3.6}deg, rgba(120, 53, 15, 0.18) ${sparkPct * 3.6}deg 360deg)`;
-  const exhaustionGradient = ires.exhaustion >= 80
-    ? `conic-gradient(from 180deg, rgba(239, 68, 68, 0.92) 0deg, rgba(239, 68, 68, 0.92) ${exhaustionPct * 3.6}deg, rgba(127, 29, 29, 0.2) ${exhaustionPct * 3.6}deg 360deg)`
-    : ires.exhaustion <= 20
-      ? `conic-gradient(from 180deg, rgba(255, 255, 255, 0.92) 0deg, rgba(255, 255, 255, 0.92) ${exhaustionPct * 3.6}deg, rgba(148, 163, 184, 0.16) ${exhaustionPct * 3.6}deg 360deg)`
-      : `conic-gradient(from 180deg, rgba(168, 85, 247, 0.92) 0deg, rgba(168, 85, 247, 0.92) ${exhaustionPct * 3.6}deg, rgba(88, 28, 135, 0.18) ${exhaustionPct * 3.6}deg 360deg)`;
   const detailCardClassName = isMobilePortrait
     ? 'fixed left-1/2 top-[calc(env(safe-area-inset-top,0px)+5.25rem)] z-40 w-[min(24rem,calc(100vw-0.75rem))] -translate-x-1/2'
     : 'absolute left-1/2 top-[calc(100%+0.6rem)] z-30 w-[min(24rem,92vw)] -translate-x-1/2';
+  const stateLabel = ires.currentState === 'exhausted' ? 'RED' : ires.currentState === 'rested' ? 'RST' : 'BAS';
 
   React.useEffect(() => {
     if (!showDetail || typeof document === 'undefined') return undefined;
@@ -88,78 +76,81 @@ export const UiVitalsGlyph: React.FC<UiVitalsGlyphProps> = ({
   return (
     <div
       ref={shellRef}
-      className={`ui-vitals-glyph-shell relative ${compactMode ? 'w-[min(17.5rem,50vw)] max-w-full' : 'w-72'}`}
+      className={`ui-vitals-glyph-shell relative ${compactMode ? 'w-[min(14rem,42vw)] max-w-full' : 'w-72'}`}
       data-layout-mode={layoutMode}
     >
       <button
         type="button"
         onClick={onToggleDetail}
-        className={`ui-vitals-glyph ${ires.currentState === 'exhausted' ? 'ui-vitals-glyph-redline' : ''} w-full rounded-[28px] border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-2 py-2 text-left shadow-[0_8px_20px_rgba(15,23,42,0.08)]`}
+        className={`ui-vitals-glyph ${ires.currentState === 'exhausted' ? 'ui-vitals-glyph-redline' : ''} w-full text-left`}
         aria-expanded={showDetail}
         aria-label="Toggle vitals details"
       >
-        <div className="flex items-center justify-center">
-          <div className="ui-vitals-glyph-frame relative flex items-center justify-center">
-            <div className="ui-vitals-glyph-wing ui-vitals-glyph-wing-left">
-              <div className="text-[9px] font-black uppercase tracking-[0.18em] text-[var(--text-muted)]">HP</div>
-              <div className="text-sm font-black text-[var(--accent-danger)]">{formatCompactValue(gameState.player.hp, gameState.player.maxHp)}</div>
-              <div className="ui-vitals-glyph-wing-bar">
-                <div className="ui-vitals-glyph-wing-fill bg-[var(--accent-danger)]" style={{ width: `${hpPct}%` }} />
-              </div>
+        <div className="ui-vitals-glyph-frame">
+          <div className="ui-vitals-glyph-meter ui-vitals-glyph-meter-hp">
+            <div className="ui-vitals-glyph-meter-label">HP</div>
+            <div className="ui-vitals-glyph-meter-value ui-vitals-glyph-meter-value-danger">
+              {formatCompactValue(gameState.player.hp, gameState.player.maxHp)}
             </div>
-
-            <div className="ui-vitals-glyph-core-shell relative">
-              <div className="ui-vitals-glyph-exhaustion-ring" style={{ backgroundImage: exhaustionGradient }} />
-              {projectedExhaustionPct !== undefined ? (
+            <div className="ui-vitals-glyph-meter-track">
+              <div className="ui-vitals-glyph-meter-fill ui-vitals-glyph-meter-fill-danger" style={{ width: `${hpPct}%` }} />
+              {projectedHpPct !== undefined ? (
                 <div
-                  className="ui-vitals-glyph-projection-ring"
-                  style={{ backgroundImage: `conic-gradient(from 180deg, rgba(255,255,255,0.85) 0deg, rgba(255,255,255,0.85) ${projectedExhaustionPct * 3.6}deg, rgba(255,255,255,0) ${projectedExhaustionPct * 3.6}deg 360deg)` }}
+                  className="ui-vitals-glyph-meter-projection"
+                  style={{ left: `calc(${projectedHpPct}% - 1px)` }}
                 />
               ) : null}
-              <div className="ui-vitals-glyph-core" style={{ backgroundImage: sparkGradient }}>
+            </div>
+          </div>
+
+          <div className="ui-vitals-glyph-core-readout">
+            <div className="ui-vitals-glyph-meter ui-vitals-glyph-meter-spark">
+              <div className="ui-vitals-glyph-meter-label">Spark</div>
+              <div className="ui-vitals-glyph-core-value">{Math.round(ires.spark)}</div>
+              <div className="ui-vitals-glyph-core-subvalue">/ {Math.round(ires.maxSpark)}</div>
+              <div className="ui-vitals-glyph-meter-track">
+                <div className="ui-vitals-glyph-meter-fill ui-vitals-glyph-meter-fill-spark" style={{ width: `${sparkPct}%` }} />
                 {projectedSparkPct !== undefined ? (
                   <div
-                    className="ui-vitals-glyph-core-projection"
-                    style={{ backgroundImage: `conic-gradient(from 210deg, rgba(255,255,255,0.8) 0deg, rgba(255,255,255,0.8) ${projectedSparkPct * 3.6}deg, rgba(255,255,255,0) ${projectedSparkPct * 3.6}deg 360deg)` }}
+                    className="ui-vitals-glyph-meter-projection"
+                    style={{ left: `calc(${projectedSparkPct}% - 1px)` }}
                   />
                 ) : null}
-                <div className="ui-vitals-glyph-core-inner">
-                  <div className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-900/70">Spark</div>
-                  <div className="text-2xl font-black text-amber-950">{Math.round(ires.spark)}</div>
-                  <div className="text-[10px] font-bold text-amber-900/70">/ {Math.round(ires.maxSpark)}</div>
-                </div>
               </div>
-              {resourcePreview?.sparkBurnHpDelta ? (
-                <div className="ui-vitals-glyph-badge ui-vitals-glyph-badge-burn">Burn {resourcePreview.sparkBurnHpDelta}</div>
-              ) : null}
             </div>
 
-            <div className="ui-vitals-glyph-wing ui-vitals-glyph-wing-right">
-              <div className="text-[9px] font-black uppercase tracking-[0.18em] text-[var(--text-muted)]">MP</div>
-              <div className="text-sm font-black text-cyan-700">{formatCompactValue(ires.mana, ires.maxMana)}</div>
-              <div className="ui-vitals-glyph-wing-bar">
-                <div className="ui-vitals-glyph-wing-fill bg-cyan-500" style={{ width: `${manaPct}%` }} />
+            <div className="ui-vitals-glyph-meter ui-vitals-glyph-meter-ex" aria-label={`State ${ires.currentState}`}>
+              <div className="ui-vitals-glyph-meter-row">
+                <span className="ui-vitals-glyph-meter-label">ST</span>
+                <span className={`ui-vitals-glyph-meter-value ${ires.currentState === 'exhausted' ? 'ui-vitals-glyph-meter-value-danger' : ires.currentState === 'rested' ? 'ui-vitals-glyph-meter-value-neutral' : 'ui-vitals-glyph-meter-value-ex'}`}>{stateLabel}</span>
+              </div>
+              <div className="ui-vitals-glyph-meter-track">
+                <div className="ui-vitals-glyph-meter-fill ui-vitals-glyph-meter-fill-ex" style={{ width: `${sparkPct}%` }} />
+                {projectedSparkPct !== undefined ? (
+                  <div
+                    className="ui-vitals-glyph-meter-projection"
+                    style={{ left: `calc(${projectedSparkPct}% - 1px)` }}
+                  />
+                ) : null}
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-          <UiStateBadge stateLabel={stateLabel} />
-          {combatPressureMode === 'travel' ? (
-            <span className="ui-vitals-glyph-chip ui-vitals-glyph-chip-travel">Travel Mode</span>
-          ) : null}
-          <span className="ui-vitals-glyph-chip ui-vitals-glyph-chip-calm">
-            {turnFlowMode === 'protected_single' ? 'Protected' : 'Manual Chain'}
-          </span>
-          {turnFlowMode === 'protected_single' ? (
-            <span className="ui-vitals-glyph-chip ui-vitals-glyph-chip-calm">Auto-End: 1</span>
-          ) : null}
-          <span className={`ui-vitals-glyph-chip ${enemyAlert ? 'ui-vitals-glyph-chip-alert' : 'ui-vitals-glyph-chip-calm'}`}>
-            Alert {enemyAlert ? 'On' : 'Off'}
-          </span>
-          {overdriveArmed ? <span className="ui-vitals-glyph-chip ui-vitals-glyph-chip-bonus">Overdrive Armed</span> : null}
-          {ires.pendingRestedBonus ? <span className="ui-vitals-glyph-chip ui-vitals-glyph-chip-bonus">Bonus Armed</span> : null}
+          <div className="ui-vitals-glyph-meter ui-vitals-glyph-meter-mp">
+            <div className="ui-vitals-glyph-meter-label">MP</div>
+            <div className="ui-vitals-glyph-meter-value ui-vitals-glyph-meter-value-mp">
+              {formatCompactValue(ires.mana, ires.maxMana)}
+            </div>
+            <div className="ui-vitals-glyph-meter-track">
+              <div className="ui-vitals-glyph-meter-fill ui-vitals-glyph-meter-fill-mp" style={{ width: `${manaPct}%` }} />
+              {projectedManaPct !== undefined ? (
+                <div
+                  className="ui-vitals-glyph-meter-projection"
+                  style={{ left: `calc(${projectedManaPct}% - 1px)` }}
+                />
+              ) : null}
+            </div>
+          </div>
         </div>
       </button>
 

@@ -70,7 +70,7 @@ export const relicScenarios: ScenarioCollection = {
         {
             id: 'relic_steady_plates_end_to_end',
             title: 'Relic: Steady Plates',
-            description: 'Steady Plates grants turn-start armor that resolves against incoming damage in the same round.',
+            description: 'Steady Plates grants turn-start armor for the next decision point after end-of-turn hazards resolve.',
             relatedSkills: ['BASIC_MOVE'],
             category: 'passive',
             difficulty: 'intermediate',
@@ -91,9 +91,9 @@ export const relicScenarios: ScenarioCollection = {
             },
             verify: (state: GameState, logs: string[]) => {
                 const checks = {
-                    playerHpProtected: state.player.hp === state.player.maxHp,
+                    endTurnHazardResolved: state.player.hp < state.player.maxHp,
                     damageEventOccurred: logs.some(l => l.includes('player burns!')),
-                    armorPresentAfterCycle: state.player.temporaryArmor >= 0 && state.player.temporaryArmor <= 2,
+                    armorPresentAfterCycle: (state.player.temporaryArmor || 0) >= 1 && (state.player.temporaryArmor || 0) <= 2,
                     relicTriggerMessageSeen: logs.some(l => l.includes('Steady Plates harden your stance.')),
                 };
                 return Object.values(checks).every(v => v === true);

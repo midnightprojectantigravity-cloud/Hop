@@ -97,6 +97,7 @@ export const DASH: SkillDefinition = {
                     destination: stopPos,
                     path: dashPath,
                     simulatePath: movementPolicy.simulatePath,
+                    ignoreWalls: movementPolicy.ignoreWalls,
                     ignoreGroundHazards: true,
                     animationDuration: dashPath.length * 60,  // 60ms per tile (fast dash)
                     presentationKind: 'dash',
@@ -148,6 +149,7 @@ export const DASH: SkillDefinition = {
                 destination: stopPos,
                 path: dashPath,
                 simulatePath: movementPolicy.simulatePath,
+                ignoreWalls: movementPolicy.ignoreWalls,
                 ignoreGroundHazards: true,
                 animationDuration: dashPath.length * 60,  // 60ms per tile
                 presentationKind: 'dash',

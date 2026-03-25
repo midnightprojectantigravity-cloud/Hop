@@ -145,8 +145,22 @@ const TILE_ID_BY_CODE: Record<number, keyof typeof TILE_CODE_BY_ID> = {
     3: 'VOID'
 };
 
-const themeDefaultClosure = (theme: string, claimOverlapped: boolean): 'WALL' | 'VOID' =>
-    claimOverlapped ? 'VOID' : (theme === 'inferno' ? 'WALL' : 'VOID');
+const themeDefaultClosure = (theme: string): 'WALL' | 'VOID' =>
+    theme === 'inferno' ? 'WALL' : 'VOID';
+
+const buildClaimKeySet = (
+    claims: SpatialClaim[],
+    hardness?: SpatialClaimHardness
+): Set<string> => {
+    const keys = new Set<string>();
+    for (const claim of claims) {
+        if (hardness && claim.hardness !== hardness) continue;
+        for (const cell of claim.cells) {
+            keys.add(pointToKey(cell));
+        }
+    }
+    return keys;
+};
 
 const hashString = (value: string): string => {
     let hash = 2166136261 >>> 0;
@@ -1043,15 +1057,7 @@ const closeUnresolvedGaskets = (
 ): Map<string, Tile> => {
     const registry = buildModuleRegistryIndex();
     const nextTiles = new Map(tiles);
-    const claimKeysByHardness = claims.reduce<Record<SpatialClaimHardness, Set<string>>>((acc, claim) => {
-        const set = acc[claim.hardness] || new Set<string>();
-        claim.cells.forEach(cell => set.add(pointToKey(cell)));
-        acc[claim.hardness] = set;
-        return acc;
-    }, {
-        hard: new Set<string>(),
-        soft: new Set<string>()
-    });
+    const hardClaimKeys = buildClaimKeySet(claims, 'hard');
 
     for (const placement of modulePlan.placements) {
         const module = registry.entriesById[placement.moduleId];
@@ -1059,10 +1065,9 @@ const closeUnresolvedGaskets = (
             if (gasket.state !== 'open_optional') continue;
             const point = toWorld(placement.anchor, gasket);
             const key = pointToKey(point);
-            const overlapsHardClaim = claimKeysByHardness.hard.has(key);
-            const closureBaseId = overlapsHardClaim
-                ? themeDefaultClosure(theme, true)
-                : themeDefaultClosure(theme, false);
+            const overlapsHardClaim = hardClaimKeys.has(key);
+            if (overlapsHardClaim && nextTiles.has(key)) continue;
+            const closureBaseId = themeDefaultClosure(theme);
             nextTiles.set(key, createTile(closureBaseId, point));
         }
     }
@@ -2072,10 +2077,12 @@ const applyEnvironmentalPressure = (
     pathNetwork: GeneratedPathNetwork,
     intent: FloorIntentRequest,
     seed: string,
-    authoredFloor?: AuthoredFloor
+    authoredFloor?: AuthoredFloor,
+    claims: SpatialClaim[] = []
 ): { tiles: Map<string, Tile>; pathNetwork: GeneratedPathNetwork; diagnostics: string[] } => {
     const nextTiles = new Map(tiles);
     const clusters: EnvironmentalPressureCluster[] = [];
+    const hardClaimKeys = buildClaimKeySet(claims, 'hard');
     const specials = new Set<string>([
         pointToKey(arena.playerSpawn),
         pointToKey(arena.stairsPosition),
@@ -2124,7 +2131,13 @@ const applyEnvironmentalPressure = (
         const routeMembership = resolveTileRouteMembership(pathNetwork, centerKey);
         const candidateKeys = walkableNeighborKeys(center)
             .sort((left, right) => left.localeCompare(right))
-            .filter(key => !tacticalRouteTileKeys.has(key) && !specials.has(key) && !landmarkKeys.has(key) && !usedTileKeys.has(key));
+            .filter(key =>
+                !hardClaimKeys.has(key)
+                && !tacticalRouteTileKeys.has(key)
+                && !specials.has(key)
+                && !landmarkKeys.has(key)
+                && !usedTileKeys.has(key)
+            );
         const clusterKeys: string[] = [];
         for (const candidateKey of candidateKeys) {
             const tile = nextTiles.get(candidateKey);
@@ -2146,7 +2159,12 @@ const applyEnvironmentalPressure = (
 
     const trapTiles = prioritizeHexKeys(
         pathNetwork.visualTileKeys
-            .filter(key => !specials.has(key) && !landmarkKeys.has(key) && !usedTileKeys.has(key)),
+            .filter(key =>
+                !hardClaimKeys.has(key)
+                && !specials.has(key)
+                && !landmarkKeys.has(key)
+                && !usedTileKeys.has(key)
+            ),
         trapPriority
     );
 
@@ -3117,7 +3135,8 @@ const runCompilerPass = (
                 state.pathNetworkValue,
                 state.intent,
                 state.input.seed,
-                state.authoredFloor
+                state.authoredFloor,
+                state.claims || []
             );
             return {
                 ...state,
@@ -3473,7 +3492,15 @@ export const compileStandaloneFloor = (
         });
     }
     const visualPath = buildVisualPathNetwork(tacticalPath.pathNetwork);
-    const pressured = applyEnvironmentalPressure(arena, closedTiles, visualPath.pathNetwork, intent, seed, authoredFloor);
+    const pressured = applyEnvironmentalPressure(
+        arena,
+        closedTiles,
+        visualPath.pathNetwork,
+        intent,
+        seed,
+        authoredFloor,
+        claims
+    );
     const pathNetwork = pressured.pathNetwork;
     const pathDiagnostics = pressured.diagnostics;
     const pressuredTiles = pressured.tiles;

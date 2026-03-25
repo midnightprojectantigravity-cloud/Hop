@@ -55,7 +55,7 @@ describe('trinity integration', () => {
 
         const out = BASIC_ATTACK.execute(state, player, targetPos, []);
         const damage = out.effects.find(e => e.type === 'Damage');
-        expect(damage && damage.type === 'Damage' ? damage.amount : 0).toBe(3);
+        expect(damage && damage.type === 'Damage' ? damage.amount : 0).toBe(7);
     });
 
     it('mind stat increases FIREBALL and CORPSE_EXPLOSION base output', () => {
@@ -71,7 +71,7 @@ describe('trinity integration', () => {
         const fireballState = makeState(player, [enemy]);
         const fireballOut = FIREBALL.execute(fireballState, player, enemy.position);
         const fbDamage = fireballOut.effects.find(e => e.type === 'Damage');
-        expect(fbDamage && fbDamage.type === 'Damage' ? fbDamage.amount : 0).toBe(2);
+        expect(fbDamage && fbDamage.type === 'Damage' ? fbDamage.amount : 0).toBe(1);
 
         const corpseState = makeState(player, [enemy], corpseTiles);
         const corpseOut = CORPSE_EXPLOSION.execute(corpseState, player, corpsePos);
@@ -91,12 +91,12 @@ describe('trinity integration', () => {
             { sourceId: player.id, targetId: enemy.id }
         );
 
-        expect(next.enemies[0].statusEffects[0]?.duration).toBe(3);
+        expect(next.enemies[0].statusEffects[0]?.duration).toBe(30);
     });
 
     it('instinct lever adds deterministic initiative bonus', () => {
         const actor = makeActor('enemy-fast', 'enemy', 'enemy', { q: 0, r: 0, s: 0 });
         actor.components = new Map([['trinity', { type: 'trinity', body: 0, mind: 0, instinct: 4 }]]);
-        expect(getInitiativeScore(actor)).toBe(18);
+        expect(getInitiativeScore(actor)).toBe(12.8);
     });
 });

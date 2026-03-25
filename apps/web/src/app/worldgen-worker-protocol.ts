@@ -6,21 +6,19 @@ import type {
 } from '@hop/engine';
 
 export type WorldgenWorkerRequest =
-  | { type: 'BOOT' }
+  | { type: 'INITIALIZE' }
   | { type: 'COMPILE_RUN_START'; requestId: string; payload: StartRunCompileContext }
   | { type: 'COMPILE_PENDING_FLOOR'; requestId: string; payload: TransitionCompileContext };
 
 export type WorldgenWorkerResponse =
   | {
-      type: 'BOOT_OK';
-      registryVersion: string;
-      specSchemaVersion: string;
-      moduleCount: number;
+      type: 'INITIALIZE_OK';
+      contractVersion: string;
+      runtimeApiVersion: string;
     }
   | {
-      type: 'BOOT_ERROR';
-      registryVersion: string;
-      specSchemaVersion: string;
+      type: 'INITIALIZE_ERROR';
+      contractVersion?: string;
       error: string;
     }
   | {

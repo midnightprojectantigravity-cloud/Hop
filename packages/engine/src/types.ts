@@ -3,7 +3,7 @@ import type { SkillID, StatusID, ArchetypeID, JuiceEffectID, AilmentID } from '.
 import type { JuiceSignaturePayloadV1 } from './types/juice-signature';
 import type { CombatScoreEvent } from './systems/combat/combat-calculator';
 import type { CompiledFloorArtifact, GeneratedPathNetwork, GenerationDebugSnapshot, GenerationSpecInput, GenerationState, RunTelemetryCounters } from './generation/schema';
-import type { IresMetabolicConfig, MetabolicActionBandId } from './systems/ires/metabolic-types';
+import type { IresMetabolicConfig, LinearStatFormula, MetabolicActionBandId } from './systems/ires/metabolic-types';
 
 /**
  * ARCHITECTURE OVERVIEW: "Gold Standard" Tech Stack
@@ -39,6 +39,8 @@ export interface SkillResourceProfile {
     primaryResource: IresPrimaryResource;
     primaryCost: number;
     baseStrain: number;
+    sparkWalkScalar?: number;
+    manaCost?: number;
     countsAsMovement: boolean;
     countsAsAction: boolean;
     redlineAllowed?: boolean;
@@ -60,6 +62,9 @@ export type SkillMetabolicScopeTag =
 export interface SkillMetabolicBandProfile {
     bandId: MetabolicActionBandId;
     resourceMode: 'spark_only' | 'mana_only' | 'hybrid' | 'none';
+    sparkWalkBandId?: MetabolicActionBandId | 'none';
+    sparkWalkScalarOffset?: number;
+    manaBandId?: MetabolicActionBandId | 'none';
     countsAsMovement: boolean;
     countsAsAction: boolean;
     travelEligible: boolean;
@@ -73,6 +78,9 @@ export interface IresTurnProjection {
     spark: { current: number; projected: number; delta: number };
     mana: { current: number; projected: number; delta: number };
     exhaustion: { current: number; projected: number; delta: number };
+    sparkStateBefore?: IresActorState;
+    sparkStateAfter?: IresActorState;
+    projectedSparkRecoveryIfEndedNow?: number;
     stateAfter: IresActorState;
     actionCountAfter: number;
     wouldRest: boolean;
@@ -84,6 +92,11 @@ export interface ActionResourcePreview {
     sparkDelta: number;
     manaDelta: number;
     exhaustionDelta: number;
+    tempoSparkCost?: number;
+    skillSparkSurcharge?: number;
+    sparkCostTotal?: number;
+    manaCost?: number;
+    sparkBurnOutcome?: 'none' | 'enter_exhausted_free' | 'burn_now' | 'burn_blocked_cap' | 'travel_suppressed';
     sparkBurnHpDelta: number;
     tax: number;
     effectiveBfi: number;
@@ -115,10 +128,22 @@ export interface IresRuntimeState {
 
 export interface IresRulesetConfig {
     enabled: boolean;
-    version: 'ires-v1';
+    version: 'ires-v1' | 'ires-v2';
     sparkRecoveryPerTurn: number;
     manaRecoveryPerTurn: number;
     restExhaustionClear: number;
+    sparkPoolFormula?: LinearStatFormula;
+    sparkRecoveryFlatFormula?: LinearStatFormula;
+    sparkRecoveryPctFormula?: LinearStatFormula;
+    restedEnterSparkRatio?: number;
+    restedExitSparkBelow?: number;
+    exhaustedEnterSparkRatio?: number;
+    exhaustedExitSparkAbove?: number;
+    sparkRecoveryStateMultipliers?: {
+        rested: number;
+        base: number;
+        exhausted: number;
+    };
     travelModeEnabled: boolean;
     travelMovementOnly: boolean;
     travelSparkRecovery: number;
@@ -130,6 +155,7 @@ export interface IresRulesetConfig {
     restedSparkBonus: number;
     restedCritBonusPct: number;
     fibonacciTable: number[];
+    travelSuppressesSparkBurn?: boolean;
     metabolism?: IresMetabolicConfig;
 }
 
@@ -236,6 +262,7 @@ export type AtomicEffect =
         animationDuration?: number;  // Optional: Suggested duration in ms (e.g., 150ms per tile)
         ignoreCollision?: boolean;
         simulatePath?: boolean;
+        ignoreWalls?: boolean;
         ignoreGroundHazards?: boolean;
         presentationKind?: MovementPresentationKind;
         pathStyle?: MovementPathStyle;
@@ -313,6 +340,11 @@ export type AtomicEffect =
             actionKind?: 'move' | 'action' | 'rest' | 'end_turn' | 'turn_start' | 'travel';
             tax?: number;
             effectiveBfi?: number;
+            tempoSparkCost?: number;
+            skillSparkSurcharge?: number;
+            sparkCostTotal?: number;
+            manaCost?: number;
+            sparkBurnOutcome?: 'none' | 'enter_exhausted_free' | 'burn_now' | 'burn_blocked_cap' | 'travel_suppressed';
             sparkBurnHpDelta?: number;
         };
     }

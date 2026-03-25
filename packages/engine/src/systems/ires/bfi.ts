@@ -13,12 +13,6 @@ export type IresArmorTier = 'None' | 'Light' | 'Medium' | 'Heavy';
 const clamp = (value: number, min: number, max: number): number =>
     Math.max(min, Math.min(max, value));
 
-const resolveLegacyMovementTier = (weightClass?: WeightClass): Exclude<IresArmorTier, 'None'> => {
-    if (weightClass === 'Light') return 'Light';
-    if (weightClass === 'Heavy' || weightClass === 'Anchored' || weightClass === 'OuterWall') return 'Heavy';
-    return 'Medium';
-};
-
 export const resolveIresArmorTier = (
     actorOrBurdenTier?: Pick<Actor, 'armorBurdenTier' | 'weightClass'> | ArmorBurdenTier | WeightClass
 ): IresArmorTier => {
@@ -32,13 +26,7 @@ export const resolveIresWeightModifier = (
     actorOrWeightClass?: Pick<Actor, 'armorBurdenTier' | 'weightClass'> | WeightClass
 ): { bfi: number; movementSpark: number; tier: IresArmorTier } => {
     const tier = resolveIresArmorTier(actorOrWeightClass as any);
-    const weightClass = typeof actorOrWeightClass === 'string'
-        ? actorOrWeightClass
-        : actorOrWeightClass?.weightClass;
-    const legacyMovementTier = resolveLegacyMovementTier(weightClass);
     const bfi = DEFAULT_IRES_METABOLIC_CONFIG.burdenBfiAdjustments[tier];
-    if (legacyMovementTier === 'Light') return { bfi, movementSpark: -5, tier };
-    if (legacyMovementTier === 'Heavy') return { bfi, movementSpark: 15, tier };
     return { bfi, movementSpark: 0, tier };
 };
 
@@ -73,3 +61,8 @@ export const resolveExhaustionTax = (
         Math.max(0, actionCountThisTurn)
     );
 };
+
+export const resolveWalkUnit = (
+    actor: Actor,
+    ruleset?: Parameters<typeof resolveIresRuleset>[0]
+): number => resolveExhaustionTax(actor, 0, ruleset);

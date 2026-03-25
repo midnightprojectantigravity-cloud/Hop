@@ -1,17 +1,17 @@
-import { isEnemyAlertActive, pointToKey, type ActionResourcePreview, type GameState, type Point, type SimulationEvent, type StateMirrorSnapshot } from '@hop/engine';
 import React from 'react';
+import type { ActionResourcePreview } from '@hop/engine';
+import { pointToKey } from '../../../../packages/engine/src/hex';
+import { isEnemyAlertActive } from '../../../../packages/engine/src/systems/free-move';
 import { GameBoard } from '../components/GameBoard';
-import { UI } from '../components/UI';
 import { UpgradeOverlay } from '../components/UpgradeOverlay';
 import { SkillTray } from '../components/SkillTray';
 import { SynapseBottomTray } from '../components/synapse/SynapseBottomTray';
-import type { VisualAssetManifest } from '../visual/asset-manifest';
+import { UiLogFeed } from '../components/ui/ui-log-feed';
 import { resolveBoardColorMode } from '../visual/biome-config';
 import type { CameraInsetsPx } from '../visual/camera';
-import { UI_THEME_OPTIONS, type UiColorMode, type UiPreferencesV1 } from './ui-preferences';
+import { UI_THEME_OPTIONS, type UiColorMode } from './ui-preferences';
 import {
   getUiInformationRevealMode,
-  setUiInformationRevealMode,
   type UiInformationRevealMode
 } from './information-reveal';
 import {
@@ -19,8 +19,6 @@ import {
   buildSynapseScoreSnapshot,
   resolveSynapsePreview,
   type SynapseDeltaEntry,
-  type SynapsePulse,
-  type SynapseSelection
 } from './synapse';
 import {
   ResolvingTurnOverlay,
@@ -33,17 +31,16 @@ import {
 } from './AppOverlays';
 import { WorldgenBoardOverlay } from './WorldgenBoardOverlay';
 import { WorldgenDebugPanel } from './WorldgenDebugPanel';
-import { UiTriResourceHeader, getWaitDirectiveLabel } from '../components/ui/ui-status-panel-sections';
-import { UiVitalsDetailCard } from '../components/ui/ui-vitals-detail-card';
-
-type MobileToast = {
-  id: string;
-  text: string;
-  tone: 'damage' | 'heal' | 'status' | 'system';
-  createdAt: number;
-};
-
-type FloorIntroState = { floor: number; theme: string } | null;
+import {
+  UiBoardStatsSection,
+  UiDirectivesSection,
+  UiSentinelDirectiveSection,
+  UiTriResourceHeader,
+  getWaitDirectiveLabel
+} from '../components/ui/ui-status-panel-sections';
+import { UiMobileTopHud } from '../components/ui/ui-mobile-top-hud';
+import { UiVitalsGlance } from '../components/ui/ui-vitals-glance';
+import type { GameScreenModel } from './use-game-screen-model';
 
 const InfoSettingsPanel = ({
   compact = false
@@ -77,52 +74,7 @@ const EnemyAlertChip = ({
 );
 
 interface GameScreenProps {
-  gameState: GameState;
-  uiPreferences: UiPreferencesV1;
-  turnFlowMode: 'protected_single' | 'manual_chain';
-  overdriveArmed: boolean;
-  selectedSkillId: string | null;
-  showMovementRange: boolean;
-  isInputLocked: boolean;
-  isReplayMode: boolean;
-  replayActionsLength: number;
-  replayIndex: number;
-  replayActive: boolean;
-  mobileToasts: MobileToast[];
-  tutorialInstructions: string | null;
-  floorIntro: FloorIntroState;
-  assetManifest?: VisualAssetManifest | null;
-  isSynapseMode: boolean;
-  synapseSelection: SynapseSelection;
-  synapsePulse: SynapsePulse;
-  onSetBoardBusy: (busy: boolean) => void;
-  onTileClick: (hex: Point, passiveSkillId?: string) => void;
-  onSimulationEvents?: (events: SimulationEvent[]) => void;
-  onMirrorSnapshot?: (snapshot: StateMirrorSnapshot) => void;
-  onReset: () => void;
-  onWait: () => void;
-  onExitToHub: () => void;
-  onSelectSkill: (skillId: string | null) => void;
-  onSelectUpgrade: (upgradeId: string) => void;
-  onToggleSynapseMode: () => void;
-  onSynapseInspectEntity: (actorId: string) => void;
-  onSynapseSelectSource: (actorId: string) => void;
-  onSynapseClearSelection: () => void;
-  onDismissTutorial: () => void;
-  onToggleReplay: () => void;
-  onStepReplay: () => void;
-  onJumpReplay: (index: number) => void;
-  replayMarkerIndices?: number[];
-  onCloseReplay: () => void;
-  onQuickRestart: () => void;
-  onViewReplay: () => void;
-  onRunLostActionsReady?: () => void;
-  showRunLostOverlay: boolean;
-  onSetColorMode: (mode: UiColorMode) => void;
-  onToggleOverdrive: () => void;
-  mobileDockV2Enabled?: boolean;
-  replayChronicleEnabled?: boolean;
-  strictTargetPathParityV1Enabled?: boolean;
+  screen: GameScreenModel;
 }
 
 interface GuardedActionButtonProps {
@@ -189,11 +141,12 @@ const MobileChevronButton = ({
     type="button"
     onClick={onClick}
     style={style}
+    data-mobile-top-hud-fold-toggle
     aria-expanded={expanded}
     aria-label={label}
-    className="inline-flex items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2.5 py-1 text-[var(--text-muted)] transition-colors active:bg-[var(--surface-panel-hover)]"
+    className="ui-mobile-top-hud-fold-toggle inline-flex items-center justify-center text-[var(--text-muted)] transition-colors active:bg-[var(--surface-panel-hover)]"
   >
-    <span className="text-base leading-none">{expanded ? '^' : 'v'}</span>
+    <span className="ui-mobile-top-hud-chevron-glyph">{expanded ? '^' : 'v'}</span>
   </button>
 );
 
@@ -244,62 +197,69 @@ export const resolveBottomDockHeightPx = (width: number, height: number): number
   return clamp(Math.round(height * percent), 176, 320);
 };
 
-export const GameScreen = ({
-  gameState,
-  uiPreferences,
-  turnFlowMode,
-  overdriveArmed,
-  selectedSkillId,
-  showMovementRange,
-  isInputLocked,
-  isReplayMode,
-  replayActionsLength,
-  replayIndex,
-  replayActive,
-  mobileToasts,
-  tutorialInstructions,
-  floorIntro,
-  assetManifest,
-  isSynapseMode,
-  synapseSelection,
-  synapsePulse,
-  onSetBoardBusy,
-  onTileClick,
-  onSimulationEvents,
-  onMirrorSnapshot,
-  onReset,
-  onWait,
-  onExitToHub,
-  onSelectSkill,
-  onSelectUpgrade,
-  onToggleSynapseMode,
-  onSynapseInspectEntity,
-  onSynapseSelectSource,
-  onSynapseClearSelection,
-  onDismissTutorial,
-  onToggleReplay,
-  onStepReplay,
-  onJumpReplay,
-  replayMarkerIndices,
-  onCloseReplay,
-  onQuickRestart,
-  onViewReplay,
-  onRunLostActionsReady,
-  showRunLostOverlay,
-  onSetColorMode,
-  onToggleOverdrive,
-  mobileDockV2Enabled = true,
-  replayChronicleEnabled = false,
-  strictTargetPathParityV1Enabled = false,
-}: GameScreenProps) => {
+export const GameScreen = ({ screen }: GameScreenProps) => {
+  const {
+    run: {
+      gameState,
+      selectedSkillId,
+      showMovementRange,
+      isInputLocked,
+      isReplayMode,
+      replayActionsLength,
+      replayIndex,
+      replayActive,
+      mobileToasts,
+      tutorialInstructions,
+      floorIntro,
+      assetManifest,
+      isSynapseMode,
+      synapseSelection,
+      synapsePulse,
+      showRunLostOverlay,
+    },
+    ui: {
+      uiPreferences,
+      turnFlowMode,
+      overdriveArmed,
+      replayMarkerIndices,
+      mobileDockV2Enabled = true,
+      replayChronicleEnabled = false,
+      strictTargetPathParityV1Enabled = false,
+    },
+    actions: {
+      onSetBoardBusy,
+      onTileClick,
+      onSimulationEvents,
+      onMirrorSnapshot,
+      onReset,
+      onWait,
+      onExitToHub,
+      onSelectSkill,
+      onSelectUpgrade,
+      onToggleSynapseMode,
+      onSynapseInspectEntity,
+      onSynapseSelectSource,
+      onSynapseClearSelection,
+      onDismissTutorial,
+      onToggleReplay,
+      onStepReplay,
+      onJumpReplay,
+      onCloseReplay,
+      onQuickRestart,
+      onViewReplay,
+      onRunLostActionsReady,
+      onSetColorMode,
+      onSetVitalsMode,
+      onToggleOverdrive,
+    }
+  } = screen;
   const showWorldgenDebug = React.useMemo(() => {
     if (!import.meta.env.DEV || typeof window === 'undefined') return false;
     return new URLSearchParams(window.location.search).get('worldgenDebug') === '1';
   }, []);
   const [intelMode, setIntelMode] = React.useState<UiInformationRevealMode>(() => getUiInformationRevealMode());
-  const [showVitalsDetail, setShowVitalsDetail] = React.useState(false);
-  const [mobileTopRailExpanded, setMobileTopRailExpanded] = React.useState(false);
-  const [mobileBottomDockExpanded, setMobileBottomDockExpanded] = React.useState(false);
+  const [mobileTopTrayOpen, setMobileTopTrayOpen] = React.useState(false);
+  const [mobileInfoMode, setMobileInfoMode] = React.useState(false);
   const [viewportSize, setViewportSize] = React.useState(() => {
     if (typeof window === 'undefined') return { width: 390, height: 844 };
     return { width: window.innerWidth, height: window.innerHeight };
@@ -330,10 +290,6 @@ export const GameScreen = ({
     syncViewport();
     return () => window.removeEventListener('resize', syncViewport);
   }, []);
-  const handleIntelModeChange = React.useCallback((mode: UiInformationRevealMode) => {
-    setIntelMode(mode);
-    setUiInformationRevealMode(mode);
-  }, []);
   const synapsePreview = React.useMemo(
     () => resolveSynapsePreview(gameState.intentPreview),
     [gameState.intentPreview]
@@ -363,6 +319,7 @@ export const GameScreen = ({
   const boardColorMode = React.useMemo(() => resolveBoardColorMode(gameState.theme), [gameState.theme]);
   const enemyAlertActive = React.useMemo(() => isEnemyAlertActive(gameState), [gameState]);
   const resourcePreview = ((gameState.intentPreview as { resourcePreview?: ActionResourcePreview } | undefined)?.resourcePreview);
+  const messages = Array.isArray(gameState.message) ? gameState.message : [];
   const hudScale = React.useMemo(
     () => resolveHudScale(viewportSize.width, viewportSize.height),
     [viewportSize.height, viewportSize.width]
@@ -386,6 +343,10 @@ export const GameScreen = ({
   const valueFontPx = React.useMemo(
     () => clamp(18 * hudScale, 16, 28),
     [hudScale]
+  );
+  const mobileTopHudCompactHeightPx = React.useMemo(
+    () => Math.round(labelFontPx * 2 + valueFontPx * 2 + 10),
+    [labelFontPx, valueFontPx]
   );
   const hudCssVars = React.useMemo(
     () => ({
@@ -428,13 +389,70 @@ export const GameScreen = ({
   const desktopUtilityRef = React.useRef<HTMLDivElement | null>(null);
   const desktopSynapseTrayRef = React.useRef<HTMLDivElement | null>(null);
   const [cameraSafeInsetsPx, setCameraSafeInsetsPx] = React.useState<Partial<CameraInsetsPx>>({});
+  const mobileFocusModeDisabled = layoutMode !== 'desktop_command_center';
+  const isMobilePortrait = layoutMode === 'mobile_portrait';
+  const isMobileLayout = layoutMode !== 'desktop_command_center';
+  const effectiveSynapseMode = mobileFocusModeDisabled ? false : isSynapseMode;
+  const mobileBottomInfoActive = isMobilePortrait && mobileDockV2Enabled ? mobileInfoMode : effectiveSynapseMode;
 
-  React.useEffect(() => {
-    if (!showVitalsDetail) return;
-    if (!mobileDockV2Enabled || isSynapseMode || layoutMode === 'desktop_command_center') {
-      setShowVitalsDetail(false);
-    }
-  }, [isSynapseMode, layoutMode, mobileDockV2Enabled, showVitalsDetail]);
+  const collapseMobileTopHudExtension = React.useCallback(() => {
+    setMobileTopTrayOpen(false);
+  }, []);
+
+  const handleToggleMobileInfoMode = React.useCallback(() => {
+    setMobileInfoMode((value) => {
+      const next = !value;
+      if (next) {
+        setMobileTopTrayOpen(false);
+      }
+      return next;
+    });
+  }, []);
+
+  const maybeCollapseMobileTopHudExtension = React.useCallback(() => {
+    if (!isMobileLayout) return;
+    collapseMobileTopHudExtension();
+  }, [collapseMobileTopHudExtension, isMobileLayout]);
+
+  const handleMobileWait = React.useCallback(() => {
+    maybeCollapseMobileTopHudExtension();
+    onWait();
+  }, [maybeCollapseMobileTopHudExtension, onWait]);
+
+  const handleMobileExitToHub = React.useCallback(() => {
+    maybeCollapseMobileTopHudExtension();
+    onExitToHub();
+  }, [maybeCollapseMobileTopHudExtension, onExitToHub]);
+
+  const handleMobileReset = React.useCallback(() => {
+    maybeCollapseMobileTopHudExtension();
+    onReset();
+  }, [maybeCollapseMobileTopHudExtension, onReset]);
+
+  const handleMobileSelectSkill = React.useCallback((skillId: Parameters<typeof onSelectSkill>[0]) => {
+    maybeCollapseMobileTopHudExtension();
+    onSelectSkill(skillId);
+  }, [maybeCollapseMobileTopHudExtension, onSelectSkill]);
+
+  const handleMobileSetVitalsMode = React.useCallback((mode: Parameters<typeof onSetVitalsMode>[0]) => {
+    maybeCollapseMobileTopHudExtension();
+    onSetVitalsMode(mode);
+  }, [maybeCollapseMobileTopHudExtension, onSetVitalsMode]);
+
+  const handleMobileToggleOverdrive = React.useCallback(() => {
+    maybeCollapseMobileTopHudExtension();
+    onToggleOverdrive();
+  }, [maybeCollapseMobileTopHudExtension, onToggleOverdrive]);
+
+  const handleToggleMobileTopTray = React.useCallback(() => {
+    setMobileTopTrayOpen((value) => {
+      const next = !value;
+      if (next) {
+        setMobileInfoMode(false);
+      }
+      return next;
+    });
+  }, []);
 
   React.useEffect(() => {
     if (!synapsePreview) {
@@ -557,13 +575,24 @@ export const GameScreen = ({
     };
   }, [layoutMode, isSynapseMode, synapseSelection.mode]);
 
+  React.useEffect(() => {
+    if (!mobileFocusModeDisabled || !isSynapseMode) return;
+    onToggleSynapseMode();
+  }, [isSynapseMode, mobileFocusModeDisabled, onToggleSynapseMode]);
+
+  React.useEffect(() => {
+    if (layoutMode === 'mobile_portrait') return;
+    setMobileTopTrayOpen(false);
+    setMobileInfoMode(false);
+  }, [layoutMode]);
+
   return (
     <div
       data-layout-mode={layoutMode}
-      className={`surface-app-material flex flex-col lg:flex-row w-screen h-screen bg-[var(--surface-app)] overflow-hidden text-[var(--text-primary)] font-[var(--font-body)] ${isSynapseMode ? 'synapse-vision-active' : ''}`}
+      className={`surface-app-material flex flex-col lg:flex-row w-screen h-screen bg-[var(--surface-app)] overflow-hidden text-[var(--text-primary)] font-[var(--font-body)] ${effectiveSynapseMode ? 'synapse-vision-active' : ''}`}
     >
       <div
-        className="surface-panel-material torn-edge-shell lg:hidden shrink-0 border-b border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm z-20"
+        className="surface-panel-material torn-edge-shell lg:hidden shrink-0 border-b border-[var(--border-subtle)] bg-[color:var(--surface-panel)] backdrop-blur-sm z-20 relative overflow-visible"
         style={mobileTopRailStyle}
       >
         {!mobileDockV2Enabled && (
@@ -584,16 +613,12 @@ export const GameScreen = ({
                 </div>
               </div>
               <div className="flex justify-end">
-                <button
-                  onClick={onToggleSynapseMode}
+                <MobileChevronButton
+                  expanded={mobileTopTrayOpen}
+                  onClick={handleToggleMobileTopTray}
+                  label={mobileTopTrayOpen ? 'Collapse top HUD' : 'Expand top HUD'}
                   style={hudActionButtonStyle}
-                  className={`px-3 rounded-lg border font-black uppercase tracking-[0.16em] transition-colors ${isSynapseMode
-                    ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
-                    : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] active:bg-[var(--surface-panel-hover)]'
-                  }`}
-                >
-                  Info
-                </button>
+                />
               </div>
             </div>
             <div className="px-4 pb-3">
@@ -604,9 +629,42 @@ export const GameScreen = ({
             </div>
           </>
         )}
-        {mobileDockV2Enabled && (
-          <div className="px-3 pb-3 pt-2.5">
-            <div className="grid grid-cols-[minmax(4.75rem,1fr)_minmax(0,1.3fr)_auto] items-center gap-2">
+        {mobileDockV2Enabled && isMobilePortrait && (
+          <div className="px-3 pb-2.5 pt-2">
+            <UiMobileTopHud
+              floor={gameState.floor}
+              hp={gameState.player.hp}
+              maxHp={gameState.player.maxHp}
+              spark={gameState.player.ires?.spark ?? 0}
+              maxSpark={gameState.player.ires?.maxSpark ?? 100}
+              mana={gameState.player.ires?.mana ?? 0}
+              maxMana={gameState.player.ires?.maxMana ?? 0}
+              exhaustion={gameState.player.ires?.exhaustion ?? 0}
+              compactHeightPx={mobileTopHudCompactHeightPx}
+              labelFontPx={labelFontPx}
+              valueFontPx={valueFontPx}
+              infoActive={mobileInfoMode}
+              trayOpen={mobileTopTrayOpen}
+              waitLabel={waitLabel}
+              isInputLocked={isInputLocked}
+              sigmaValue={sigmaValue}
+              turnFlowLabel={turnFlowLabel}
+              turnFlowMode={turnFlowMode}
+              enemyAlerted={enemyAlertActive}
+              hpProjectionDelta={hpProjectionDelta}
+              projectedHp={projectedHp}
+              overdriveArmed={overdriveArmed}
+              overdriveButtonLabel={overdriveButtonLabel}
+              onToggleInfo={handleToggleMobileInfoMode}
+              onToggleTray={handleToggleMobileTopTray}
+              onToggleOverdrive={handleMobileToggleOverdrive}
+              trayActionButtonStyle={hudActionButtonStyle}
+            />
+          </div>
+        )}
+        {mobileDockV2Enabled && !isMobilePortrait && (
+          <div className="px-3 pb-2.5 pt-2">
+            <div className="grid grid-cols-[minmax(4.25rem,0.95fr)_minmax(0,1.1fr)_auto] items-center gap-2">
               <div className="min-w-0 text-left">
                 <div className="uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold" style={{ fontSize: 'var(--hud-label-font)' }}>Floor</div>
                 <div className="font-black text-[var(--text-primary)] leading-none" style={{ fontSize: 'var(--hud-value-font)' }}>
@@ -623,68 +681,26 @@ export const GameScreen = ({
                 )}
               </div>
               <div className="min-w-0 flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setShowVitalsDetail((value) => !value)}
-                  aria-expanded={showVitalsDetail}
-                  aria-label="Toggle vitals details"
-                  className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2.5 py-2 active:bg-[var(--surface-panel-hover)]"
-                >
-                  <div className="grid grid-cols-3 gap-1.5 text-center">
-                    <div className="min-w-0">
-                      <div className="uppercase tracking-[0.18em] text-[var(--text-muted)] font-black" style={{ fontSize: 'var(--hud-label-font)' }}>HP</div>
-                      <div className="font-black text-[var(--accent-danger)] leading-none" style={{ fontSize: 'calc(var(--hud-value-font) * 0.86)' }}>
-                        {gameState.player.hp}
-                      </div>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="uppercase tracking-[0.18em] text-[var(--text-muted)] font-black" style={{ fontSize: 'var(--hud-label-font)' }}>Spark</div>
-                      <div className="font-black text-amber-500 leading-none" style={{ fontSize: 'calc(var(--hud-value-font) * 0.86)' }}>
-                        {Math.round(gameState.player.ires?.spark || 0)}
-                      </div>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="uppercase tracking-[0.18em] text-[var(--text-muted)] font-black" style={{ fontSize: 'var(--hud-label-font)' }}>MP</div>
-                      <div className="font-black text-cyan-400 leading-none" style={{ fontSize: 'calc(var(--hud-value-font) * 0.86)' }}>
-                        {Math.round(gameState.player.ires?.mana || 0)}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              </div>
-              <div className="flex items-center justify-end gap-1.5">
-                <button
-                  onClick={onToggleSynapseMode}
-                  style={hudActionButtonStyle}
-                  className={`min-w-[4.25rem] px-3 rounded-lg border font-black uppercase tracking-[0.16em] transition-colors ${isSynapseMode
-                    ? 'bg-[var(--synapse-soft)] border-[var(--synapse-border)] text-[var(--synapse-text)]'
-                    : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] active:bg-[var(--surface-panel-hover)]'
-                  }`}
-                >
-                  Info
-                </button>
-                <MobileChevronButton
-                  expanded={mobileTopRailExpanded}
-                  onClick={() => setMobileTopRailExpanded((value) => !value)}
-                  label={mobileTopRailExpanded ? 'Collapse top HUD' : 'Expand top HUD'}
-                  style={hudActionButtonStyle}
-                />
-              </div>
-            </div>
-
-            {showVitalsDetail ? (
-              <div className="mt-2.5">
-                <UiVitalsDetailCard
+                <UiVitalsGlance
                   gameState={gameState}
+                  layoutMode={layoutMode}
+                  mode={uiPreferences.vitalsMode}
+                  onSetMode={handleMobileSetVitalsMode}
                   resourcePreview={resourcePreview}
-                  compact
                   turnFlowMode={turnFlowMode}
                   overdriveArmed={overdriveArmed}
                 />
               </div>
-            ) : null}
-
-            {mobileTopRailExpanded ? (
+              <div className="flex items-center justify-end">
+                <MobileChevronButton
+                  expanded={mobileTopTrayOpen}
+                  onClick={handleToggleMobileTopTray}
+                  label={mobileTopTrayOpen ? 'Collapse top HUD' : 'Expand top HUD'}
+                  style={hudActionButtonStyle}
+                />
+              </div>
+            </div>
+            {mobileTopTrayOpen ? (
               <>
                 <div className="mt-2.5 grid grid-cols-2 gap-1.5">
                   <div
@@ -723,7 +739,7 @@ export const GameScreen = ({
                   <div className="mt-2">
                     <button
                       type="button"
-                      onClick={onToggleOverdrive}
+                      onClick={handleMobileToggleOverdrive}
                       style={hudActionButtonStyle}
                       className={`w-full rounded-lg border font-black uppercase tracking-[0.16em] ${
                         overdriveArmed
@@ -741,35 +757,15 @@ export const GameScreen = ({
         )}
       </div>
 
-      <aside className="surface-panel-material torn-edge-shell hidden lg:flex w-96 border-r border-[var(--border-subtle)] bg-[var(--surface-panel)] flex-col z-20 overflow-y-auto">
-        <div className="px-4 pt-4 pb-3 border-b border-[var(--border-subtle)]">
-          <EnemyAlertChip alerted={enemyAlertActive} />
-        </div>
-        <div className="min-h-0 flex-1">
-          <UI
-            gameState={gameState}
-            onReset={onReset}
-            onWait={onWait}
-            onExitToHub={onExitToHub}
-            intelMode={intelMode}
-            onIntelModeChange={handleIntelModeChange}
-            showIntelControls={false}
-            inputLocked={isInputLocked}
-          />
-        </div>
-      </aside>
-
-      <main
-        data-board-theme={boardColorMode}
-        className={`board-theme-shell surface-board-material flex-1 min-h-0 relative flex items-center justify-center bg-[var(--surface-board)] overflow-hidden ${dangerThreatActive ? 'grim-filter-active' : ''}`}
-      >
-        <div ref={desktopUtilityRef} className="hidden lg:flex absolute top-5 right-5 z-30 items-start gap-2.5">
-          <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-2 py-1.5">
+      <aside className="surface-panel-material torn-edge-shell hidden lg:flex w-[24rem] border-r border-[var(--border-subtle)] bg-[var(--surface-panel)] flex-col z-20 overflow-y-auto">
+        <div className="p-4 flex flex-col gap-4">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Theme</div>
             <select
               aria-label="Theme"
               value={uiPreferences.colorMode}
               onChange={(event) => onSetColorMode(event.target.value as UiColorMode)}
-              className="min-h-8 rounded border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-2 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-primary)]"
+              className="min-h-10 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 text-[11px] font-black uppercase tracking-[0.12em] text-[var(--text-primary)]"
             >
               {UI_THEME_OPTIONS.map((theme) => (
                 <option key={theme.id} value={theme.id}>
@@ -778,6 +774,21 @@ export const GameScreen = ({
               ))}
             </select>
           </div>
+          <EnemyAlertChip alerted={enemyAlertActive} />
+          <div className="rounded-[1.6rem] border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4 space-y-4 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
+            <UiTriResourceHeader gameState={gameState} compact variant="board_condensed" />
+            <UiSentinelDirectiveSection gameState={gameState} compact intelMode={intelMode} />
+            <UiBoardStatsSection gameState={gameState} compact />
+          </div>
+        </div>
+        <UiLogFeed messages={messages} compact />
+      </aside>
+
+      <main
+        data-board-theme={boardColorMode}
+        className={`board-theme-shell surface-board-material flex-1 min-h-0 relative flex items-center justify-center bg-[var(--surface-board)] overflow-hidden ${dangerThreatActive ? 'grim-filter-active' : ''}`}
+      >
+        <div ref={desktopUtilityRef} className="hidden lg:flex absolute top-5 right-5 z-30 items-start gap-2.5">
           <button
             onClick={onToggleSynapseMode}
             className={`px-3 py-2 rounded-lg border text-[10px] font-black uppercase tracking-[0.16em] transition-colors ${isSynapseMode
@@ -787,22 +798,6 @@ export const GameScreen = ({
           >
             Info (I)
           </button>
-          <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
-            {turnFlowLabel}
-            {turnFlowMode === 'protected_single' ? ' / Auto-End: 1' : ''}
-          </div>
-          {turnFlowMode === 'protected_single' ? (
-            <button
-              onClick={onToggleOverdrive}
-              className={`px-3 py-2 rounded-lg border text-[10px] font-black uppercase tracking-[0.16em] transition-colors ${
-                overdriveArmed
-                  ? 'bg-emerald-950/60 border-emerald-400/50 text-emerald-100'
-                  : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-panel-hover)]'
-              }`}
-            >
-              {overdriveButtonLabel}
-            </button>
-          ) : null}
         </div>
         <div className="w-full h-full p-0 sm:p-3 lg:p-8 flex items-center justify-center">
           <div ref={boardSurfaceRef} className={`surface-panel-material torn-edge-shell w-full h-full relative border border-[var(--border-subtle)] bg-[color:var(--surface-panel)] rounded-none sm:rounded-3xl lg:rounded-[40px] shadow-[inset_0_0_100px_rgba(0,0,0,0.2)] flex items-center justify-center overflow-hidden ${gameState.isShaking ? 'animate-shake' : ''}`}>
@@ -818,15 +813,14 @@ export const GameScreen = ({
               assetManifest={assetManifest}
               onSimulationEvents={onSimulationEvents}
               onMirrorSnapshot={onMirrorSnapshot}
-              isSynapseMode={isSynapseMode}
+              isSynapseMode={effectiveSynapseMode}
               synapseSelection={synapseSelection}
               synapsePulse={synapsePulse}
               synapseDeltasByActorId={synapseDeltasByActorId}
               onSynapseInspectEntity={onSynapseInspectEntity}
               cameraSafeInsetsPx={cameraSafeInsetsPx}
-              visualEchoesEnabled={mobileDockV2Enabled}
             />
-            {isSynapseMode && (
+            {effectiveSynapseMode && (
               <div ref={desktopSynapseTrayRef} className="hidden lg:block absolute bottom-3 left-1/2 -translate-x-1/2 z-40 w-[min(92vw,34rem)] pointer-events-auto space-y-2">
                 <SynapseBottomTray
                   gameState={gameState}
@@ -845,19 +839,21 @@ export const GameScreen = ({
             )}
             {showWorldgenDebug && <WorldgenBoardOverlay gameState={gameState} />}
             {showWorldgenDebug && <WorldgenDebugPanel gameState={gameState} />}
+            <MobileToastsOverlay
+              mobileToasts={gameState.gameStatus === 'playing' ? mobileToasts : []}
+              motionMode={uiPreferences.motionMode}
+            />
             <ResolvingTurnOverlay visible={isInputLocked && gameState.gameStatus === 'playing'} />
           </div>
         </div>
       </main>
-
-      <MobileToastsOverlay mobileToasts={gameState.gameStatus === 'playing' ? mobileToasts : []} />
 
       <aside
         className="surface-panel-material torn-edge-shell lg:hidden shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-panel)] z-20 overflow-y-auto"
         style={bottomDockStyle}
       >
         <div className={`${uiPreferences.hudDensity === 'compact' ? 'p-3 gap-3' : 'p-4 gap-4'} flex flex-col h-full`} style={hudCssVars}>
-          {!isSynapseMode && !mobileDockV2Enabled && (
+          {!mobileBottomInfoActive && !mobileDockV2Enabled && (
             <div className="flex items-center justify-between gap-2">
               <h3 className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
                 Skills
@@ -865,7 +861,7 @@ export const GameScreen = ({
               <div className="grid grid-cols-3 gap-1.5 w-full sm:w-auto">
                 <button
                   disabled={isInputLocked}
-                  onClick={onWait}
+                  onClick={handleMobileWait}
                   style={hudActionButtonStyle}
                   className={`w-full px-2 rounded-lg border font-black uppercase tracking-widest ${isInputLocked
                     ? 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] opacity-50'
@@ -875,14 +871,14 @@ export const GameScreen = ({
                   {waitLabel}
                 </button>
                 <button
-                  onClick={onExitToHub}
+                  onClick={handleMobileExitToHub}
                   style={hudActionButtonStyle}
                   className="w-full px-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] font-black uppercase tracking-widest text-[var(--text-primary)] active:bg-[var(--surface-panel)]"
                 >
-                  Hub
+                  Home
                 </button>
                 <button
-                  onClick={onReset}
+                  onClick={handleMobileReset}
                   style={hudActionButtonStyle}
                   className="w-full px-2 rounded-lg border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] font-black uppercase tracking-widest text-[var(--accent-danger)] active:opacity-90"
                 >
@@ -891,12 +887,12 @@ export const GameScreen = ({
               </div>
             </div>
           )}
-          {!isSynapseMode && mobileDockV2Enabled && (
-            <div className="space-y-2">
+          {!mobileBottomInfoActive && mobileDockV2Enabled && (
+            <div className="space-y-2.5">
               <div className="grid grid-cols-3 gap-1.5">
                 <button
                   disabled={isInputLocked}
-                  onClick={onWait}
+                  onClick={handleMobileWait}
                   style={hudActionButtonStyle}
                   className={`px-2 rounded-lg border font-black uppercase tracking-widest ${isInputLocked
                     ? 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] opacity-50'
@@ -907,14 +903,14 @@ export const GameScreen = ({
                 </button>
                 <GuardedActionButton
                   disabled={false}
-                  onConfirm={onExitToHub}
-                  label="Hub"
+                  onConfirm={handleMobileExitToHub}
+                  label="Home"
                   style={hudActionButtonStyle}
                   className="px-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] font-black uppercase tracking-widest text-[var(--text-primary)]"
                 />
                 <GuardedActionButton
                   disabled={turnFlowMode !== 'protected_single'}
-                  onConfirm={onToggleOverdrive}
+                  onConfirm={handleMobileToggleOverdrive}
                   label={overdriveArmed ? 'Override Armed' : 'Override'}
                   style={hudActionButtonStyle}
                   className={`px-2 rounded-lg border font-black uppercase tracking-widest ${
@@ -924,53 +920,29 @@ export const GameScreen = ({
                   }`}
                 />
               </div>
-              <div className="grid grid-cols-[1fr_auto] gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setMobileBottomDockExpanded((value) => !value)}
-                  style={hudActionButtonStyle}
-                  aria-expanded={mobileBottomDockExpanded}
-                  className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
-                >
-                  <span>{selectedSkillId ? `Skill: ${selectedSkillId}` : 'Skills'}</span>
-                  <span className="text-base leading-none">{mobileBottomDockExpanded ? '^' : 'v'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectSkill(null)}
-                  style={hudActionButtonStyle}
-                  className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 font-black uppercase tracking-[0.16em] text-[var(--text-muted)]"
-                >
-                  Clear
-                </button>
-              </div>
-              {mobileBottomDockExpanded ? (
-                <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-2">
-                  <SkillTray
-                    skills={gameState.player.activeSkills || []}
-                    selectedSkillId={selectedSkillId}
-                    onSelectSkill={onSelectSkill}
-                    hasSpear={gameState.hasSpear}
-                    gameState={gameState}
-                    inputLocked={isInputLocked}
-                    compact
-                  />
-                </div>
-              ) : null}
+              <SkillTray
+                skills={gameState.player.activeSkills || []}
+                selectedSkillId={selectedSkillId}
+                onSelectSkill={handleMobileSelectSkill}
+                hasSpear={gameState.hasSpear}
+                gameState={gameState}
+                inputLocked={isInputLocked}
+                compact
+              />
             </div>
           )}
-          {!isSynapseMode && !mobileDockV2Enabled && (
+          {!mobileBottomInfoActive && !mobileDockV2Enabled && (
             <SkillTray
               skills={gameState.player.activeSkills || []}
               selectedSkillId={selectedSkillId}
-              onSelectSkill={onSelectSkill}
+              onSelectSkill={handleMobileSelectSkill}
               hasSpear={gameState.hasSpear}
               gameState={gameState}
               inputLocked={isInputLocked}
               compact
             />
           )}
-          {isSynapseMode && (
+          {mobileBottomInfoActive && (
             <div className="space-y-2.5">
               <div className="font-black uppercase tracking-[0.2em] text-[var(--text-muted)]" style={{ fontSize: 'var(--hud-label-font)' }}>
                 Info
@@ -993,9 +965,55 @@ export const GameScreen = ({
         </div>
       </aside>
 
-      <aside className="surface-panel-material torn-edge-shell hidden lg:flex w-72 border-l border-[var(--border-subtle)] bg-[var(--surface-panel)] flex-col z-20 overflow-y-auto">
-        <div className="p-6 flex flex-col gap-8 h-full">
-          <div className="flex-1">
+      <aside className="surface-panel-material torn-edge-shell hidden lg:flex w-[20rem] border-l border-[var(--border-subtle)] bg-[var(--surface-panel)] flex-col z-20 overflow-y-auto">
+        <div className="p-6 flex flex-col gap-5 h-full">
+          <section className="rounded-[1.6rem] border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-4 space-y-4">
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Override Status</h3>
+              <p className="mt-2 text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                {turnFlowMode === 'protected_single'
+                  ? 'Protected turn flow can be broken once by arming override.'
+                  : 'Manual Chain disables override and leaves auto-end inactive.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                {turnFlowLabel}
+              </span>
+              {turnFlowMode === 'protected_single' ? (
+                <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                  Auto-End: 1
+                </span>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              disabled={turnFlowMode !== 'protected_single'}
+              onClick={onToggleOverdrive}
+              className={`w-full rounded-xl border px-4 py-3 text-xs font-black uppercase tracking-[0.18em] ${
+                overdriveArmed
+                  ? 'border-emerald-400/50 bg-emerald-950/60 text-emerald-100'
+                  : turnFlowMode === 'protected_single'
+                    ? 'border-[var(--border-subtle)] bg-[var(--surface-panel)] text-[var(--text-primary)] hover:bg-[var(--surface-panel-hover)]'
+                    : 'border-[var(--border-subtle)] bg-[var(--surface-panel)] text-[var(--text-muted)] opacity-60'
+              }`}
+            >
+              {overdriveArmed ? 'Override Armed' : 'Arm Override'}
+            </button>
+          </section>
+
+          <section className="rounded-[1.6rem] border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-4">
+            <UiDirectivesSection
+              compact={false}
+              inputLocked={isInputLocked}
+              waitLabel={waitLabel}
+              onWait={onWait}
+              onReset={onReset}
+              onExitToHub={onExitToHub}
+            />
+          </section>
+
+          <section className="flex-1 rounded-[1.6rem] border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-6">Tactical Skills</h3>
             <SkillTray
               skills={gameState.player.activeSkills || []}
@@ -1005,18 +1023,13 @@ export const GameScreen = ({
               gameState={gameState}
               inputLocked={isInputLocked}
             />
-          </div>
-
-          <div className="pt-8 border-t border-[var(--border-subtle)] text-center">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
-              Hop Engine v5.0
-            </div>
-          </div>
+          </section>
         </div>
       </aside>
 
       <TutorialInstructionsOverlay
         tutorialInstructions={tutorialInstructions}
+        motionMode={uiPreferences.motionMode}
         onDismiss={onDismissTutorial}
       />
 
@@ -1025,25 +1038,27 @@ export const GameScreen = ({
       )}
       <RunLostOverlay
         visible={showRunLostOverlay}
+        motionMode={uiPreferences.motionMode}
         onQuickRestart={onQuickRestart}
         onViewReplay={onViewReplay}
         onActionsReady={onRunLostActionsReady}
       />
-      <RunWonOverlay visible={gameState.gameStatus === 'won'} score={gameState.completedRun?.score || 0} onExitToHub={onExitToHub} />
+      <RunWonOverlay visible={gameState.gameStatus === 'won'} motionMode={uiPreferences.motionMode} score={gameState.completedRun?.score || 0} onExitToHub={onExitToHub} />
 
-      <FloorIntroOverlay floorIntro={floorIntro} />
+      <FloorIntroOverlay floorIntro={floorIntro} motionMode={uiPreferences.motionMode} />
 
-      <ReplayControlsOverlay
-        isReplayMode={isReplayMode}
-        replayIndex={replayIndex}
-        replayLength={replayActionsLength}
-        replayActive={replayActive}
-        onToggleReplay={onToggleReplay}
-        onStepReplay={onStepReplay}
-        onJumpReplay={replayChronicleEnabled ? onJumpReplay : undefined}
-        markerIndices={replayChronicleEnabled ? replayMarkerIndices : undefined}
-        onCloseReplay={onCloseReplay}
-      />
+        <ReplayControlsOverlay
+          isReplayMode={isReplayMode}
+          replayIndex={replayIndex}
+          replayLength={replayActionsLength}
+          replayActive={replayActive}
+          motionMode={uiPreferences.motionMode}
+          onToggleReplay={onToggleReplay}
+          onStepReplay={onStepReplay}
+          onJumpReplay={replayChronicleEnabled ? onJumpReplay : undefined}
+          markerIndices={replayChronicleEnabled ? replayMarkerIndices : undefined}
+          onCloseReplay={onCloseReplay}
+        />
     </div>
   );
 };

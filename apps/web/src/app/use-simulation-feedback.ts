@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { buildEngineMirrorSnapshot, validateStateMirrorSnapshot } from '@hop/engine';
 import type { GameState, SimulationEvent, StateMirrorSnapshot } from '@hop/engine';
+import { buildEngineMirrorSnapshot, validateStateMirrorSnapshot } from '../../../../packages/engine/src/systems/state-mirror';
 
 type MobileToast = {
   id: string;
@@ -65,19 +65,20 @@ export const deriveMobileToastsFromSimulationEvents = (
     } else if (ev.type === 'ResourceChanged' && ev.targetId === playerId) {
       const sparkDelta = Number(ev.payload?.spark?.delta || 0);
       const manaDelta = Number(ev.payload?.mana?.delta || 0);
-      const exhaustionDelta = Number(ev.payload?.exhaustion?.delta || 0);
-      if (exhaustionDelta !== 0) {
-        out.push({
-          id: `sim-toast-${ev.id}`,
-          text: `${exhaustionDelta > 0 ? '+' : ''}${Math.round(exhaustionDelta)} EX`,
-          tone: 'status'
-        });
-      } else if (sparkDelta !== 0) {
+      const debug = ev.payload?.debug as { tempoSparkCost?: number; skillSparkSurcharge?: number; sparkBurnOutcome?: string } | undefined;
+      if (sparkDelta !== 0) {
         out.push({
           id: `sim-toast-${ev.id}`,
           text: `${sparkDelta > 0 ? '+' : ''}${Math.round(sparkDelta)} SP`,
           tone: 'system'
         });
+        if ((debug?.tempoSparkCost || 0) > 0 || (debug?.skillSparkSurcharge || 0) > 0) {
+          out.push({
+            id: `sim-toast-${ev.id}-tempo`,
+            text: `Tempo ${Math.round(debug?.tempoSparkCost || 0)} / Skill ${Math.round(debug?.skillSparkSurcharge || 0)}`,
+            tone: 'status'
+          });
+        }
       } else if (manaDelta !== 0) {
         out.push({
           id: `sim-toast-${ev.id}`,
@@ -89,7 +90,7 @@ export const deriveMobileToastsFromSimulationEvents = (
       const nextState = String(ev.payload?.after || 'Base').toUpperCase();
       out.push({
         id: `sim-toast-${ev.id}`,
-        text: nextState === 'EXHAUSTED' ? 'EXHAUSTED' : nextState === 'RESTED' ? 'RESTED' : 'Recovered Below 50',
+        text: nextState === 'EXHAUSTED' ? 'REDLINE' : nextState === 'RESTED' ? 'RESTED' : 'BASE',
         tone: 'status'
       });
     } else if (ev.type === 'SparkBurnTriggered' && ev.targetId === playerId) {
@@ -100,10 +101,10 @@ export const deriveMobileToastsFromSimulationEvents = (
         tone: 'damage'
       });
     } else if (ev.type === 'RestTriggered' && ev.targetId === playerId) {
-      const exhaustionDelta = Math.abs(Number(ev.payload?.exhaustionDelta || 0));
+      const sparkDelta = Math.max(0, Number(ev.payload?.sparkDelta || 0));
       out.push({
         id: `sim-toast-${ev.id}`,
-        text: `Rest: -${Math.round(exhaustionDelta)} EX`,
+        text: `Rest: +${Math.round(sparkDelta)} SP`,
         tone: 'status'
       });
     } else if (ev.type === 'MessageLogged') {

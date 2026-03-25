@@ -7,6 +7,9 @@ const buildProjection = (): IresTurnProjection => ({
   spark: { current: 100, projected: 82, delta: -18 },
   mana: { current: 10, projected: 10, delta: 0 },
   exhaustion: { current: 22, projected: 39, delta: 17 },
+  sparkStateBefore: 'rested',
+  sparkStateAfter: 'base',
+  projectedSparkRecoveryIfEndedNow: 84,
   stateAfter: 'base',
   actionCountAfter: 1,
   wouldRest: false
@@ -18,6 +21,10 @@ const buildResourcePreview = (): ActionResourcePreview => ({
   sparkDelta: -18,
   manaDelta: 0,
   exhaustionDelta: 17,
+  tempoSparkCost: 8,
+  skillSparkSurcharge: 10,
+  sparkCostTotal: 18,
+  manaCost: 0,
   sparkBurnHpDelta: 0,
   tax: 8,
   effectiveBfi: 5,
@@ -30,7 +37,7 @@ const buildResourcePreview = (): ActionResourcePreview => ({
 });
 
 describe('UiVitalsGlyph', () => {
-  it('renders the spark core, hp wing, mana wing, and compact chips', () => {
+  it('renders the spark core, hp wing, mana wing, and exhaustion plaque in mobile glance mode', () => {
     const gameState = recomputeVisibility({
       ...generateInitialState(1, 'ui-vitals-glyph'),
       enemies: []
@@ -50,10 +57,11 @@ describe('UiVitalsGlyph', () => {
     expect(html).toContain('Spark');
     expect(html).toContain('HP');
     expect(html).toContain('MP');
-    expect(html).toContain('Travel Mode');
-    expect(html).toContain('Alert Off');
-    expect(html).toContain('Protected');
-    expect(html).toContain('Auto-End: 1');
+    expect(html).toContain('aria-label="State rested"');
+    expect(html).not.toContain('Travel Mode');
+    expect(html).not.toContain('Alert Off');
+    expect(html).not.toContain('Protected');
+    expect(html).not.toContain('Auto-End: 1');
     expect(html).toContain('aria-expanded="false"');
   });
 
@@ -79,7 +87,7 @@ describe('UiVitalsGlyph', () => {
     expect(html).toContain('Turn Flow');
     expect(html).toContain('Overdrive: chaining enabled');
     expect(html).toContain('INFO');
-    expect(html).toContain('Fibonacci Cheat Sheet');
+    expect(html).toContain('Tempo Ladder');
     expect(html).toContain('Travel recovery applies');
   });
 });

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createHex } from '../hex';
-import { generateInitialState } from '../logic';
-import { previewActionOutcome } from '../systems/action-preview';
+import { gameReducer, generateInitialState } from '../logic';
+import { previewActionOutcome, resolveMovementPreviewPath } from '../systems/action-preview';
 import { buildInitiativeQueue } from '../systems/initiative';
 import { SpatialSystem } from '../systems/spatial-system';
 import { resolveCombatPressureMode } from '../systems/free-move';
-import { recomputeVisibility } from '../systems/visibility';
+import { recomputeVisibility, recomputeVisibilityFromScratch } from '../systems/visibility';
 import { getSkillDefinition } from '../skillRegistry';
+import { createMockState, p, placeTile } from './test_utils';
 
 describe('action preview dry run', () => {
     it('simulates outcome without mutating live state', () => {
@@ -14,7 +15,7 @@ describe('action preview dry run', () => {
         const enemy = state.enemies[0]!;
         const playerPos = createHex(4, 5);
         const enemyPos = createHex(5, 5);
-        const positioned = recomputeVisibility({
+        const positioned = recomputeVisibilityFromScratch({
             ...state,
             player: { ...state.player, position: playerPos },
             enemies: state.enemies.map((e, idx) => idx === 0 ? { ...e, position: enemyPos } : e)
@@ -54,7 +55,7 @@ describe('action preview dry run', () => {
 
     it('reports travel-settled movement metadata when alert is off', () => {
         const base = generateInitialState(1, 'preview-travel-settle');
-        const positioned = recomputeVisibility({
+        const positioned = recomputeVisibilityFromScratch({
             ...base,
             enemies: [],
             initiativeQueue: buildInitiativeQueue({ ...base, enemies: [] }),
@@ -78,21 +79,16 @@ describe('action preview dry run', () => {
         const base = generateInitialState(1, 'travel-flip-search');
         const playerPos = createHex(4, 8);
         const enemyPos = createHex(0, 2);
-        const positioned = recomputeVisibility({
+        const seeded = {
             ...base,
             player: { ...base.player, position: playerPos, previousPosition: playerPos },
-            enemies: [{ ...base.enemies[0]!, position: enemyPos, previousPosition: enemyPos, hp: 99, maxHp: 99 }],
-            initiativeQueue: buildInitiativeQueue({
-                ...base,
-                player: { ...base.player, position: playerPos, previousPosition: playerPos },
-                enemies: [{ ...base.enemies[0]!, position: enemyPos, previousPosition: enemyPos, hp: 99, maxHp: 99 }]
-            }),
-            occupancyMask: SpatialSystem.refreshOccupancyMask({
-                ...base,
-                player: { ...base.player, position: playerPos, previousPosition: playerPos },
-                enemies: [{ ...base.enemies[0]!, position: enemyPos, previousPosition: enemyPos, hp: 99, maxHp: 99 }]
-            })
-        });
+            enemies: [{ ...base.enemies[0]!, position: enemyPos, previousPosition: enemyPos, hp: 99, maxHp: 99 }]
+        };
+        const positioned = gameReducer(recomputeVisibilityFromScratch({
+            ...seeded,
+            initiativeQueue: buildInitiativeQueue(seeded),
+            occupancyMask: SpatialSystem.refreshOccupancyMask(seeded)
+        }), { type: 'ADVANCE_TURN' });
         const target = createHex(4, 2);
         const result = previewActionOutcome(positioned, {
             actorId: positioned.player.id,
@@ -105,5 +101,40 @@ describe('action preview dry run', () => {
         expect(result.resourcePreview?.modeAfter).toBe('battle');
         expect(result.resourcePreview?.travelRecoveryApplied).toBe(false);
         expect(result.resourcePreview?.travelRecoverySuppressedReason).toBe('alert_triggered');
+    });
+
+    it('trims DASH movement preview to the snare interrupt tile', () => {
+        const state = createMockState();
+        state.player = {
+            ...state.player,
+            position: p(4, 4),
+            previousPosition: p(4, 4)
+        };
+
+        for (let q = 0; q < 10; q++) {
+            for (let r = 0; r < 10; r++) {
+                placeTile(state, p(q, r), [], 'STONE');
+            }
+        }
+
+        const snare = p(5, 4);
+        const target = p(6, 4);
+        state.tiles.get(`${snare.q},${snare.r}`)!.effects = [{ id: 'SNARE', duration: -1, potency: 1 }];
+
+        const preview = previewActionOutcome(state, {
+            actorId: state.player.id,
+            skillId: 'DASH',
+            target
+        });
+        expect(preview.ok).toBe(true);
+        expect(preview.predictedState?.player.position).toEqual(snare);
+
+        const movement = resolveMovementPreviewPath(state, state.player, 'DASH', target);
+        expect(movement.ok).toBe(true);
+        expect(movement.destination).toEqual(snare);
+        expect(movement.path).toEqual([
+            p(4, 4),
+            snare
+        ]);
     });
 });

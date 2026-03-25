@@ -99,6 +99,7 @@ export const JUMP: SkillDefinition = {
             source: attacker.position,
             path: [attacker.position, target],
             ignoreCollision: true,
+            ignoreWalls: movementPolicy.ignoreWalls,
             ignoreGroundHazards: movementPolicy.ignoreGroundHazards,
             simulatePath: movementPolicy.simulatePath,
             presentationKind: 'jump',

@@ -6,7 +6,7 @@ import type {
     VisualBiomeClutterLayer,
 } from '../../visual/asset-manifest';
 
-type TileFlags = { isWall: boolean; isLava: boolean; isFire: boolean };
+type TileFlags = { isWall: boolean; isLava: boolean; isFire: boolean; isVoid: boolean };
 
 type BoardDepthSprite = {
     id: string;
@@ -156,7 +156,7 @@ export const useBoardDepthSprites = <TMountainSettings extends { scale: number; 
         for (const hex of cells) {
             const key = pointToKey(hex);
             const flags = tileVisualFlags.get(key);
-            if (flags?.isWall || flags?.isLava || flags?.isFire) continue;
+            if (flags?.isWall || flags?.isLava || flags?.isFire || flags?.isVoid) continue;
             const { y } = hexToPixel(hex, TILE_SIZE);
 
             for (let slot = 0; slot < maxPerHex; slot++) {

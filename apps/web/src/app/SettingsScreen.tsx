@@ -15,6 +15,9 @@ interface SettingsScreenProps {
   onSetMotionMode: (mode: UiMotionMode) => void;
   onSetHudDensity: (density: UiHudDensity) => void;
   onSetTurnFlowMode: (mode: UiTurnFlowMode) => void;
+  onSetAudioEnabled: (enabled: boolean) => void;
+  onSetHapticsEnabled: (enabled: boolean) => void;
+  onSetVitalsMode: (mode: 'glance' | 'full') => void;
   onBack: () => void;
 }
 
@@ -24,6 +27,9 @@ export const SettingsScreen = ({
   onSetMotionMode,
   onSetHudDensity,
   onSetTurnFlowMode,
+  onSetAudioEnabled,
+  onSetHapticsEnabled,
+  onSetVitalsMode,
   onBack
 }: SettingsScreenProps) => {
   const [intelMode, setIntelMode] = React.useState<UiInformationRevealMode>(() => getUiInformationRevealMode());
@@ -93,6 +99,37 @@ export const SettingsScreen = ({
           <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
             Protected Single auto-ends after one action unless Overdrive is armed.
           </p>
+        </section>
+
+        <section className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
+          <h2 className="text-[11px] uppercase tracking-[0.2em] font-black text-[var(--text-muted)] mb-3">Vitals Display</h2>
+          <button
+            onClick={() => onSetVitalsMode(uiPreferences.vitalsMode === 'glance' ? 'full' : 'glance')}
+            className="w-full min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[10px] font-black uppercase tracking-widest"
+          >
+            {uiPreferences.vitalsMode === 'glance' ? 'Glance + Expand' : 'Full Details'}
+          </button>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+            Glance keeps the compact mobile glyph active until expanded.
+          </p>
+        </section>
+
+        <section className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">
+          <h2 className="text-[11px] uppercase tracking-[0.2em] font-black text-[var(--text-muted)] mb-3">Sensory</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={() => onSetAudioEnabled(!uiPreferences.audioEnabled)}
+              className="w-full min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[10px] font-black uppercase tracking-widest"
+            >
+              Audio: {uiPreferences.audioEnabled ? 'On' : 'Off'}
+            </button>
+            <button
+              onClick={() => onSetHapticsEnabled(!uiPreferences.hapticsEnabled)}
+              className="w-full min-h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[10px] font-black uppercase tracking-widest"
+            >
+              Haptics: {uiPreferences.hapticsEnabled ? 'On' : 'Off'}
+            </button>
+          </div>
         </section>
 
         <section className="surface-panel-material torn-edge-shell rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-4">

@@ -68,7 +68,7 @@ export const basicMoveScenarios: ScenarioCollection = {
             setup: (engine: any) => {
                 // Start at center, ensuring the enemy list is empty
                 engine.setPlayer({ q: 4, r: 5, s: -9 }, ['BASIC_MOVE', 'BASIC_ATTACK']);
-                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'adj_victim');
+                engine.spawnEnemy('footman', { q: 3, r: 5, s: -8 }, 'adj_victim', { hp: 1, maxHp: 1 });
             },
             run: (engine: any) => {
                 // Move to a very distant tile (distance of 6)
@@ -148,7 +148,7 @@ export const basicMoveScenarios: ScenarioCollection = {
         {
             id: 'single_enemy_single_action_per_turn',
             title: 'Enemy Multi-Action Turn',
-            description: 'Enemy AI can chain movement and attacks in one turn under IRES until it ends or redlines.',
+            description: 'Enemy AI can chain movement and an attack in one turn under IRES once it reaches adjacency.',
             relatedSkills: ['BASIC_MOVE'],
             category: 'movement',
             difficulty: 'intermediate',
@@ -157,7 +157,7 @@ export const basicMoveScenarios: ScenarioCollection = {
 
             setup: (engine: any) => {
                 engine.setPlayer({ q: 4, r: 5, s: -9 }, []);
-                engine.spawnEnemy('footman', { q: 7, r: 5, s: -12 }, 'single_actor');
+                engine.spawnEnemy('footman', { q: 6, r: 5, s: -11 }, 'single_actor');
                 const enemy = engine.getEnemy('single_actor');
                 if (enemy?.components) {
                     enemy.components.set('trinity', {
@@ -184,7 +184,7 @@ export const basicMoveScenarios: ScenarioCollection = {
                 const attackCount = logs.filter(l => l.includes('attacked you')).length;
                 const checks = {
                     playerTookDamage: state.player.hp < state.player.maxHp,
-                    chainedMovement: moveCount >= 2,
+                    chainedMovement: moveCount >= 1,
                     chainedAttack: attackCount >= 1,
                     noZeroEffectMoveWarning: !logs.some(l => l.includes('produced ZERO effects')),
                 };

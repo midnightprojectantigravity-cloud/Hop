@@ -1,4 +1,4 @@
-# Codebase Status - March 22, 2026
+# Codebase Status - March 23, 2026
 
 ## Trinity V2 Integration Status
 Trinity combat and IRES are now integrated as the only supported core runtime model.
@@ -60,8 +60,8 @@ Delivered outcomes:
    - harness batch wrapper parity tests
 
 References:
-- `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
-- `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
+- `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+- `docs/archive/NEXT_PHASES_MILESTONE_2026-02-28.md`
 
 ## Latest Balance Milestone
 UPA multi-archetype success tuning is complete and strict-gated.
@@ -73,7 +73,7 @@ Delivered outcomes:
 4. Strict-suite-aligned baseline fixture updates (golden + regression envelopes).
 
 Reference:
-- `docs/UPA_SUCCESS_TUNING.md`
+- `docs/archive/UPA_SUCCESS_TUNING.md`
 
 ## Capability Rollout Milestone
 Capability rollout completion is merged and validated with staged production safety.
@@ -86,7 +86,7 @@ Delivered outcomes:
 5. Non-prod defaults enabled (`development`), production defaults retained off (`production`) for staged promotion.
 
 Reference:
-- `docs/CAPABILITY_ROLLOUT.md`
+- `docs/archive/CAPABILITY_ROLLOUT.md`
 - `docs/NEXT_LEVEL.md` (Deferred Backlog `D4`)
 
 ## Replay V3 + Stability Milestone
@@ -113,7 +113,7 @@ Delivered outcomes:
    - `%TEMP%/` ignored to prevent duplicate test discovery
 
 Reference:
-- `docs/REPLAY_V3_STABILITY_WRAPUP_2026-03-03.md`
+- `docs/archive/REPLAY_V3_STABILITY_WRAPUP_2026-03-03.md`
 
 ## UI/UX Great Refactor Milestone
 Mobile-first parchment productization for web UI is merged and validated.
@@ -144,7 +144,7 @@ Delivered outcomes:
    - replay control overlay placement contract
 
 Reference:
-- `docs/UI_UX_GREAT_REFACTOR_WRAPUP_2026-03-03.md`
+- `docs/archive/UI_UX_GREAT_REFACTOR_WRAPUP_2026-03-03.md`
 
 ## Inferno World Compiler Milestone
 Inferno-only world compiler milestone is merged, hardened, and now serves as the default inferno map-generation path.
@@ -157,15 +157,19 @@ Delivered outcomes:
 5. Golden seeds, worker parity, persistence, and path-specific regressions are now gated.
 
 Reference:
-- `docs/INFERNO_WORLDGEN_WRAPUP_2026-03-12.md`
+- `docs/archive/INFERNO_WORLDGEN_WRAPUP_2026-03-12.md`
 
 ## Validation Snapshot (Current)
 
 Engine:
 - `npm --workspace @hop/engine run build` -> pass
-- `npm --workspace @hop/engine test` -> failing on known parity/baseline drift (`enemy_ai_parity_corpus`, `golden_run`, `harness_ai_convergence_regression`)
+- `npm --workspace @hop/engine test` -> smoke-tier iterative gate (`test:smoke`)
+- `npm --workspace @hop/engine run test:targeting` -> pass
+- `npm --workspace @hop/engine run test:scenarios` -> pass
+- `npm --workspace @hop/engine run test:combat-smoke` -> pass
+- `npm --workspace @hop/engine run test:full` -> pass
 - `npm --workspace @hop/engine run test:worldgen` -> pass
-- `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts` -> pass
+- `npm run engine:fast` -> pass
 - `npm run ires:skill-bands:audit` -> pass
 - `npm run mvp:replay:gate` -> pass
 - `npm --workspace @hop/engine run bench:runtime:candidate` -> pass (5% regression gate)
@@ -173,6 +177,37 @@ Engine:
 Web:
 - `npm --workspace @hop/web run test:run` -> pass
 - `npm --workspace @hop/web run build` -> pass
+
+## Web UI/UX Status
+
+The web UI/UX roadmap is functionally complete through the planned productization phases.
+
+Delivered web outcomes:
+1. `App.tsx` is a thin root and `AppShell.tsx` now delegates boot, tutorial, worldgen, run, and route rendering through extracted controllers/shells.
+2. `GameScreen.tsx` is model-driven instead of using the older wide prop surface.
+3. Sensory audio+haptics, guided tutorials, transition polish, CSS split, PWA/offline shell, and boot-state overlay are live.
+4. Bundle and boot hardening are now in place:
+   - `@hop/web` has `build:analyze`, which emits `apps/web/dist/bundle-stats.json`
+   - Vite now splits heavy engine data/generation modules into `engine-data`, `engine-generation`, and `engine-generated`
+   - the main `engine` chunk dropped from ~540 kB to ~426 kB minified, removing the large-chunk warning
+   - boot no longer front-loads lazy route prefetch from `use-boot-session`
+   - the boot overlay now ships the existing `splash-placeholder.webp` instead of the 744 kB JPEG
+   - the service worker no longer precaches the audio manifest on first install
+5. Worldgen-worker decoupling is now in place:
+   - app boot no longer waits on worldgen readiness; the hub boot gate is shell/assets only
+   - `worldgen-worker` is now a tiny bootstrap chunk (~1.2 kB minified) that lazy-loads `worldgen-worker-runtime` (~432.7 kB minified) on first worldgen use
+   - worldgen initialization is now exposed honestly through warm-up UX in run start, arcade entry, and pending-floor transitions
+   - default spec validation moved out of browser boot and into engine test coverage
+   - worldgen telemetry is now separate from app boot telemetry (`worldgen_init_ms`, `worldgen_first_compile_ms`, `worldgen_runtime_error`)
+6. Web validation is green:
+   - `npm --workspace @hop/web run test:run`
+   - `npm --workspace @hop/web run build`
+   - `npm --workspace @hop/web run build:analyze`
+
+Remaining open items:
+1. Optional follow-up bundle hardening for the still-large lazy `worldgen-worker-runtime` chunk (~432.7 kB minified), if fresh new-run latency needs further improvement.
+2. Optional offline-first enhancement for brand-new runs after only a shell load; local offline resume remains guaranteed in the current model.
+3. Optional splash-art refinement if the current `webp` placeholder should be replaced with final production art rather than just the smaller encoded asset.
 
 Server:
 - `npm --workspace @hop/server run test` -> pass
@@ -183,13 +218,13 @@ Monorepo:
 ## Current Risk Posture
 
 1. No known blocking regressions in the strict AI acceptance gate.
-2. Determinism/parity checks are active and should remain mandatory for AI-affecting and content-spawn-affecting PRs.
+2. The canonical engine repair loop is now `npm run engine:fast`; `npm --workspace @hop/engine run test:full` is the practical exhaustive checkpoint before closeout.
 3. Deprecated constants (`ENEMY_STATS`, `FLOOR_ENEMY_*`) are retired from source ownership and blocked by static checks; runtime ownership remains catalog/profile-backed.
 4. Diagnostics (`oracle/shadow` diff scripts/tests) are retained for investigation workflows.
 5. `npm run upa:health:release` is the canonical fast release health report.
 6. `npm run upa:health:full` remains the deep offline health analysis path.
 7. Trinity profile env overrides and combat rollout flags are retired from supported workflows.
-8. Remaining gameplay debt is concentrated in reserve tuning, parity/golden rebaseline work, and timeline audit cleanup rather than runtime architecture.
+8. The remaining engine validation risk is concentrated in the acceptance-heavy tier excluded from `test:full`; the practical full gate, `targeting`, `scenarios`, `combat-smoke`, and `worldgen` are green.
 
 ## Next Documentation Focus
 
@@ -197,5 +232,5 @@ Monorepo:
 2. Keep completed implementation plans under `docs/archive/`; keep only living trackers and runbooks at `docs/` root.
 3. Keep generated/audit artifacts in `artifacts/upa/`; keep stable references in `docs/`.
 4. Keep balance operations aligned with the canonical doctrine in docs/GOLD_STANDARD_BALANCING.md.
-5. Keep Trinity/IRES references aligned with docs/COMBAT_FORMULA_LEDGER.md and docs/TRINITY_V2_INTEGRATION_SIGNOFF.md.
+5. Keep Trinity/IRES references aligned with docs/COMBAT_FORMULA_LEDGER.md and docs/archive/TRINITY_V2_INTEGRATION_SIGNOFF.md.
 

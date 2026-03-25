@@ -57,6 +57,7 @@ export const SHADOW_STEP: SkillDefinition = {
             target: 'self',
             destination: target,
             simulatePath: movementPolicy.simulatePath,
+            ignoreWalls: movementPolicy.ignoreWalls,
             ignoreGroundHazards: movementPolicy.ignoreGroundHazards,
             presentationKind: 'teleport',
             pathStyle: 'blink',

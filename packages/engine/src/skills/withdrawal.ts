@@ -169,6 +169,7 @@ export const WITHDRAWAL: SkillDefinition = {
                 destination: safeSpot,
                 source: attacker.position,
                 simulatePath: movementPolicy.simulatePath,
+                ignoreWalls: movementPolicy.ignoreWalls,
                 ignoreGroundHazards: movementPolicy.ignoreGroundHazards
             });
             effects.push({

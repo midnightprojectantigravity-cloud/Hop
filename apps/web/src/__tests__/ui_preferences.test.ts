@@ -1,5 +1,6 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
+  UI_PREFERENCES_LEGACY_STORAGE_KEY,
   UI_PREFERENCES_STORAGE_KEY,
   UI_THEME_STORAGE_KEY,
   applyUiPreferencesToRoot,
@@ -20,7 +21,7 @@ class MemoryStorage {
   }
 }
 
-describe('ui preferences v1', () => {
+describe('ui preferences v2', () => {
   it('reads default preferences when storage is empty', () => {
     const storage = new MemoryStorage();
     const prefs = readUiPreferences(storage);
@@ -30,7 +31,10 @@ describe('ui preferences v1', () => {
       hudDensity: 'compact',
       mobileLayout: 'portrait_primary',
       turnFlowMode: 'protected_single',
-      overdriveUiMode: 'per_turn_arm'
+      overdriveUiMode: 'per_turn_arm',
+      audioEnabled: true,
+      hapticsEnabled: true,
+      vitalsMode: 'glance'
     });
   });
 
@@ -42,7 +46,10 @@ describe('ui preferences v1', () => {
       hudDensity: 'comfortable',
       mobileLayout: 'portrait_primary',
       turnFlowMode: 'manual_chain',
-      overdriveUiMode: 'per_turn_arm'
+      overdriveUiMode: 'per_turn_arm',
+      audioEnabled: false,
+      hapticsEnabled: false,
+      vitalsMode: 'full'
     };
 
     writeUiPreferences(prefs, storage);
@@ -54,18 +61,23 @@ describe('ui preferences v1', () => {
     expect(roundTrip).toEqual(prefs);
   });
 
-  it('maps legacy light and dark values to canonical themes', () => {
+  it('migrates legacy v1 preference payloads', () => {
     const storage = new MemoryStorage();
-    storage.setItem(UI_PREFERENCES_STORAGE_KEY, JSON.stringify({
+    storage.setItem(UI_PREFERENCES_LEGACY_STORAGE_KEY, JSON.stringify({
       colorMode: 'light',
       motionMode: 'snappy',
       hudDensity: 'compact',
-      mobileLayout: 'portrait_primary'
+      mobileLayout: 'portrait_primary',
+      turnFlowMode: 'protected_single',
+      overdriveUiMode: 'per_turn_arm'
     }));
     storage.setItem(UI_THEME_STORAGE_KEY, 'dark');
 
     const prefs = readUiPreferences(storage);
     expect(prefs.colorMode).toBe('midnight');
+    expect(prefs.audioEnabled).toBe(true);
+    expect(prefs.hapticsEnabled).toBe(true);
+    expect(prefs.vitalsMode).toBe('glance');
   });
 
   it('applies preference dataset attributes to root element', () => {
@@ -77,7 +89,10 @@ describe('ui preferences v1', () => {
         hudDensity: 'comfortable',
         mobileLayout: 'portrait_primary',
         turnFlowMode: 'protected_single',
-        overdriveUiMode: 'per_turn_arm'
+        overdriveUiMode: 'per_turn_arm',
+        audioEnabled: false,
+        hapticsEnabled: true,
+        vitalsMode: 'full'
       },
       root
     );
@@ -87,5 +102,8 @@ describe('ui preferences v1', () => {
     expect(root.dataset.hudDensity).toBe('comfortable');
     expect(root.dataset.mobileLayout).toBe('portrait_primary');
     expect(root.dataset.turnFlowMode).toBe('protected_single');
+    expect(root.dataset.audioEnabled).toBe('false');
+    expect(root.dataset.hapticsEnabled).toBe('true');
+    expect(root.dataset.vitalsMode).toBe('full');
   });
 });

@@ -1,7 +1,6 @@
 import type { GameState, GridSize, Loadout, MapShape } from '@hop/engine';
 import type { ReplayRecord } from '../components/ReplayManager';
 import { Hub } from '../components/Hub';
-import { ArcadeHub } from '../components/ArcadeHub';
 import { ReplayErrorOverlay, TutorialInstructionsOverlay } from './AppOverlays';
 import {
   UI_THEME_OPTIONS,
@@ -13,9 +12,7 @@ import {
 
 interface HubScreenProps {
   gameState: GameState;
-  isArcadeRoute: boolean;
-  hubPath: string;
-  arcadePath: string;
+  homePath: string;
   biomesPath: string;
   themeLabPath: string;
   settingsPath: string;
@@ -29,7 +26,6 @@ interface HubScreenProps {
   onSetColorMode: (mode: UiColorMode) => void;
   onSetMotionMode: (mode: UiMotionMode) => void;
   onSetHudDensity: (density: UiHudDensity) => void;
-  onStartArcadeRun: (loadoutId: string) => void;
   capabilityPassivesEnabled: boolean;
   onCapabilityPassivesEnabledChange: (enabled: boolean) => void;
   movementRuntimeEnabled: boolean;
@@ -47,9 +43,7 @@ interface HubScreenProps {
 
 export const HubScreen = ({
   gameState,
-  isArcadeRoute,
-  hubPath,
-  arcadePath,
+  homePath,
   biomesPath,
   themeLabPath,
   settingsPath,
@@ -63,7 +57,6 @@ export const HubScreen = ({
   onSetColorMode,
   onSetMotionMode,
   onSetHudDensity,
-  onStartArcadeRun,
   capabilityPassivesEnabled,
   onCapabilityPassivesEnabledChange,
   movementRuntimeEnabled,
@@ -125,53 +118,43 @@ export const HubScreen = ({
           ))}
         </select>
       </div>
-      {!isArcadeRoute && (
-        <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigateTo(themeLabPath)}
-            className="px-4 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] hover:bg-[var(--surface-panel-hover)] text-[10px] font-black uppercase tracking-[0.2em]"
-          >
-            Theme Lab
-          </button>
-          <button
-            type="button"
-            onClick={() => navigateTo(biomesPath)}
-            className="px-4 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--accent-royal-soft)] hover:bg-[var(--accent-royal-soft-hover)] text-[10px] font-black uppercase tracking-[0.2em]"
-          >
-            Biome Sandbox
-          </button>
-        </div>
-      )}
-      {isArcadeRoute ? (
-        <ArcadeHub
-          onBack={() => navigateTo(hubPath)}
-          onLaunchArcade={onStartArcadeRun}
-          twoStepSelection
-        />
-      ) : (
-        <Hub
-          gameState={gameState}
-          capabilityPassivesEnabled={capabilityPassivesEnabled}
-          onCapabilityPassivesEnabledChange={onCapabilityPassivesEnabledChange}
-          movementRuntimeEnabled={movementRuntimeEnabled}
-          onMovementRuntimeEnabledChange={onMovementRuntimeEnabledChange}
-          mapShape={mapShape}
-          onMapShapeChange={onMapShapeChange}
-          mapSize={mapSize}
-          onMapSizeChange={onMapSizeChange}
-          onSelectLoadout={onSelectLoadout}
-          onStartRun={onStartRun}
-          onOpenArcade={() => navigateTo(arcadePath)}
-          onOpenSettings={dedicatedRoutesEnabled ? (() => navigateTo(settingsPath)) : undefined}
-          onOpenLeaderboard={dedicatedRoutesEnabled ? (() => navigateTo(leaderboardPath)) : undefined}
-          onOpenTutorials={dedicatedRoutesEnabled ? (() => navigateTo(tutorialsPath)) : undefined}
-          onLoadScenario={onLoadScenario}
-          onStartReplay={onStartReplay}
-          dedicatedRoutesEnabled={dedicatedRoutesEnabled}
-          hubTrainingOnly={dedicatedRoutesEnabled}
-        />
-      )}
+      <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => navigateTo(themeLabPath)}
+          className="px-4 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] hover:bg-[var(--surface-panel-hover)] text-[10px] font-black uppercase tracking-[0.2em]"
+        >
+          Theme Lab
+        </button>
+        <button
+          type="button"
+          onClick={() => navigateTo(biomesPath)}
+          className="px-4 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--accent-royal-soft)] hover:bg-[var(--accent-royal-soft-hover)] text-[10px] font-black uppercase tracking-[0.2em]"
+        >
+          Biome Sandbox
+        </button>
+      </div>
+      <Hub
+        gameState={gameState}
+        capabilityPassivesEnabled={capabilityPassivesEnabled}
+        onCapabilityPassivesEnabledChange={onCapabilityPassivesEnabledChange}
+        movementRuntimeEnabled={movementRuntimeEnabled}
+        onMovementRuntimeEnabledChange={onMovementRuntimeEnabledChange}
+        mapShape={mapShape}
+        onMapShapeChange={onMapShapeChange}
+        mapSize={mapSize}
+        onMapSizeChange={onMapSizeChange}
+        onSelectLoadout={onSelectLoadout}
+        onStartRun={onStartRun}
+        onOpenArcade={() => navigateTo(homePath)}
+        onOpenSettings={dedicatedRoutesEnabled ? (() => navigateTo(settingsPath)) : undefined}
+        onOpenLeaderboard={dedicatedRoutesEnabled ? (() => navigateTo(leaderboardPath)) : undefined}
+        onOpenTutorials={dedicatedRoutesEnabled ? (() => navigateTo(tutorialsPath)) : undefined}
+        onLoadScenario={onLoadScenario}
+        onStartReplay={onStartReplay}
+        dedicatedRoutesEnabled={dedicatedRoutesEnabled}
+        hubTrainingOnly={dedicatedRoutesEnabled}
+      />
       <ReplayErrorOverlay replayError={replayError} />
       <TutorialInstructionsOverlay
         tutorialInstructions={tutorialInstructions}

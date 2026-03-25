@@ -9,6 +9,7 @@ import {
 } from '@hop/engine';
 
 type WorldPoint = { x: number; y: number };
+type ViewBoxRect = { x: number; y: number; width: number; height: number };
 
 const SQRT_3 = Math.sqrt(3);
 const HEX_HIT_PADDING_PX = 2;
@@ -67,4 +68,41 @@ export const resolveBoardHexAtWorldPoint = (
   }
 
   return null;
+};
+
+const parseSvgViewBox = (value: string | null): ViewBoxRect | null => {
+  if (!value) return null;
+  const [x, y, width, height] = value
+    .trim()
+    .split(/[,\s]+/)
+    .map(Number);
+
+  if (![x, y, width, height].every(Number.isFinite)) return null;
+  if (width <= 0 || height <= 0) return null;
+  return { x, y, width, height };
+};
+
+export const clientPointToSvgWorldPoint = (
+  clientPoint: WorldPoint,
+  svg: Pick<SVGSVGElement, 'getAttribute' | 'getBoundingClientRect'>,
+): WorldPoint | null => {
+  const viewBox = parseSvgViewBox(svg.getAttribute('viewBox'));
+  if (!viewBox) return null;
+
+  const rect = svg.getBoundingClientRect();
+  if (!Number.isFinite(rect.width) || !Number.isFinite(rect.height) || rect.width <= 0 || rect.height <= 0) {
+    return null;
+  }
+
+  // Match preserveAspectRatio="xMidYMid meet" on the board SVG.
+  const scale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height);
+  const renderedWidth = viewBox.width * scale;
+  const renderedHeight = viewBox.height * scale;
+  const offsetX = rect.left + ((rect.width - renderedWidth) / 2);
+  const offsetY = rect.top + ((rect.height - renderedHeight) / 2);
+
+  return {
+    x: viewBox.x + ((clientPoint.x - offsetX) / scale),
+    y: viewBox.y + ((clientPoint.y - offsetY) / scale),
+  };
 };

@@ -1,3 +1,6 @@
+import type { UiMotionMode } from './ui-preferences';
+import { resolveTransitionClasses } from './screen-transition-shell';
+
 type MobileToast = {
   id: string;
   text: string;
@@ -18,14 +21,16 @@ export const ReplayErrorOverlay = ({ replayError }: { replayError: string | null
 
 export const TutorialInstructionsOverlay = ({
   tutorialInstructions,
+  motionMode = 'snappy',
   onDismiss,
 }: {
   tutorialInstructions: string | null;
+  motionMode?: UiMotionMode;
   onDismiss: () => void;
 }) => {
   if (!tutorialInstructions) return null;
   return (
-    <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-[var(--accent-royal-soft)] border border-[var(--accent-royal)] p-4 rounded-xl backdrop-blur-md shadow-xl z-30 max-w-lg text-center animate-in fade-in slide-in-from-top-4">
+    <div className={`absolute top-8 left-1/2 -translate-x-1/2 bg-[var(--accent-royal-soft)] border border-[var(--accent-royal)] p-4 rounded-xl backdrop-blur-md shadow-xl z-30 max-w-lg text-center ${resolveTransitionClasses(motionMode, 'overlay')}`}>
       <h4 className="text-[var(--accent-royal)] font-bold uppercase text-xs tracking-widest mb-1">Simulation Objective</h4>
       <p className="text-[var(--text-primary)] text-sm">{tutorialInstructions}</p>
       <button
@@ -53,10 +58,19 @@ export const ResolvingTurnOverlay = ({ visible }: { visible: boolean }) => {
   );
 };
 
-export const MobileToastsOverlay = ({ mobileToasts }: { mobileToasts: MobileToast[] }) => {
+export const MobileToastsOverlay = ({
+  mobileToasts,
+  motionMode = 'snappy'
+}: {
+  mobileToasts: MobileToast[];
+  motionMode?: UiMotionMode;
+}) => {
   if (mobileToasts.length === 0) return null;
   return (
-    <div className="lg:hidden fixed left-1/2 -translate-x-1/2 top-16 z-50 pointer-events-none flex flex-col gap-2 w-[min(92vw,26rem)]">
+    <div
+      data-mobile-toasts-overlay
+      className="lg:hidden absolute bottom-3 right-3 z-50 pointer-events-none flex flex-col items-end gap-2 w-[min(58vw,16rem)]"
+    >
       {mobileToasts.map((toast) => {
         const toneClass =
           toast.tone === 'damage'
@@ -69,7 +83,7 @@ export const MobileToastsOverlay = ({ mobileToasts }: { mobileToasts: MobileToas
         return (
           <div
             key={toast.id}
-            className={`rounded-xl border px-3 py-2 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.35)] text-xs font-bold tracking-wide ${toneClass}`}
+            className={`rounded-xl border px-3 py-2 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.35)] text-xs font-bold tracking-wide ${toneClass} ${resolveTransitionClasses(motionMode, 'overlay')}`}
           >
             {toast.text}
           </div>
@@ -81,11 +95,13 @@ export const MobileToastsOverlay = ({ mobileToasts }: { mobileToasts: MobileToas
 
 export const RunLostOverlay = ({
   visible,
+  motionMode = 'snappy',
   onQuickRestart,
   onViewReplay,
   onActionsReady
 }: {
   visible: boolean;
+  motionMode?: UiMotionMode;
   onQuickRestart: () => void;
   onViewReplay: () => void;
   onActionsReady?: () => void;
@@ -93,7 +109,7 @@ export const RunLostOverlay = ({
   if (!visible) return null;
   onActionsReady?.();
   return (
-    <div className="fixed inset-0 bg-[color:var(--overlay-defeat)] backdrop-blur-xl flex flex-col items-center justify-center z-[200] transition-opacity duration-300 px-6">
+    <div className={`fixed inset-0 bg-[color:var(--overlay-defeat)] backdrop-blur-xl flex flex-col items-center justify-center z-[200] px-6 ${resolveTransitionClasses(motionMode, 'overlay')}`}>
       <div className="w-[min(92vw,34rem)] rounded-3xl border border-[var(--accent-danger-border)] bg-[color:var(--surface-panel)] p-8 text-center">
         <h2 className="text-3xl sm:text-5xl font-black text-[var(--text-primary)] mb-2 tracking-tighter uppercase font-[var(--font-heading)]">Defeat</h2>
         <p className="text-[var(--text-muted)] mb-8 text-sm sm:text-base font-bold uppercase tracking-[0.18em]">
@@ -120,16 +136,18 @@ export const RunLostOverlay = ({
 
 export const RunWonOverlay = ({
   visible,
+  motionMode = 'snappy',
   score,
   onExitToHub,
 }: {
   visible: boolean;
+  motionMode?: UiMotionMode;
   score: number;
   onExitToHub: () => void;
 }) => {
   if (!visible) return null;
   return (
-    <div className="fixed inset-0 bg-[color:var(--overlay-victory)] backdrop-blur-xl flex flex-col items-center justify-center z-[200] transition-opacity duration-300">
+    <div className={`fixed inset-0 bg-[color:var(--overlay-victory)] backdrop-blur-xl flex flex-col items-center justify-center z-[200] ${resolveTransitionClasses(motionMode, 'overlay')}`}>
       <h2 className="text-4xl sm:text-6xl font-black text-[var(--text-primary)] mb-2 tracking-tighter uppercase font-[var(--font-heading)]">Arcade Cleared</h2>
       <p className="text-[var(--text-muted)] mb-2 text-base sm:text-xl font-medium tracking-widest uppercase">The Sentinel has fallen</p>
       <p className="text-[var(--text-muted)] mb-12 text-sm font-bold uppercase tracking-[0.3em]">Score: {score}</p>
@@ -137,21 +155,27 @@ export const RunWonOverlay = ({
         onClick={onExitToHub}
         className="px-12 py-4 bg-[var(--surface-panel)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-2xl font-black uppercase tracking-widest hover:brightness-105 transition-all"
       >
-        Return to Command Center
+        Home
       </button>
     </div>
   );
 };
 
-export const FloorIntroOverlay = ({ floorIntro }: { floorIntro: FloorIntroState }) => {
+export const FloorIntroOverlay = ({
+  floorIntro,
+  motionMode = 'snappy'
+}: {
+  floorIntro: FloorIntroState;
+  motionMode?: UiMotionMode;
+}) => {
   if (!floorIntro) return null;
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-[150] pointer-events-none animate-in fade-in duration-700">
+    <div className={`fixed inset-0 flex items-center justify-center z-[150] pointer-events-none ${resolveTransitionClasses(motionMode, 'floor')}`}>
       <div className="text-center">
-        <div className="text-[var(--accent-royal)] font-black text-2xl uppercase tracking-[0.5em] mb-4 animate-in slide-in-from-bottom-8 duration-1000">Floor {floorIntro.floor}</div>
-        <h2 className="text-6xl sm:text-8xl font-black text-[var(--text-primary)] uppercase tracking-tighter animate-in slide-in-from-top-12 duration-1000">{floorIntro.theme}</h2>
+        <div className={`text-[var(--accent-royal)] font-black text-2xl uppercase tracking-[0.5em] mb-4 ${resolveTransitionClasses(motionMode, 'floor')}`}>Floor {floorIntro.floor}</div>
+        <h2 className={`text-6xl sm:text-8xl font-black text-[var(--text-primary)] uppercase tracking-tighter ${resolveTransitionClasses(motionMode, 'floor')}`}>{floorIntro.theme}</h2>
         <div className="h-1 w-64 bg-[var(--surface-panel-hover)] mx-auto mt-8 rounded-full overflow-hidden">
-          <div className="h-full bg-[var(--accent-royal)] animate-[progress_3s_linear]" />
+          <div className={`h-full bg-[var(--accent-royal)] ${motionMode === 'reduced' ? 'w-full' : 'animate-[progress_3s_linear]'}`} />
         </div>
       </div>
     </div>
@@ -163,6 +187,7 @@ export const ReplayControlsOverlay = ({
   replayIndex,
   replayLength,
   replayActive,
+  motionMode = 'snappy',
   onToggleReplay,
   onStepReplay,
   onJumpReplay,
@@ -173,6 +198,7 @@ export const ReplayControlsOverlay = ({
   replayIndex: number;
   replayLength: number;
   replayActive: boolean;
+  motionMode?: UiMotionMode;
   onToggleReplay: () => void;
   onStepReplay: () => void;
   onJumpReplay?: (index: number) => void;
@@ -190,7 +216,7 @@ export const ReplayControlsOverlay = ({
   })();
 
   return (
-    <div className="fixed top-3 sm:top-auto sm:bottom-12 left-1/2 -translate-x-1/2 w-[min(94vw,40rem)] sm:w-auto bg-[color:var(--surface-panel)] border border-[var(--accent-royal)] p-4 sm:p-6 rounded-3xl backdrop-blur-2xl shadow-[0_0_50px_rgba(79,70,229,0.15)] z-[250] flex flex-col sm:flex-row items-center gap-4 sm:gap-8 animate-in slide-in-from-bottom-8 duration-300">
+    <div className={`fixed top-3 sm:top-auto sm:bottom-12 left-1/2 -translate-x-1/2 w-[min(94vw,40rem)] sm:w-auto bg-[color:var(--surface-panel)] border border-[var(--accent-royal)] p-4 sm:p-6 rounded-3xl backdrop-blur-2xl shadow-[0_0_50px_rgba(79,70,229,0.15)] z-[250] flex flex-col sm:flex-row items-center gap-4 sm:gap-8 ${resolveTransitionClasses(motionMode, 'overlay')}`}>
       <div className="flex flex-col">
         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--accent-royal)] mb-1">Replay System</span>
         <span className="text-[var(--text-primary)] font-bold text-sm">Step {replayIndex} / {replayLength}</span>

@@ -14,7 +14,7 @@ import {
     resolveRuntimeSkillResourceProfile
 } from '../systems/ires';
 import { SpatialSystem } from '../systems/spatial-system';
-import { recomputeVisibility } from '../systems/visibility';
+import { recomputeVisibilityFromScratch } from '../systems/visibility';
 import type { GameState } from '../types';
 
 const prepareTravelPlayerState = (seed: string) => {
@@ -34,7 +34,7 @@ const prepareTravelPlayerState = (seed: string) => {
         initiativeQueue: buildInitiativeQueue(nextState),
         occupancyMask: SpatialSystem.refreshOccupancyMask(nextState)
     };
-    return gameReducer(recomputeVisibility(withQueue), { type: 'ADVANCE_TURN' });
+    return gameReducer(recomputeVisibilityFromScratch(withQueue), { type: 'ADVANCE_TURN' });
 };
 
 describe('IRES runtime band resolution', () => {
@@ -152,8 +152,10 @@ describe('IRES runtime band resolution', () => {
         const profile = resolveRuntimeSkillResourceProfile('SENTINEL_BLAST', skillDef);
         const preview = resolveIresActionPreview(sentinel, 'SENTINEL_BLAST', skillDef?.resourceProfile, undefined, 'battle', skillDef);
 
-        expect(sentinel.ires?.maxMana).toBe(10);
+        expect(sentinel.ires?.maxMana).toBe(16);
         expect(profile.primaryCost).toBe(10);
+        expect(profile.manaCost).toBe(10);
+        expect(profile.sparkWalkScalar).toBe(1);
         expect(profile.primaryCost).toBeLessThanOrEqual(sentinel.ires?.maxMana || 0);
         expect(preview.blockedReason).toBeUndefined();
     });

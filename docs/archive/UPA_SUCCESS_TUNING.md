@@ -62,4 +62,4 @@ To keep strict suites aligned with the tuned deterministic baseline:
 
 ## Notes
 1. This tranche intentionally changes balance outcomes while preserving determinism and replay stability.
-2. ACAE pilot work is separate and tracked in `docs/ACAE_MILESTONE_2026-03-01.md`.
+2. ACAE pilot work is separate and tracked in `docs/archive/ACAE_MILESTONE_2026-03-01.md`.

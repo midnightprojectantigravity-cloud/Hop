@@ -10,6 +10,7 @@ import {
     validateMovementDestination,
     validateMovementTraversalStep
 } from '../systems/capabilities/movement-policy';
+import { TileResolver } from '../systems/tiles/tile-effects';
 
 /**
  * BASIC_MOVE Skill
@@ -33,6 +34,172 @@ const resolveBasicMovePolicy = (state: GameState, actor: Actor, target?: Point) 
     return policy;
 };
 
+const cloneBasicMovePolicy = (
+    movementPolicy: ReturnType<typeof resolveBasicMovePolicy>,
+    overrides: Partial<ReturnType<typeof resolveBasicMovePolicy>> & {
+        movementModel?: Partial<ReturnType<typeof resolveBasicMovePolicy>['movementModel']>;
+    }
+) => ({
+    ...movementPolicy,
+    ...overrides,
+    movementModel: {
+        ...movementPolicy.movementModel,
+        ...(overrides.movementModel || {})
+    }
+});
+
+const resolveBasicMoveLandingPolicy = (
+    movementPolicy: ReturnType<typeof resolveBasicMovePolicy>
+) => cloneBasicMovePolicy(movementPolicy, {
+    ignoreWalls: false,
+    ignoreGroundHazards: false,
+    movementModel: {
+        ...movementPolicy.movementModel,
+        pathing: 'walk',
+        ignoreWalls: false,
+        ignoreGroundHazards: false
+    }
+});
+
+const resolveBasicMoveTraversalPolicies = (
+    movementPolicy: ReturnType<typeof resolveBasicMovePolicy>
+) => {
+    if (movementPolicy.pathing !== 'walk') return [movementPolicy];
+    if (!movementPolicy.ignoreWalls && !movementPolicy.ignoreGroundHazards) return [movementPolicy];
+    return [
+        resolveBasicMoveLandingPolicy(movementPolicy),
+        movementPolicy
+    ];
+};
+
+const resolveBasicMoveTransitionOptions = (
+    traversalPolicy: ReturnType<typeof resolveBasicMovePolicy>
+) => ({
+    ignoreActors: true,
+    ignoreGroundHazards: traversalPolicy.ignoreGroundHazards || traversalPolicy.pathing === 'flight' || traversalPolicy.pathing === 'teleport',
+    ignoreWalls: traversalPolicy.ignoreWalls
+});
+
+const collectMovementRangeWithPolicy = (
+    state: GameState,
+    actor: Actor,
+    origin: Point,
+    movePoints: number,
+    traversalPolicy: ReturnType<typeof resolveBasicMovePolicy>,
+    landingPolicy: ReturnType<typeof resolveBasicMovePolicy>
+): Point[] => {
+    const visited = new Map<string, number>();
+    const out: Point[] = [];
+    const key = (p: Point) => `${p.q},${p.r}`;
+    const queue: Array<{ p: Point; remaining: number }> = [{ p: origin, remaining: movePoints }];
+    visited.set(key(origin), movePoints);
+
+    while (queue.length > 0) {
+        const cur = queue.shift()!;
+        if (cur.remaining <= 0) continue;
+
+        for (const next of getNeighbors(cur.p)) {
+            const traversal = validateMovementTraversalStep(state, actor, next, traversalPolicy, {
+                skillId: 'BASIC_MOVE',
+                allowAlliedOccupancy: true
+            });
+            if (!traversal.isValid) continue;
+
+            const tile = state.tiles.get(key(next));
+            if (!tile) continue;
+
+            const transition = TileResolver.processTransition(
+                actor,
+                tile,
+                state,
+                cur.remaining,
+                resolveBasicMoveTransitionOptions(traversalPolicy)
+            );
+            const nk = key(next);
+            const nextRemaining = transition.newMomentum ?? Math.max(0, cur.remaining - 1);
+            if (visited.has(nk) && visited.get(nk)! >= nextRemaining) continue;
+
+            visited.set(nk, nextRemaining);
+            if (validateMovementDestination(state, actor, next, landingPolicy).isValid) {
+                out.push(next);
+            }
+            if (!transition.interrupt && nextRemaining > 0) {
+                queue.push({ p: next, remaining: nextRemaining });
+            }
+        }
+    }
+
+    return out;
+};
+
+const findSafePathWithPolicy = (
+    state: GameState,
+    actor: Actor,
+    origin: Point,
+    target: Point,
+    movePoints: number,
+    traversalPolicy: ReturnType<typeof resolveBasicMovePolicy>,
+    landingPolicy: ReturnType<typeof resolveBasicMovePolicy>
+): Point[] | null => {
+    const key = (p: Point) => `${p.q},${p.r}`;
+    const parseKey = (k: string): Point => {
+        const [q, r] = k.split(',').map(Number);
+        return { q, r, s: -q - r };
+    };
+
+    const queue: Point[] = [origin];
+    const remaining = new Map<string, number>([[key(origin), movePoints]]);
+    const cameFrom = new Map<string, string | null>([[key(origin), null]]);
+
+    while (queue.length > 0) {
+        const cur = queue.shift()!;
+        const curKey = key(cur);
+        const curRemaining = remaining.get(curKey)!;
+        if (curRemaining <= 0) continue;
+
+        for (const next of getNeighbors(cur)) {
+            const traversal = validateMovementTraversalStep(state, actor, next, traversalPolicy, {
+                skillId: 'BASIC_MOVE',
+                allowAlliedOccupancy: true
+            });
+            if (!traversal.isValid) continue;
+
+            const tile = state.tiles.get(key(next));
+            if (!tile) continue;
+
+            const transition = TileResolver.processTransition(
+                actor,
+                tile,
+                state,
+                curRemaining,
+                resolveBasicMoveTransitionOptions(traversalPolicy)
+            );
+            const nextKey = key(next);
+            const nextRemaining = transition.newMomentum ?? Math.max(0, curRemaining - 1);
+            if (remaining.has(nextKey) && remaining.get(nextKey)! >= nextRemaining) continue;
+
+            remaining.set(nextKey, nextRemaining);
+            cameFrom.set(nextKey, curKey);
+            if (!transition.interrupt && nextRemaining > 0) {
+                queue.push(next);
+            }
+        }
+    }
+
+    const targetKey = key(target);
+    if (!cameFrom.has(targetKey)) return null;
+    if (!validateMovementDestination(state, actor, target, landingPolicy).isValid) return null;
+
+    const path: Point[] = [];
+    let cur: string | null = targetKey;
+    while (cur) {
+        path.push(parseKey(cur));
+        cur = cameFrom.get(cur) || null;
+    }
+    path.reverse();
+    return path;
+};
+
 const getSafeMovementRange = (
     state: GameState,
     actor: Actor,
@@ -40,43 +207,26 @@ const getSafeMovementRange = (
     movePoints: number,
     movementPolicy: ReturnType<typeof resolveBasicMovePolicy>
 ): Point[] => {
+    const landingPolicy = resolveBasicMoveLandingPolicy(movementPolicy);
     if (movementPolicy.pathing === 'teleport') {
         return SpatialSystem.getAreaTargets(state, origin, movePoints).filter(next => {
             if (hexEquals(next, origin)) return false;
-            return validateMovementDestination(state, actor, next, movementPolicy).isValid;
+            return validateMovementDestination(state, actor, next, landingPolicy).isValid;
         });
     }
 
-    const visited = new Map<string, number>();
-    const out: Point[] = [];
-    const key = (p: Point) => `${p.q},${p.r}`;
-    const queue: Array<{ p: Point; cost: number }> = [{ p: origin, cost: 0 }];
-    visited.set(key(origin), 0);
-
-    while (queue.length > 0) {
-        const cur = queue.shift()!;
-        if (cur.cost >= movePoints) continue;
-
-        for (const next of getNeighbors(cur.p)) {
-            const traversal = validateMovementTraversalStep(state, actor, next, movementPolicy, {
-                skillId: 'BASIC_MOVE',
-                allowAlliedOccupancy: true
-            });
-            if (!traversal.isValid) continue;
-
-            const nk = key(next);
-            const newCost = cur.cost + 1;
-            if (visited.has(nk) && visited.get(nk)! <= newCost) continue;
-
-            visited.set(nk, newCost);
-            if (validateMovementDestination(state, actor, next, movementPolicy).isValid) {
-                out.push(next);
+    const outByKey = new Map<string, Point>();
+    for (const traversalPolicy of resolveBasicMoveTraversalPolicies(movementPolicy)) {
+        const reachable = collectMovementRangeWithPolicy(state, actor, origin, movePoints, traversalPolicy, landingPolicy);
+        for (const point of reachable) {
+            const key = `${point.q},${point.r}`;
+            if (!outByKey.has(key)) {
+                outByKey.set(key, point);
             }
-            queue.push({ p: next, cost: newCost });
         }
     }
 
-    return out;
+    return [...outByKey.values()];
 };
 
 const findSafePath = (
@@ -87,58 +237,20 @@ const findSafePath = (
     movePoints: number,
     movementPolicy: ReturnType<typeof resolveBasicMovePolicy>
 ): Point[] | null => {
+    const landingPolicy = resolveBasicMoveLandingPolicy(movementPolicy);
     if (movementPolicy.pathing === 'teleport') {
         if (hexEquals(origin, target)) return null;
         if (hexDistance(origin, target) > movePoints) return null;
-        if (!validateMovementDestination(state, actor, target, movementPolicy).isValid) return null;
+        if (!validateMovementDestination(state, actor, target, landingPolicy).isValid) return null;
         return [origin, target];
     }
 
-    const key = (p: Point) => `${p.q},${p.r}`;
-    const parseKey = (k: string): Point => {
-        const [q, r] = k.split(',').map(Number);
-        return { q, r, s: -q - r };
-    };
-
-    const queue: Point[] = [origin];
-    const cost = new Map<string, number>([[key(origin), 0]]);
-    const cameFrom = new Map<string, string | null>([[key(origin), null]]);
-
-    while (queue.length > 0) {
-        const cur = queue.shift()!;
-        const curKey = key(cur);
-        const curCost = cost.get(curKey)!;
-        if (curCost >= movePoints) continue;
-
-        for (const next of getNeighbors(cur)) {
-            const traversal = validateMovementTraversalStep(state, actor, next, movementPolicy, {
-                skillId: 'BASIC_MOVE',
-                allowAlliedOccupancy: true
-            });
-            if (!traversal.isValid) continue;
-
-            const nextKey = key(next);
-            const nextCost = curCost + 1;
-            if (cost.has(nextKey) && cost.get(nextKey)! <= nextCost) continue;
-
-            cost.set(nextKey, nextCost);
-            cameFrom.set(nextKey, curKey);
-            queue.push(next);
-        }
+    for (const traversalPolicy of resolveBasicMoveTraversalPolicies(movementPolicy)) {
+        const path = findSafePathWithPolicy(state, actor, origin, target, movePoints, traversalPolicy, landingPolicy);
+        if (path) return path;
     }
 
-    const targetKey = key(target);
-    if (!cameFrom.has(targetKey)) return null;
-    if (!validateMovementDestination(state, actor, target, movementPolicy).isValid) return null;
-
-    const path: Point[] = [];
-    let cur: string | null = targetKey;
-    while (cur) {
-        path.push(parseKey(cur));
-        cur = cameFrom.get(cur) || null;
-    }
-    path.reverse();
-    return path;
+    return null;
 };
 
 export const BASIC_MOVE: SkillDefinition = {
@@ -195,6 +307,7 @@ export const BASIC_MOVE: SkillDefinition = {
             // Validation/pathfinding allows passing through allies for free movement.
             // Runtime simulation must match that contract to avoid short-stops.
             ignoreCollision: true,
+            ignoreWalls: movementPolicy.ignoreWalls,
             ignoreGroundHazards: movementPolicy.ignoreGroundHazards || movementPolicy.pathing === 'flight' || movementPolicy.pathing === 'teleport',
             presentationKind: 'walk',
             pathStyle: 'hex_step',

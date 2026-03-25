@@ -12,7 +12,7 @@ Completion snapshot:
 - [x] Initiative B.4 (validation-at-boot/build direction) active via deterministic validation/test gates and script checks.
 
 Related milestone:
-- `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+- `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 
 Key updates from the original draft:
 - `applyAction()` now lives in `packages/engine/src/logic.ts` (not `packages/engine/src/engine/core.ts`)

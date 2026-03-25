@@ -4,9 +4,9 @@ Canonical doctrine:
 - `docs/GOLD_STANDARD_BALANCING.md`
 
 ## Current Inputs
-- Calibration baseline: `docs/UPA_CALIBRATION_BASELINE.json`
+- Calibration baseline: `artifacts/upa/UPA_CALIBRATION_BASELINE.json`
 - Matchup matrix: `docs/UPA_PVP_MATCHUP_MATRIX.json`
-- Skill health: `docs/UPA_SKILL_HEALTH.json`
+- Skill health: `artifacts/upa/UPA_SKILL_HEALTH.json`
 - Dynamic grades: `docs/UPA_SKILL_GRADES_DYNAMIC.json`
 - Archetype source of truth (loadout IDs): `packages/engine/src/systems/loadout.ts`
 

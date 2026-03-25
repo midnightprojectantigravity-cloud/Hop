@@ -13,7 +13,8 @@ interface UsePendingFloorWorldgenArgs {
   worldgenWorker: WorldgenWorkerState;
   worldgenDebugEnabled: boolean;
   dispatchWithTrace: (action: Action, source: string) => void;
-  reportWorldgenUiError: (kind: 'boot' | 'start_run' | 'stairs', message: string) => void;
+  ensureWorldgenReady: (reason: 'pending_floor') => Promise<void>;
+  reportWorldgenUiError: (kind: 'init' | 'start_run' | 'stairs', message: string) => void;
   clearWorldgenUiError: () => void;
 }
 
@@ -30,6 +31,7 @@ export const usePendingFloorWorldgen = ({
   worldgenWorker,
   worldgenDebugEnabled,
   dispatchWithTrace,
+  ensureWorldgenReady,
   reportWorldgenUiError,
   clearWorldgenUiError
 }: UsePendingFloorWorldgenArgs): UsePendingFloorWorldgenResult => {
@@ -74,14 +76,22 @@ export const usePendingFloorWorldgen = ({
       dispatchWithTrace({ type: 'RESOLVE_PENDING' }, 'pending_ready');
       return;
     }
-    if (!worldgenWorker.ready || !gameState.generationState) {
-      const message = worldgenWorker.error || 'Worldgen worker unavailable for stairs transition';
+    if (!gameState.generationState) {
+      const message = 'Worldgen generation state unavailable for stairs transition';
       dispatchState({ type: 'COMPILE_FAILED', key, error: message });
       reportWorldgenUiError('stairs', message);
       return;
     }
 
     dispatchState({ type: 'COMPILE_STARTED', key });
+    const initialized = await ensureWorldgenReady('pending_floor').then(() => true).catch((error: Error) => {
+      const message = error.message || 'Worldgen runtime unavailable for stairs transition';
+      dispatchState({ type: 'COMPILE_FAILED', key, error: message });
+      reportWorldgenUiError('init', message);
+      return null;
+    });
+    if (!initialized) return;
+
     const context = buildTransitionCompileContext(gameState, worldgenDebugEnabled);
     const artifact = await worldgenWorker.compilePendingFloor(context).catch((error: Error) => {
       const message = error.message || 'Worldgen stairs transition failed';
@@ -97,6 +107,7 @@ export const usePendingFloorWorldgen = ({
   }, [
     clearWorldgenUiError,
     dispatchWithTrace,
+    ensureWorldgenReady,
     gameState,
     reportWorldgenUiError,
     worldgenDebugEnabled,
@@ -123,11 +134,13 @@ export const usePendingFloorWorldgen = ({
     void compilePendingFloor(pendingKey);
   }, [compilePendingFloor, gameState.pendingStatus?.status, pendingKey]);
 
-  const progressLabel = worldgenWorker.progress
-    ? `Compiling: ${worldgenWorker.progress.pass} (${worldgenWorker.progress.percent}%)`
-    : state.phase === 'waiting_for_animation' && isPendingFloorTransition
-      ? 'Compiling: waiting_for_animation'
-      : undefined;
+  const progressLabel = worldgenWorker.phase === 'initializing'
+    ? 'Warming worldgen runtime...'
+    : worldgenWorker.progress
+      ? `Compiling: ${worldgenWorker.progress.pass} (${worldgenWorker.progress.percent}%)`
+      : state.phase === 'waiting_for_animation' && isPendingFloorTransition
+        ? 'Compiling: waiting_for_animation'
+        : undefined;
 
   return {
     state,

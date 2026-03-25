@@ -241,6 +241,21 @@ const cloneMovementPath = (path: Point[] | undefined, origin: Point, destination
     return [clonePoint(origin), clonePoint(destination)];
 };
 
+const resolvePreviewTrace = (state: GameState | undefined, actorId: string) => {
+    const visualEvents = state?.visualEvents || [];
+    for (let i = visualEvents.length - 1; i >= 0; i--) {
+        const event = visualEvents[i];
+        if (event?.type !== 'kinetic_trace') continue;
+        const trace = event.payload as AtomicEffect | undefined;
+        if (!trace || typeof trace !== 'object') continue;
+        const movementTrace = event.payload as import('../types').MovementTrace | undefined;
+        if (movementTrace?.actorId === actorId) {
+            return movementTrace;
+        }
+    }
+    return null;
+};
+
 export const resolveMovementPreviewPath = (
     state: GameState,
     actor: Actor,
@@ -281,8 +296,12 @@ export const resolveMovementPreviewPath = (
         };
     }
 
-    const destination = clonePoint(displacement.destination);
-    const path = cloneMovementPath(displacement.path, actor.position, displacement.destination);
+    const previewTrace = resolvePreviewTrace(preview.predictedState, actor.id);
+    const resolvedActor = preview.predictedState ? resolveActorById(preview.predictedState, actor.id) : undefined;
+    const destination = clonePoint(previewTrace?.destination || resolvedActor?.position || displacement.destination);
+    const path = previewTrace?.path?.length
+        ? previewTrace.path.map(clonePoint)
+        : cloneMovementPath(displacement.path, actor.position, destination);
     const interrupted = pointToKey(destination) !== pointToKey(target);
 
     return {

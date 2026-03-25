@@ -3,6 +3,7 @@ import { createHex, pointToKey } from '../hex';
 import { generateInitialState } from '../logic';
 import { getComponent, type AttachmentComponent } from '../systems/components';
 import { applyEffects } from '../systems/effect-engine';
+import { createEnemy } from '../systems/entities/entity-factory';
 import { BASE_TILES } from '../systems/tiles/tile-registry';
 import type { GameState, Point } from '../types';
 
@@ -31,8 +32,24 @@ const setupAttachmentState = () => {
     const anchorId = 'anchor-enemy';
     const attachedId = 'attached-enemy';
 
-    const anchor = { ...state.enemies[0]!, id: anchorId, position: anchorPos, hp: 5, maxHp: 5, statusEffects: [], components: new Map(state.enemies[0]!.components || []) };
-    const attached = { ...state.enemies[1]!, id: attachedId, position: attachedPos, hp: 5, maxHp: 5, statusEffects: [], components: new Map(state.enemies[1]!.components || []) };
+    const anchor = createEnemy({
+        id: anchorId,
+        subtype: 'footman',
+        position: anchorPos,
+        hp: 5,
+        maxHp: 5,
+        speed: 1,
+        skills: ['BASIC_MOVE', 'BASIC_ATTACK']
+    });
+    const attached = createEnemy({
+        id: attachedId,
+        subtype: 'footman',
+        position: attachedPos,
+        hp: 5,
+        maxHp: 5,
+        speed: 1,
+        skills: ['BASIC_MOVE', 'BASIC_ATTACK']
+    });
 
     const tiles = new Map(state.tiles);
     const seeded: GameState = {

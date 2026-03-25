@@ -2,19 +2,19 @@
 
 ## Status (March 3, 2026)
 - AI convergence is complete and gated:
-  - `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+  - `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 - Post-AI roadmap tranches are complete and gated:
-  - `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
+  - `docs/archive/NEXT_PHASES_MILESTONE_2026-02-28.md`
 - ACAE pilot tranche is complete and gated (feature-flagged hybrid rollout):
-  - `docs/ACAE_MILESTONE_2026-03-01.md`
+  - `docs/archive/ACAE_MILESTONE_2026-03-01.md`
 - UPA multi-archetype success tuning tranche is complete and gated:
-  - `docs/UPA_SUCCESS_TUNING.md`
+  - `docs/archive/UPA_SUCCESS_TUNING.md`
 - Capability rollout tranche is complete and validated (staged rollout posture retained):
-  - `docs/CAPABILITY_ROLLOUT.md`
+  - `docs/archive/CAPABILITY_ROLLOUT.md`
 - Great Refactor UI/UX tranche is complete and validated:
-  - `docs/UI_UX_GREAT_REFACTOR_WRAPUP_2026-03-03.md`
+  - `docs/archive/UI_UX_GREAT_REFACTOR_WRAPUP_2026-03-03.md`
 - Inferno world compiler tranche is complete and integrated as the default inferno map-generation path:
-  - `docs/INFERNO_WORLDGEN_WRAPUP_2026-03-12.md`
+  - `docs/archive/INFERNO_WORLDGEN_WRAPUP_2026-03-12.md`
 - Documentation sync for post-tranche architecture is complete:
   - `docs/MASTER_TECH_STACK.md`
   - `docs/GOLD_STANDARD_MANIFESTO.md`

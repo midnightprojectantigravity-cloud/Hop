@@ -27,11 +27,13 @@ export const getAiResourceSignals = (ires: IresRuntimeState | null | undefined):
 
     const sparkRatio = clamp01(Number(ires.spark || 0) / Math.max(1, Number(ires.maxSpark || 1)));
     const manaRatio = clamp01(Number(ires.mana || 0) / Math.max(1, Number(ires.maxMana || 1)));
-    const exhaustionRatio = clamp01(Number(ires.exhaustion || 0) / 100);
+    const exhaustionRatio = clamp01(1 - sparkRatio);
     const reservePressure = clamp01(Math.max(1 - sparkRatio, 1 - manaRatio));
-    const fatiguePressure = ires.isExhausted
+    const fatiguePressure = ires.currentState === 'exhausted'
         ? 1
-        : clamp01((exhaustionRatio * 0.8) + (Number(ires.pendingRestedBonus ? 1 : 0) * 0.05));
+        : ires.currentState === 'rested'
+            ? clamp01(exhaustionRatio * 0.2)
+            : clamp01(exhaustionRatio * 0.8);
     const actionChainPressure = clamp01(Math.max(0, Number(ires.actionCountThisTurn || 0) - 1) / 2);
     const recoveryPressure = clamp01(
         (fatiguePressure * 0.5)

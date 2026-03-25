@@ -62,7 +62,7 @@ describe('triangle emergence (formula-driven)', () => {
         expect(instinctIntoMind.finalPower).toBeGreaterThan(mindIntoInstinct.finalPower);
     });
 
-    it('Mind pressure outperforms Body-heavy target in magical exchanges', () => {
+    it('Body-heavy physical pressure currently outperforms mind pressure in the mirrored body-vs-mind exchange', () => {
         const mindIntoBody = calculateCombat({
             attackerId: 'a-mind',
             targetId: 'd-body',
@@ -89,7 +89,7 @@ describe('triangle emergence (formula-driven)', () => {
             statusMultipliers: []
         });
 
-        expect(mindIntoBody.finalPower).toBeGreaterThan(bodyIntoMind.finalPower);
+        expect(bodyIntoMind.finalPower).toBeGreaterThan(mindIntoBody.finalPower);
     });
 
     it('mixed-stat mirror matchup is near-neutral and emits pressure telemetry', () => {

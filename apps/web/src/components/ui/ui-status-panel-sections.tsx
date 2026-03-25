@@ -1,5 +1,7 @@
 import React from 'react';
 import {
+  computeManaRecoveryIfEndedNow,
+  computeSparkRecoveryIfEndedNow,
   resolveCombatPressureMode,
   resolveEffectiveBfi,
   resolveExhaustionTax,
@@ -57,6 +59,15 @@ export interface UiRulesetFlags {
 const pct = (current: number, max: number): string =>
   `${Math.max(0, Math.min(100, max > 0 ? (current / max) * 100 : 0))}%`;
 
+const formatStateLabel = (state: string | undefined): 'Base' | 'Rested' | 'Exhausted' =>
+  state === 'exhausted'
+    ? 'Exhausted'
+    : state === 'rested'
+      ? 'Rested'
+      : 'Base';
+
+const capitalizeWord = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
+
 export const getWaitDirectiveLabel = (gameState: GameState): 'Rest' | 'End Turn' => {
   const ires = gameState.player.ires;
   return ires && (ires.actedThisTurn || ires.movedThisTurn) ? 'End Turn' : 'Rest';
@@ -112,33 +123,28 @@ const UiResourceBar: React.FC<{
   </div>
 );
 
-export const UiTriResourceHeader: React.FC<StatusGameProps & { mobile?: boolean }> = ({ gameState, compact, mobile = false }) => {
+export const UiTriResourceHeader: React.FC<StatusGameProps & {
+  mobile?: boolean;
+  variant?: 'default' | 'board_condensed';
+}> = ({
+  gameState,
+  compact,
+  mobile = false,
+  variant = 'default'
+}) => {
   const ires = gameState.player.ires;
   if (!ires) return null;
 
   const combatPressureMode = resolveCombatPressureMode(gameState);
   const isSparkDeficit = ires.spark < 50;
-  const stateLabel = ires.currentState === 'exhausted'
-    ? 'Exhausted'
-    : ires.currentState === 'rested'
-      ? 'Rested'
-      : 'Base';
-  const exhaustionClass = ires.exhaustion >= 80
-    ? 'border-rose-500/70 bg-rose-950/60'
-    : ires.exhaustion <= 20
-      ? 'border-white/60 bg-white/10'
-      : 'border-fuchsia-400/40 bg-fuchsia-950/45';
-  const exhaustionFillClass = ires.exhaustion >= 80
-    ? 'bg-gradient-to-r from-rose-500 via-red-500 to-orange-400 ires-redline'
-    : ires.exhaustion <= 20
-      ? 'bg-gradient-to-r from-white/90 to-slate-200/80'
-      : 'bg-gradient-to-r from-fuchsia-500 to-violet-500';
+  const stateLabel = formatStateLabel(ires.currentState);
+  const showCompactStatusChips = mobile || variant === 'board_condensed';
 
   return (
     <div className={compact ? 'space-y-3' : 'space-y-4'}>
       <div className="flex items-center justify-between gap-3">
         <div>
-          {!mobile && (
+          {!showCompactStatusChips && (
             <>
               <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Metabolic Engine</div>
               <div className="text-xs font-bold text-[var(--text-secondary)]">Fuel and friction for the active turn.</div>
@@ -150,7 +156,7 @@ export const UiTriResourceHeader: React.FC<StatusGameProps & { mobile?: boolean 
               )}
             </>
           )}
-          {mobile && (
+          {showCompactStatusChips && (
             <div className="flex flex-wrap items-center gap-2">
               <UiStateBadge stateLabel={stateLabel} />
               {combatPressureMode === 'travel' && (
@@ -167,7 +173,7 @@ export const UiTriResourceHeader: React.FC<StatusGameProps & { mobile?: boolean 
               Bonus Armed
             </span>
           )}
-          {!mobile && <UiStateBadge stateLabel={stateLabel} />}
+          {!showCompactStatusChips && <UiStateBadge stateLabel={stateLabel} />}
         </div>
       </div>
       <UiResourceBar
@@ -186,13 +192,6 @@ export const UiTriResourceHeader: React.FC<StatusGameProps & { mobile?: boolean 
         className="border-cyan-400/40 bg-cyan-950/35"
         fillClassName="bg-gradient-to-r from-cyan-400 to-sky-400"
       />
-      <UiResourceBar
-        label="Exhaustion"
-        value={ires.exhaustion}
-        max={100}
-        className={exhaustionClass}
-        fillClassName={exhaustionFillClass}
-      />
     </div>
   );
 };
@@ -205,12 +204,14 @@ export const UiMetabolicProfileSection: React.FC<StatusGameProps> = ({ gameState
   const nextTax = resolveExhaustionTax(gameState.player, ires.actionCountThisTurn, gameState.ruleset);
   const upcomingTaxes = Array.from({ length: 4 }, (_, idx) => resolveExhaustionTax(gameState.player, ires.actionCountThisTurn + idx, gameState.ruleset));
   const stateMod = ires.currentState === 'exhausted' ? 'Redline' : ires.currentState === 'rested' ? 'Rested' : 'Base';
+  const sparkRecovery = computeSparkRecoveryIfEndedNow(gameState.player, ires);
+  const manaRecovery = computeManaRecoveryIfEndedNow(gameState.player, ires);
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
       <div className="flex items-center justify-between gap-2">
         <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">INFO</span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Enter 80 / Exit &lt; 50</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">RST 80 / RED 20 / Exit 50</span>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
@@ -219,13 +220,13 @@ export const UiMetabolicProfileSection: React.FC<StatusGameProps> = ({ gameState
           <div className="text-[11px] text-[var(--text-secondary)]">Armor {weight.tier} ({weight.bfi >= 0 ? '+' : ''}{weight.bfi})</div>
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Next Tax</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Next Tempo</div>
           <div className="text-2xl font-black text-[var(--text-primary)]">{nextTax}</div>
           <div className="text-[11px] text-[var(--text-secondary)]">Action #{ires.actionCountThisTurn + 1}</div>
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
           <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Recovery</div>
-          <div className="text-lg font-black text-[var(--text-primary)]">+25 / +5</div>
+          <div className="text-lg font-black text-[var(--text-primary)]">+{sparkRecovery} / +{manaRecovery}</div>
           <div className="text-[11px] text-[var(--text-secondary)]">Spark / Mana</div>
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
@@ -237,11 +238,11 @@ export const UiMetabolicProfileSection: React.FC<StatusGameProps> = ({ gameState
         </div>
       </div>
       <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
-        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Fibonacci Cheat Sheet</div>
+        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Tempo Ladder</div>
         <div className="mt-2 grid grid-cols-2 gap-2">
           {upcomingTaxes.map((tax, idx) => (
             <div key={`tax-${idx}`} className="rounded-lg bg-[var(--surface-panel-hover)] px-2 py-1.5 text-[11px] font-bold text-[var(--text-secondary)]">
-              Action {ires.actionCountThisTurn + idx + 1}: +{tax} EX
+              Action {ires.actionCountThisTurn + idx + 1}: +{tax} SP
             </div>
           ))}
         </div>
@@ -268,6 +269,81 @@ export const UiInitiativeSection: React.FC<{ hideInitiativeQueue: boolean; gameS
   intelMode
 }) => (hideInitiativeQueue ? null : <InitiativeDisplay gameState={gameState} revealMode={intelMode} />);
 
+export const UiSentinelDirectiveSection: React.FC<StatusIntelProps> = ({ gameState, intelMode }) => (
+  <>
+    {gameState.enemies.filter(enemy => enemy.subtype === 'sentinel').map((boss) => {
+      const info = getUiActorInformation(gameState, gameState.player.id, boss.id, intelMode);
+      const showName = info.reveal.name;
+      const showHp = info.reveal.hp;
+      const bossLabel = showName ? (info.data.name || 'Sentinel Directive') : 'Unknown Directive';
+      const hpCurrent = showHp ? boss.hp : 0;
+      const hpMax = showHp ? boss.maxHp : 0;
+      const hpWidth = showHp ? (boss.hp / boss.maxHp) * 100 : 0;
+      return (
+        <div key={boss.id} className="pt-4 animate-in slide-in-from-right-8 duration-500">
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-xs font-black text-[var(--accent-danger)] uppercase tracking-tighter italic">{bossLabel}</span>
+            <span className="text-lg font-black">{hpCurrent} <span className="text-[var(--text-muted)] text-xs">/ {hpMax}</span></span>
+          </div>
+          <div className="h-4 w-full bg-[var(--accent-danger-soft)] rounded-md border border-[var(--accent-danger-border)] overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-[var(--accent-danger)] to-[color:var(--accent-danger)] shadow-[0_0_20px_rgba(200,79,53,0.35)] transition-all duration-300"
+              style={{ width: `${hpWidth}%` }}
+            />
+          </div>
+        </div>
+      );
+    })}
+  </>
+);
+
+const UiBoardStatRow = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
+    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">{label}</span>
+    <span className="text-sm font-black text-[var(--text-primary)] text-right">{value}</span>
+  </div>
+);
+
+export const UiBoardStatsSection: React.FC<StatusGameProps> = ({ gameState, compact }) => {
+  const ires = gameState.player.ires;
+  if (!ires) return null;
+
+  const stateLabel = formatStateLabel(ires.currentState);
+  const combatPressureMode = resolveCombatPressureMode(gameState);
+  const effectiveBfi = resolveEffectiveBfi(gameState.player);
+  const nextTax = resolveExhaustionTax(gameState.player, ires.actionCountThisTurn, gameState.ruleset);
+  const coreStats = [
+    { label: 'HP', value: `${gameState.player.hp}/${gameState.player.maxHp}` },
+    { label: 'Guard', value: String(gameState.player.temporaryArmor || 0) },
+    { label: 'Spark', value: `${Math.round(ires.spark)}/${Math.round(ires.maxSpark)}` },
+    { label: 'Mana', value: `${Math.round(ires.mana)}/${Math.round(ires.maxMana)}` },
+    { label: 'State', value: stateLabel }
+  ];
+  const derivedStats = [
+    { label: 'BFI', value: String(effectiveBfi) },
+    { label: 'Next Tempo', value: `+${nextTax} SP` },
+    { label: 'Recovery', value: `+${computeSparkRecoveryIfEndedNow(gameState.player, ires)} Spark / +${computeManaRecoveryIfEndedNow(gameState.player, ires)} Mana` },
+    { label: 'Crit Bonus', value: `${ires.activeRestedCritBonusPct}%` },
+    { label: 'Pressure', value: capitalizeWord(combatPressureMode) },
+    { label: 'Bonus', value: ires.pendingRestedBonus ? 'Armed' : 'Idle' }
+  ];
+
+  return (
+    <section className={compact ? 'space-y-3' : 'space-y-4'}>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Core</div>
+          {coreStats.map((stat) => <UiBoardStatRow key={stat.label} label={stat.label} value={stat.value} />)}
+        </div>
+        <div className="space-y-2">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Derived</div>
+          {derivedStats.map((stat) => <UiBoardStatRow key={stat.label} label={stat.label} value={stat.value} />)}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 export const UiVitalsSection: React.FC<StatusIntelProps> = ({ gameState, compact, intelMode }) => (
   <div className={compact ? 'space-y-4' : 'space-y-6'}>
     <UiTriResourceHeader gameState={gameState} compact={compact} />
@@ -291,29 +367,7 @@ export const UiVitalsSection: React.FC<StatusIntelProps> = ({ gameState, compact
       </div>
     </div>
 
-    {gameState.enemies.filter(e => e.subtype === 'sentinel').map((boss) => {
-      const info = getUiActorInformation(gameState, gameState.player.id, boss.id, intelMode);
-      const showName = info.reveal.name;
-      const showHp = info.reveal.hp;
-      const bossLabel = showName ? (info.data.name || 'Sentinel Directive') : 'Unknown Directive';
-      const hpCurrent = showHp ? boss.hp : 0;
-      const hpMax = showHp ? boss.maxHp : 0;
-      const hpWidth = showHp ? (boss.hp / boss.maxHp) * 100 : 0;
-      return (
-        <div key={boss.id} className="pt-4 animate-in slide-in-from-right-8 duration-500">
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-xs font-black text-[var(--accent-danger)] uppercase tracking-tighter italic">{bossLabel}</span>
-            <span className="text-lg font-black">{hpCurrent} <span className="text-[var(--text-muted)] text-xs">/ {hpMax}</span></span>
-          </div>
-          <div className="h-4 w-full bg-[var(--accent-danger-soft)] rounded-md border border-[var(--accent-danger-border)] overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[var(--accent-danger)] to-[color:var(--accent-danger)] shadow-[0_0_20px_rgba(200,79,53,0.35)] transition-all duration-300"
-              style={{ width: `${hpWidth}%` }}
-            />
-          </div>
-        </div>
-      );
-    })}
+    <UiSentinelDirectiveSection gameState={gameState} compact={compact} intelMode={intelMode} />
 
     <UiMetabolicProfileSection gameState={gameState} compact={compact} />
   </div>
@@ -447,7 +501,7 @@ export const UiDirectivesSection: React.FC<DirectivesSectionProps> = ({
       onClick={onExitToHub}
       className={`w-full flex justify-between items-center ${compact ? 'px-3 py-2.5' : 'px-4 py-3'} bg-[var(--surface-panel-hover)] hover:bg-[var(--surface-panel-muted)] border border-[var(--border-subtle)] rounded-xl transition-all group`}
     >
-      <span className="text-sm font-bold text-[var(--text-secondary)]">Return to Hub</span>
+      <span className="text-sm font-bold text-[var(--text-secondary)]">Home</span>
       <span className="text-lg grayscale group-hover:grayscale-0 transition-all">H</span>
     </button>
   </div>

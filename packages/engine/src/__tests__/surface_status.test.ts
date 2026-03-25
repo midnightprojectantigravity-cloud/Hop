@@ -91,8 +91,8 @@ describe('surface-status hooks', () => {
         const normalDamage = normal.effects.find(isTargetDamage) as { amount: number } | undefined;
         const meltedDamage = melted.effects.find(isTargetDamage) as { amount: number } | undefined;
 
-        expect(normalDamage?.amount).toBe(7);
-        expect(meltedDamage?.amount).toBe(8);
+        expect(normalDamage?.amount).toBe(14);
+        expect(meltedDamage?.amount).toBe(16);
     });
 
     it('returns 1.15 only for fire skills on melted surfaces', () => {

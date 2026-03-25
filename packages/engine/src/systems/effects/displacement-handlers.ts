@@ -7,6 +7,17 @@ import { UnifiedTileService } from '../tiles/unified-tile-service';
 import { buildAttachmentPropagationPlans } from '../movement/attachment-system';
 import type { AtomicEffectHandlerMap } from './types';
 
+const trimMovementPathToDestination = (origin: MovementTrace['origin'], path: MovementTrace['path'], destination: MovementTrace['destination']): MovementTrace['path'] => {
+    const destinationIndex = path.findIndex(point => hexEquals(point, destination));
+    if (destinationIndex >= 0) {
+        return path.slice(0, destinationIndex + 1);
+    }
+    if (hexEquals(origin, destination)) {
+        return [origin];
+    }
+    return [origin, destination];
+};
+
 export const displacementEffectHandlers: AtomicEffectHandlerMap = {
     Displacement: (state, effect, context, api) => {
         let nextState = { ...state };
@@ -63,7 +74,8 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
             }
             const pathResult = TileResolver.processPath(liveActor, path.slice(1), nextState, path.length - 1, {
                 ignoreActors: effect.ignoreCollision,
-                ignoreGroundHazards: effect.ignoreGroundHazards
+                ignoreGroundHazards: effect.ignoreGroundHazards,
+                ignoreWalls: effect.ignoreWalls
             });
             finalDestination = pathResult.lastValidPos;
 
@@ -139,7 +151,7 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
 
                     while (remaining > 0) {
                         const nextSlide = hexAdd(slidePos, dirVec);
-                        if (!UnifiedTileService.isWalkable(nextState, nextSlide)) break;
+                        if (!effect.ignoreWalls && !UnifiedTileService.isWalkable(nextState, nextSlide)) break;
 
                         const occupant = (targetActorId === nextState.player.id)
                             ? nextState.enemies.find(e => e.hp > 0 && hexEquals(e.position, nextSlide))
@@ -149,7 +161,11 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
 
                         const tile = UnifiedTileService.getTileAt(nextState, nextSlide);
                         if (tile) {
-                            const transition = TileResolver.processTransition(actor as Actor, tile, nextState, 1);
+                            const transition = TileResolver.processTransition(actor as Actor, tile, nextState, 1, {
+                                ignoreActors: effect.ignoreCollision,
+                                ignoreGroundHazards: effect.ignoreGroundHazards,
+                                ignoreWalls: effect.ignoreWalls
+                            });
                             slidePos = nextSlide;
                             if (transition.effects.length > 0) {
                                 nextState = api.applyEffects(nextState, transition.effects, { targetId: targetActorId });
@@ -192,17 +208,22 @@ export const displacementEffectHandlers: AtomicEffectHandlerMap = {
             || (isTeleportMovement ? 'blink' : 'hex_step');
         const sequenceId = effect.presentationSequenceId
             || `${targetActorId}:${nextState.turnNumber}:${existingVisualEvents.length}:${presentationKind}`;
+        const resolvedTracePath = trimMovementPathToDestination(
+            origin,
+            effect.path || (isTeleportMovement ? [origin, finalDestination] : getHexLine(origin, finalDestination)),
+            finalDestination
+        );
 
         const trace: MovementTrace = {
             actorId: targetActorId,
             origin,
-            path: effect.path || (isTeleportMovement ? [origin, finalDestination] : getHexLine(origin, finalDestination)),
+            path: resolvedTracePath,
             destination: finalDestination,
             movementType: isTeleportMovement ? 'teleport' : 'slide',
             presentationKind,
             pathStyle,
             sequenceId,
-            durationMs: effect.animationDuration ?? (isTeleportMovement ? 180 : Math.max(120, (effect.path?.length || getHexLine(origin, finalDestination).length) * 110)),
+            durationMs: effect.animationDuration ?? (isTeleportMovement ? 180 : Math.max(120, resolvedTracePath.length * 110)),
             startDelayMs: traceStartDelayMs,
             wasLethal: nextState.tiles.get(pointToKey(finalDestination))?.traits.has('HAZARDOUS') || false
         };

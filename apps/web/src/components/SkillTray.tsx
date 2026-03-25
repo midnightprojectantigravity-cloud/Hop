@@ -1,5 +1,9 @@
 import React from 'react';
-import { getSkillDefinition, resolveCombatPressureMode, resolveIresActionPreview, type Skill, type SkillSlot, type GameState } from '@hop/engine';
+import type { GameState, Skill, SkillSlot } from '@hop/engine';
+import { getSkillDefinition } from '../../../../packages/engine/src/skillRegistry';
+import { resolveCombatPressureMode } from '../../../../packages/engine/src/systems/free-move';
+import { resolveIresActionPreview } from '../../../../packages/engine/src/systems/ires/preview';
+import { getCachedSkillTargets } from './game-board/target-resolution-cache';
 
 interface SkillTrayProps {
   skills: Skill[];
@@ -13,11 +17,16 @@ interface SkillTrayProps {
 
 const formatPrimaryChip = (preview: ReturnType<typeof resolveIresActionPreview> | undefined): string => {
   if (!preview) return '';
-  if (preview.sparkBurnHpDelta > 0 && preview.primaryResource === 'spark') {
+  if (preview.sparkBurnOutcome === 'travel_suppressed') {
+    return 'Travel Safe';
+  }
+  if (preview.sparkBurnHpDelta > 0) {
     return `Burn ${preview.sparkBurnHpDelta} HP`;
   }
-  if (preview.primaryResource === 'spark') return `${preview.primaryCost} SP`;
-  if (preview.primaryResource === 'mana') return `${preview.primaryCost} MP`;
+  const parts: string[] = [];
+  if ((preview.sparkCostTotal || 0) > 0) parts.push(`${preview.sparkCostTotal} SP`);
+  if ((preview.manaCost || 0) > 0) parts.push(`${preview.manaCost} MP`);
+  if (parts.length > 0) return parts.join(' / ');
   return '0';
 };
 
@@ -44,7 +53,18 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
           const def = getSkillDefinition(skill.id);
           const resourcePreview = def ? resolveIresActionPreview(gameState.player, skill.id, def.resourceProfile, gameState.ruleset, combatPressureMode) : undefined;
           const resourceBlocked = !!resourcePreview?.blockedReason;
-          const cannotUse = inputLocked || resourceBlocked || (isOnCooldown && !isSpearSlot) || (isSpearSlot && !hasSpear);
+          const validTargetCount = def?.getValidTargets
+            ? getCachedSkillTargets({
+                gameState,
+                actorId: gameState.player.id,
+                skillId: skill.id,
+                origin: gameState.player.position,
+                resolver: () => def.getValidTargets!(gameState, gameState.player.position),
+              }).length
+            : null;
+          const noTargets = validTargetCount !== null && validTargetCount === 0;
+          const hardDisabled = inputLocked || resourceBlocked || (isOnCooldown && !isSpearSlot) || (isSpearSlot && !hasSpear);
+          const cannotUse = hardDisabled || noTargets;
           const showTravelPill = combatPressureMode === 'travel'
             && !!def?.resourceProfile?.countsAsMovement
             && !def.resourceProfile.countsAsAction;
@@ -52,12 +72,17 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
           const rawName = def?.name || skill.name;
           const displayName = typeof rawName === 'function' ? rawName(gameState) : rawName;
           const displayIcon = def?.icon || '*';
-          const taxChip = resourcePreview && resourcePreview.tax > 0 ? `+${resourcePreview.tax} EX` : '+0 EX';
           const primaryChip = formatPrimaryChip(resourcePreview);
+          const sparkBreakdown = resourcePreview
+            ? `Tempo ${resourcePreview.tempoSparkCost || 0} + Skill ${resourcePreview.skillSparkSurcharge || 0}${(resourcePreview.sparkCostTotal || 0) > 0 ? ` = ${resourcePreview.sparkCostTotal} SP` : ''}`
+            : null;
           const tooltip = resourcePreview?.blockedReason
-            || (resourcePreview?.sparkBurnHpDelta
+            || (noTargets ? 'No valid targets right now' : null)
+            || (resourcePreview?.sparkBurnOutcome === 'travel_suppressed'
+              ? `Travel: burn suppressed. ${sparkBreakdown || ''}`.trim()
+              : resourcePreview?.sparkBurnHpDelta
               ? `EXHAUSTED: this costs ${resourcePreview.sparkBurnHpDelta} HP Spark Burn`
-              : primaryChip);
+              : [primaryChip, sparkBreakdown].filter(Boolean).join(' | '));
 
           return (
             <button
@@ -72,7 +97,7 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                 ${isSelected
                   ? 'skill-card-selected border-[var(--accent-royal)] text-[var(--text-primary)]'
                   : 'border-[var(--border-subtle)] hover:border-[var(--accent-royal)]'}
-                ${cannotUse ? 'opacity-40 grayscale pointer-events-none' : 'cursor-pointer'}
+                ${hardDisabled ? 'opacity-40 grayscale' : noTargets ? 'opacity-60 saturate-75' : 'cursor-pointer'}
               `}
             >
               <span className={`skill-icon-stain ${compact ? 'text-2xl' : 'text-3xl'}`}>
@@ -88,9 +113,11 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
                 <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${resourcePreview?.sparkBurnHpDelta ? 'border-rose-500/70 bg-rose-950/70 text-rose-200' : 'border-amber-300/60 bg-amber-100/70 text-amber-950'}`}>
                   {resourcePreview?.sparkBurnHpDelta ? 'Flame' : primaryChip}
                 </span>
-                <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-950/55 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-fuchsia-100">
-                  {taxChip}
-                </span>
+                {resourcePreview && (resourcePreview.sparkCostTotal || 0) > 0 ? (
+                  <span className="rounded-full border border-slate-400/40 bg-slate-950/55 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-slate-100">
+                    T {resourcePreview.tempoSparkCost || 0} + S {resourcePreview.skillSparkSurcharge || 0}
+                  </span>
+                ) : null}
               </div>
 
               {showTravelPill ? (
@@ -102,6 +129,14 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
               {resourcePreview?.sparkBurnHpDelta ? (
                 <div className="absolute inset-x-2 bottom-1.5 rounded-md border border-rose-500/50 bg-rose-950/55 px-1.5 py-0.5 text-center text-[9px] font-black uppercase tracking-[0.14em] text-rose-100">
                   Burn {resourcePreview.sparkBurnHpDelta} HP
+                </div>
+              ) : resourcePreview?.sparkBurnOutcome === 'travel_suppressed' ? (
+                <div className="absolute inset-x-2 bottom-1.5 rounded-md border border-emerald-400/45 bg-emerald-950/55 px-1.5 py-0.5 text-center text-[9px] font-black uppercase tracking-[0.14em] text-emerald-100">
+                  Burn Safe
+                </div>
+              ) : noTargets ? (
+                <div className="absolute inset-x-2 bottom-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-panel-hover)] px-1.5 py-0.5 text-center text-[9px] font-black uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  No Target
                 </div>
               ) : null}
 

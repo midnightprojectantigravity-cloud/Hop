@@ -52,7 +52,7 @@ Remaining work is balance/tuning debt, not rollout debt:
 4. continued tuning of matchup and pacing envelopes
 
 ## Artifact Sources Of Truth
-1. skill health: `docs/UPA_SKILL_HEALTH.json`
+1. skill health: `artifacts/upa/UPA_SKILL_HEALTH.json`
 2. matchup matrix: `docs/UPA_PVP_MATCHUP_MATRIX.json`
 3. IRES metabolic report: `artifacts/ires/IRES_METABOLIC_REPORT.md`
 4. IRES skill band audit: `artifacts/ires/IRES_SKILL_BAND_AUDIT.md`

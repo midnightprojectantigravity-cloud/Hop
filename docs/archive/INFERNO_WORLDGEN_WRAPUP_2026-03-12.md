@@ -2,7 +2,7 @@
 
 Historical note:
 - This is a milestone wrap-up, not current operational guidance.
-- Current release-gate and Trinity/IRES runtime guidance lives in docs/STATUS.md, docs/UPA_GUIDE.md, and docs/TRINITY_V2_INTEGRATION_SIGNOFF.md.
+- Current release-gate and Trinity/IRES runtime guidance lives in `docs/STATUS.md`, `docs/UPA_GUIDE.md`, and `docs/archive/TRINITY_V2_INTEGRATION_SIGNOFF.md`.
 
 ## Summary
 
@@ -103,7 +103,7 @@ Additional close-out validation completed after the main wrap-up pass:
 
 1. `packages/engine/src/__tests__/scenarios_runner.test.ts` is green again after restoring scenario visibility refresh and awareness-dependent enemy fixtures.
 2. `npm run mvp:replay:gate` passes with matching fingerprints.
-3. `docs/UPA_SKILL_HEALTH.json` regenerated cleanly under the historical health gate of the time; current equivalent release check is `npm run upa:health:release`.
+3. `artifacts/upa/UPA_SKILL_HEALTH.json` regenerated cleanly under the historical health gate of the time; current equivalent release check is `npm run upa:health:release`.
 
 Remaining work is optional follow-on work, not completion-critical:
 

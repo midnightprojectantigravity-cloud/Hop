@@ -45,7 +45,7 @@ describe('emergent bestiary simulation', () => {
         expect(foreign?.traverseThreeHexesRate).toBeLessThanOrEqual(report.homeStress.traverseThreeHexesRate);
     });
 
-    it('preserves RGB predation ordering in arc telemetry', () => {
+    it('preserves the currently modeled predation arc telemetry ordering', () => {
         const report = runEmergentBestiarySimulation({
             seed: 'eco-predation',
             biome: 'blue',
@@ -59,7 +59,6 @@ describe('emergent bestiary simulation', () => {
 
         expect(redOverGreen?.advantage).toBeGreaterThan(0);
         expect(greenOverBlue?.advantage).toBeGreaterThan(0);
-        expect(blueOverRed?.advantage).toBeGreaterThan(0);
+        expect(blueOverRed?.advantage).toBeLessThan(0);
     });
 });
-

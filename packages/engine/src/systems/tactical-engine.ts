@@ -5,7 +5,15 @@ import { getActorAt } from '../helpers';
 import { isFreeMoveMode, resolveCombatPressureMode } from './free-move';
 import { applyEffects } from './effect-engine';
 import { recomputeVisibility } from './visibility';
-import { ensureActorIres, resolveExhaustionState, resolveIresActionPreview, resolveIresRuleset, resolveRuntimeSkillResourceProfile, resolveWaitPreview } from './ires';
+import {
+    computeSparkRecoveryIfEndedNow,
+    ensureActorIres,
+    resolveExhaustionState,
+    resolveIresActionPreview,
+    resolveIresRuleset,
+    resolveRuntimeSkillResourceProfile,
+    resolveWaitPreview
+} from './ires';
 
 type TacticalResolution = {
     effects: AtomicEffect[];
@@ -117,35 +125,28 @@ export class TacticalEngine {
             };
         }
 
-        const sparkProjected = this.clamp(
-            current.spark + basePreview.sparkDelta + config.travelSparkRecovery,
-            0,
-            current.maxSpark
-        );
+        const sparkProjected = this.clamp(current.spark + basePreview.sparkDelta + config.travelSparkRecovery, 0, current.maxSpark);
         const manaProjected = this.clamp(
             current.mana + basePreview.manaDelta + config.travelManaRecovery,
             0,
             current.maxMana
         );
-        const exhaustionProjected = this.clamp(
-            current.exhaustion + basePreview.exhaustionDelta - config.travelExhaustionClear,
-            0,
-            100
-        );
         const projectedState = resolveExhaustionState({
             ...current,
             spark: sparkProjected,
             mana: manaProjected,
-            exhaustion: exhaustionProjected
+            exhaustion: 0
         }, config);
 
         return {
             ...basePreview,
             sparkDelta: sparkProjected - current.spark,
             manaDelta: manaProjected - current.mana,
-            exhaustionDelta: exhaustionProjected - current.exhaustion,
+            exhaustionDelta: projectedState.exhaustion - current.exhaustion,
             nextActionCount: 0,
             bandAfter: projectedState.currentState,
+            sparkBurnHpDelta: 0,
+            sparkBurnOutcome: basePreview.sparkBurnOutcome === 'burn_now' ? 'travel_suppressed' : basePreview.sparkBurnOutcome,
             modeBefore,
             modeAfter,
             travelRecoveryApplied: true,
@@ -163,9 +164,12 @@ export class TacticalEngine {
                 },
                 exhaustion: {
                     current: current.exhaustion,
-                    projected: exhaustionProjected,
-                    delta: exhaustionProjected - current.exhaustion
+                    projected: projectedState.exhaustion,
+                    delta: projectedState.exhaustion - current.exhaustion
                 },
+                sparkStateBefore: current.currentState,
+                sparkStateAfter: projectedState.currentState,
+                projectedSparkRecoveryIfEndedNow: computeSparkRecoveryIfEndedNow(hydratedActor, projectedState, config),
                 stateAfter: projectedState.currentState,
                 actionCountAfter: 0,
                 wouldRest: false
@@ -321,7 +325,7 @@ export class TacticalEngine {
             intent.skillId,
             runtimeSkillProfile || skillDef?.resourceProfile,
             gameState.ruleset,
-            'battle',
+            resolveCombatPressureMode(gameState),
             skillDef
         );
         if (baseResourcePreview.blockedReason) {
@@ -389,6 +393,11 @@ export class TacticalEngine {
                         : (runtimeSkillProfile?.countsAsMovement ? 'move' : 'action'),
                     tax: resourcePreview.tax,
                     effectiveBfi: resourcePreview.effectiveBfi,
+                    tempoSparkCost: resourcePreview.tempoSparkCost,
+                    skillSparkSurcharge: resourcePreview.skillSparkSurcharge,
+                    sparkCostTotal: resourcePreview.sparkCostTotal,
+                    manaCost: resourcePreview.manaCost,
+                    sparkBurnOutcome: resourcePreview.sparkBurnOutcome,
                     sparkBurnHpDelta: resourcePreview.sparkBurnHpDelta
                 }
             });

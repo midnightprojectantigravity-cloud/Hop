@@ -43,11 +43,26 @@ export const UiVitalsDetailCard: React.FC<UiVitalsDetailCardProps> = ({
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] p-3">
             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Projected Turn State</div>
             <div className="mt-2 grid grid-cols-1 gap-2 text-[11px] font-bold text-[var(--text-secondary)]">
+              {typeof resourcePreview?.tempoSparkCost === 'number' ? (
+                <div>Tempo: +{resourcePreview.tempoSparkCost} SP</div>
+              ) : null}
+              {typeof resourcePreview?.skillSparkSurcharge === 'number' ? (
+                <div>Skill: +{resourcePreview.skillSparkSurcharge} SP</div>
+              ) : null}
+              {typeof resourcePreview?.sparkCostTotal === 'number' && resourcePreview.sparkCostTotal > 0 ? (
+                <div>Total Spark Cost: {resourcePreview.sparkCostTotal} SP</div>
+              ) : null}
+              {typeof resourcePreview?.manaCost === 'number' && resourcePreview.manaCost > 0 ? (
+                <div>Mana Cost: {resourcePreview.manaCost} MP</div>
+              ) : null}
               <div>Spark: {projection.spark.current} to {projection.spark.projected} ({formatDelta(projection.spark.delta)})</div>
               <div>Mana: {projection.mana.current} to {projection.mana.projected} ({formatDelta(projection.mana.delta)})</div>
-              <div>Exhaustion: {projection.exhaustion.current} to {projection.exhaustion.projected} ({formatDelta(projection.exhaustion.delta)})</div>
-              <div>State: {projection.stateAfter}</div>
+              <div>State: {projection.sparkStateBefore || gameState.player.ires?.currentState} to {projection.sparkStateAfter || projection.stateAfter}</div>
+              {typeof projection.projectedSparkRecoveryIfEndedNow === 'number' ? (
+                <div>Recover If Ended Now: +{projection.projectedSparkRecoveryIfEndedNow} SP</div>
+              ) : null}
               {resourcePreview?.travelRecoveryApplied && <div className="text-emerald-700">Travel recovery applies</div>}
+              {resourcePreview?.sparkBurnOutcome === 'travel_suppressed' ? <div className="text-emerald-700">Burn suppressed in travel</div> : null}
               {resourcePreview?.sparkBurnHpDelta ? <div className="text-[var(--accent-danger)]">Spark Burn: {resourcePreview.sparkBurnHpDelta} HP</div> : null}
             </div>
           </div>

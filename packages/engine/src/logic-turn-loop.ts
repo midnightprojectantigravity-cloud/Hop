@@ -156,10 +156,6 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
             }
 
             if (!continuingTurn) {
-                const sotResult = deps.executeStatusWindow(curState, actorId, 'START_OF_TURN', actorStepId);
-                curState = sotResult.state;
-                messages.push(...sotResult.messages);
-
                 if (actorId === 'player' && curState.upgrades?.includes('RELIC_STEADY_PLATES')) {
                     const boostedArmor = Math.min(2, (curState.player.temporaryArmor || 0) + 1);
                     if (boostedArmor !== (curState.player.temporaryArmor || 0)) {
@@ -173,6 +169,10 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                         messages.push(appendTaggedMessage([], 'Steady Plates harden your stance.', 'INFO', 'COMBAT')[0]);
                     }
                 }
+
+                const sotResult = deps.executeStatusWindow(curState, actorId, 'START_OF_TURN', actorStepId);
+                curState = sotResult.state;
+                messages.push(...sotResult.messages);
 
                 if (actorId === 'player') {
                     const shieldSkill = curState.player.activeSkills?.find(s => s.id === 'SHIELD_BASH');

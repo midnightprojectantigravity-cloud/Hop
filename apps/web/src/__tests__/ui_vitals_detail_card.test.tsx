@@ -7,6 +7,9 @@ const buildProjection = (): IresTurnProjection => ({
   spark: { current: 100, projected: 70, delta: -30 },
   mana: { current: 10, projected: 5, delta: -5 },
   exhaustion: { current: 18, projected: 44, delta: 26 },
+  sparkStateBefore: 'rested',
+  sparkStateAfter: 'base',
+  projectedSparkRecoveryIfEndedNow: 84,
   stateAfter: 'base',
   actionCountAfter: 2,
   wouldRest: false
@@ -18,6 +21,10 @@ const buildResourcePreview = (): ActionResourcePreview => ({
   sparkDelta: -30,
   manaDelta: -5,
   exhaustionDelta: 26,
+  tempoSparkCost: 13,
+  skillSparkSurcharge: 17,
+  sparkCostTotal: 30,
+  manaCost: 5,
   sparkBurnHpDelta: 14,
   tax: 13,
   effectiveBfi: 6,
@@ -46,11 +53,16 @@ describe('UiVitalsDetailCard', () => {
     expect(html).toContain('Projected Turn State');
     expect(html).toContain('Vitals INFO');
     expect(html).toContain('Tap outside to close');
+    expect(html).toContain('Tempo: +13 SP');
+    expect(html).toContain('Skill: +17 SP');
+    expect(html).toContain('Total Spark Cost: 30 SP');
+    expect(html).toContain('Mana Cost: 5 MP');
     expect(html).toContain('Spark: 100 to 70 (-30)');
-    expect(html).toContain('Exhaustion: 18 to 44 (+26)');
+    expect(html).toContain('State: rested to base');
+    expect(html).toContain('Recover If Ended Now: +84 SP');
     expect(html).toContain('Spark Burn: 14 HP');
     expect(html).toContain('BFI');
-    expect(html).toContain('Next Tax');
-    expect(html).toContain('Fibonacci Cheat Sheet');
+    expect(html).toContain('Next Tempo');
+    expect(html).toContain('Tempo Ladder');
   });
 });

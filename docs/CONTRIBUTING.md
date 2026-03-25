@@ -103,7 +103,7 @@ When adding/removing skill files in `packages/engine/src/skills/`, run the gener
   - `npm --workspace @hop/engine run report-enemy-ai-policy-dependence`
 
 Milestone reference:
-- `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+- `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 
 ## Submitting changes
 

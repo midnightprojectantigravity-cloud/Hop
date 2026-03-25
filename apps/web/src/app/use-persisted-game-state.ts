@@ -1,13 +1,10 @@
 import { useEffect, useReducer, useRef } from 'react';
-import {
-  deriveMaxHpFromTrinity,
-  ensureActorTrinity,
-  ensurePlayerLoadoutIntegrity,
-  gameReducer,
-  generateHubState,
-  pointToKey
-} from '@hop/engine';
 import type { Action, Actor, GameState } from '@hop/engine';
+import { pointToKey } from '../../../../packages/engine/src/hex';
+import { gameReducer, generateHubState } from '../../../../packages/engine/src/logic';
+import { deriveMaxHpFromTrinity } from '../../../../packages/engine/src/systems/combat/trinity-resolver';
+import { ensureActorTrinity } from '../../../../packages/engine/src/systems/entities/entity-factory';
+import { ensurePlayerLoadoutIntegrity } from '../../../../packages/engine/src/systems/loadout';
 
 const toComponentMap = (components: unknown): Map<string, any> => {
   if (components instanceof Map) return components as Map<string, any>;
@@ -41,6 +38,9 @@ export const hydratePersistedGameState = (saved: string | null): GameState => {
 
   try {
     const parsed = JSON.parse(saved);
+    if ((parsed?.ruleset?.ires?.version || 'ires-v1') !== 'ires-v2') {
+      return generateHubState();
+    }
 
     if (parsed.tiles) {
       const tileEntries = Array.isArray(parsed.tiles)

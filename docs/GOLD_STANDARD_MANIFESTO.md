@@ -85,9 +85,9 @@ Use it as the decision filter for engine, client, and balance changes.
 ## 11) Documentation Topology
 1. Current status board: `docs/STATUS.md`
 2. Active tracker: `docs/NEXT_LEVEL.md`
-3. AI convergence milestone: `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
-4. Post-AI phases milestone: `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
-5. ACAE milestone: `docs/ACAE_MILESTONE_2026-03-01.md`
+3. AI convergence milestone: `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+4. Post-AI phases milestone: `docs/archive/NEXT_PHASES_MILESTONE_2026-02-28.md`
+5. ACAE milestone: `docs/archive/ACAE_MILESTONE_2026-03-01.md`
 6. Active balance backlog: `docs/BALANCE_BACKLOG.md`
 7. Canonical balance doctrine: `docs/GOLD_STANDARD_BALANCING.md`
 8. UPA operations: `docs/UPA_GUIDE.md`

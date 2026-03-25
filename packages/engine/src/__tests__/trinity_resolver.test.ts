@@ -11,7 +11,7 @@ describe('trinity-resolver', () => {
         expect(levers.mindStatusDurationBonus).toBe(2);
         expect(levers.mindMagicMultiplier).toBe(2.5);
         expect(levers.instinctInitiativeBonus).toBe(16);
-        expect(levers.instinctCriticalMultiplier).toBe(1.16);
+        expect(levers.instinctCriticalMultiplier).toBe(1.12);
         expect(levers.instinctSparkDiscountMultiplier).toBe(0.92);
     });
 
@@ -19,7 +19,7 @@ describe('trinity-resolver', () => {
         const levers = resolveTrinityLevers({ body: 120, mind: -10, instinct: 999 });
         expect(levers.bodyMitigation).toBe(0.5);
         expect(levers.mindStatusDurationBonus).toBe(0);
-        expect(levers.instinctCriticalMultiplier).toBe(1.2);
+        expect(levers.instinctCriticalMultiplier).toBe(1.15);
         expect(levers.instinctSparkDiscountMultiplier).toBe(0);
     });
 
@@ -29,6 +29,6 @@ describe('trinity-resolver', () => {
 
     it('derives max HP from trinity stats with a single shared formula', () => {
         const trinity = { body: 200, mind: 100, instinct: 100 };
-        expect(deriveMaxHpFromTrinity(trinity)).toBe(1500);
+        expect(deriveMaxHpFromTrinity(trinity)).toBe(1600);
     });
 });

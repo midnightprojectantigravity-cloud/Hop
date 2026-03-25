@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { isPlayerTurn } from '@hop/engine';
 import type { Action, GameState } from '@hop/engine';
+import { isPlayerTurn } from '../../../../packages/engine/src/systems/initiative';
 import { deriveTurnDriverState } from '../turn-driver';
 
 type TurnTraceEntry = {

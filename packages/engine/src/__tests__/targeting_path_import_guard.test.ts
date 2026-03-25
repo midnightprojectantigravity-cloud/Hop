@@ -1,16 +1,18 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const ROOT = join(process.cwd(), 'packages', 'engine', 'src');
+const ROOT = existsSync(join(process.cwd(), 'src'))
+    ? join(process.cwd(), 'src')
+    : join(process.cwd(), 'packages', 'engine', 'src');
 const BANNED_IMPORT_PATTERNS = [
     /from\s+['"][^'"]*skills\/targeting['"]/,
     /from\s+['"][^'"]*systems\/movement\/movement['"]/
 ];
 
 const ALLOWLIST_PATH_ENDINGS = new Set([
-    join('packages', 'engine', 'src', 'skills', 'targeting.ts'),
-    join('packages', 'engine', 'src', 'systems', 'movement', 'movement.ts')
+    '/src/skills/targeting.ts',
+    '/src/systems/movement/movement.ts'
 ]);
 
 const walk = (dir: string): string[] => {
@@ -35,7 +37,7 @@ describe('targeting/path import guard', () => {
         for (const file of walk(ROOT)) {
             const normalized = file.replace(/\\/g, '/');
             if (normalized.includes('/__tests__/')) continue;
-            if ([...ALLOWLIST_PATH_ENDINGS].some(pathEnding => normalized.endsWith(pathEnding.replace(/\\/g, '/')))) {
+            if ([...ALLOWLIST_PATH_ENDINGS].some(pathEnding => normalized.endsWith(pathEnding))) {
                 continue;
             }
             const content = readFileSync(file, 'utf8');

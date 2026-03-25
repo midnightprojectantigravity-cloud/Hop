@@ -1,25 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { resolveArcadeSelectionInteraction } from '../components/ArcadeHub';
+import { resolveArcadeSplashStartRunRequest } from '../app/use-worldgen-session';
 
-describe('arcade selection interaction', () => {
-  it('uses explicit two-step flow when enabled', () => {
-    const result = resolveArcadeSelectionInteraction({
-      twoStepSelection: true,
-      selectedLoadoutId: null,
-      clickedLoadoutId: 'VANGUARD'
-    });
-    expect(result.nextSelectedLoadoutId).toBe('VANGUARD');
-    expect(result.launchLoadoutId).toBeNull();
-  });
+describe('arcade splash start contract', () => {
+  it('launches the fixed Vanguard daily run immediately from the splash', () => {
+    const result = resolveArcadeSplashStartRunRequest();
 
-  it('launches immediately when two-step flow is disabled', () => {
-    const result = resolveArcadeSelectionInteraction({
-      twoStepSelection: false,
-      selectedLoadoutId: 'HUNTER',
-      clickedLoadoutId: 'VANGUARD'
-    });
-    expect(result.nextSelectedLoadoutId).toBe('HUNTER');
-    expect(result.launchLoadoutId).toBe('VANGUARD');
+    expect(result.loadoutId).toBe('VANGUARD');
+    expect(result.mode).toBe('daily');
+    expect(result.source).toBe('arcade_start_run');
   });
 });
-

@@ -11,7 +11,7 @@ import {
 import type { Actor } from '../types';
 
 describe('combat-calculator', () => {
-    it('applies base, scaling, status, and risk stack deterministically', () => {
+    it('applies base, scaling, status, and quality stack deterministically', () => {
         const result = calculateCombat({
             attackerId: 'player',
             targetId: 'enemy_1',
@@ -31,13 +31,13 @@ describe('combat-calculator', () => {
             theoreticalMaxPower: 25
         });
 
-        expect(result.bodyScaledPower).toBe(11);
-        expect(result.finalPower).toBe(19);
+        expect(result.bodyScaledPower).toBe(13.5);
+        expect(result.finalPower).toBe(36);
         expect(result.statusMultiplier).toBe(1.08);
-        expect(result.riskMultiplier).toBe(1.25);
-        expect(result.criticalMultiplier).toBe(1.02);
-        expect(result.scoreEvent.efficiency).toBe(0.76);
-        expect(result.scoreEvent.riskBonusApplied).toBe(true);
+        expect(result.riskMultiplier).toBe(1);
+        expect(result.criticalMultiplier).toBe(2.5);
+        expect(result.scoreEvent.efficiency).toBe(1);
+        expect(result.scoreEvent.riskBonusApplied).toBe(false);
     });
 
     it('never returns negative final power', () => {
@@ -78,7 +78,7 @@ describe('combat-calculator', () => {
         const trinity = { body: 0, mind: 7, instinct: 4 };
         expect(computeStatusDuration(1, trinity)).toBe(1);
         expect(computeInitiativeBonus(trinity)).toBe(8);
-        expect(computeCriticalMultiplier(trinity)).toBe(1.08);
+        expect(computeCriticalMultiplier(trinity)).toBe(1.06);
         expect(computeSparkCost(5, trinity)).toBe(4.8);
         expect(GrandCalculator.resolveSparkCost(5, trinity)).toBe(4.8);
     });

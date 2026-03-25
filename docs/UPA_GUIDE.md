@@ -4,7 +4,7 @@ Roadmap docs:
 - Active tracker: `docs/NEXT_LEVEL.md`
 - Backlog: `docs/BALANCE_BACKLOG.md`
 - Historical milestones: `docs/ROADMAP_HISTORY.md`
-- AI convergence milestone: `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+- AI convergence milestone: `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 
 Artifact policy:
 - Stable/reference reports can stay in `docs/`.
@@ -236,10 +236,10 @@ Scripts:
 
 Commands:
 ```bash
-npx tsx packages/engine/scripts/runCalibrationSnapshot.ts docs/UPA_CALIBRATION_SNAPSHOT_BEFORE.json cal-v1 uel-v1
-npx tsx packages/engine/scripts/runCalibrationSnapshot.ts docs/UPA_CALIBRATION_SNAPSHOT_AFTER.json cal-v1-firemage-baseline uel-v1
-npx tsx packages/engine/scripts/runCalibrationDiff.ts docs/UPA_CALIBRATION_SNAPSHOT_BEFORE.json docs/UPA_CALIBRATION_SNAPSHOT_AFTER.json docs/UPA_CALIBRATION_DIFF.json
-npx tsx packages/engine/scripts/runCalibrationCompare.ts cal-v1 cal-v1-firemage-baseline uel-v1 docs/UPA_CALIBRATION_COMPARE.json
+npx tsx packages/engine/scripts/runCalibrationSnapshot.ts artifacts/upa/UPA_CALIBRATION_SNAPSHOT_BEFORE.json cal-v1 uel-v1
+npx tsx packages/engine/scripts/runCalibrationSnapshot.ts artifacts/upa/UPA_CALIBRATION_SNAPSHOT_AFTER.json cal-v1-firemage-baseline uel-v1
+npx tsx packages/engine/scripts/runCalibrationDiff.ts artifacts/upa/UPA_CALIBRATION_SNAPSHOT_BEFORE.json artifacts/upa/UPA_CALIBRATION_SNAPSHOT_AFTER.json artifacts/upa/UPA_CALIBRATION_DIFF.json
+npx tsx packages/engine/scripts/runCalibrationCompare.ts cal-v1 cal-v1-firemage-baseline uel-v1 artifacts/upa/UPA_CALIBRATION_COMPARE.json
 ```
 
 NPM shortcuts:
@@ -261,15 +261,15 @@ npm run upa:encounter:validate
 ```
 
 Artifacts:
-- `docs/UPA_CHALLENGE_DESIGN_REPORT.json`
-- `docs/UPA_ENCOUNTER_VALIDATION.json`
+- `artifacts/upa/UPA_CHALLENGE_DESIGN_REPORT.json`
+- `artifacts/upa/UPA_ENCOUNTER_VALIDATION.json`
 
 ### 10) Skill formula-path audit
 Script: `packages/engine/scripts/runSkillFormulaAudit.ts`
 
 Command:
 ```bash
-npx tsx packages/engine/scripts/runSkillFormulaAudit.ts docs/UPA_SKILL_FORMULA_AUDIT.json
+npx tsx packages/engine/scripts/runSkillFormulaAudit.ts artifacts/upa/UPA_SKILL_FORMULA_AUDIT.json
 ```
 
 NPM shortcut:
@@ -282,7 +282,7 @@ Script: `packages/engine/scripts/runSkillMigrationAudit.ts`
 
 Command:
 ```bash
-npx tsx packages/engine/scripts/runSkillMigrationAudit.ts docs/UPA_SKILL_MIGRATION_AUDIT.json
+npx tsx packages/engine/scripts/runSkillMigrationAudit.ts artifacts/upa/UPA_SKILL_MIGRATION_AUDIT.json
 ```
 
 NPM shortcut:
@@ -308,7 +308,7 @@ npm run upa:trinity:report
 ```
 
 Default artifact:
-- `docs/UPA_TRINITY_CONTRIBUTIONS.json`
+- `artifacts/upa/UPA_TRINITY_CONTRIBUTIONS.json`
 
 ### 12) Trinity runtime artifact ownership
 The integrated runtime no longer supports profile A/B comparison through ambient env toggles.
@@ -433,7 +433,7 @@ npx tsx packages/engine/scripts/runPvpUpa.ts 300 60 VANGUARD HUNTER heuristic he
 
 ### Save output to file (PowerShell)
 ```powershell
-npx tsx packages/engine/scripts/runUpaOutlierAnalysis.ts 1000 80 VANGUARD | Out-File docs/UPA_REPORT_VANGUARD.json -Encoding utf8
+npx tsx packages/engine/scripts/runUpaOutlierAnalysis.ts 1000 80 VANGUARD | Out-File artifacts/upa/UPA_REPORT_VANGUARD.json -Encoding utf8
 ```
 
 ## Reading the New Skill Telemetry
@@ -478,9 +478,9 @@ Recommended split:
 - `dynamicNumericGrade`: computed from simulation telemetry (UPA/harness outputs).
 
 Suggested artifact names:
-- `docs/UPA_SKILL_GRADES_STATIC.json`
-- `docs/UPA_SKILL_GRADES_DYNAMIC.json`
-- `docs/UPA_SKILL_GRADE_DRIFT.json`
+- `artifacts/upa/UPA_SKILL_GRADES_STATIC.json`
+- `artifacts/upa/UPA_SKILL_GRADES_DYNAMIC.json`
+- `artifacts/upa/UPA_SKILL_GRADE_DRIFT.json`
 
 Interpretation guidance:
 - Use static grade for design-time comparisons before playtests.
@@ -488,29 +488,29 @@ Interpretation guidance:
 - Use drift (`dynamic - static`) to find hidden synergies, no-op traps, or overtuned skills.
 
 Contribution rule:
-- If a skill stat/profile changes, regenerate `docs/UPA_SKILL_GRADES_STATIC.json`.
+- If a skill stat/profile changes, regenerate `artifacts/upa/UPA_SKILL_GRADES_STATIC.json`.
 - If a skill behavior/targeting/execution rule changes, rerun dynamic grading and drift artifacts.
 
 ### Grade generation commands
 
 Static numeric grades (all registered skills):
 ```bash
-npx tsx packages/engine/scripts/runSkillGradesStatic.ts p6-static-v1 docs/UPA_SKILL_GRADES_STATIC.json
+npx tsx packages/engine/scripts/runSkillGradesStatic.ts p6-static-v1 artifacts/upa/UPA_SKILL_GRADES_STATIC.json
 ```
 
 Dynamic numeric grades (single loadout):
 ```bash
-npx tsx packages/engine/scripts/runSkillGradesDynamic.ts 300 80 heuristic VANGUARD docs/UPA_SKILL_GRADES_DYNAMIC.json
+npx tsx packages/engine/scripts/runSkillGradesDynamic.ts 300 80 heuristic VANGUARD artifacts/upa/UPA_SKILL_GRADES_DYNAMIC.json
 ```
 
 Dynamic numeric grades (all loadouts):
 ```bash
-npx tsx packages/engine/scripts/runSkillGradesDynamic.ts 300 80 heuristic ALL docs/UPA_SKILL_GRADES_DYNAMIC.json
+npx tsx packages/engine/scripts/runSkillGradesDynamic.ts 300 80 heuristic ALL artifacts/upa/UPA_SKILL_GRADES_DYNAMIC.json
 ```
 
 Static vs dynamic drift report:
 ```bash
-npx tsx packages/engine/scripts/runSkillGradeDrift.ts docs/UPA_SKILL_GRADES_STATIC.json docs/UPA_SKILL_GRADES_DYNAMIC.json docs/UPA_SKILL_GRADE_DRIFT.json
+npx tsx packages/engine/scripts/runSkillGradeDrift.ts artifacts/upa/UPA_SKILL_GRADES_STATIC.json artifacts/upa/UPA_SKILL_GRADES_DYNAMIC.json artifacts/upa/UPA_SKILL_GRADE_DRIFT.json
 ```
 
 Quiet/verbose behavior:
@@ -520,9 +520,9 @@ Quiet/verbose behavior:
 ### One-command local flow
 PowerShell:
 ```powershell
-npx tsx packages/engine/scripts/runSkillGradesStatic.ts p6-static-v1 docs/UPA_SKILL_GRADES_STATIC.json; `
-npx tsx packages/engine/scripts/runSkillGradesDynamic.ts 300 80 heuristic ALL docs/UPA_SKILL_GRADES_DYNAMIC.json; `
-npx tsx packages/engine/scripts/runSkillGradeDrift.ts docs/UPA_SKILL_GRADES_STATIC.json docs/UPA_SKILL_GRADES_DYNAMIC.json docs/UPA_SKILL_GRADE_DRIFT.json
+npx tsx packages/engine/scripts/runSkillGradesStatic.ts p6-static-v1 artifacts/upa/UPA_SKILL_GRADES_STATIC.json; `
+npx tsx packages/engine/scripts/runSkillGradesDynamic.ts 300 80 heuristic ALL artifacts/upa/UPA_SKILL_GRADES_DYNAMIC.json; `
+npx tsx packages/engine/scripts/runSkillGradeDrift.ts artifacts/upa/UPA_SKILL_GRADES_STATIC.json artifacts/upa/UPA_SKILL_GRADES_DYNAMIC.json artifacts/upa/UPA_SKILL_GRADE_DRIFT.json
 ```
 
 NPM shortcut:
@@ -563,7 +563,7 @@ npx tsx packages/engine/scripts/runSkillHealthReport.ts check docs/UPA_SKILL_HEA
 ```
 Smoke gate mode (bounded CI/runtime-friendly sweep):
 ```bash
-npx tsx packages/engine/scripts/runSkillHealthReport.ts smoke docs/UPA_SKILL_HEALTH.json
+npx tsx packages/engine/scripts/runSkillHealthReport.ts smoke artifacts/upa/UPA_SKILL_HEALTH.json
 ```
 
 Modes:
@@ -585,8 +585,8 @@ Nightly refresh:
 - `.github/workflows/upa-grade-nightly.yml`
 - Generates static/dynamic/drift artifacts on a schedule and uploads them as CI artifacts.
 - Also generates and uploads:
-  - `docs/UPA_SKILL_HEALTH.json`
-  - `docs/UPA_CALIBRATION_BASELINE.json`
+  - `artifacts/upa/UPA_SKILL_HEALTH.json`
+  - `artifacts/upa/UPA_CALIBRATION_BASELINE.json`
   - `docs/UPA_PVP_MATCHUP_MATRIX.json`
   - `artifacts/upa/UPA_EVALUATOR_BASELINES.json`
   - `artifacts/upa/UPA_EVALUATOR_TREND.json`

@@ -4,7 +4,7 @@ import { gameReducer, generateInitialState } from '../logic';
 import { previewActionOutcome } from '../systems/action-preview';
 import { buildInitiativeQueue, isPlayerTurn } from '../systems/initiative';
 import { SpatialSystem } from '../systems/spatial-system';
-import { recomputeVisibility } from '../systems/visibility';
+import { recomputeVisibilityFromScratch } from '../systems/visibility';
 import { resolveCombatPressureMode } from '../systems/free-move';
 import { applyIresMutationToActor, resolveIresActionPreview, resolveIresRuleset } from '../systems/ires';
 import { getSkillDefinition } from '../skillRegistry';
@@ -34,7 +34,7 @@ const prepareAdjacentEnemyState = () => {
         initiativeQueue: buildInitiativeQueue(seeded),
         occupancyMask: SpatialSystem.refreshOccupancyMask(seeded)
     };
-    return recomputeVisibility(withQueue);
+    return recomputeVisibilityFromScratch(withQueue);
 };
 
 const prepareReadyPlayerState = ({
@@ -78,19 +78,19 @@ const prepareReadyPlayerState = ({
         initiativeQueue: buildInitiativeQueue(nextState),
         occupancyMask: SpatialSystem.refreshOccupancyMask(nextState)
     };
-    return gameReducer(recomputeVisibility(withQueue), { type: 'ADVANCE_TURN' });
+    return gameReducer(recomputeVisibilityFromScratch(withQueue), { type: 'ADVANCE_TURN' });
 };
 
 describe('IRES runtime', () => {
     it('derives travel vs battle mode from enemy alert state', () => {
-        const noHostiles = recomputeVisibility({
+        const noHostiles = recomputeVisibilityFromScratch({
             ...generateInitialState(1, 'ires-travel-no-hostiles'),
             enemies: []
         });
         expect(resolveCombatPressureMode(noHostiles)).toBe('travel');
 
         const unawareBase = generateInitialState(1, 'ires-travel-unaware-hostile');
-        const unawareHostile = recomputeVisibility({
+        const unawareHostile = recomputeVisibilityFromScratch({
             ...unawareBase,
             player: {
                 ...unawareBase.player,
@@ -108,7 +108,7 @@ describe('IRES runtime', () => {
         expect(resolveCombatPressureMode(unawareHostile)).toBe('travel');
 
         const awareBase = generateInitialState(1, 'ires-travel-aware-hostile');
-        const awareHostile = recomputeVisibility({
+        const awareHostile = recomputeVisibilityFromScratch({
             ...awareBase,
             player: {
                 ...awareBase.player,
@@ -159,7 +159,8 @@ describe('IRES runtime', () => {
         );
 
         expect(preview.blockedReason).toBeUndefined();
-        expect(preview.sparkDelta).toBe(0);
+        expect(preview.sparkDelta).toBeLessThan(0);
+        expect(preview.sparkBurnOutcome).toBe('burn_now');
         expect(preview.sparkBurnHpDelta).toBeGreaterThan(0);
         expect(preview.bandAfter).toBe('exhausted');
     });
@@ -167,7 +168,18 @@ describe('IRES runtime', () => {
     it('caps Spark Burn actions at one per turn', () => {
         const state = generateInitialState(1, 'ires-burn-cap-seed');
         const config = resolveIresRuleset(state.ruleset);
-        const exhausted = applyIresMutationToActor(state.player, { exhaustionDelta: 80 }, config);
+        const exhaustedBase = applyIresMutationToActor(state.player, { exhaustionDelta: 80 }, config);
+        const exhausted = {
+            ...exhaustedBase,
+            ires: {
+                ...exhaustedBase.ires!,
+                spark: 80,
+                maxSpark: 400,
+                exhaustion: 80,
+                isExhausted: true,
+                currentState: 'exhausted' as const
+            }
+        };
         const firstPreview = resolveIresActionPreview(
             exhausted,
             'BASIC_ATTACK',
@@ -185,10 +197,13 @@ describe('IRES runtime', () => {
         );
 
         expect(firstPreview.blockedReason).toBeUndefined();
+        expect(firstPreview.sparkBurnOutcome).toBe('burn_now');
         expect(firstPreview.sparkBurnHpDelta).toBeGreaterThan(0);
         expect(afterFirstBurn.ires?.sparkBurnActionsThisTurn).toBe(1);
+        expect(secondPreview.blockedReason).toBeUndefined();
+        expect(secondPreview.sparkDelta).toBeLessThan(0);
         expect(secondPreview.sparkBurnHpDelta).toBe(0);
-        expect(secondPreview.blockedReason).toBe('Spark Burn action cap reached (1)');
+        expect(secondPreview.sparkBurnOutcome).toBe('burn_blocked_cap');
     });
 
     it('self-settles pure movement in travel mode and resets turn burden without arming rest bonuses', () => {

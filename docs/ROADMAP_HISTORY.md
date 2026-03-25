@@ -30,7 +30,7 @@ Note:
   - `npm --workspace @hop/web exec vitest run` (`8` files, `15` tests)
 
 Reference:
-- `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+- `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 - Historical sections below preserve original wording and original file paths from when each milestone was recorded.
 
 ---
@@ -94,7 +94,7 @@ Reference:
 
 ## Progress Snapshot (February 9, 2026)
 
-### User Feedback Closure (`docs/User Feedback.md`)
+### User Feedback Closure (`docs/archive/USER_FEEDBACK.md`)
 - [x] **Unsafe lava traversal blocked for free move**
   - Scope:
     - [x] `BASIC_MOVE` now computes targets through hazard-safe pathing only (`packages/engine/src/skills/basic_move.ts`).
@@ -753,7 +753,7 @@ Goal: move from stability fixes to true balance calibration across all archetype
   - [x] Run 300-seed calibration batches per archetype using fixed policy version (`heuristic`, `maxTurns=80`).
   - [x] Establish target guardrails (timeout, floor progression, hazard breaches) and emit baseline artifact.
 - Acceptance tests:
-  - [x] New calibration artifact committed under `docs/UPA_CALIBRATION_BASELINE.json`.
+  - [x] New calibration artifact committed under `artifacts/upa/UPA_CALIBRATION_BASELINE.json`.
   - [x] `unwaivedBreachCount=0` in strict calibration check (`npm run upa:calibration:check`).
 
 ### P6.2.PR2 - Dynamic-grade normalization
@@ -795,7 +795,7 @@ Goal: move from stability fixes to true balance calibration across all archetype
 - [x] CI exposes balance regressions early with actionable thresholds.
 
 ### P6.2 Progress Snapshot (February 9, 2026)
-- Calibration (`docs/UPA_CALIBRATION_BASELINE.json`, `300` seeds, `80` turns, heuristic):
+- Calibration (`artifacts/upa/UPA_CALIBRATION_BASELINE.json`, `300` seeds, `80` turns, heuristic):
   - `VANGUARD`: `winRate=0`, `timeout=0.0733`, `avgFloor=3.5767`, `hazard=0.4867`, `UPA=0.2435`
   - `SKIRMISHER`: `winRate=0`, `timeout=0.25`, `avgFloor=1.43`, `hazard=0.0067`, `UPA=0.166`
   - `FIREMAGE`: `winRate=0.0733`, `timeout=0.01`, `avgFloor=8.44`, `hazard=0`, `UPA=0.5636`

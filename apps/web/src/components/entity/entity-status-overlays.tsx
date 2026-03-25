@@ -61,7 +61,7 @@ export const EntityStatusOverlays: React.FC<EntityStatusOverlaysProps> = ({
           {iresState === 'exhausted' ? 'RED' : 'RST'}
         </text>
         {iresState === 'exhausted' && (
-          <title>{`Exhausted ${Math.round(exhaustion)}/100`}</title>
+          <title>{`Redline ${Math.round(exhaustion)}% reserve spent`}</title>
         )}
       </g>
     )}

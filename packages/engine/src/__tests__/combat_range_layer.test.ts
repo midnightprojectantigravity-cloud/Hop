@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { calculateCombat } from '../systems/combat/combat-calculator';
 
 describe('combat range layer', () => {
-    it('rewards close engagement for melee-biased attackers', () => {
+    it('keeps direct calculator power stable across engagement distance while preserving distance telemetry', () => {
         const close = calculateCombat({
             attackerId: 'red_attacker',
             targetId: 'green_target',
@@ -39,11 +39,12 @@ describe('combat range layer', () => {
             targetOptimalRangeMax: 6
         });
 
-        expect(close.finalPower).toBeGreaterThan(far.finalPower);
-        expect(close.scoreEvent.rangePressure).toBeGreaterThan(far.scoreEvent.rangePressure);
+        expect(close.finalPower).toBe(far.finalPower);
+        expect(close.rangeMultiplier).toBe(far.rangeMultiplier);
+        expect(close.scoreEvent.rangePressure).toBeLessThan(far.scoreEvent.rangePressure);
     });
 
-    it('allows high instinct to reduce long-range hit decay', () => {
+    it('raises hit and crit telemetry for high-instinct attackers at long range', () => {
         const lowInstinct = calculateCombat({
             attackerId: 'low_instinct',
             targetId: 'target',
@@ -80,11 +81,13 @@ describe('combat range layer', () => {
             targetOptimalRangeMax: 4
         });
 
-        expect(highInstinct.finalPower).toBeGreaterThan(lowInstinct.finalPower);
-        expect(highInstinct.scoreEvent.rangePressure).toBeGreaterThan(lowInstinct.scoreEvent.rangePressure);
+        expect(highInstinct.finalPower).toBe(lowInstinct.finalPower);
+        expect(highInstinct.hitQualityScore).toBe(lowInstinct.hitQualityScore);
+        expect(highInstinct.critChance).toBeGreaterThan(lowInstinct.critChance);
+        expect(highInstinct.scoreEvent.hitPressure).toBeGreaterThan(lowInstinct.scoreEvent.hitPressure);
     });
 
-    it('preserves triangle outputs when range data is not provided', () => {
+    it('preserves final triangle outputs when distance is omitted even if range bands are authored', () => {
         const baseline = calculateCombat({
             attackerId: 'baseline',
             targetId: 'target',
@@ -116,8 +119,7 @@ describe('combat range layer', () => {
         });
 
         expect(withRangeBandsButNoDistance.finalPower).toBe(baseline.finalPower);
-        expect(withRangeBandsButNoDistance.rangeMultiplier).toBe(1);
+        expect(withRangeBandsButNoDistance.rangeMultiplier).toBe(baseline.rangeMultiplier);
         expect(withRangeBandsButNoDistance.scoreEvent.rangePressure).toBe(0);
     });
 });
-

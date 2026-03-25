@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { DEFAULT_LOADOUTS } from '@hop/engine';
+import { DEFAULT_LOADOUTS } from '../../../../packages/engine/src/systems/loadout';
 import type { Loadout } from '@hop/engine';
 
 interface ArcadeHubProps {

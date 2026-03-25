@@ -105,7 +105,7 @@ This document is the high-level source of truth for current engine/runtime archi
 - evaluation orchestration and contracts in `packages/engine/src/systems/evaluation/`
 
 Reference milestone:
-- `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+- `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 
 ## Post-AI + Post-Tranche Baseline (March 1, 2026)
 
@@ -136,7 +136,7 @@ Reference milestone:
   - `packages/engine/src/systems/evaluation/pvp-harness.ts`
 
 Reference milestone:
-- `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
+- `docs/archive/NEXT_PHASES_MILESTONE_2026-02-28.md`
 
 ## ACAE Pilot Baseline (March 1, 2026)
 
@@ -160,7 +160,7 @@ Reference milestone:
   - `packages/engine/scripts/runAcaeAnnihilationStability.ts`
 
 Reference milestone:
-- `docs/ACAE_MILESTONE_2026-03-01.md`
+- `docs/archive/ACAE_MILESTONE_2026-03-01.md`
 
 ## Quality Gates
 
@@ -191,7 +191,7 @@ Reference milestone:
 
 2. Capability rollout
 - Capability and movement-runtime toggles remain intentionally staged through ruleset, env, and URL override surfaces.
-- These flags are separate from worldgen completion and are still tracked by `docs/CAPABILITY_ROLLOUT.md`.
+- These flags are separate from worldgen completion and are still tracked by `docs/archive/CAPABILITY_ROLLOUT.md`.
 
 3. Dev-only worldgen inspection
 - `?worldgenDebug=1` remains an intentional development-only inspection gate in web.
@@ -202,9 +202,9 @@ Reference milestone:
 1. Contribution workflow: `docs/CONTRIBUTING.md`
 2. Current status: `docs/STATUS.md`
 3. Active tracker: `docs/NEXT_LEVEL.md`
-4. AI milestone: `docs/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
-5. Post-AI phases milestone: `docs/NEXT_PHASES_MILESTONE_2026-02-28.md`
-6. ACAE milestone: `docs/ACAE_MILESTONE_2026-03-01.md`
+4. AI milestone: `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+5. Post-AI phases milestone: `docs/archive/NEXT_PHASES_MILESTONE_2026-02-28.md`
+6. ACAE milestone: `docs/archive/ACAE_MILESTONE_2026-03-01.md`
 7. Historical archive: `docs/ROADMAP_HISTORY.md`
 8. Archived completed plans: `docs/archive/`
 9. UPA operations: `docs/UPA_GUIDE.md`

@@ -1,4 +1,5 @@
 import { emitUiMetric } from './ui-telemetry';
+import { playSensoryAudio } from './sensory-audio-runtime';
 
 export type SensoryToken =
   | 'haptic-nav-light'
@@ -8,7 +9,17 @@ export type SensoryToken =
   | 'ui-parchment-slide'
   | 'ui-brass-clink'
   | 'ui-danger-drum'
-  | 'ui-synapse-chime';
+  | 'ui-synapse-chime'
+  | 'ui-tap'
+  | 'ui-confirm'
+  | 'ui-cancel'
+  | 'combat-hit-light'
+  | 'combat-hit-heavy'
+  | 'combat-receive'
+  | 'combat-kill'
+  | 'run-floor-transition'
+  | 'run-victory'
+  | 'run-defeat';
 
 export type SensoryPayload = {
   id: SensoryToken;
@@ -25,13 +36,19 @@ export type SensoryDispatchResult = {
 
 const LOW_PRIORITY_TTL_MS = 120;
 
-let activeLowTimer: number | null = null;
+let activeLowAudioTimer: number | null = null;
+let activeLowHapticTimer: number | null = null;
 
-const clearActiveLow = () => {
-  if (activeLowTimer !== null && typeof window !== 'undefined') {
-    window.clearTimeout(activeLowTimer);
+const clearTimer = (timer: number | null): number | null => {
+  if (timer !== null && typeof window !== 'undefined') {
+    window.clearTimeout(timer);
   }
-  activeLowTimer = null;
+  return null;
+};
+
+const clearAllActiveLow = () => {
+  activeLowAudioTimer = clearTimer(activeLowAudioTimer);
+  activeLowHapticTimer = clearTimer(activeLowHapticTimer);
 };
 
 const reducedMotionEnabled = (): boolean => {
@@ -39,8 +56,22 @@ const reducedMotionEnabled = (): boolean => {
   return document.documentElement.dataset.motion === 'reduced';
 };
 
+const hapticsEnabled = (): boolean => {
+  if (typeof document === 'undefined') return true;
+  return document.documentElement.dataset.hapticsEnabled !== 'false';
+};
+
+const audioEnabled = (): boolean => {
+  if (typeof document === 'undefined') return true;
+  return document.documentElement.dataset.audioEnabled !== 'false';
+};
+
+const isAudioToken = (id: SensoryToken): boolean =>
+  id.startsWith('ui-') || id.startsWith('combat-') || id.startsWith('run-');
+
 const vibrateDevice = (payload: SensoryPayload): void => {
-  if (payload.id.startsWith('ui-')) return;
+  if (!hapticsEnabled()) return;
+  if (isAudioToken(payload.id)) return;
   if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
   if (payload.intensity <= 0) return;
 
@@ -53,12 +84,14 @@ export const dispatchSensoryEvent = (input: SensoryPayload): SensoryDispatchResu
     ...input,
     intensity: reducedMotionEnabled() ? 0.0 : input.intensity
   };
+  const audioToken = isAudioToken(normalized.id);
+  const activeLowTimer = audioToken ? activeLowAudioTimer : activeLowHapticTimer;
 
   let preempted = false;
   if (normalized.priority === 'high') {
-    if (activeLowTimer !== null) {
+    if (activeLowAudioTimer !== null || activeLowHapticTimer !== null) {
       preempted = true;
-      clearActiveLow();
+      clearAllActiveLow();
       emitUiMetric('sensory_preemption_count', 1, {
         id: normalized.id,
         context: normalized.context
@@ -77,12 +110,24 @@ export const dispatchSensoryEvent = (input: SensoryPayload): SensoryDispatchResu
   }
 
   if (typeof window !== 'undefined' && normalized.priority === 'low') {
-    activeLowTimer = window.setTimeout(() => {
-      clearActiveLow();
+    const timer = window.setTimeout(() => {
+      if (audioToken) {
+        activeLowAudioTimer = clearTimer(activeLowAudioTimer);
+      } else {
+        activeLowHapticTimer = clearTimer(activeLowHapticTimer);
+      }
     }, LOW_PRIORITY_TTL_MS);
+    if (audioToken) {
+      activeLowAudioTimer = timer;
+    } else {
+      activeLowHapticTimer = timer;
+    }
   }
 
   vibrateDevice(normalized);
+  if (audioEnabled() && isAudioToken(normalized.id)) {
+    playSensoryAudio(normalized.id, normalized.intensity);
+  }
 
   return {
     dispatched: true,
@@ -90,4 +135,3 @@ export const dispatchSensoryEvent = (input: SensoryPayload): SensoryDispatchResu
     payload: normalized
   };
 };
-
