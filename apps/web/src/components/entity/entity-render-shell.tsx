@@ -104,8 +104,6 @@ export const EntityRenderShell: React.FC<EntityRenderShellProps> = ({
                 showFacing={showFacing}
                 facing={entity.facing}
                 borderColor={borderColor}
-                iresState={entity.ires?.currentState}
-                exhaustion={entity.ires?.exhaustion}
               />
 
               <EntityAilmentBadges entity={entity} />

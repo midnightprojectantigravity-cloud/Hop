@@ -18,7 +18,7 @@ export const BOMB_ACTOR_CONTRACT: EphemeralActorContract = {
     weightClass: 'Light',
     armorBurdenTier: 'None',
     trinity: { body: 0, mind: 0, instinct: 0 },
-    speed: 10,
+    speed: 1,
     fuseTurns: 2,
     blastRadius: 1
 };

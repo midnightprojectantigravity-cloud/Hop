@@ -43,14 +43,14 @@ export const ArcadeSplashGate = ({
         }}
       />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(241,200,117,0.18),transparent_34%),linear-gradient(180deg,rgba(8,5,2,0.28),rgba(8,5,2,0.62)_48%,rgba(8,5,2,0.82))]" />
-      <div className="absolute inset-0 px-6 pb-6 pt-8 sm:px-8 sm:pb-8 sm:pt-10 lg:px-12 lg:pb-12 lg:pt-12">
+      <div data-arcade-splash-shell className="arcade-splash-shell absolute inset-0">
         <div className="arcade-splash-panel mx-auto h-full w-full max-w-6xl text-center">
-          <div className="arcade-splash-title-stack">
+          <div data-arcade-splash-title-stack className="arcade-splash-title-stack">
             <h1 className="splash-title-main font-[var(--font-heading)]">ASHES</h1>
             <h2 className="splash-title-connector font-[var(--font-heading)]">OF THE</h2>
             <h1 className="splash-title-main font-[var(--font-heading)]">WORLD</h1>
           </div>
-          <div className="arcade-splash-action-stack mx-auto w-full max-w-sm">
+          <div data-arcade-splash-action-stack className="arcade-splash-action-stack mx-auto w-full max-w-sm">
             <div className="flex w-full flex-col justify-center gap-3">
               <button
                 type="button"
@@ -67,7 +67,7 @@ export const ArcadeSplashGate = ({
               <button
                 type="button"
                 onClick={onOpenHub}
-                className="min-h-12 w-full rounded-2xl border border-white/30 bg-white/10 text-xs font-black uppercase tracking-[0.2em] hover:bg-white/15"
+                className="min-h-12 w-full rounded-2xl border border-white/30 bg-white/10 text-xs font-black uppercase tracking-[0.2em] text-white hover:bg-white/15"
               >
                 Hub
               </button>

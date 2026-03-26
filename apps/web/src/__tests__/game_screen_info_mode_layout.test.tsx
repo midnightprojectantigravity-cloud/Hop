@@ -101,9 +101,13 @@ describe('game screen info mode layout', () => {
     const html = renderWithMobileViewport(<GameScreen {...buildProps(false)} />);
 
     expect(html).toContain('data-mobile-top-hud');
+    expect(html).toContain('data-mobile-bottom-dock');
     expect(html).toContain('data-mobile-top-hud-info-button');
     expect(html).toContain('data-mobile-top-hud-chevron');
     expect(html).toContain('data-mobile-top-hud-fold-toggle');
+    expect(html).toContain('padding-bottom:var(--safe-zone-bottom-comfort)');
+    expect(html).toContain('padding-left:var(--safe-area-left)');
+    expect(html).toContain('padding-right:var(--safe-area-right)');
     expect(html).toContain('Floor');
     expect(html).toContain('INFO');
     expect(html).not.toContain('Toggle vitals details');

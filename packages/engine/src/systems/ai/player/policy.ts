@@ -22,29 +22,21 @@ const hasReadyTagSkill = (state: GameState, tag: string): boolean => {
 export const chooseStrategicIntent = (state: GameState, profile: StrategicPolicyProfile): StrategicIntent => {
     const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
     const hostiles = aliveHostiles(state);
-    const archetype = String(state.player.archetype || '');
     const ires = state.player.ires;
     const resourceSignals = getAiResourceSignals(ires);
 
-    if (profile.version === 'sp-v1-balance' && hostiles > 0 && archetype === 'HUNTER' && hpRatio > 0.25) {
-        return 'offense';
-    }
-
+    if (hpRatio < profile.thresholds.defenseHpRatio) return 'defense';
+    if (hostiles <= 0) return 'positioning';
     if (
-        hostiles > 0
-        && archetype === 'FIREMAGE'
-        && ires
+        ires
         && (
-            resourceSignals.fatiguePressure >= 0.55
-            || resourceSignals.reservePressure >= 0.7
-            || resourceSignals.recoveryPressure >= 0.5
+            resourceSignals.fatiguePressure >= 0.6
+            || resourceSignals.reservePressure >= 0.75
+            || resourceSignals.recoveryPressure >= 0.55
         )
     ) {
         return 'defense';
     }
-
-    if (hpRatio < profile.thresholds.defenseHpRatio) return 'defense';
-    if (hostiles <= 0) return 'positioning';
 
     const adjacentThreat = adjacentHostileCount(state, state.player.position);
     const nearestThreat = nearestHostileDistance(state);

@@ -88,6 +88,12 @@ describe('hub route shell route split', () => {
     expect(html).toContain('WORLD');
     expect(html).toContain('Start');
     expect(html).toContain('Hub');
+    expect(html).toContain('data-arcade-splash-shell');
+    expect(html).toContain('class="arcade-splash-shell absolute inset-0"');
+    expect(html).toContain('data-arcade-splash-title-stack');
+    expect(html).toContain('class="arcade-splash-title-stack"');
+    expect(html).toContain('data-arcade-splash-action-stack');
+    expect(html).toContain('text-white');
   });
 
   it('renders the strategic hub screen on the dedicated hub route', () => {

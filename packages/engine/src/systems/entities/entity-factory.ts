@@ -165,6 +165,7 @@ const PASSIVE_SKILL_IDS = new Set<string>([
     'TACTICAL_INSIGHT',
     'THEME_HAZARDS',
     'TIME_BOMB',
+    'VOLATILE_PAYLOAD',
     'VIBRATION_SENSE'
 ]);
 

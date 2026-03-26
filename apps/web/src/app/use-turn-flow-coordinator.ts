@@ -32,6 +32,19 @@ interface UseTurnFlowCoordinatorArgs {
   resolvePendingFloor?: () => void | Promise<void>;
 }
 
+export const shouldAutoResolveReplayPendingFloor = ({
+  isReplayMode,
+  pendingStatus,
+  hasResolvePendingFloor
+}: {
+  isReplayMode: boolean;
+  pendingStatus?: GameState['pendingStatus'];
+  hasResolvePendingFloor: boolean;
+}): boolean =>
+  isReplayMode
+  && pendingStatus?.status === 'playing'
+  && hasResolvePendingFloor;
+
 const getVisualEventsSignature = (events: Array<{ type: string; payload: any }> | undefined): string => {
   const arr = events || [];
   const last = arr.length > 0 ? arr[arr.length - 1] : undefined;
@@ -189,6 +202,11 @@ export const useTurnFlowCoordinator = ({
 
   // Auto-resolve pending transitions when animations settle
   useEffect(() => {
+    const allowReplayPendingFloorResolve = shouldAutoResolveReplayPendingFloor({
+      isReplayMode,
+      pendingStatus: gameState.pendingStatus,
+      hasResolvePendingFloor: Boolean(resolvePendingFloor)
+    });
     const noPendingAnimations =
       !isBusy
       && (currentEventsHash === lastProcessedEventsHash.current)
@@ -209,7 +227,7 @@ export const useTurnFlowCoordinator = ({
     const canResolveByFallbackDelay = !hasBlockingTimeline || elapsedPendingMs >= requiredFallbackDelayMs;
     const readyForResolve = noPendingAnimations && (canResolveByBusySignal || canResolveByFallbackDelay);
 
-    if (!turnDriver.shouldResolvePending) return;
+    if (!turnDriver.shouldResolvePending && !allowReplayPendingFloorResolve) return;
 
     if (readyForResolve) {
       appendTurnTrace('PENDING_RESOLVE_READY', {
@@ -248,6 +266,8 @@ export const useTurnFlowCoordinator = ({
     turnDriver.shouldResolvePending,
     gameState.timelineEvents,
     gameState.visualEvents,
+    gameState.pendingStatus,
+    isReplayMode,
     isBusy,
     currentEventsHash,
     currentTimelineHash,

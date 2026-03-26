@@ -247,6 +247,32 @@ body::after {
   animation: arcadeReadyPulse 1100ms ease-in-out infinite;
 }
 
+.arcade-splash-shell {
+  box-sizing: border-box;
+  padding-top: max(var(--safe-area-top), 2rem);
+  padding-right: max(var(--safe-area-right), 1.5rem);
+  padding-bottom: max(var(--safe-zone-bottom-comfort), 1.5rem);
+  padding-left: max(var(--safe-area-left), 1.5rem);
+}
+
+@media (min-width: 640px) {
+  .arcade-splash-shell {
+    padding-top: max(var(--safe-area-top), 2.5rem);
+    padding-right: max(var(--safe-area-right), 2rem);
+    padding-bottom: max(var(--safe-zone-bottom-comfort), 2rem);
+    padding-left: max(var(--safe-area-left), 2rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .arcade-splash-shell {
+    padding-top: max(var(--safe-area-top), 3rem);
+    padding-right: max(var(--safe-area-right), 3rem);
+    padding-bottom: max(var(--safe-zone-bottom-comfort), 3rem);
+    padding-left: max(var(--safe-area-left), 3rem);
+  }
+}
+
 .arcade-splash-panel {
   --splash-title-color: #f4ddae;
   --splash-title-shadow:
@@ -265,11 +291,17 @@ body::after {
   flex-direction: column;
   align-items: center;
   gap: 0.2rem;
+  width: 100%;
+  max-width: min(100%, 36rem);
+  padding-inline: clamp(0.75rem, 3vw, 1.75rem);
+  box-sizing: border-box;
 }
 
 .arcade-splash-action-stack {
   margin-top: auto;
-  padding-bottom: clamp(0.25rem, 1.5vh, 1rem);
+  padding-bottom: max(var(--safe-zone-bottom-comfort), clamp(1.75rem, 6vh, 3.5rem));
+  padding-inline: clamp(0.75rem, 3vw, 1.5rem);
+  box-sizing: border-box;
 }
 
 .splash-title-main {
@@ -292,5 +324,16 @@ body::after {
   margin: -0.12em 0;
   text-transform: uppercase;
   letter-spacing: 0.4em;
+}
+
+@media (max-width: 480px) {
+  .splash-title-main {
+    font-size: min(14svh, 22vw);
+  }
+
+  .splash-title-connector {
+    font-size: min(4.6svh, 7.5vw);
+    letter-spacing: 0.28em;
+  }
 }
 

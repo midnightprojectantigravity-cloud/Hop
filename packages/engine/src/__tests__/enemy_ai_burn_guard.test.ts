@@ -17,7 +17,7 @@ describe('enemy ai burn guard', () => {
             skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
             trinity: { body: 6, mind: 3, instinct: 4 }
         }), {
-            exhaustionDelta: 80
+            exhaustionDelta: 85
         }, resolveIresRuleset(base.ruleset));
         const state = {
             ...base,
@@ -36,7 +36,7 @@ describe('enemy ai burn guard', () => {
             state
         });
 
-        expect(exhaustedEnemy.ires?.isExhausted).toBe(true);
+        expect(exhaustedEnemy.ires?.currentState).toBe('exhausted');
         expect(selected.decision.action.type).toBe('WAIT');
         expect(selected.decision.action.skillId).toBe('WAIT_SKILL');
     });

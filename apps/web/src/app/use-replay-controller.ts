@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_LOADOUTS, generateInitialState, resolveCombatRuleset, validateReplayEnvelopeV3 } from '@hop/engine';
 import type { Action, GameState } from '@hop/engine';
 import type { ReplayRecord } from '../components/ReplayManager';
+import type { PendingFloorWorldgenPhase } from './pending-floor-worldgen-machine';
 
 type DispatchWithTrace = (action: Action, source: string) => void;
 
 interface ReplayControllerOptions {
   dispatchWithTrace: DispatchWithTrace;
+  isReplayStepBlocked: () => boolean;
 }
 
 export interface ReplayPlaybackValidationResult {
@@ -65,7 +67,19 @@ export const validateReplayRecordForPlayback = (record: ReplayRecord): ReplayPla
   };
 };
 
-export const useReplayController = ({ dispatchWithTrace }: ReplayControllerOptions) => {
+export const isReplayStepBlocked = ({
+  isBusy,
+  pendingFloorPhase
+}: {
+  isBusy: boolean;
+  pendingFloorPhase: PendingFloorWorldgenPhase;
+}): boolean =>
+  isBusy
+  || pendingFloorPhase === 'waiting_for_animation'
+  || pendingFloorPhase === 'compiling_floor'
+  || pendingFloorPhase === 'compile_failed';
+
+export const useReplayController = ({ dispatchWithTrace, isReplayStepBlocked }: ReplayControllerOptions) => {
   const [isReplayMode, setIsReplayMode] = useState(false);
   const [replayActions, setReplayActions] = useState<Action[]>([]);
   const [replayActive, setReplayActive] = useState(false);
@@ -104,6 +118,9 @@ export const useReplayController = ({ dispatchWithTrace }: ReplayControllerOptio
   }, [dispatchWithTrace]);
 
   const stepReplay = useCallback(() => {
+    if (isReplayStepBlocked()) {
+      return;
+    }
     const idx = replayIndexRef.current;
     if (idx >= replayActions.length) {
       setReplayActive(false);
@@ -111,7 +128,7 @@ export const useReplayController = ({ dispatchWithTrace }: ReplayControllerOptio
     }
     dispatchWithTrace(replayActions[idx] as Action, 'replay_step');
     replayIndexRef.current = idx + 1;
-  }, [dispatchWithTrace, replayActions]);
+  }, [dispatchWithTrace, isReplayStepBlocked, replayActions]);
 
   const goToReplayIndex = useCallback((targetIndex: number) => {
     if (!replayInitStateRef.current) return;

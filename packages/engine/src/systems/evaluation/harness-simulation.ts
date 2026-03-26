@@ -50,6 +50,8 @@ export const simulateHarnessRunDetailed = (
         : 0;
     const finalSpark = Number(state.player.ires?.spark || 0);
     const finalMana = Number(state.player.ires?.mana || 0);
+    const finalSparkState = state.player.ires?.currentState || 'base';
+    const finalSparkRatio = Number(state.player.ires?.spark || 0) / Math.max(1, Number(state.player.ires?.maxSpark || 1));
     const finalExhaustion = Number(state.player.ires?.exhaustion || 0);
     const runTelemetry = state.runTelemetry || {
         restTurns: 0,
@@ -74,6 +76,8 @@ export const simulateHarnessRunDetailed = (
         finalPlayerHpRatio: (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1),
         finalSpark,
         finalMana,
+        finalSparkState,
+        finalSparkRatio,
         finalExhaustion,
         peakExhaustion: peakPlayerExhaustion,
         restTurns: Number(runTelemetry.restTurns || 0),

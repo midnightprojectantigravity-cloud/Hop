@@ -99,6 +99,45 @@ describe('hub start journey wiring', () => {
     expect(onStartRun).toHaveBeenNthCalledWith(2, 'daily');
   });
 
+  it('pads the mobile CTA and content above the bottom safe zone', () => {
+    const hubState = {
+      ...generateHubState(),
+      selectedLoadoutId: 'VANGUARD'
+    };
+
+    const tree = Hub({
+      gameState: hubState,
+      capabilityPassivesEnabled: false,
+      onCapabilityPassivesEnabledChange: vi.fn(),
+      movementRuntimeEnabled: false,
+      onMovementRuntimeEnabledChange: vi.fn(),
+      onSelectLoadout: vi.fn(),
+      onStartRun: vi.fn(),
+      onOpenArcade: vi.fn(),
+      onLoadScenario: vi.fn(),
+      onStartReplay: vi.fn()
+    });
+
+    const mobileCta = findElements(
+      tree,
+      (element) => element.props?.['data-hub-mobile-cta'] !== undefined
+    )[0];
+    const scrollShell = findElements(
+      tree,
+      (element) =>
+        typeof element.props?.className === 'string'
+        && element.props.className.includes('pb-[calc(6rem+var(--safe-zone-bottom-comfort))]')
+    )[0];
+
+    expect(scrollShell).toBeTruthy();
+    expect(mobileCta).toBeTruthy();
+    expect(mobileCta.props?.style).toMatchObject({
+      paddingBottom: 'var(--safe-zone-bottom-comfort)',
+      paddingLeft: 'max(var(--safe-area-left), 0.75rem)',
+      paddingRight: 'max(var(--safe-area-right), 0.75rem)'
+    });
+  });
+
   it('routes map shape and size controls to hub callbacks', () => {
     const onMapShapeChange = vi.fn();
     const onMapSizeChange = vi.fn();

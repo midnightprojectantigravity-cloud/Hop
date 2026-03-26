@@ -543,7 +543,11 @@ const executeStatusWindow = (
         }
     });
 
-    let nextState = applyEffects(state, effects, { sourceId: actorId, stepId });
+    let nextState = applyEffects(state, effects, {
+        sourceId: actorId,
+        stepId,
+        ...(actor.subtype === 'bomb' ? { volatileBombVisited: [actor.id] } : {})
+    });
     const ailmentTick = tickActorAilments(nextState, actorId, window, stepId);
     nextState = ailmentTick.state;
     messages.push(...ailmentTick.messages);

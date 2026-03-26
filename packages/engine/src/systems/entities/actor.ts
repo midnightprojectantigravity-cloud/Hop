@@ -5,8 +5,17 @@
 import type { Entity, StatusEffect } from '../../types';
 import { STATUS_REGISTRY } from '../../constants';
 import type { StatusID } from '../../types/registry';
+import { buildBombDetonationEffects, isBombActor } from '../effects/bomb-runtime';
 
 const buildStatusOnTick = (type: StatusID): StatusEffect['onTick'] | undefined => {
+  if (type === 'time_bomb') {
+    return (actor) => {
+      if (!isBombActor(actor)) return [];
+      const fuse = actor.statusEffects.find(status => status.type === 'time_bomb');
+      if (!fuse || fuse.duration > 1) return [];
+      return buildBombDetonationEffects(actor);
+    };
+  }
   if (type !== 'blinded') return undefined;
   return (actor) => {
     const blinded = actor.statusEffects.find(status => status.type === 'blinded');

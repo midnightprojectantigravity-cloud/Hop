@@ -188,7 +188,7 @@ export const Hub: React.FC<HubProps> = ({
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden pb-24 sm:pb-0">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden pb-[calc(6rem+var(--safe-zone-bottom-comfort))] sm:pb-0">
         {/* Left Area: Archetype Selection */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-12 custom-scrollbar">
           <div className="max-w-4xl mx-auto">
@@ -330,7 +330,15 @@ export const Hub: React.FC<HubProps> = ({
       </div>
 
       {gameState.selectedLoadoutId && (
-        <div className="surface-panel-material torn-edge-shell sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 py-3">
+        <div
+          data-hub-mobile-cta
+          className="surface-panel-material torn-edge-shell sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 pt-3"
+          style={{
+            paddingBottom: 'var(--safe-zone-bottom-comfort)',
+            paddingLeft: 'max(var(--safe-area-left), 0.75rem)',
+            paddingRight: 'max(var(--safe-area-right), 0.75rem)',
+          }}
+        >
           <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-black mb-2">
             Ready: {gameState.selectedLoadoutId}
           </div>

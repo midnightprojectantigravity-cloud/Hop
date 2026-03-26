@@ -20,6 +20,7 @@ import { useAppSession } from './use-app-session';
 import { useGameScreenModel } from './use-game-screen-model';
 import { useHubSession } from './use-hub-session';
 import { useReplaySession } from './use-replay-session';
+import { isReplayStepBlocked } from './use-replay-controller';
 import { useRunSession } from './use-run-session';
 import { useBootSession } from './use-boot-session';
 import { useTutorialSession } from './use-tutorial-session';
@@ -133,6 +134,7 @@ export function AppShell() {
     && new URLSearchParams(window.location.search).get('worldgenDebug') === '1';
 
   const dispatchWithTraceProxyRef = useRef<(action: Action, source: string) => void>(() => {});
+  const replayStepBlockedRef = useRef(false);
   const dispatchReplayAction = useCallback((action: Action, source: string) => {
     dispatchWithTraceProxyRef.current(action, source);
   }, []);
@@ -149,7 +151,10 @@ export function AppShell() {
     stepReplay,
     goToReplayIndex,
     replayMarkerIndices
-  } = useReplaySession({ dispatchReplayAction });
+  } = useReplaySession({
+    dispatchReplayAction,
+    isReplayStepBlocked: () => replayStepBlockedRef.current
+  });
 
   useDebugPerfLogger([gameState.gameStatus, isReplayMode]);
 
@@ -272,6 +277,10 @@ export function AppShell() {
     hubPath,
     isArcadeRoute,
     onRunStarted: () => runStartedProxyRef.current()
+  });
+  replayStepBlockedRef.current = isReplayStepBlocked({
+    isBusy,
+    pendingFloorPhase: worldgenSession.pendingFloorWorldgen.state.phase
   });
 
   const turnFlowCoordinator = useTurnFlowCoordinator({

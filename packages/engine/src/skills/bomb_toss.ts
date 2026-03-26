@@ -2,8 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getActorAt } from '../helpers';
 import { validateRange } from '../systems/validation';
 import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
-import { createEntity } from '../systems/entities/entity-factory';
-import { BOMB_ACTOR_CONTRACT } from '../data/hazards/ephemeral-actors';
+import { createBombActor } from '../systems/effects/bomb-runtime';
 
 /**
  * BOMB_TOSS
@@ -43,28 +42,7 @@ export const BOMB_TOSS: SkillDefinition = {
         }
 
         const bombId = `bomb-${attacker.id}-${state.turnNumber}-${state.actionLog?.length ?? 0}-${target.q}_${target.r}_${target.s}`;
-        const bomb = createEntity({
-            id: bombId,
-            type: 'enemy',
-            subtype: 'bomb',
-            factionId: attacker.factionId,
-            position: target,
-            hp: 1,
-            maxHp: 1,
-            speed: BOMB_ACTOR_CONTRACT.speed,
-            skills: ['TIME_BOMB'],
-            weightClass: BOMB_ACTOR_CONTRACT.weightClass,
-            armorBurdenTier: BOMB_ACTOR_CONTRACT.armorBurdenTier,
-            trinity: BOMB_ACTOR_CONTRACT.trinity
-        });
-        bomb.statusEffects = [
-            {
-                id: 'TIME_BOMB',
-                type: 'time_bomb',
-                duration: BOMB_ACTOR_CONTRACT.fuseTurns,
-                tickWindow: 'END_OF_TURN',
-            },
-        ];
+        const bomb = createBombActor(bombId, target, attacker.factionId);
 
         effects.push({ type: 'SpawnActor', actor: bomb });
         messages.push('Bomb tossed!');

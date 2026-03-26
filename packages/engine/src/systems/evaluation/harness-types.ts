@@ -67,7 +67,11 @@ export interface RunResult {
     finalPlayerHpRatio: number;
     finalSpark: number;
     finalMana: number;
+    finalSparkState: 'rested' | 'base' | 'exhausted';
+    finalSparkRatio: number;
+    /** Deprecated compatibility field derived from Spark depletion/state. */
     finalExhaustion: number;
+    /** Deprecated compatibility field derived from Spark depletion/state. */
     peakExhaustion: number;
     restTurns: number;
     redlineActions: number;
@@ -116,6 +120,7 @@ export interface BatchSummary {
     avgFinalPlayerHpRatioWhenTimeout: number;
     avgFinalSpark: number;
     avgFinalMana: number;
+    avgFinalSparkRatio?: number;
     avgFinalExhaustion: number;
     avgPeakExhaustion: number;
     avgRestTurns: number;

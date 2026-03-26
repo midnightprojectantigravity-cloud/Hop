@@ -34,4 +34,21 @@ describe('entity status overlays', () => {
     expect(html).toContain('stun-icon');
     expect(html).toContain('<title>Stunned</title>');
   });
+
+  it('does not render RST or RED badges under units', () => {
+    const html = renderToStaticMarkup(
+      <svg>
+        <EntityStatusOverlays
+          stunned={false}
+          blinded={false}
+          showFacing={false}
+          borderColor="#fff"
+        />
+      </svg>
+    );
+
+    expect(html).not.toContain('RST');
+    expect(html).not.toContain('RED');
+    expect(html).not.toContain('ires-exhausted-badge');
+  });
 });

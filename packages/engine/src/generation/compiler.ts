@@ -4,6 +4,7 @@ import { FLOOR_THEMES, GRID_HEIGHT, GRID_WIDTH } from '../constants';
 import { createHex, getGridForShape, getMapRowBoundsForColumn, isTileInMapShape, pointToKey } from '../hex';
 import { isSpecialTile } from '../helpers';
 import { BASE_TILES } from '../systems/tiles/tile-registry';
+import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { createRng, stableIdFromSeed } from '../systems/rng';
 import { getEnemyCatalogEntry, getEnemyCatalogSkillLoadout, getFloorSpawnProfile } from '../data/enemies';
 import { ensureTacticalDataBootstrapped } from '../systems/tactical-data-bootstrap';
@@ -118,6 +119,7 @@ interface CompilerSessionRuntimeState extends CompilerSessionState {
     directorEntropyKey?: string;
     occupied?: Set<string>;
     realizedTiles?: Map<string, Tile>;
+    reservedKeys?: Set<string>;
     spawnPositions?: Point[];
     rooms?: Room[];
     authoredEnemySeeds?: Array<Point & { subtype: string }>;
@@ -184,6 +186,73 @@ const createTile = (baseId: 'STONE' | 'WALL' | 'LAVA' | 'VOID', position: Point)
     traits: new Set(BASE_TILES[baseId].defaultTraits),
     effects: []
 });
+
+const createGenerationTileState = (
+    tiles: Map<string, Tile>,
+    map: { width: number; height: number; mapShape: MapShape }
+): GameState => ({
+    tiles,
+    gridWidth: map.width,
+    gridHeight: map.height,
+    mapShape: map.mapShape
+} as GameState);
+
+const isSpawnTraversalTile = (state: GameState, point: Point): boolean => {
+    const tile = UnifiedTileService.getTileAt(state, point);
+    if (tile.baseId === 'VOID') return false;
+    return UnifiedTileService.isPassable(state, point);
+};
+
+const collectReachableSpawnKeys = (
+    arena: BaseArena,
+    tiles: Map<string, Tile>,
+    map: { width: number; height: number; mapShape: MapShape }
+): Set<string> => {
+    const state = createGenerationTileState(tiles, map);
+    const reachable = new Set<string>();
+    const queue = [arena.playerSpawn];
+
+    while (queue.length > 0) {
+        const point = queue.shift()!;
+        const key = pointToKey(point);
+        if (reachable.has(key) || !isSpawnTraversalTile(state, point)) continue;
+        reachable.add(key);
+        for (const neighborKey of walkableNeighborKeys(point)) {
+            const [q, r] = neighborKey.split(',').map(Number);
+            queue.push(createHex(q, r));
+        }
+    }
+
+    return reachable;
+};
+
+const resolveArenaSpawnPositions = (
+    arena: BaseArena,
+    tiles: Map<string, Tile>,
+    map: { width: number; height: number; mapShape: MapShape },
+    reservedKeys: ReadonlySet<string>
+): { spawnPositions: Point[]; reachableKeys: Set<string> } => {
+    const reachableKeys = collectReachableSpawnKeys(arena, tiles, map);
+    const specials = {
+        playerStart: arena.playerSpawn,
+        stairsPosition: arena.stairsPosition,
+        shrinePosition: arena.shrinePosition
+    };
+    const spawnPositions = arena.allHexes.filter(point =>
+        reachableKeys.has(pointToKey(point))
+        && !isSpecialTile(point, specials)
+        && !reservedKeys.has(pointToKey(point))
+        && hexDistanceInt(point, arena.playerSpawn) >= 3
+    ).sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)));
+
+    return { spawnPositions, reachableKeys };
+};
+
+const filterAuthoredEnemySeeds = (
+    seeds: Array<Point & { subtype: string }>,
+    reachableKeys: ReadonlySet<string>
+): Array<Point & { subtype: string }> =>
+    seeds.filter(seed => reachableKeys.has(pointToKey(seed)));
 
 const getFloorTheme = (floor: number): string => FLOOR_THEMES[floor] || 'inferno';
 
@@ -979,6 +1048,7 @@ const realizeSceneEvidence = (
 
 const realizeArenaArtifact = (
     arena: BaseArena,
+    map: { width: number; height: number; mapShape: MapShape },
     floor: number,
     _seed: string,
     modulePlan: ModulePlan,
@@ -1016,20 +1086,7 @@ const realizeArenaArtifact = (
         tileMap.set(pointToKey(point), createTile(stamp.baseId, point));
     }
 
-    const specials = {
-        playerStart: arena.playerSpawn,
-        stairsPosition: arena.stairsPosition,
-        shrinePosition: arena.shrinePosition
-    };
-    const spawnPositions = arena.allHexes.filter(point => {
-        const tile = tileMap.get(pointToKey(point));
-        if (!tile) return false;
-        const isBlocked = tile.traits.has('BLOCKS_MOVEMENT') || tile.traits.has('HAZARDOUS');
-        return !isBlocked
-            && !isSpecialTile(point, specials)
-            && !reservedKeys.has(pointToKey(point))
-            && hexDistanceInt(point, arena.playerSpawn) >= 3;
-    }).sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)));
+    const { spawnPositions } = resolveArenaSpawnPositions(arena, tileMap, map, reservedKeys);
 
     const rooms: Room[] = [{
         id: 'arena',
@@ -3050,9 +3107,10 @@ const runCompilerPass = (
                 claims: registerSpatialClaims(state.modulePlan)
             };
         case 'realizeArenaArtifact':
-            if (!state.arena || !state.modulePlan) return state;
+            if (!state.arena || !state.modulePlan || !state.resolvedMap) return state;
             const realized = realizeArenaArtifact(
                 state.arena,
+                state.resolvedMap,
                 state.input.floor,
                 state.input.seed,
                 state.modulePlan,
@@ -3061,6 +3119,7 @@ const runCompilerPass = (
             return {
                 ...state,
                 realizedTiles: realized.tiles,
+                reservedKeys: realized.reservedKeys,
                 spawnPositions: realized.spawnPositions,
                 rooms: realized.rooms,
                 authoredEnemySeeds: realized.authoredEnemySeeds
@@ -3128,7 +3187,7 @@ const runCompilerPass = (
                 pathDiagnosticsValue: visualPath.diagnostics
             } as CompilerSessionRuntimeState;
         case 'applyEnvironmentalPressure':
-            if (!state.arena || !state.realizedTiles || !state.pathNetworkValue || !state.intent) return state;
+            if (!state.arena || !state.realizedTiles || !state.pathNetworkValue || !state.intent || !state.resolvedMap) return state;
             const pressured = applyEnvironmentalPressure(
                 state.arena,
                 state.realizedTiles,
@@ -3138,9 +3197,16 @@ const runCompilerPass = (
                 state.authoredFloor,
                 state.claims || []
             );
+            const pressuredSpawnTopology = resolveArenaSpawnPositions(
+                state.arena,
+                pressured.tiles,
+                state.resolvedMap,
+                state.reservedKeys || new Set<string>()
+            );
             return {
                 ...state,
                 realizedTiles: pressured.tiles,
+                spawnPositions: pressuredSpawnTopology.spawnPositions,
                 pathNetworkValue: pressured.pathNetwork,
                 pathDiagnosticsValue: pressured.diagnostics
             } as CompilerSessionRuntimeState;
@@ -3196,11 +3262,16 @@ const runCompilerPass = (
                 currentFloorSummary: floorSummary,
                 artifactDigest: state.artifactDigest
             };
+            const finalReachableSpawnKeys = collectReachableSpawnKeys(
+                state.arena,
+                state.realizedTiles,
+                state.resolvedMap
+            );
             const generatedEnemies = generateFloorEnemiesInternal(
                 state.input.floor,
                 state.spawnPositions,
                 state.input.seed,
-                state.authoredEnemySeeds
+                filterAuthoredEnemySeeds(state.authoredEnemySeeds || [], finalReachableSpawnKeys)
             );
             const enemySpawns = generatedEnemies
                 .map(enemy => ({
@@ -3463,8 +3534,9 @@ export const compileStandaloneFloor = (
     }
 
     const claims = registerSpatialClaims(modulePlan);
-    const { tiles: realizedTiles, spawnPositions, rooms, authoredEnemySeeds } = realizeArenaArtifact(
+    const { tiles: realizedTiles, rooms, reservedKeys, authoredEnemySeeds } = realizeArenaArtifact(
         arena,
+        resolvedMap,
         floor,
         seed,
         modulePlan,
@@ -3504,6 +3576,8 @@ export const compileStandaloneFloor = (
     const pathNetwork = pressured.pathNetwork;
     const pathDiagnostics = pressured.diagnostics;
     const pressuredTiles = pressured.tiles;
+    const finalSpawnTopology = resolveArenaSpawnPositions(arena, pressuredTiles, resolvedMap, reservedKeys);
+    const spawnPositions = finalSpawnTopology.spawnPositions;
     const verificationReport = verifyArenaArtifact(
         arena,
         pressuredTiles,
@@ -3544,7 +3618,12 @@ export const compileStandaloneFloor = (
         artifactDigest
     };
 
-    const generatedEnemies = generateFloorEnemiesInternal(floor, spawnPositions, seed, authoredEnemySeeds);
+    const generatedEnemies = generateFloorEnemiesInternal(
+        floor,
+        spawnPositions,
+        seed,
+        filterAuthoredEnemySeeds(authoredEnemySeeds, finalSpawnTopology.reachableKeys)
+    );
     const enemySpawns = generatedEnemies
         .map(enemy => ({
             id: enemy.id,

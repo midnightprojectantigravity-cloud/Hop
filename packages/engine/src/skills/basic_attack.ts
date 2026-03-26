@@ -74,11 +74,6 @@ export const BASIC_ATTACK: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
-        if (targetActor.subtype === 'bomb') {
-            messages.push('Cannot attack a bomb!');
-            return { effects, messages, consumesTurn: false };
-        }
-
         // Calculate damage through the centralized combat calculator.
         let baseDamage = 1;
         if (activeUpgrades.includes('POWER_STRIKE')) baseDamage += 2;

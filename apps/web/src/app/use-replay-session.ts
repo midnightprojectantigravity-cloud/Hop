@@ -3,11 +3,16 @@ import type { Action } from '@hop/engine';
 import { useReplayController } from './use-replay-controller';
 
 export const useReplaySession = ({
-  dispatchReplayAction
+  dispatchReplayAction,
+  isReplayStepBlocked
 }: {
   dispatchReplayAction: (action: Action, source: string) => void;
+  isReplayStepBlocked: () => boolean;
 }) => {
-  const replay = useReplayController({ dispatchWithTrace: dispatchReplayAction });
+  const replay = useReplayController({
+    dispatchWithTrace: dispatchReplayAction,
+    isReplayStepBlocked
+  });
 
   const replayMarkerIndices = useMemo(() => {
     if (replay.replayActions.length === 0) return [0];

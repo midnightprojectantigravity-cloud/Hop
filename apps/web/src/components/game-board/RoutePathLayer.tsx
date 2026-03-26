@@ -1,14 +1,11 @@
 import React, { useMemo } from 'react';
 import {
-  UnifiedTileService,
-  getNeighbors,
   hexToPixel,
   pointToKey,
   TILE_SIZE,
   type GameState,
   type PathEdge,
-  type PathSegment,
-  type Point
+  type PathSegment
 } from '@hop/engine';
 
 const parseKeyToPoint = (key: string) => {
@@ -32,131 +29,9 @@ const MIN_MEANINGFUL_ALT_TILES = 4;
 const buildEdgeSignature = (left: string, right: string): string =>
   left < right ? `${left}|${right}` : `${right}|${left}`;
 
-const buildEdgesFromTileKeys = (tileKeys: string[]): PathEdge[] => {
-  const edges: PathEdge[] = [];
-  for (let index = 1; index < tileKeys.length; index += 1) {
-    const previous = tileKeys[index - 1];
-    const current = tileKeys[index];
-    if (!previous || !current || previous === current) continue;
-    const [fromKey, toKey] = previous < current ? [previous, current] : [current, previous];
-    edges.push({ fromKey, toKey });
-  }
-  return edges;
-};
-
-const isDisplayHazard = (gameState: GameState, point: Point): boolean => {
-  const traits = UnifiedTileService.getTraitsAt(gameState, point);
-  return traits.has('HAZARDOUS') || traits.has('LAVA') || traits.has('FIRE') || traits.has('VOID');
-};
-
-const isDisplayWalkable = (gameState: GameState, point: Point): boolean =>
-  UnifiedTileService.isWalkable(gameState, point);
-
 type DisplaySegment = Pick<PathSegment, 'id' | 'kind' | 'routeMembership' | 'fromLandmarkId' | 'toLandmarkId'> & {
   tileKeys: string[];
   edges: PathEdge[];
-};
-
-const resolveDisplaySegmentPath = (
-  gameState: GameState,
-  sourceKey: string,
-  targetKey: string,
-  preferredKeys: ReadonlySet<string>,
-  disfavoredKeys: ReadonlySet<string>
-): string[] | null => {
-  type QueueEntry = {
-    key: string;
-    cost: number;
-    steps: number;
-  };
-
-  const search = (avoidHazards: boolean): string[] | null => {
-    const frontier: QueueEntry[] = [{ key: sourceKey, cost: 0, steps: 0 }];
-    const costByKey = new Map<string, number>([[sourceKey, 0]]);
-    const predecessorByKey = new Map<string, string | null>([[sourceKey, null]]);
-    const stepByKey = new Map<string, number>([[sourceKey, 0]]);
-
-    while (frontier.length > 0) {
-      let bestIndex = 0;
-      for (let index = 1; index < frontier.length; index += 1) {
-        const candidate = frontier[index]!;
-        const currentBest = frontier[bestIndex]!;
-        if (
-          candidate.cost < currentBest.cost
-          || (candidate.cost === currentBest.cost && candidate.steps < currentBest.steps)
-          || (
-            candidate.cost === currentBest.cost
-            && candidate.steps === currentBest.steps
-            && candidate.key.localeCompare(currentBest.key) < 0
-          )
-        ) {
-          bestIndex = index;
-        }
-      }
-
-      const current = frontier.splice(bestIndex, 1)[0]!;
-      const bestKnownCost = costByKey.get(current.key);
-      const bestKnownSteps = stepByKey.get(current.key);
-      if (bestKnownCost !== current.cost || bestKnownSteps !== current.steps) continue;
-      if (current.key === targetKey) break;
-
-      const currentPoint = parseKeyToPoint(current.key);
-      const neighbors = getNeighbors(currentPoint)
-        .map(pointToKey)
-        .sort((left, right) => left.localeCompare(right));
-
-      for (const neighborKey of neighbors) {
-        const neighborPoint = parseKeyToPoint(neighborKey);
-        if (!isDisplayWalkable(gameState, neighborPoint)) continue;
-
-        const isHazard = isDisplayHazard(gameState, neighborPoint);
-        if (avoidHazards && isHazard && neighborKey !== targetKey) continue;
-
-        let edgeCost = 10;
-        if (isHazard && neighborKey !== targetKey) edgeCost += 40;
-        if (!preferredKeys.has(neighborKey)) edgeCost += 3;
-        if (disfavoredKeys.has(neighborKey) && neighborKey !== targetKey) edgeCost += 9;
-
-        const nearbyBlockers = getNeighbors(neighborPoint).reduce((count, adjacent) => {
-          if (!isDisplayWalkable(gameState, adjacent)) return count + 1;
-          if (isDisplayHazard(gameState, adjacent)) return count + 1;
-          return count;
-        }, 0);
-        edgeCost += nearbyBlockers;
-
-        const nextCost = current.cost + edgeCost;
-        const nextSteps = current.steps + 1;
-        const knownCost = costByKey.get(neighborKey);
-        const knownSteps = stepByKey.get(neighborKey);
-        if (
-          knownCost !== undefined
-          && (
-            nextCost > knownCost
-            || (nextCost === knownCost && knownSteps !== undefined && nextSteps >= knownSteps)
-          )
-        ) {
-          continue;
-        }
-
-        costByKey.set(neighborKey, nextCost);
-        stepByKey.set(neighborKey, nextSteps);
-        predecessorByKey.set(neighborKey, current.key);
-        frontier.push({ key: neighborKey, cost: nextCost, steps: nextSteps });
-      }
-    }
-
-    if (!costByKey.has(targetKey)) return null;
-
-    const reversed: string[] = [];
-    let currentKey: string | null | undefined = targetKey;
-    while (currentKey) {
-      reversed.push(currentKey);
-      currentKey = predecessorByKey.get(currentKey);
-    }
-    return reversed.reverse();
-  };
-
-  return search(true) || search(false);
 };
 
 interface RoutePathLayerProps {
@@ -172,54 +47,17 @@ export const RoutePathLayer: React.FC<RoutePathLayerProps> = ({ gameState }) => 
   const showDebugTactical = Boolean(gameState.worldgenDebug);
   const displayNetwork = useMemo(() => {
     const displayedSegments: DisplaySegment[] = [];
-    const landmarksById = new Map(pathNetwork.landmarks.map((landmark) => [landmark.id, landmark]));
-    const primarySupportKeys = new Set(
-      pathNetwork.segments
-        .filter((segment) => segment.kind !== 'spur' && segment.routeMembership === 'primary')
-        .flatMap((segment) => segment.tileKeys)
-    );
-    const alternateSupportKeys = new Set(
-      pathNetwork.segments
-        .filter((segment) => segment.kind !== 'spur' && segment.routeMembership === 'alternate')
-        .flatMap((segment) => segment.tileKeys)
-    );
 
     for (const segment of pathNetwork.segments) {
       if (segment.kind === 'spur') continue;
-      const sourceLandmark = landmarksById.get(segment.fromLandmarkId);
-      const targetLandmark = landmarksById.get(segment.toLandmarkId);
-      const sourceKey = sourceLandmark ? pointToKey(sourceLandmark.point) : segment.tileKeys[0];
-      const targetKey = targetLandmark ? pointToKey(targetLandmark.point) : segment.tileKeys[segment.tileKeys.length - 1];
-      if (!sourceKey || !targetKey) continue;
-
-      const preferredKeys = new Set(segment.tileKeys);
-      const opposingKeys = segment.routeMembership === 'alternate'
-        ? primarySupportKeys
-        : alternateSupportKeys;
-      const disfavoredKeys = new Set(
-        Array.from(opposingKeys).filter((key) =>
-          key !== sourceKey
-          && key !== targetKey
-          && !preferredKeys.has(key)
-        )
-      );
-
-      const reroutedTileKeys = resolveDisplaySegmentPath(
-        gameState,
-        sourceKey,
-        targetKey,
-        preferredKeys,
-        disfavoredKeys
-      ) || segment.tileKeys;
-
       displayedSegments.push({
         id: segment.id,
         kind: segment.kind,
         routeMembership: segment.routeMembership,
         fromLandmarkId: segment.fromLandmarkId,
         toLandmarkId: segment.toLandmarkId,
-        tileKeys: reroutedTileKeys,
-        edges: buildEdgesFromTileKeys(reroutedTileKeys)
+        tileKeys: [...segment.tileKeys],
+        edges: [...segment.edges]
       });
     }
 
@@ -258,7 +96,7 @@ export const RoutePathLayer: React.FC<RoutePathLayerProps> = ({ gameState }) => 
         left.fromKey.localeCompare(right.fromKey) || left.toKey.localeCompare(right.toKey)
       )
     };
-  }, [gameState, pathNetwork]);
+  }, [pathNetwork]);
   const displayTileKeySet = useMemo(() => new Set(displayNetwork.tileKeys), [displayNetwork.tileKeys]);
   const exploredVisualTiles = displayNetwork.tileKeys.filter(key => exploredKeys.has(key) && !visibleKeys.has(key));
   const visibleVisualTiles = displayNetwork.tileKeys.filter(key => visibleKeys.has(key));
@@ -296,8 +134,8 @@ export const RoutePathLayer: React.FC<RoutePathLayerProps> = ({ gameState }) => 
               y1={from.y}
               x2={to.x}
               y2={to.y}
-              stroke="rgba(219, 122, 63, 0.34)"
-              strokeWidth={Math.max(5, TILE_SIZE * 0.16)}
+              stroke="rgba(156, 123, 93, 0.18)"
+              strokeWidth={Math.max(3.5, TILE_SIZE * 0.11)}
               strokeLinecap="round"
             />
           );
@@ -316,8 +154,8 @@ export const RoutePathLayer: React.FC<RoutePathLayerProps> = ({ gameState }) => 
               y1={from.y}
               x2={to.x}
               y2={to.y}
-              stroke="rgba(245, 181, 102, 0.68)"
-              strokeWidth={Math.max(6, TILE_SIZE * 0.2)}
+              stroke="rgba(212, 187, 144, 0.32)"
+              strokeWidth={Math.max(4, TILE_SIZE * 0.13)}
               strokeLinecap="round"
             />
           );
@@ -333,9 +171,9 @@ export const RoutePathLayer: React.FC<RoutePathLayerProps> = ({ gameState }) => 
               data-route-key={tileKey}
               points={TILE_WASH_POINTS}
               transform={`translate(${x},${y})`}
-              fill="rgba(184, 117, 79, 0.18)"
-              stroke="rgba(239, 183, 127, 0.1)"
-              strokeWidth="1"
+              fill="rgba(128, 104, 82, 0.07)"
+              stroke="rgba(191, 164, 132, 0.07)"
+              strokeWidth="0.8"
             />
           );
         })}
@@ -350,9 +188,9 @@ export const RoutePathLayer: React.FC<RoutePathLayerProps> = ({ gameState }) => 
               data-route-key={tileKey}
               points={TILE_WASH_POINTS}
               transform={`translate(${x},${y})`}
-              fill="rgba(238, 171, 94, 0.28)"
-              stroke="rgba(255, 221, 169, 0.28)"
-              strokeWidth="1.2"
+              fill="rgba(187, 160, 122, 0.12)"
+              stroke="rgba(231, 214, 188, 0.14)"
+              strokeWidth="0.95"
             />
           );
         })}
@@ -368,9 +206,9 @@ export const RoutePathLayer: React.FC<RoutePathLayerProps> = ({ gameState }) => 
               points={LANDMARK_RING_POINTS}
               transform={`translate(${x},${y})`}
               fill="none"
-              stroke="rgba(255, 224, 178, 0.72)"
-              strokeWidth="1.4"
-              strokeDasharray="5 4"
+              stroke="rgba(226, 207, 177, 0.34)"
+              strokeWidth="1"
+              strokeDasharray="4 5"
             />
           );
         })}

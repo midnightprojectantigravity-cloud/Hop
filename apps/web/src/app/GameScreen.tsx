@@ -360,19 +360,19 @@ export const GameScreen = ({ screen }: GameScreenProps) => {
   const mobileTopRailStyle = React.useMemo(
     () => ({
       ...hudCssVars,
-      paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)',
-      paddingLeft: 'max(env(safe-area-inset-left, 0px), 0px)',
-      paddingRight: 'max(env(safe-area-inset-right, 0px), 0px)'
+      paddingTop: 'var(--safe-area-top)',
+      paddingLeft: 'var(--safe-area-left)',
+      paddingRight: 'var(--safe-area-right)'
     } as React.CSSProperties),
     [hudCssVars]
   );
   const bottomDockStyle = React.useMemo(
     () => ({
       ...hudCssVars,
-      height: `calc(${bottomDockHeightPx}px + max(env(safe-area-inset-bottom, 0px), 0px))`,
-      paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0px)',
-      paddingLeft: 'max(env(safe-area-inset-left, 0px), 0px)',
-      paddingRight: 'max(env(safe-area-inset-right, 0px), 0px)'
+      height: `calc(${bottomDockHeightPx}px + var(--safe-zone-bottom-comfort))`,
+      paddingBottom: 'var(--safe-zone-bottom-comfort)',
+      paddingLeft: 'var(--safe-area-left)',
+      paddingRight: 'var(--safe-area-right)'
     } as React.CSSProperties),
     [bottomDockHeightPx, hudCssVars]
   );
@@ -849,6 +849,7 @@ export const GameScreen = ({ screen }: GameScreenProps) => {
       </main>
 
       <aside
+        data-mobile-bottom-dock
         className="surface-panel-material torn-edge-shell lg:hidden shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-panel)] z-20 overflow-y-auto"
         style={bottomDockStyle}
       >

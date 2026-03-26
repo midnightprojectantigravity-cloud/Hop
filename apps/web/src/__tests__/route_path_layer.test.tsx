@@ -105,7 +105,7 @@ describe('RoutePathLayer', () => {
     expect(debugHtml).toContain('data-route-landmark="hidden"');
   });
 
-  it('reroutes the displayed path around hazardous tiles when a safe lane exists', () => {
+  it('keeps rendering the generated route even if live tiles later become hazardous', () => {
     const state = generateInitialState(1, 'route-display-reroute');
     const entry = createHex(4, 4);
     const middle = createHex(5, 4);
@@ -195,9 +195,9 @@ describe('RoutePathLayer', () => {
       </svg>
     );
 
-    expect(html).not.toContain(`data-route-key="${pointToKey(middle)}"`);
-    expect(html).toContain(`data-route-key="${pointToKey(detourA)}"`);
-    expect(html).toContain(`data-route-key="${pointToKey(detourB)}"`);
+    expect(html).toContain(`data-route-key="${pointToKey(middle)}"`);
+    expect(html).not.toContain(`data-route-key="${pointToKey(detourA)}"`);
+    expect(html).not.toContain(`data-route-key="${pointToKey(detourB)}"`);
   });
 
   it('suppresses alternate lanes that barely diverge from the primary route', () => {

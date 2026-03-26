@@ -37,16 +37,17 @@ describe('ai resource signals', () => {
             spark: 25,
             mana: 10,
             exhaustion: 50,
+            currentState: 'base',
             actionCountThisTurn: 2
         }));
 
         expect(signals.sparkRatio).toBeCloseTo(0.25, 5);
         expect(signals.manaRatio).toBeCloseTo(0.25, 5);
-        expect(signals.exhaustionRatio).toBeCloseTo(0.5, 5);
+        expect(signals.exhaustionRatio).toBeCloseTo(0.75, 5);
         expect(signals.reservePressure).toBeCloseTo(0.75, 5);
-        expect(signals.fatiguePressure).toBeCloseTo(0.4, 5);
-        expect(signals.actionChainPressure).toBeCloseTo(0.5, 5);
-        expect(signals.recoveryPressure).toBeCloseTo(0.5375, 5);
+        expect(signals.fatiguePressure).toBeCloseTo(0.6375, 5);
+        expect(signals.actionChainPressure).toBeCloseTo(2 / 3, 5);
+        expect(signals.recoveryPressure).toBeCloseTo(0.67979, 5);
     });
 
     it('pins fatigue pressure to full when the actor is exhausted', () => {
@@ -63,6 +64,24 @@ describe('ai resource signals', () => {
         expect(signals.manaRatio).toBeCloseTo(0.875, 5);
         expect(signals.reservePressure).toBeCloseTo(0.2, 5);
         expect(signals.fatiguePressure).toBe(1);
-        expect(signals.recoveryPressure).toBeCloseTo(0.57, 5);
+        expect(signals.recoveryPressure).toBeCloseTo(0.62, 5);
+    });
+
+    it('treats the second action as higher pressure than the first', () => {
+        const firstActionDone = getAiResourceSignals(makeIres({
+            spark: 70,
+            mana: 40,
+            currentState: 'base',
+            actionCountThisTurn: 1
+        }));
+        const freshTurn = getAiResourceSignals(makeIres({
+            spark: 70,
+            mana: 40,
+            currentState: 'base',
+            actionCountThisTurn: 0
+        }));
+
+        expect(firstActionDone.actionChainPressure).toBeGreaterThan(freshTurn.actionChainPressure);
+        expect(firstActionDone.recoveryPressure).toBeGreaterThan(freshTurn.recoveryPressure);
     });
 });

@@ -6,6 +6,7 @@ export interface AtomicEffectContext {
     stepId?: string;
     attachmentVisited?: string[];
     stackReactions?: AtomicStackReactionHooks;
+    volatileBombVisited?: string[];
 }
 
 export type SimulationEventDraft = Omit<SimulationEvent, 'id' | 'turn'>;

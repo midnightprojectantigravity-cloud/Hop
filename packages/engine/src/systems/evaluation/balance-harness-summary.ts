@@ -179,6 +179,7 @@ export const summarizeBatch = (
         avgFinalPlayerHpRatioWhenTimeout: average(timeouts.map(r => r.finalPlayerHpRatio || 0)),
         avgFinalSpark: average(results.map(r => r.finalSpark || 0)),
         avgFinalMana: average(results.map(r => r.finalMana || 0)),
+        avgFinalSparkRatio: average(results.map(r => r.finalSparkRatio || 0)),
         avgFinalExhaustion: average(results.map(r => r.finalExhaustion || 0)),
         avgPeakExhaustion: average(results.map(r => r.peakExhaustion || 0)),
         avgRestTurns: average(results.map(r => r.restTurns || 0)),

@@ -1,4 +1,4 @@
-import type { SkillDefinition, SkillIntentProfile, SkillIntentTag } from '../types';
+import type { SkillAiTargetRule, SkillDefinition, SkillIntentProfile, SkillIntentTag } from '../types';
 import type { SkillID } from '../types/registry';
 
 type PartialProfile = Partial<Omit<SkillIntentProfile, 'id' | 'target' | 'estimates' | 'economy' | 'risk'>> & {
@@ -6,6 +6,17 @@ type PartialProfile = Partial<Omit<SkillIntentProfile, 'id' | 'target' | 'estima
     estimates?: Partial<SkillIntentProfile['estimates']>;
     economy?: Partial<SkillIntentProfile['economy']>;
     risk?: Partial<SkillIntentProfile['risk']>;
+    ai?: Partial<NonNullable<SkillIntentProfile['ai']>>;
+};
+
+const deriveAiRules = (tags: SkillIntentTag[], aoeRadius?: number): SkillAiTargetRule[] => {
+    const rules = new Set<SkillAiTargetRule>();
+    if (tags.includes('damage')) rules.add('direct_hit');
+    if ((aoeRadius || 0) > 0) rules.add('enemy_density');
+    if (tags.includes('control') || tags.includes('hazard')) rules.add('empty_tile_adjacent_to_enemy');
+    if (tags.includes('objective')) rules.add('objective_progress');
+    if (tags.includes('move')) rules.add('self_preservation');
+    return [...rules];
 };
 
 const hasTag = (tags: SkillIntentTag[], tag: SkillIntentTag): boolean => tags.includes(tag);
@@ -47,12 +58,22 @@ const inferTags = (def: SkillDefinition): SkillIntentTag[] => {
 };
 
 const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
-    BASIC_MOVE: { intentTags: ['move', 'objective', 'utility'], target: { pattern: 'single' }, estimates: { movement: 1 } },
+    BASIC_MOVE: {
+        intentTags: ['move', 'objective', 'utility'],
+        target: { pattern: 'single' },
+        estimates: { movement: 1 },
+        ai: {
+            targetRules: ['self_preservation', 'objective_progress']
+        }
+    },
     BASIC_ATTACK: {
         intentTags: ['damage'],
         target: { pattern: 'single' },
         estimates: { damage: 4 },
-        economy: { consumesTurn: true }
+        economy: { consumesTurn: true },
+        ai: {
+            targetRules: ['direct_hit']
+        }
     },
     AUTO_ATTACK: { intentTags: ['damage', 'utility'], target: { pattern: 'single' }, estimates: { damage: 2 } },
     DASH: {
@@ -102,7 +123,12 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         intentTags: ['damage'],
         target: { pattern: 'line' },
         estimates: { damage: 2 },
-        risk: { requireEnemyContact: true, noContactPenalty: 4, noProgressCastPenalty: 4 }
+        risk: { requireEnemyContact: true, noContactPenalty: 4, noProgressCastPenalty: 4 },
+        ai: {
+            desiredRange: [2, 4],
+            targetRules: ['direct_hit', 'self_preservation', 'escape_exposure'],
+            preferSafeAfterUse: true
+        }
     },
     FIREBALL: { intentTags: ['damage', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 5, control: 1 } },
     FIREWALL: { intentTags: ['hazard', 'control', 'damage'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { damage: 5, control: 3 } },
@@ -119,8 +145,32 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         economy: { consumesTurn: false },
         risk: { noProgressCastPenalty: 2 }
     },
-    BOMB_TOSS: { intentTags: ['damage', 'control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 6, control: 2 } },
-    TIME_BOMB: { intentTags: ['damage', 'hazard', 'utility'], target: { pattern: 'self' }, estimates: { damage: 6, control: 1 } },
+    BOMB_TOSS: {
+        intentTags: ['damage', 'control', 'hazard'],
+        target: { pattern: 'radius', aoeRadius: 1 },
+        estimates: { damage: 6, control: 2 },
+        ai: {
+            desiredRange: [2, 3],
+            targetRules: ['empty_tile_adjacent_to_enemy', 'empty_tile_on_route', 'avoid_self_blast'],
+            persistence: { turns: 2, radius: 1 },
+            stationarySummon: true
+        }
+    },
+    TIME_BOMB: {
+        intentTags: ['damage', 'hazard', 'utility'],
+        target: { pattern: 'self' },
+        estimates: { damage: 6, control: 1 },
+        economy: { consumesTurn: false },
+        ai: {
+            persistence: { turns: 2, radius: 1 }
+        }
+    },
+    VOLATILE_PAYLOAD: {
+        intentTags: ['hazard', 'utility'],
+        target: { pattern: 'self' },
+        estimates: { control: 1 },
+        economy: { consumesTurn: false }
+    },
     CORPSE_EXPLOSION: { intentTags: ['damage', 'control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 6, control: 1 } },
     RAISE_DEAD: { intentTags: ['summon', 'control', 'utility'], target: { pattern: 'single' }, estimates: { summon: 5 } },
     SOUL_SWAP: { intentTags: ['move', 'control', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2, control: 2 } },
@@ -254,7 +304,10 @@ const mergeProfile = (base: SkillIntentProfile, patch?: PartialProfile): SkillIn
         target: { ...base.target, ...(patch.target || {}) },
         estimates: { ...base.estimates, ...(patch.estimates || {}) },
         economy: { ...base.economy, ...(patch.economy || {}) },
-        risk: { ...base.risk, ...(patch.risk || {}) }
+        risk: { ...base.risk, ...(patch.risk || {}) },
+        ai: patch.ai || base.ai
+            ? { ...(base.ai || {}), ...(patch.ai || {}) }
+            : undefined
     };
 };
 
@@ -284,6 +337,9 @@ export const buildSkillIntentProfile = (def: SkillDefinition): SkillIntentProfil
         risk: {
             selfExposure: hasTag(inferredTags, 'move') ? 0.5 : 0,
             hazardAffinity: hasTag(inferredTags, 'hazard') ? 0.5 : 0
+        },
+        ai: {
+            targetRules: deriveAiRules(inferredTags)
         },
         complexity: 1
     };

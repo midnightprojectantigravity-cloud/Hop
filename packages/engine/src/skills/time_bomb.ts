@@ -1,5 +1,5 @@
 import type { AtomicEffect, GameState, Point, SkillDefinition } from '../types';
-import { getNeighbors } from '../hex';
+import { buildBombDetonationEffects } from '../systems/effects/bomb-runtime';
 
 /**
  * TIME_BOMB
@@ -24,38 +24,7 @@ export const TIME_BOMB: SkillDefinition = {
             return { effects: [], messages: [], consumesTurn: true };
         }
 
-        const center = attacker.position;
-        const blastTiles = [center, ...getNeighbors(center)];
-        const effects: AtomicEffect[] = blastTiles.map(pos => ({
-            type: 'Damage',
-            target: pos,
-            amount: 1,
-            reason: 'bomb_explosion',
-        }));
-
-        // Remove the bomb via normal damage resolution so death hooks stay consistent.
-        effects.push({
-            type: 'Damage',
-            target: attacker.id,
-            amount: 999,
-            reason: 'bomb_explosion',
-        });
-        effects.push({
-            type: 'Juice',
-            effect: 'explosion_ring',
-            target: center,
-            intensity: 'high',
-            metadata: {
-                signature: 'ATK.BLAST.FIRE.TIME_BOMB',
-                family: 'attack',
-                primitive: 'blast',
-                phase: 'impact',
-                element: 'fire',
-                variant: 'time_bomb',
-                targetRef: { kind: 'target_hex' },
-                skillId: 'TIME_BOMB'
-            }
-        });
+        const effects: AtomicEffect[] = buildBombDetonationEffects(attacker);
 
         return {
             effects,

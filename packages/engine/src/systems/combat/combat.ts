@@ -16,8 +16,8 @@ import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../visual/juice-manifest';
 import { TileResolver } from '../tiles/tile-effects';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
 import { applyDamage } from '../entities/actor';
-import { createEntity } from '../entities/entity-factory';
 import { addToQueue } from '../initiative';
+import { createBombActor } from '../effects/bomb-runtime';
 
 export const resolveTelegraphedAttacks = (
   state: GameState,
@@ -178,24 +178,7 @@ export const resolveSingleEnemyTurn = (
     if (!occupied) {
       messages.push(`${enemy.subtype} placed a bomb.`);
       const bombId = `bomb_${enemy.id}_${state.turnNumber}`;
-      const bomb: Entity = createEntity({
-        id: bombId,
-        type: 'enemy',
-        subtype: 'bomb',
-        factionId: 'enemy',
-        position: enemy.intentPosition,
-        speed: 10,
-        skills: ['TIME_BOMB'],
-        weightClass: 'Standard',
-      });
-      bomb.statusEffects = [
-        {
-          id: 'TIME_BOMB',
-          type: 'time_bomb',
-          duration: 2,
-          tickWindow: 'END_OF_TURN'
-        }
-      ];
+      const bomb: Entity = createBombActor(bombId, enemy.intentPosition, 'enemy');
       curState = {
         ...curState,
         enemies: [...curState.enemies, bomb],

@@ -14,9 +14,43 @@ const parseHexKey = (key: string) => {
     return { q, r, s: -q - r };
 };
 
+const neighborKeys = (key: string): string[] => {
+    const point = parseHexKey(key);
+    return [
+        { q: point.q + 1, r: point.r, s: point.s - 1 },
+        { q: point.q + 1, r: point.r - 1, s: point.s },
+        { q: point.q, r: point.r - 1, s: point.s + 1 },
+        { q: point.q - 1, r: point.r, s: point.s + 1 },
+        { q: point.q - 1, r: point.r + 1, s: point.s },
+        { q: point.q, r: point.r + 1, s: point.s - 1 }
+    ].map(pointToKey);
+};
+
 const isWalkableTileKey = (tiles: Map<string, { baseId: string; traits: Set<string> }>, key: string): boolean => {
     const tile = tiles.get(key);
     return Boolean(tile && tile.baseId !== 'VOID' && !tile.traits.has('BLOCKS_MOVEMENT'));
+};
+
+const isSpawnTraversalTileKey = (tiles: Map<string, { baseId: string; traits: Set<string> }>, key: string): boolean => {
+    const tile = tiles.get(key);
+    return Boolean(tile && tile.baseId !== 'VOID' && !tile.traits.has('BLOCKS_MOVEMENT') && !tile.traits.has('HAZARDOUS'));
+};
+
+const collectReachableSpawnKeys = (
+    tiles: Map<string, { baseId: string; traits: Set<string> }>,
+    startKey: string
+): Set<string> => {
+    const visited = new Set<string>();
+    const queue = [startKey];
+
+    while (queue.length > 0) {
+        const key = queue.shift()!;
+        if (visited.has(key) || !isSpawnTraversalTileKey(tiles, key)) continue;
+        visited.add(key);
+        queue.push(...neighborKeys(key));
+    }
+
+    return visited;
 };
 
 describe('generated tactical paths', () => {
@@ -65,6 +99,28 @@ describe('generated tactical paths', () => {
                     )
                 ).toBe(true);
             }
+        });
+    });
+
+    it.each(curatedFloors)('keeps spawn tiles and spawned enemies on reachable safe tiles for floor $floor', ({ floor, runSeed, floorSeed }) => {
+        const result = compileStandaloneFloor(floor, floorSeed, {
+            generationState: createGenerationState(runSeed)
+        });
+        const tiles = result.dungeon.tiles as Map<string, { baseId: string; traits: Set<string> }>;
+        const reachable = collectReachableSpawnKeys(tiles, pointToKey(result.dungeon.playerSpawn));
+
+        expect(result.verificationReport.code).toBe('OK');
+
+        result.dungeon.spawnPositions.forEach((position) => {
+            const key = pointToKey(position);
+            expect(isSpawnTraversalTileKey(tiles, key)).toBe(true);
+            expect(reachable.has(key)).toBe(true);
+        });
+
+        result.enemies.forEach((enemy) => {
+            const key = pointToKey(enemy.position);
+            expect(isSpawnTraversalTileKey(tiles, key)).toBe(true);
+            expect(reachable.has(key)).toBe(true);
         });
     });
 });

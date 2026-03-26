@@ -66,6 +66,7 @@ export type SkillID =
     | 'FIREWALL'
     | 'BOMB_TOSS'
     | 'TIME_BOMB'
+    | 'VOLATILE_PAYLOAD'
     | 'MULTI_SHOOT'
     | 'RAISE_DEAD'
     | 'SET_TRAP'

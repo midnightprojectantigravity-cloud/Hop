@@ -131,14 +131,13 @@ export class WildStrategy implements IStrategyProvider {
         }
         if (actor.subtype === 'bomb') {
             return {
-                type: 'USE_SKILL',
+                type: 'WAIT',
                 actorId: actor.id,
-                skillId: 'TIME_BOMB',
-                targetHex: actor.position,
+                skillId: 'WAIT_SKILL',
                 priority: 10,
                 metadata: {
                     expectedValue: 0,
-                    reasoningCode: 'BOMB_FUSE_TICK',
+                    reasoningCode: 'BOMB_WAIT_FUSE',
                     isGhost: false,
                     rngConsumption: 0
                 }

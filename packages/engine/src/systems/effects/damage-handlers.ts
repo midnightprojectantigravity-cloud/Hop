@@ -3,6 +3,7 @@ import type { Actor, Point } from '../../types';
 import { applyDamage, applyHeal } from '../entities/actor';
 import { appendTaggedMessage } from '../engine-messages';
 import { buildDamageBreakReleaseEffects } from '../movement/attachment-system';
+import { buildBombDetonationEffects, hasVolatilePayload, isBombActor } from './bomb-runtime';
 import type { AtomicEffectHandlerMap } from './types';
 
 const HAZARD_DAMAGE_REASONS = ['lava_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage'] as const;
@@ -12,6 +13,21 @@ const hasReason = (reason: string | undefined, list: readonly string[]) => !!rea
 
 const markedPredatorBonus = (victim?: Actor): number =>
     victim?.statusEffects?.some(s => s.type === 'marked_predator') ? 1 : 0;
+
+const triggerVolatileBombDetonation = (
+    state: Parameters<NonNullable<AtomicEffectHandlerMap['Damage']>>[0],
+    bomb: Actor,
+    context: Parameters<NonNullable<AtomicEffectHandlerMap['Damage']>>[2],
+    api: Parameters<NonNullable<AtomicEffectHandlerMap['Damage']>>[3]
+) => api.applyEffects(
+    state,
+    buildBombDetonationEffects(bomb),
+    {
+        ...context,
+        sourceId: context.sourceId || bomb.id,
+        volatileBombVisited: [...(context.volatileBombVisited || []), bomb.id]
+    }
+);
 
 export const damageEffectHandlers: AtomicEffectHandlerMap = {
     Damage: (state, effect, context, api) => {
@@ -133,6 +149,15 @@ export const damageEffectHandlers: AtomicEffectHandlerMap = {
                 const damageClass = effect.scoreEvent?.damageClass || 'physical';
                 const traitScaled = api.scaleCombatProfileDamage(nextState, effect.amount, context.sourceId, victim, damageClass, effect.reason);
                 const scaledAmount = traitScaled.amount + markedPredatorBonus(victim);
+                if (
+                    victim
+                    && isBombActor(victim)
+                    && hasVolatilePayload(victim)
+                    && scaledAmount > 0
+                    && !(context.volatileBombVisited || []).includes(victim.id)
+                ) {
+                    return triggerVolatileBombDetonation(nextState, victim, context, api);
+                }
                 simulationTargetId = targetActorId || victim?.id;
                 simulationPos = victimPos || victim?.position;
                 simulationAmount = scaledAmount;
@@ -212,6 +237,15 @@ export const damageEffectHandlers: AtomicEffectHandlerMap = {
             const damageClass = effect.scoreEvent?.damageClass || 'physical';
             const traitScaled = api.scaleCombatProfileDamage(nextState, effect.amount, context.sourceId, targetAtPos, damageClass, effect.reason);
             const scaledAmount = traitScaled.amount;
+            if (
+                targetAtPos
+                && isBombActor(targetAtPos)
+                && hasVolatilePayload(targetAtPos)
+                && (scaledAmount + markedPredatorBonus(targetAtPos)) > 0
+                && !(context.volatileBombVisited || []).includes(targetAtPos.id)
+            ) {
+                return triggerVolatileBombDetonation(nextState, targetAtPos, context, api);
+            }
             simulationTargetId = targetAtPos?.id;
             simulationPos = targetPos;
             simulationAmount = scaledAmount + markedPredatorBonus(targetAtPos || undefined);

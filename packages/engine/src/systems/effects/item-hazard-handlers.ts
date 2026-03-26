@@ -1,8 +1,8 @@
 import { hexEquals } from '../../hex';
 import type { Actor } from '../../types';
 import { applyDamage } from '../entities/actor';
-import { createEntity } from '../entities/entity-factory';
 import { stableIdFromSeed } from '../rng';
+import { createBombActor } from './bomb-runtime';
 import type { AtomicEffectHandlerMap } from './types';
 
 export const itemHazardEffectHandlers: AtomicEffectHandlerMap = {
@@ -59,24 +59,7 @@ export const itemHazardEffectHandlers: AtomicEffectHandlerMap = {
                 + (nextState.actionLog?.length ?? 0)
                 + nextState.enemies.length;
             const bombId = `bomb-${stableIdFromSeed(seed, counter, 8, 'bomb')}`;
-            const bomb: Actor = createEntity({
-                id: bombId,
-                type: 'enemy',
-                subtype: 'bomb',
-                factionId: 'enemy',
-                position: effect.position,
-                speed: 10,
-                skills: ['TIME_BOMB'],
-                weightClass: 'Standard',
-            });
-            bomb.statusEffects = [
-                {
-                    id: 'TIME_BOMB',
-                    type: 'time_bomb',
-                    duration: 2,
-                    tickWindow: 'END_OF_TURN',
-                },
-            ];
+            const bomb: Actor = createBombActor(bombId, effect.position, 'enemy');
             nextState.enemies = [...nextState.enemies, bomb];
             return nextState;
         }

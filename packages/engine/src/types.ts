@@ -597,6 +597,24 @@ export type SkillIntentTag =
     | 'economy'
     | 'utility';
 
+export type SkillAiTargetRule =
+    | 'direct_hit'
+    | 'enemy_density'
+    | 'empty_tile_adjacent_to_enemy'
+    | 'empty_tile_on_route'
+    | 'objective_progress'
+    | 'self_preservation'
+    | 'avoid_self_blast'
+    | 'escape_exposure';
+
+export interface SkillAiProfile {
+    desiredRange?: number | [number, number];
+    targetRules?: SkillAiTargetRule[];
+    persistence?: { turns: number; radius?: number };
+    preferSafeAfterUse?: boolean;
+    stationarySummon?: boolean;
+}
+
 export interface SkillIntentProfile {
     id: SkillID;
     intentTags: SkillIntentTag[];
@@ -625,6 +643,7 @@ export interface SkillIntentProfile {
         requireEnemyContact?: boolean;
         noContactPenalty?: number;
     };
+    ai?: SkillAiProfile;
     complexity: number;
 }
 
