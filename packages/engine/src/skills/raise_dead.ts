@@ -90,6 +90,16 @@ export const RAISE_DEAD: SkillDefinition = {
             ownerId: attacker.id,
             id: createUniqueSkeletonId(state),
             position: target,
+            initialBehaviorOverlay: {
+                id: 'raise_dead_skeleton',
+                source: 'summon',
+                sourceId: 'raise_dead',
+                desiredRange: 1,
+                offenseBias: 0.1,
+                commitBias: 0.15,
+                followThroughBias: 0.1
+            },
+            initialAnchorActorId: attacker.id
         });
 
         effects.push({ type: 'SpawnActor', actor: skeleton });

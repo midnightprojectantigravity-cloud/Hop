@@ -23,7 +23,8 @@ const cloneDefaultLoadouts = (
             {
                 ...value,
                 startingSkills: [...value.startingSkills],
-                startingUpgrades: [...value.startingUpgrades]
+                startingUpgrades: [...value.startingUpgrades],
+                behaviorOverlay: value.behaviorOverlay ? { ...value.behaviorOverlay } : undefined
             }
         ])
     );
@@ -150,21 +151,14 @@ export const reconcileLoadoutCapabilityPassives = (
     return nextSkills;
 };
 
-export interface ApplyLoadoutOptions {
-    capabilityPassivesEnabled?: boolean;
-}
-
 /**
  * Apply a loadout to a set of player stats.
  */
 export const applyLoadoutToPlayer = (
-    loadout: Loadout,
-    options: ApplyLoadoutOptions = {}
+    loadout: Loadout
 ): { upgrades: string[]; activeSkills: Skill[]; archetype: any } => {
     const baseSkills = loadout.startingSkills.map(s => createActiveSkill(s as any)).filter(Boolean) as Skill[];
-    const activeSkills = options.capabilityPassivesEnabled === undefined
-        ? baseSkills
-        : reconcileLoadoutCapabilityPassives(loadout, baseSkills, options.capabilityPassivesEnabled);
+    const activeSkills = reconcileLoadoutCapabilityPassives(loadout, baseSkills, true);
     const archetype = loadout.id;
     return {
         upgrades: [...loadout.startingUpgrades],

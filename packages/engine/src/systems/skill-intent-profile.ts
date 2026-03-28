@@ -72,7 +72,13 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         estimates: { damage: 4 },
         economy: { consumesTurn: true },
         ai: {
-            targetRules: ['direct_hit']
+            desiredRange: 1,
+            targetRules: ['direct_hit'],
+            behaviorDelta: {
+                offenseBias: 0.2,
+                commitBias: 0.15,
+                followThroughBias: 0.15
+            }
         }
     },
     AUTO_ATTACK: { intentTags: ['damage', 'utility'], target: { pattern: 'single' }, estimates: { damage: 2 } },
@@ -86,13 +92,27 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         intentTags: ['move', 'utility'],
         target: { pattern: 'single' },
         estimates: { movement: 2 },
-        risk: { noProgressCastPenalty: 6 }
+        risk: { noProgressCastPenalty: 6 },
+        ai: {
+            mobilityRole: 'gap_close',
+            behaviorDelta: {
+                commitBias: 0.1
+            }
+        }
     },
     SHIELD_BASH: {
         intentTags: ['damage', 'control', 'protect'],
         target: { pattern: 'single' },
         estimates: { damage: 3, control: 2 },
-        risk: { requireEnemyContact: true, noContactPenalty: 5, noProgressCastPenalty: 7 }
+        risk: { requireEnemyContact: true, noContactPenalty: 5, noProgressCastPenalty: 7 },
+        ai: {
+            desiredRange: 1,
+            targetRules: ['direct_hit', 'self_preservation'],
+            behaviorDelta: {
+                offenseBias: 0.2,
+                commitBias: 0.1
+            }
+        }
     },
     BULWARK_CHARGE: { intentTags: ['move', 'protect', 'damage'], target: { pattern: 'line' }, estimates: { movement: 2, damage: 4, shielding: 2 } },
     VAULT: {
@@ -117,7 +137,15 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         intentTags: ['damage'],
         target: { pattern: 'line' },
         estimates: { damage: 5 },
-        risk: { requireEnemyContact: true, noContactPenalty: 4, noProgressCastPenalty: 5 }
+        risk: { requireEnemyContact: true, noContactPenalty: 4, noProgressCastPenalty: 5 },
+        ai: {
+            desiredRange: [1, 2],
+            targetRules: ['direct_hit'],
+            behaviorDelta: {
+                offenseBias: 0.15,
+                commitBias: 0.1
+            }
+        }
     },
     ARCHER_SHOT: {
         intentTags: ['damage'],
@@ -127,16 +155,60 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         ai: {
             desiredRange: [2, 4],
             targetRules: ['direct_hit', 'self_preservation', 'escape_exposure'],
-            preferSafeAfterUse: true
+            preferSafeAfterUse: true,
+            behaviorDelta: {
+                offenseBias: 0.1,
+                selfPreservationBias: 0.25,
+                commitBias: -0.1
+            }
         }
     },
-    FIREBALL: { intentTags: ['damage', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 5, control: 1 } },
-    FIREWALL: { intentTags: ['hazard', 'control', 'damage'], target: { pattern: 'radius', aoeRadius: 2 }, estimates: { damage: 5, control: 3 } },
+    FIREBALL: {
+        intentTags: ['damage', 'hazard'],
+        target: { pattern: 'radius', aoeRadius: 1 },
+        estimates: { damage: 5, control: 1 },
+        ai: {
+            desiredRange: [2, 4],
+            targetRules: ['direct_hit', 'enemy_density', 'escape_exposure'],
+            preferSafeAfterUse: true,
+            behaviorDelta: {
+                offenseBias: 0.15,
+                selfPreservationBias: 0.2,
+                commitBias: -0.05,
+                controlBias: 0.1
+            }
+        }
+    },
+    FIREWALL: {
+        intentTags: ['hazard', 'control', 'damage'],
+        target: { pattern: 'radius', aoeRadius: 2 },
+        estimates: { damage: 5, control: 3 },
+        ai: {
+            desiredRange: [2, 4],
+            targetRules: ['enemy_density', 'empty_tile_adjacent_to_enemy', 'escape_exposure'],
+            preferSafeAfterUse: true,
+            behaviorDelta: {
+                controlBias: 0.45,
+                selfPreservationBias: 0.2,
+                offenseBias: 0.1,
+                commitBias: -0.1
+            }
+        }
+    },
     FIREWALK: {
         intentTags: ['move', 'hazard', 'utility'],
         target: { pattern: 'single' },
         estimates: { movement: 3 },
-        risk: { noProgressCastPenalty: 8 }
+        risk: { noProgressCastPenalty: 8 },
+        ai: {
+            mobilityRole: 'reposition',
+            targetRules: ['self_preservation', 'escape_exposure'],
+            behaviorDelta: {
+                selfPreservationBias: 0.15,
+                controlBias: 0.05,
+                commitBias: -0.05
+            }
+        }
     },
     ABSORB_FIRE: {
         intentTags: ['heal', 'hazard', 'utility'],
@@ -150,10 +222,16 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         target: { pattern: 'radius', aoeRadius: 1 },
         estimates: { damage: 6, control: 2 },
         ai: {
-            desiredRange: [2, 3],
+            rangeModel: 'skill_range_plus_one',
             targetRules: ['empty_tile_adjacent_to_enemy', 'empty_tile_on_route', 'avoid_self_blast'],
             persistence: { turns: 2, radius: 1 },
-            stationarySummon: true
+            stationarySummon: true,
+            behaviorDelta: {
+                controlBias: 0.4,
+                offenseBias: 0.1,
+                selfPreservationBias: 0.2,
+                commitBias: -0.05
+            }
         }
     },
     TIME_BOMB: {
@@ -172,7 +250,20 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         economy: { consumesTurn: false }
     },
     CORPSE_EXPLOSION: { intentTags: ['damage', 'control', 'hazard'], target: { pattern: 'radius', aoeRadius: 1 }, estimates: { damage: 6, control: 1 } },
-    RAISE_DEAD: { intentTags: ['summon', 'control', 'utility'], target: { pattern: 'single' }, estimates: { summon: 5 } },
+    RAISE_DEAD: {
+        intentTags: ['summon', 'control', 'utility'],
+        target: { pattern: 'single' },
+        estimates: { summon: 5 },
+        ai: {
+            targetRules: ['objective_progress'],
+            overlayOnSummon: {
+                desiredRange: 1,
+                offenseBias: 0.1,
+                commitBias: 0.15,
+                followThroughBias: 0.1
+            }
+        }
+    },
     SOUL_SWAP: { intentTags: ['move', 'control', 'utility'], target: { pattern: 'single' }, estimates: { movement: 2, control: 2 } },
     MULTI_SHOOT: { intentTags: ['damage'], target: { pattern: 'line' }, estimates: { damage: 5 } },
     SET_TRAP: { intentTags: ['control', 'hazard'], target: { pattern: 'single' }, estimates: { control: 3 } },
@@ -262,12 +353,56 @@ const OVERRIDES: Partial<Record<SkillID, PartialProfile>> = {
         intentTags: ['summon', 'control', 'damage', 'utility'],
         target: { pattern: 'single' },
         estimates: { summon: 1, control: 0, damage: 2 },
-        risk: { noProgressCastPenalty: 30 }
+        risk: { noProgressCastPenalty: 30 },
+        ai: {
+            targetRules: ['objective_progress']
+        }
     },
-    FALCON_PECK: { intentTags: ['damage'], target: { pattern: 'single' }, estimates: { damage: 3 } },
-    FALCON_APEX_STRIKE: { intentTags: ['damage', 'control'], target: { pattern: 'single' }, estimates: { damage: 5, control: 1 } },
-    FALCON_HEAL: { intentTags: ['heal', 'utility'], target: { pattern: 'single' }, estimates: { healing: 4 } },
-    FALCON_SCOUT: { intentTags: ['control', 'utility'], target: { pattern: 'self' }, estimates: { control: 3 } },
+    FALCON_PECK: {
+        intentTags: ['damage'],
+        target: { pattern: 'single' },
+        estimates: { damage: 3 },
+        ai: {
+            desiredRange: 1,
+            targetRules: ['direct_hit'],
+            behaviorDelta: {
+                offenseBias: 0.15,
+                commitBias: 0.15
+            }
+        }
+    },
+    FALCON_APEX_STRIKE: {
+        intentTags: ['damage', 'control'],
+        target: { pattern: 'single' },
+        estimates: { damage: 5, control: 1 },
+        ai: {
+            desiredRange: [1, 2],
+            targetRules: ['direct_hit'],
+            behaviorDelta: {
+                offenseBias: 0.3,
+                commitBias: 0.2,
+                followThroughBias: 0.2
+            }
+        }
+    },
+    FALCON_HEAL: {
+        intentTags: ['heal', 'utility'],
+        target: { pattern: 'single' },
+        estimates: { healing: 4 },
+        ai: {
+            rangeModel: 'owner_proximity',
+            targetRules: ['self_preservation']
+        }
+    },
+    FALCON_SCOUT: {
+        intentTags: ['control', 'utility'],
+        target: { pattern: 'self' },
+        estimates: { control: 3 },
+        ai: {
+            rangeModel: 'anchor_proximity',
+            targetRules: ['objective_progress']
+        }
+    },
     FALCON_AUTO_ROOST: {
         intentTags: ['summon', 'utility', 'protect'],
         target: { pattern: 'self' },

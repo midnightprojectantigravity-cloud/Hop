@@ -19,6 +19,8 @@ import { buildIntentPreview } from './systems/telegraph-projection';
 import { buildRunSummary } from './systems/run-objectives';
 import { appendTaggedMessage, appendTaggedMessages } from './systems/engine-messages';
 import { StrategyRegistry } from './systems/ai/strategy-registry';
+import { recordEnemyAiTurnTelemetry } from './systems/ai/enemy/runtime-telemetry';
+import type { RecordEnemyAiTurnTelemetryParams } from './systems/ai/enemy/runtime-telemetry';
 import { processIntent } from './systems/intent-middleware';
 import { TacticalEngine } from './systems/tactical-engine';
 import { applyAutoAttack } from './skills/auto_attack';
@@ -143,6 +145,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
 
             const actor = actorIndex.get(actorId);
             const actorStepId = `${curState.turnNumber}:${curState.initiativeQueue?.round ?? 0}:${actorId}:${iterations}`;
+            let pendingTelegraphEnemyTelemetry: Omit<RecordEnemyAiTurnTelemetryParams, 'telemetry'> | undefined;
 
             if (!actor || actor.hp <= 0) {
                 curState = { ...curState, initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId) };
@@ -192,9 +195,52 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                     }
                 }
 
+                const telegraphingActor = actorId !== 'player'
+                    ? curState.enemies.find(enemy => enemy.id === actorId)
+                    : undefined;
+                const telegraphIntentSkillId = telegraphingActor?.intent;
+                const playerHpBeforeTelegraph = Number(curState.player.hp || 0);
                 const tele = resolveTelegraphedAttacks(curState, curState.player.position, actorId, actorStepId);
                 curState = tele.state;
                 messages.push(...tele.messages);
+                if (
+                    actorId !== 'player'
+                    && telegraphIntentSkillId
+                    && tele.messages.length > 0
+                ) {
+                    pendingTelegraphEnemyTelemetry = {
+                        playerId: curState.player.id,
+                        actionType: telegraphIntentSkillId === 'BASIC_ATTACK' ? 'ATTACK' : 'USE_SKILL',
+                        skillId: telegraphIntentSkillId,
+                        selectedFacts: {
+                            canDamageNow: Number(curState.player.hp || 0) < playerHpBeforeTelegraph,
+                            canKillNow: false,
+                            createsThreatNextDecision: false,
+                            improvesObjective: false,
+                            reducesExposureMaterially: false,
+                            backtracks: false,
+                            isLowValueMobility: false,
+                            isHazardSelfTrap: false
+                        },
+                        selectionSummary: {
+                            visibleOpponentIds: [curState.player.id],
+                            visibleOpponentCount: 1,
+                            attackOpportunityAvailable: true,
+                            threatOpportunityAvailable: false,
+                            engagementMode: 'engage',
+                            coherenceTargetKind: 'hostile',
+                            sameTurnRetreatRejectedCount: 0,
+                            sparkBandBefore: 'stable',
+                            restedOpportunityMode: 'battery_only',
+                            safeSecondActionAvailable: false,
+                            voluntaryExhaustionAttemptCount: 0,
+                            voluntaryExhaustionAllowedCount: 0,
+                            voluntaryExhaustionBlockedCount: 0
+                        },
+                        playerHpBefore: playerHpBeforeTelegraph,
+                        playerHpAfter: Number(curState.player.hp || 0)
+                    };
+                }
             }
 
             actorIndex = buildActorIndex(curState);
@@ -213,6 +259,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 continue;
             }
             let intent: Intent;
+            const playerHpBeforeActorTurn = Number(curState.player.hp || 0);
             let forcedStunSkip = false;
             if (isStunned(actorForIntent)) {
                 forcedStunSkip = true;
@@ -448,6 +495,38 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 if (actorId === 'player') {
                     curState.kills = (curState.kills || 0) + autoAttackResult.kills;
                 }
+            }
+
+            if (pendingTelegraphEnemyTelemetry) {
+                curState = {
+                    ...curState,
+                    enemyAiTelemetry: recordEnemyAiTurnTelemetry({
+                        telemetry: curState.enemyAiTelemetry,
+                        ...pendingTelegraphEnemyTelemetry
+                    })
+                };
+            }
+
+            if (
+                actorId !== 'player'
+                && actorAfterTurn
+                && actorAfterTurn.factionId === 'enemy'
+                && actorAfterTurn.subtype !== 'bomb'
+                && intent.metadata.aiTelemetry
+            ) {
+                curState = {
+                    ...curState,
+                    enemyAiTelemetry: recordEnemyAiTurnTelemetry({
+                        telemetry: curState.enemyAiTelemetry,
+                        playerId: curState.player.id,
+                        actionType: intent.type,
+                        skillId: intent.skillId,
+                        selectedFacts: intent.metadata.aiTelemetry.selectedFacts,
+                        selectionSummary: intent.metadata.aiTelemetry.selectionSummary,
+                        playerHpBefore: playerHpBeforeActorTurn,
+                        playerHpAfter: Number(curState.player.hp || 0)
+                    })
+                };
             }
 
             if (actorId === 'player') {

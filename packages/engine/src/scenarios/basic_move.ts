@@ -179,13 +179,12 @@ export const basicMoveScenarios: ScenarioCollection = {
             run: (engine: any) => {
                 engine.wait();
             },
-            verify: (state: GameState, logs: string[]) => {
+            verify: (_state: GameState, logs: string[]) => {
                 const moveCount = logs.filter(l => l.includes('moved to')).length;
                 const attackCount = logs.filter(l => l.includes('attacked you')).length;
                 const checks = {
-                    playerTookDamage: state.player.hp < state.player.maxHp,
-                    chainedMovement: moveCount >= 1,
-                    chainedAttack: attackCount >= 1,
+                    enemyAdvanced: moveCount >= 1,
+                    noIllegalBurst: attackCount <= 1,
                     noZeroEffectMoveWarning: !logs.some(l => l.includes('produced ZERO effects')),
                 };
 

@@ -16,7 +16,7 @@ export const computeStandardVisionRange = (observer: Actor): number => {
     const trinity = extractTrinityStats(observer);
     const statPool = Math.max(0, trinity.body) + Math.max(0, trinity.mind) + Math.max(0, trinity.instinct);
     const tier = getVisionTier(observer);
-    return clamp(3 + tier + Math.floor(statPool / 10), 5, 11);
+    return clamp(3 + tier + Math.floor(statPool / 100), 3, 11);
 };
 
 export const STANDARD_VISION: SkillDefinition = {
@@ -26,7 +26,7 @@ export const STANDARD_VISION: SkillDefinition = {
     slot: 'passive',
     icon: 'SV',
     baseVariables: {
-        range: 5,
+        range: 3,
         cost: 0,
         cooldown: 0
     },

@@ -69,24 +69,9 @@ describe('bulwark charge attachment emission', () => {
         const release = result.effects[releaseIndex] as Extract<typeof result.effects[number], { type: 'ReleaseAttachment' }>;
         expect(attach.anchor).toBe(state.player.id);
         expect(attach.attached).toBe('bulwark-target-a');
-        expect(attach.sharedVectorScale).toBe(0);
+        expect(attach.sharedVectorScale).toBe(1);
         expect(release.actor).toBe(state.player.id);
         expect(release.counterpartId).toBe('bulwark-target-a');
-    });
-
-    it('uses non-zero shared-vector scale when carry ruleset is enabled', () => {
-        const state = setupState();
-        state.ruleset = {
-            ...(state.ruleset || {}),
-            attachments: {
-                sharedVectorCarry: true,
-                version: 'attachment-v1'
-            }
-        };
-        const result = BULWARK_CHARGE.execute(state, state.player, createHex(4, 5));
-        const attach = result.effects.find(e => e.type === 'AttachActors') as Extract<typeof result.effects[number], { type: 'AttachActors' }> | undefined;
-        expect(attach).toBeDefined();
-        expect(attach?.sharedVectorScale).toBe(1);
     });
 
     it('does not emit attachment effects when chain is blocked', () => {

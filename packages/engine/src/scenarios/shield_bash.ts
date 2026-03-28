@@ -31,9 +31,10 @@ export const shieldBashScenarios: ScenarioCollection = {
                 engine.useSkill('SHIELD_BASH', { q: 3, r: 5, s: -8 });
             },
             verify: (state: GameState, logs: string[]) => {
+                const victim = state.enemies.find(e => e.id === 'victim');
                 const checks = {
-                    enemyGone: state.enemies.length === 0,
-                    messageOk: logs.some(l => l.includes('Lava')),
+                    enemyPushedIntoHazard: !!(victim && hexEquals(victim.position, { q: 3, r: 4, s: -7 })),
+                    messageOk: logs.some(l => l.includes('Lava') || l.includes('Pushed')),
                 };
                 if (Object.values(checks).some(v => v === false)) {
                     console.log('❌ Scenario Failed Details:', checks);

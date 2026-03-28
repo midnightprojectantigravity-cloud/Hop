@@ -43,7 +43,43 @@ const compactRun = (run: RunResult) => ({
     topSkills: topEntries(run.playerSkillUsage),
     autoAttackTriggersByActionType: run.autoAttackTriggersByActionType || {},
     strategicIntent: run.strategicIntentCounts,
-    casts: run.totalPlayerSkillCasts
+    casts: run.totalPlayerSkillCasts,
+    playerTactical: {
+        attackOpportunityCount: run.pacingSignal.attackOpportunityCount,
+        attackConversionCount: run.pacingSignal.attackConversionCount,
+        threatenNextTurnOpportunityCount: run.pacingSignal.threatenNextTurnOpportunityCount,
+        threatenNextTurnConversionCount: run.pacingSignal.threatenNextTurnConversionCount,
+        idleWithVisibleHostile: run.pacingSignal.idleWithVisibleHostile,
+        lowValueMobilitySelections: run.pacingSignal.lowValueMobilitySelections,
+        avgTurnEndSparkRatio: run.pacingSignal.avgTurnEndSparkRatio,
+        preservedRestedTurns: run.pacingSignal.preservedRestedTurns,
+        restedBatterySpendSelections: run.pacingSignal.restedBatterySpendSelections,
+        trueRestRestedBonusArmedTurns: run.pacingSignal.trueRestRestedBonusArmedTurns,
+        voluntaryExhaustionAllowed: run.pacingSignal.voluntaryExhaustionAllowed,
+        voluntaryExhaustionBlocked: run.pacingSignal.voluntaryExhaustionBlocked,
+        turnsEndedRested: run.pacingSignal.turnsEndedRested,
+        turnsEndedStableOrBetter: run.pacingSignal.turnsEndedStableOrBetter,
+        turnsEndedCriticalOrExhausted: run.pacingSignal.turnsEndedCriticalOrExhausted,
+        waitForBandPreservationSelections: run.pacingSignal.waitForBandPreservationSelections,
+        firstContactTurn: run.pacingSignal.firstContactTurn,
+        firstDamageTurn: run.pacingSignal.firstDamageTurn
+    },
+    enemyTactical: {
+        damageToPlayer: run.enemyAiTelemetry.damageToPlayer,
+        offensiveSkillCasts: run.enemyAiTelemetry.offensiveSkillCasts,
+        idleWithVisiblePlayer: run.enemyAiTelemetry.idleWithVisiblePlayer,
+        attackOpportunityTurns: run.enemyAiTelemetry.attackOpportunityTurns,
+        attackConversionTurns: run.enemyAiTelemetry.attackConversionTurns,
+        preservedRestedTurns: run.enemyAiTelemetry.preservedRestedTurns,
+        restedBatterySpendSelections: run.enemyAiTelemetry.restedBatterySpendSelections,
+        trueRestRestedBonusArmedTurns: run.enemyAiTelemetry.trueRestRestedBonusArmedTurns,
+        voluntaryExhaustionAllowed: run.enemyAiTelemetry.voluntaryExhaustionAllowed,
+        voluntaryExhaustionBlocked: run.enemyAiTelemetry.voluntaryExhaustionBlocked,
+        turnsEndedRested: run.enemyAiTelemetry.turnsEndedRested,
+        turnsEndedStableOrBetter: run.enemyAiTelemetry.turnsEndedStableOrBetter,
+        turnsEndedCriticalOrExhausted: run.enemyAiTelemetry.turnsEndedCriticalOrExhausted,
+        waitForBandPreservationSelections: run.enemyAiTelemetry.waitForBandPreservationSelections
+    }
 });
 
 const aggregate = {
@@ -93,7 +129,47 @@ const aggregate = {
             control: acc.control + (run.strategicIntentCounts.control || 0)
         }),
         { offense: 0, defense: 0, positioning: 0, control: 0 }
-    )
+    ),
+    playerDashboard: {
+        attackConversionRate: runs.reduce((sum, run) => sum + run.pacingSignal.attackConversionCount, 0)
+            / Math.max(1, runs.reduce((sum, run) => sum + run.pacingSignal.attackOpportunityCount, 0)),
+        threatenNextTurnConversionRate: runs.reduce((sum, run) => sum + run.pacingSignal.threatenNextTurnConversionCount, 0)
+            / Math.max(1, runs.reduce((sum, run) => sum + run.pacingSignal.threatenNextTurnOpportunityCount, 0)),
+        avgIdleWithVisibleHostile: runs.reduce((sum, run) => sum + run.pacingSignal.idleWithVisibleHostile, 0) / Math.max(1, runs.length),
+        avgLowValueMobilitySelections: runs.reduce((sum, run) => sum + run.pacingSignal.lowValueMobilitySelections, 0) / Math.max(1, runs.length),
+        avgTurnEndSparkRatio: runs.reduce((sum, run) => sum + run.pacingSignal.avgTurnEndSparkRatio, 0) / Math.max(1, runs.length),
+        avgPreservedRestedTurns: runs.reduce((sum, run) => sum + run.pacingSignal.preservedRestedTurns, 0) / Math.max(1, runs.length),
+        avgRestedBatterySpendSelections: runs.reduce((sum, run) => sum + run.pacingSignal.restedBatterySpendSelections, 0) / Math.max(1, runs.length),
+        avgTrueRestRestedBonusArmedTurns: runs.reduce((sum, run) => sum + run.pacingSignal.trueRestRestedBonusArmedTurns, 0) / Math.max(1, runs.length),
+        avgVoluntaryExhaustionAllowed: runs.reduce((sum, run) => sum + run.pacingSignal.voluntaryExhaustionAllowed, 0) / Math.max(1, runs.length),
+        avgVoluntaryExhaustionBlocked: runs.reduce((sum, run) => sum + run.pacingSignal.voluntaryExhaustionBlocked, 0) / Math.max(1, runs.length),
+        avgTurnsEndedRested: runs.reduce((sum, run) => sum + run.pacingSignal.turnsEndedRested, 0) / Math.max(1, runs.length),
+        avgTurnsEndedStableOrBetter: runs.reduce((sum, run) => sum + run.pacingSignal.turnsEndedStableOrBetter, 0) / Math.max(1, runs.length),
+        avgTurnsEndedCriticalOrExhausted: runs.reduce((sum, run) => sum + run.pacingSignal.turnsEndedCriticalOrExhausted, 0) / Math.max(1, runs.length),
+        avgWaitForBandPreservationSelections: runs.reduce((sum, run) => sum + run.pacingSignal.waitForBandPreservationSelections, 0) / Math.max(1, runs.length),
+        avgFirstContactTurn: runs.reduce((sum, run) => sum + (run.pacingSignal.firstContactTurn || 0), 0) / Math.max(1, runs.filter(run => run.pacingSignal.firstContactTurn > 0).length),
+        avgFirstDamageTurn: runs.reduce((sum, run) => sum + (run.pacingSignal.firstDamageTurn || 0), 0) / Math.max(1, runs.filter(run => run.pacingSignal.firstDamageTurn > 0).length)
+    },
+    enemyDashboard: {
+        avgEnemyDamageToPlayerPerRun: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.damageToPlayer, 0) / Math.max(1, runs.length),
+        avgEnemyOffensiveSkillCastsPerRun: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.offensiveSkillCasts, 0) / Math.max(1, runs.length),
+        enemyAttackOpportunityConversionRate: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.attackConversionTurns, 0)
+            / Math.max(1, runs.reduce((sum, run) => sum + run.enemyAiTelemetry.attackOpportunityTurns, 0)),
+        enemyThreatOpportunityConversionRate: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.threatConversionTurns, 0)
+            / Math.max(1, runs.reduce((sum, run) => sum + run.enemyAiTelemetry.threatOpportunityTurns, 0)),
+        avgEnemyIdleWithVisiblePlayer: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.idleWithVisiblePlayer, 0) / Math.max(1, runs.length),
+        avgEnemyBacktrackMoves: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.backtrackMoves, 0) / Math.max(1, runs.length),
+        avgEnemyLoopMoves: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.loopMoves, 0) / Math.max(1, runs.length),
+        avgEnemyPreservedRestedTurns: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.preservedRestedTurns, 0) / Math.max(1, runs.length),
+        avgEnemyRestedBatterySpendSelections: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.restedBatterySpendSelections, 0) / Math.max(1, runs.length),
+        avgEnemyTrueRestRestedBonusArmedTurns: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.trueRestRestedBonusArmedTurns, 0) / Math.max(1, runs.length),
+        avgEnemyVoluntaryExhaustionAllowed: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.voluntaryExhaustionAllowed, 0) / Math.max(1, runs.length),
+        avgEnemyVoluntaryExhaustionBlocked: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.voluntaryExhaustionBlocked, 0) / Math.max(1, runs.length),
+        avgEnemyTurnsEndedRested: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.turnsEndedRested, 0) / Math.max(1, runs.length),
+        avgEnemyTurnsEndedStableOrBetter: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.turnsEndedStableOrBetter, 0) / Math.max(1, runs.length),
+        avgEnemyTurnsEndedCriticalOrExhausted: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.turnsEndedCriticalOrExhausted, 0) / Math.max(1, runs.length),
+        avgEnemyWaitForBandPreservationSelections: runs.reduce((sum, run) => sum + run.enemyAiTelemetry.waitForBandPreservationSelections, 0) / Math.max(1, runs.length)
+    }
 };
 
 console.log(

@@ -379,6 +379,14 @@ export type AtomicEffect =
         apexStrikeCooldown?: number;
         healCooldown?: number;
     }
+    | {
+        type: 'UpdateBehaviorState';
+        target: 'self' | string;
+        overlays?: AiBehaviorOverlayInstance[];
+        anchorActorId?: string | null;
+        anchorPoint?: Point | null;
+        clearOverlays?: boolean;
+    }
     | { type: 'GameOver'; reason: 'PLAYER_DIED' | 'OUT_OF_TIME' };
 
 export interface VisualEvent {
@@ -607,12 +615,145 @@ export type SkillAiTargetRule =
     | 'avoid_self_blast'
     | 'escape_exposure';
 
+export type AiRangeModel =
+    | 'explicit'
+    | 'skill_range'
+    | 'skill_range_plus_one'
+    | 'owner_proximity'
+    | 'anchor_proximity'
+    | 'none';
+
+export interface AiBehaviorProfile {
+    desiredRange?: number | [number, number];
+    offenseBias: number;
+    commitBias: number;
+    followThroughBias: number;
+    selfPreservationBias: number;
+    controlBias: number;
+    hazardTolerance: number;
+    sameTurnRetreatAllowed: boolean;
+    preferDamageOverPositioning: boolean;
+}
+
+export interface AiBehaviorOverlay extends Partial<AiBehaviorProfile> {
+    id?: string;
+    rangeModel?: AiRangeModel;
+    rangeWeight?: number;
+}
+
+export interface AiBehaviorOverlayInstance extends AiBehaviorOverlay {
+    source: 'loadout' | 'skill_static' | 'skill_ready' | 'command' | 'summon' | 'status' | 'capability';
+    sourceId: string;
+    duration?: number;
+}
+
+export interface ResolvedAiBehaviorProfile extends AiBehaviorProfile {
+    desiredRange: number | [number, number];
+    sourceIds: string[];
+    hasDirectDamagePlan: boolean;
+}
+
+export type AiSparkBand =
+    | 'rested_hold'
+    | 'rested_edge'
+    | 'stable'
+    | 'caution'
+    | 'critical'
+    | 'exhausted';
+
+export type AiRestedOpportunityMode =
+    | 'productive_preserve'
+    | 'setup_preserve'
+    | 'battery_only';
+
+export type AiCandidatePayoff =
+    | 'big_payoff'
+    | 'standard_payoff'
+    | 'low_payoff'
+    | 'non_productive';
+
+export interface AiSparkAssessment {
+    sparkBandBefore: AiSparkBand;
+    sparkBandAfterAction: AiSparkBand;
+    sparkBandIfEndedNow: AiSparkBand;
+    sparkRatioBefore: number;
+    sparkRatioAfterAction: number;
+    sparkRatioIfEndedNow: number;
+    actionCountBefore: number;
+    actionCountAfter: number;
+    isFirstAction: boolean;
+    isSecondAction: boolean;
+    isThirdActionOrLater: boolean;
+    wouldEnterExhausted: boolean;
+    wouldActWhileExhausted: boolean;
+    wouldExitRested: boolean;
+    wouldPreserveRested: boolean;
+    wouldReenterRested: boolean;
+    wouldDropBelowStable: boolean;
+    wouldDropBelowCaution: boolean;
+    fullSparkBurstWindow: boolean;
+    isTrueRestTurn: boolean;
+    projectedRecoveryIfEndedNow: number;
+}
+
+export interface AiSparkDoctrineResult {
+    allowed: boolean;
+    gateReason?:
+        | 'blocked_while_exhausted'
+        | 'blocked_exhaustion_entry'
+        | 'blocked_nonproductive_rested_break'
+        | 'blocked_third_action_exhaustion'
+        | 'none';
+    sparkScoreDelta: number;
+    override: 'none' | 'big_payoff' | 'surge_only_option';
+    restedDecision: 'preserve' | 'spend_battery' | 'reenter' | 'true_rest' | 'none';
+    waitForBandPreservation: boolean;
+    voluntaryExhaustionAttempt: boolean;
+    voluntaryExhaustionAllowed: boolean;
+}
+
 export interface SkillAiProfile {
     desiredRange?: number | [number, number];
     targetRules?: SkillAiTargetRule[];
     persistence?: { turns: number; radius?: number };
     preferSafeAfterUse?: boolean;
     stationarySummon?: boolean;
+    mobilityRole?: 'gap_close' | 'escape' | 'reposition';
+    behaviorDelta?: Partial<AiBehaviorProfile>;
+    rangeModel?: AiRangeModel;
+    rangeWeight?: number;
+    overlayOnUse?: AiBehaviorOverlay;
+    overlayOnSummon?: AiBehaviorOverlay;
+}
+
+export interface EnemyAiRunTelemetry {
+    actionCounts: Record<string, number>;
+    skillUsage: Record<string, number>;
+    offensiveSkillCasts: number;
+    damageToPlayer: number;
+    visiblePlayerTurns: number;
+    idleWithVisiblePlayer: number;
+    attackOpportunityTurns: number;
+    attackConversionTurns: number;
+    threatOpportunityTurns: number;
+    threatConversionTurns: number;
+    backtrackMoves: number;
+    loopMoves: number;
+    preservedRestedTurns: number;
+    restedBatterySpendSelections: number;
+    restedReentryTurns: number;
+    trueRestRestedBonusArmedTurns: number;
+    voluntaryExhaustionAttempts: number;
+    voluntaryExhaustionAllowed: number;
+    voluntaryExhaustionBlocked: number;
+    turnsEndedRested: number;
+    turnsEndedStableOrBetter: number;
+    turnsEndedCriticalOrExhausted: number;
+    secondActionAttempts: number;
+    secondActionAllowed: number;
+    thirdActionAttempts: number;
+    thirdActionAllowed: number;
+    waitForBandPreservationSelections: number;
 }
 
 export interface SkillIntentProfile {
@@ -910,6 +1051,11 @@ export interface Actor {
         apexStrikeCooldown?: number;  // Tracking for design alignment
         healCooldown?: number;
     };
+    behaviorState?: {
+        overlays: AiBehaviorOverlayInstance[];
+        anchorActorId?: string;
+        anchorPoint?: Point;
+    };
     ires?: IresRuntimeState;
 }
 
@@ -1017,23 +1163,11 @@ export interface GameState {
     generationState?: GenerationState;
     generatedPaths?: GeneratedPathNetwork;
     runTelemetry: RunTelemetryCounters;
+    enemyAiTelemetry?: EnemyAiRunTelemetry;
     worldgenDebug?: GenerationDebugSnapshot;
 
-    // Ruleset/feature flags persisted in-state for deterministic toggles.
+    // Runtime ruleset configuration persisted in-state for deterministic replays and hydration.
     ruleset?: {
-        ailments?: {
-            acaeEnabled: boolean;
-            version: 'acae-v1';
-        };
-        attachments?: {
-            sharedVectorCarry: boolean;
-            version: 'attachment-v1';
-        };
-        capabilities?: {
-            loadoutPassivesEnabled: boolean;
-            movementRuntimeEnabled: boolean;
-            version: 'capabilities-v1';
-        };
         combat?: {
             version: CombatRulesetVersion;
             coefficientsVersion?: string;
@@ -1100,16 +1234,6 @@ export type Action =
     | { type: 'RESOLVE_PENDING' };
 
 export interface RunRulesetOverrides {
-    ailments?: {
-        acaeEnabled?: boolean;
-    };
-    attachments?: {
-        sharedVectorCarry?: boolean;
-    };
-    capabilities?: {
-        loadoutPassivesEnabled?: boolean;
-        movementRuntimeEnabled?: boolean;
-    };
     combat?: {
         version?: CombatRulesetVersion;
     };

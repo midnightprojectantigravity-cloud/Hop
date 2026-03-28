@@ -5,7 +5,6 @@ import { generateInitialState } from '../logic';
 describe('ACAE effect handler integration', () => {
     it('handles apply/deposit/clear ailment effects via effect engine', () => {
         let state = generateInitialState(1, 'acae-handler-seed');
-        state.ruleset = { ailments: { acaeEnabled: true, version: 'acae-v1' } };
         const target = state.enemies[0];
 
         state = applyEffects(state, [

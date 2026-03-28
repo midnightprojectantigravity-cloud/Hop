@@ -1,5 +1,6 @@
 import type { Entity, GameState, Point } from '../../../types';
 import type { AiDecision } from '../core/types';
+import type { GenericUnitAiCandidateFacts, GenericUnitAiSelectionSummary } from '../generic-unit-ai';
 
 export interface EnemyAiContext {
     enemy: Entity;
@@ -19,6 +20,8 @@ export interface EnemyAiDecisionResult {
     nextState: GameState;
     message?: string;
     decision: AiDecision<GameState>;
+    selectedFacts?: GenericUnitAiCandidateFacts;
+    selectionSummary?: GenericUnitAiSelectionSummary;
 }
 
 export interface EnemyAiPlannedCandidate {

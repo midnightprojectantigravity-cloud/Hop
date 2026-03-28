@@ -62,7 +62,7 @@ describe('grapple hook attachment emission', () => {
 
         expect(attach.anchor).toBe(state.player.id);
         expect(attach.attached).toBe('hook-target');
-        expect(attach.sharedVectorScale).toBe(0);
+        expect(attach.sharedVectorScale).toBe(1);
         expect(release.actor).toBe(state.player.id);
         expect(release.counterpartId).toBe('hook-target');
     });
@@ -76,19 +76,4 @@ describe('grapple hook attachment emission', () => {
         expect(result.effects.some(e => e.type === 'ReleaseAttachment')).toBe(false);
     });
 
-    it('uses non-zero shared-vector scale when attachment carry ruleset is enabled', () => {
-        const state = setupComboState();
-        state.ruleset = {
-            ...(state.ruleset || {}),
-            attachments: {
-                sharedVectorCarry: true,
-                version: 'attachment-v1'
-            }
-        };
-
-        const result = GRAPPLE_HOOK.execute(state, state.player, createHex(5, 6), []);
-        const attach = result.effects.find(e => e.type === 'AttachActors') as Extract<typeof result.effects[number], { type: 'AttachActors' }> | undefined;
-        expect(attach).toBeDefined();
-        expect(attach?.sharedVectorScale).toBe(1);
-    });
 });

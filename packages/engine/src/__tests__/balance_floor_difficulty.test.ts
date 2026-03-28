@@ -28,6 +28,7 @@ const makeSummary = (overrides?: Partial<CurrentFloorSummary>): CurrentFloorSumm
         maxStraightRun: 4,
         obstacleClusterCount: 2,
         trapClusterCount: 1,
+        lavaClusterCount: 0,
         tacticalTileCount: 18,
         visualTileCount: 28
     },

@@ -2,6 +2,11 @@ import { fingerprintFromState } from '../../logic';
 import { computeScore } from '../score';
 import { summarizePlayerCombatSignals } from '../ai/player/harness-telemetry';
 import { runHarnessPlayerLoop } from '../ai/player/harness-runner';
+import {
+    cloneEnemyAiRunTelemetry,
+    createEmptyEnemyAiRunTelemetry,
+    deriveEnemyCombatTelemetryFromState
+} from '../ai/enemy/runtime-telemetry';
 import type {
     ArchetypeLoadoutId,
     BotPolicy,
@@ -58,6 +63,32 @@ export const simulateHarnessRunDetailed = (
         redlineActions: 0,
         sparkBurnHpLost: 0
     };
+    const enemyAiTelemetry = cloneEnemyAiRunTelemetry(state.enemyAiTelemetry || createEmptyEnemyAiRunTelemetry());
+    const derivedEnemyCombatTelemetry = deriveEnemyCombatTelemetryFromState(state);
+    if (Object.keys(enemyAiTelemetry.skillUsage).length === 0 && Object.keys(derivedEnemyCombatTelemetry.skillUsage || {}).length > 0) {
+        enemyAiTelemetry.skillUsage = { ...(derivedEnemyCombatTelemetry.skillUsage || {}) };
+    }
+    if (Object.keys(enemyAiTelemetry.actionCounts).length === 0 && Number(derivedEnemyCombatTelemetry.offensiveSkillCasts || 0) > 0) {
+        enemyAiTelemetry.actionCounts = {
+            USE_SKILL: Number(derivedEnemyCombatTelemetry.offensiveSkillCasts || 0)
+        };
+    }
+    enemyAiTelemetry.offensiveSkillCasts = Math.max(
+        enemyAiTelemetry.offensiveSkillCasts,
+        Number(derivedEnemyCombatTelemetry.offensiveSkillCasts || 0)
+    );
+    enemyAiTelemetry.damageToPlayer = Math.max(
+        enemyAiTelemetry.damageToPlayer,
+        Number(derivedEnemyCombatTelemetry.damageToPlayer || 0)
+    );
+    enemyAiTelemetry.attackOpportunityTurns = Math.max(
+        enemyAiTelemetry.attackOpportunityTurns,
+        Number(derivedEnemyCombatTelemetry.attackOpportunityTurns || 0)
+    );
+    enemyAiTelemetry.attackConversionTurns = Math.max(
+        enemyAiTelemetry.attackConversionTurns,
+        Number(derivedEnemyCombatTelemetry.attackConversionTurns || 0)
+    );
     const directorState = state.generationState?.directorState;
 
     const run: RunResult = {
@@ -95,6 +126,7 @@ export const simulateHarnessRunDetailed = (
         triangleSignal,
         trinityContribution,
         combatProfileSignal,
+        enemyAiTelemetry,
         pacingSignal: telemetry.pacingSignal.samples > 0
             ? {
                 samples: telemetry.pacingSignal.samples,
@@ -103,9 +135,36 @@ export const simulateHarnessRunDetailed = (
                 avgReservePressure: telemetry.pacingSignal.avgReservePressure / telemetry.pacingSignal.samples,
                 avgFatiguePressure: telemetry.pacingSignal.avgFatiguePressure / telemetry.pacingSignal.samples,
                 avgRecoveryPressure: telemetry.pacingSignal.avgRecoveryPressure / telemetry.pacingSignal.samples,
+                avgTurnEndSparkRatio: telemetry.pacingSignal.avgTurnEndSparkRatio / Math.max(1, telemetry.pacingSignal.restSelections + telemetry.pacingSignal.endTurnSelections),
+                visibleHostileSelections: telemetry.pacingSignal.visibleHostileSelections,
+                idleWithVisibleHostile: telemetry.pacingSignal.idleWithVisibleHostile,
+                attackOpportunityCount: telemetry.pacingSignal.attackOpportunityCount,
+                attackConversionCount: telemetry.pacingSignal.attackConversionCount,
+                threatenNextTurnOpportunityCount: telemetry.pacingSignal.threatenNextTurnOpportunityCount,
+                threatenNextTurnConversionCount: telemetry.pacingSignal.threatenNextTurnConversionCount,
+                backtrackMoveCount: telemetry.pacingSignal.backtrackMoveCount,
+                loopMoveCount: telemetry.pacingSignal.loopMoveCount,
+                lowValueMobilitySelections: telemetry.pacingSignal.lowValueMobilitySelections,
                 restSelections: telemetry.pacingSignal.restSelections,
                 endTurnSelections: telemetry.pacingSignal.endTurnSelections,
-                continuedActionSelections: telemetry.pacingSignal.continuedActionSelections
+                continuedActionSelections: telemetry.pacingSignal.continuedActionSelections,
+                preservedRestedTurns: telemetry.pacingSignal.preservedRestedTurns,
+                restedBatterySpendSelections: telemetry.pacingSignal.restedBatterySpendSelections,
+                restedReentryTurns: telemetry.pacingSignal.restedReentryTurns,
+                trueRestRestedBonusArmedTurns: telemetry.pacingSignal.trueRestRestedBonusArmedTurns,
+                voluntaryExhaustionAttempts: telemetry.pacingSignal.voluntaryExhaustionAttempts,
+                voluntaryExhaustionAllowed: telemetry.pacingSignal.voluntaryExhaustionAllowed,
+                voluntaryExhaustionBlocked: telemetry.pacingSignal.voluntaryExhaustionBlocked,
+                turnsEndedRested: telemetry.pacingSignal.turnsEndedRested,
+                turnsEndedStableOrBetter: telemetry.pacingSignal.turnsEndedStableOrBetter,
+                turnsEndedCriticalOrExhausted: telemetry.pacingSignal.turnsEndedCriticalOrExhausted,
+                secondActionAttempts: telemetry.pacingSignal.secondActionAttempts,
+                secondActionAllowed: telemetry.pacingSignal.secondActionAllowed,
+                thirdActionAttempts: telemetry.pacingSignal.thirdActionAttempts,
+                thirdActionAllowed: telemetry.pacingSignal.thirdActionAllowed,
+                waitForBandPreservationSelections: telemetry.pacingSignal.waitForBandPreservationSelections,
+                firstContactTurn: telemetry.pacingSignal.firstContactTurn,
+                firstDamageTurn: telemetry.pacingSignal.firstDamageTurn
             }
             : {
                 samples: 0,
@@ -114,9 +173,36 @@ export const simulateHarnessRunDetailed = (
                 avgReservePressure: 0,
                 avgFatiguePressure: 0,
                 avgRecoveryPressure: 0,
+                avgTurnEndSparkRatio: 0,
+                visibleHostileSelections: 0,
+                idleWithVisibleHostile: 0,
+                attackOpportunityCount: 0,
+                attackConversionCount: 0,
+                threatenNextTurnOpportunityCount: 0,
+                threatenNextTurnConversionCount: 0,
+                backtrackMoveCount: 0,
+                loopMoveCount: 0,
+                lowValueMobilitySelections: 0,
                 restSelections: 0,
                 endTurnSelections: 0,
-                continuedActionSelections: 0
+                continuedActionSelections: 0,
+                preservedRestedTurns: 0,
+                restedBatterySpendSelections: 0,
+                restedReentryTurns: 0,
+                trueRestRestedBonusArmedTurns: 0,
+                voluntaryExhaustionAttempts: 0,
+                voluntaryExhaustionAllowed: 0,
+                voluntaryExhaustionBlocked: 0,
+                turnsEndedRested: 0,
+                turnsEndedStableOrBetter: 0,
+                turnsEndedCriticalOrExhausted: 0,
+                secondActionAttempts: 0,
+                secondActionAllowed: 0,
+                thirdActionAttempts: 0,
+                thirdActionAllowed: 0,
+                waitForBandPreservationSelections: 0,
+                firstContactTurn: 0,
+                firstDamageTurn: 0
             }
     };
 

@@ -12,7 +12,7 @@ export const FALCON_APEX_STRIKE: SkillDefinition = {
     id: 'FALCON_APEX_STRIKE',
     name: 'Apex Strike',
     description: 'The falcon dives into a target for lethal damage.',
-    slot: 'passive',
+    slot: 'offensive',
     icon: '⚡',
     baseVariables: {
         range: 4,

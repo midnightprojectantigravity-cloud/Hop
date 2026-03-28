@@ -45,39 +45,39 @@ const FLOOR_SPAWN_PROFILES: Record<number, Omit<FloorSpawnProfile, 'floor'>> = {
     },
     4: {
         role: 'pressure_spike',
-        budget: 7,
+        budget: 6,
         allowedSubtypes: ['footman', 'archer', 'bomber', 'raider'],
-        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 1, hazardSetterMax: 1, flankerMax: 1, supportMax: 0, bossAnchorMax: 0 }
+        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 1, hazardSetterMax: 1, flankerMax: 0, supportMax: 0, bossAnchorMax: 0 }
     },
     5: {
         role: 'elite',
-        budget: 10,
+        budget: 8,
         allowedSubtypes: ['footman', 'archer', 'bomber', 'shieldBearer', 'raider'],
-        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 1, hazardSetterMax: 1, flankerMax: 1, supportMax: 0, bossAnchorMax: 0 }
+        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 1, hazardSetterMax: 1, flankerMax: 0, supportMax: 0, bossAnchorMax: 0 }
     },
     6: {
         role: 'recovery',
-        budget: 12,
+        budget: 10,
         allowedSubtypes: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'pouncer'],
-        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 1, hazardSetterMax: 1, flankerMax: 1, supportMax: 1, bossAnchorMax: 0 }
+        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 1, hazardSetterMax: 0, flankerMax: 1, supportMax: 1, bossAnchorMax: 0 }
     },
     7: {
         role: 'pressure_spike',
-        budget: 15,
+        budget: 12,
         allowedSubtypes: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter', 'pouncer'],
-        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 2, hazardSetterMax: 1, flankerMax: 2, supportMax: 1, bossAnchorMax: 0 }
+        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 1, hazardSetterMax: 0, flankerMax: 1, supportMax: 1, bossAnchorMax: 0 }
     },
     8: {
         role: 'elite',
-        budget: 18,
+        budget: 14,
         allowedSubtypes: ['footman', 'archer', 'bomber', 'shieldBearer', 'warlock', 'sprinter', 'pouncer'],
-        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 2, hazardSetterMax: 1, flankerMax: 2, supportMax: 1, bossAnchorMax: 0 }
+        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 1, hazardSetterMax: 0, flankerMax: 1, supportMax: 1, bossAnchorMax: 0 }
     },
     9: {
         role: 'boss',
-        budget: 26,
+        budget: 20,
         allowedSubtypes: ['sentinel', 'shieldBearer', 'archer', 'warlock'],
-        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 2, hazardSetterMax: 0, flankerMax: 0, supportMax: 1, bossAnchorMax: 1 }
+        composition: { frontlineMin: 1, frontlineMax: 2, rangedMax: 1, hazardSetterMax: 0, flankerMax: 0, supportMax: 1, bossAnchorMax: 1 }
     },
     10: {
         role: 'boss',

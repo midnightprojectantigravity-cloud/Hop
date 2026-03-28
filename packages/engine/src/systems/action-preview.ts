@@ -74,6 +74,13 @@ const cloneActor = (actor: Actor): Actor => ({
                 : actor.companionState.markTarget
         }
         : undefined,
+    behaviorState: actor.behaviorState
+        ? {
+            overlays: actor.behaviorState.overlays.map(overlay => ({ ...overlay })),
+            anchorActorId: actor.behaviorState.anchorActorId,
+            anchorPoint: actor.behaviorState.anchorPoint ? clonePoint(actor.behaviorState.anchorPoint) : undefined
+        }
+        : undefined,
     ires: actor.ires
         ? {
             ...actor.ires

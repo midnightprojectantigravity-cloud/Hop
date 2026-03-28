@@ -213,10 +213,7 @@ describe('visibility system', () => {
             type: 'START_RUN',
             payload: {
                 loadoutId: 'VANGUARD',
-                seed: 'visibility-core-vision',
-                rulesetOverrides: {
-                    capabilities: { loadoutPassivesEnabled: false }
-                }
+                seed: 'visibility-core-vision'
             }
         });
         expect(run.player.activeSkills.some(skill => skill.id === 'STANDARD_VISION')).toBe(true);

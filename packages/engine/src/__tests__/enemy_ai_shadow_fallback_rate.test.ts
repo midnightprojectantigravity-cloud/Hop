@@ -46,7 +46,7 @@ const descriptors = JSON.parse(readFileSync(corpusPath, 'utf8')) as CorpusStateD
 const GOLDEN_EDGE_SUBTYPES = new Set(['warlock', 'bomber', 'archer', 'raider', 'pouncer', 'sentinel']);
 
 const BASELINE_MAX = {
-    totalCases: 41,
+    totalCases: 35,
     fallbackCases: 0,
     fallbackRate: 0,
     bySubtypeFallback: {
@@ -55,7 +55,6 @@ const BASELINE_MAX = {
         bomber: 0,
         warlock: 0,
         shieldBearer: 0,
-        raider: 0,
         pouncer: 0,
         sprinter: 0,
         assassin: 0,

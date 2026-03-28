@@ -1,177 +1,77 @@
 # NEXT_LEVEL Active Tracker
 
-## Status (March 3, 2026)
-- AI convergence is complete and gated:
-  - `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
-- Post-AI roadmap tranches are complete and gated:
-  - `docs/archive/NEXT_PHASES_MILESTONE_2026-02-28.md`
-- ACAE pilot tranche is complete and gated (feature-flagged hybrid rollout):
-  - `docs/archive/ACAE_MILESTONE_2026-03-01.md`
-- UPA multi-archetype success tuning tranche is complete and gated:
-  - `docs/archive/UPA_SUCCESS_TUNING.md`
-- Capability rollout tranche is complete and validated (staged rollout posture retained):
-  - `docs/archive/CAPABILITY_ROLLOUT.md`
-- Great Refactor UI/UX tranche is complete and validated:
-  - `docs/archive/UI_UX_GREAT_REFACTOR_WRAPUP_2026-03-03.md`
-- Inferno world compiler tranche is complete and integrated as the default inferno map-generation path:
-  - `docs/archive/INFERNO_WORLDGEN_WRAPUP_2026-03-12.md`
-- Documentation sync for post-tranche architecture is complete:
-  - `docs/MASTER_TECH_STACK.md`
-  - `docs/GOLD_STANDARD_MANIFESTO.md`
-  - `docs/CONTRIBUTING.md`
-  - `docs/STATUS.md`
-- Current project status and validation snapshot:
-  - `docs/STATUS.md`
+## Status
 
-## Current Operating Mode
-- Behavior-preserving changes only by default.
-- Determinism and replay parity are non-negotiable.
-- New gameplay systems are introduced only as explicit, gated tranches.
-- Inferno world generation is now on the main compiler/runtime path; remaining rollout toggles belong to capability and UI surfaces, not worldgen.
-- Active balance/tuning intake is tracked in:
-  - `docs/BALANCE_BACKLOG.md`
+As of March 27, 2026:
 
-## Active Priorities
+- Trinity v2 and IRES are fully integrated live runtime.
+- ACAE is merged into the live path.
+- Shared-vector carry, loadout passive capability content, and movement capability runtime are live-only behavior.
+- Worldgen worker transport is artifact-only and integrated.
+- Shared AI now runs on behavior overlays plus Spark doctrine.
 
-### P1: Compatibility Retirement Plan (Engine)
-Goal: retire temporary compatibility exports after migration stability window.
+Current repo law is documented in `docs/STATUS.md`.
 
-- [x] Remove new runtime dependencies on compatibility constants (`ENEMY_STATS`, `FLOOR_ENEMY_*`).
-- [x] Isolate compatibility constants to a dedicated legacy surface.
-- [x] Add a CI/static guard to block new ownership callsites on deprecated constants.
-- [x] Remove deprecated compatibility exports from engine source + package exports.
+## Operating Mode
+
+- Determinism and replay parity remain non-negotiable.
+- Default work should improve or harden the live runtime, not preserve retired rollout postures.
+- New gameplay systems should land only as explicit, test-backed tranches.
+- Active balance/tuning intake remains tracked in `docs/BALANCE_BACKLOG.md`.
+
+## Current Priorities
+
+### P1. Shared AI tuning and observability
+
+Goal: improve live tactical pressure, Spark pacing, and evaluation visibility on the shared AI stack.
+
+- [ ] Reduce visible-hostile idle behavior without reintroducing crash-spend pacing.
+- [ ] Continue tightening Spark doctrine weights around rested/stable preservation versus productive aggression.
+- [ ] Keep behavior-overlay telemetry and review tooling understandable during tuning.
 
 Acceptance:
-- [x] Runtime/evaluation ownership stays catalog/profile-backed only.
-- [x] `check-script-imports` enforces deprecated-constant usage checks.
-- [x] Strict AI acceptance gate remains green.
 
-### P2: Frontend Complexity Follow-up (Web)
-Goal: continue reducing high-churn file complexity without behavior drift.
-Status: complete for this tranche (`BiomeSandbox.tsx` is 74 lines, `Entity.tsx` is 110 lines).
+- [ ] `npm run upa:quick:ai` remains explainable and stable enough for iterative tuning.
+- [ ] Runtime and harness selectors remain on the same shared decision core.
 
-- [x] Extract `BiomeSandbox` defaults + persistence/copy workflow into dedicated state modules/hooks.
-- [x] Split `BiomeSandboxControlsPanel` into section components under `components/biome-sandbox/controls/*`.
-- [x] Extract `Entity` motion and visual-state logic into dedicated hooks under `components/entity/*`.
-- [x] Extract `Entity` ring/status/spear render branches into `components/entity/*` presentational modules.
-- [x] Extract `Entity` render shell + memo comparator helpers into dedicated `components/entity/*` modules.
-- [x] Decompose `JuiceEffectsLayer` into focused renderer modules (`juice-effect-signature-renderers`, `juice-effect-generic-renderers`).
-- [x] Decompose `useBoardBiomeVisuals` into focused modules (`biome-visuals-types`, `biome-visuals-utils`, `biome-mountain-settings`).
-- [x] Decompose `useBoardJuicePresentation` into focused modules (`board-juice-pose-builder`, `board-juice-camera-cues`, `board-juice-presentation-types`, `board-juice-presentation-utils`).
-- [x] Decompose `use-juice-manager-effects` timeline/cleanup logic into focused modules (`juice-timeline-utils`, `juice-cleanup-utils`).
-- [x] Decompose `ClutterObstaclesLayer` sprite branches into focused modules (`clutter-obstacles-renderers`, `clutter-obstacles-types`).
-- [x] Decompose `BiomeBackdropLayer` into focused modules (`biome-backdrop-defs`, `biome-backdrop-surfaces`, `biome-backdrop-types`).
-- [x] Decompose `useBoardCamera` sync logic into focused modules (`board-camera-sync`, `board-camera-types`).
-- [x] Extract `GameBoard` SVG/layer render stack into `components/game-board/GameBoardSceneSvg.tsx` and keep `GameBoard.tsx` focused on orchestration/hooks.
-- [x] Decompose `ui-log-feed` into classifier/types/filter-controls/entries modules and add classifier unit coverage.
-- [x] Decompose `ui-status-panel` into focused section modules (header, initiative, vitals, progress, directives).
-- [x] Surface active ruleset flags (`ACAE`, `Shared Vector Carry`) in `ui-status-panel` and add unit coverage for ruleset flag mapping.
-- [x] Continue decomposition of `apps/web/src/components/BiomeSandbox.tsx` into smaller feature modules.
-- [x] Continue decomposition of `apps/web/src/components/Entity.tsx` rendering branches where complexity remains high.
-- [x] Keep external props/API behavior stable for existing app integration.
+### P2. Documentation and runtime hygiene
+
+Goal: keep current-law docs and runtime contracts aligned after the live-only cleanup.
+
+- [ ] Keep `docs/STATUS.md` aligned with the actual runtime contract.
+- [ ] Keep retired rollout guidance in `docs/archive/` only.
+- [ ] Continue pruning stale compatibility code after load-time normalization windows expire.
 
 Acceptance:
-- [x] `npm --workspace @hop/web run test:run` passes.
-- [x] `npm --workspace @hop/web run build` passes.
 
-### P3: Harness and Evaluation Hardening (Engine)
-Goal: keep shared harness core stable and easier to extend.
+- [ ] Live source/docs stay free of retired rollout instructions.
+- [ ] Historical docs remain clearly marked as historical snapshots.
 
-- [x] Add missing parity/regression checks for shared batch behavior and seed normalization in harness suites.
-- [x] Keep `balance-harness` and `pvp-harness` as thin wrappers over shared batch primitives.
-- [x] Keep public harness exports stable.
+### P3. Evaluation and performance maintenance
 
-Acceptance:
-- [x] `npm --workspace @hop/engine run test:ai-acceptance:strict` passes.
-- [x] `npx vitest run packages/engine/src/__tests__/balance_harness.test.ts` passes.
-- [x] `npx vitest run packages/engine/src/__tests__/pvp_harness.test.ts` passes.
+Goal: keep shared evaluation infrastructure fast, readable, and stable.
 
-### P4: ACAE Pilot (Engine + Web)
-Goal: introduce a deterministic, data-driven ailment counter runtime behind a persisted ruleset flag.
-Status: complete for pilot tranche.
-
-- [x] Added pilot ailment content/contracts/parser (`burn`, `wet`, `poison`, `frozen`, `bleed`) and bootstrap consistency validation.
-- [x] Added ACAE runtime modules for formula evaluation, trigger/deposit, annihilation, hardening, and tick orchestration.
-- [x] Added new atomic effect handlers (`ApplyAilment`, `DepositAilmentCounters`, `ClearAilmentCounters`).
-- [x] Added feature-flagged tile injections for `LAVA`, `FIRE`, `WET`, `MIASMA`, and `ICE`.
-- [x] Added spear-family bleed pilot path.
-- [x] Added web counter badges, preview ailment delta math overlay text, and hardening toast feedback.
-- [x] Added ACAE strict suite and audits:
-  - `npm --workspace @hop/engine run test:acae:strict`
-
-## Merge Gate (Default for Active Tranches)
-- `npm --workspace @hop/engine run build`
-- `npm --workspace @hop/engine run check-script-imports`
-- `npm --workspace @hop/engine run test:ai-acceptance:strict`
-- `npm --workspace @hop/engine run test:acae:strict`
-- `npm --workspace @hop/web run test:run`
-- `npm --workspace @hop/web run build`
-
-## Deferred Backlog (Not Priority)
-
-### D1: Full Resolution Stack Reaction Windows (Engine)
-Goal: complete MTG-style reactive resolution wiring on top of current deterministic LIFO stack.
-
-- [x] Phase 0 scaffold: `resolveLifoStack` now supports explicit before/after reaction hooks and `enqueuePosition` (`top`/`bottom`) with deterministic trace accounting.
-- [x] Wire runtime reaction injection (`BEFORE_RESOLVE`, `ON_COLLISION`, `AFTER_RESOLVE`) into effect resolution, not only declaration-time expansion.
-- [x] Add top-of-stack/bottom enqueue handling at runtime (`enqueuePosition`) and keep deterministic trace logs.
-- [x] Extend stack trace assertions to verify reaction ordering in mixed effect/reaction chains.
+- [ ] Keep harness telemetry aligned with live AI doctrine.
+- [ ] Keep review scripts readable for balance/tuning work.
+- [ ] Watch worker/runtime performance after AI telemetry growth.
 
 Acceptance:
-- [x] New reaction-window parity tests pass with deterministic `stackTrace` ordering.
-- [x] Existing strict AI/ACAE suites remain green.
 
-### D2: Vectorized Force Unification (Engine)
-Goal: converge push/pull/kinetic displacement onto one canonical force model.
+- [ ] `npm --workspace @hop/engine run test:full` passes.
+- [ ] `npm --workspace @hop/web run test:run` passes.
+- [ ] `npm run engine:fast` stays practical as the default repair loop.
 
-- [x] Introduce canonical force contract (target equation and coefficients) to replace fragmented per-system formulas.
-- [x] Add first-class `ApplyForce` atomic effect path so impulses resolve through the same LIFO stack as other effects.
-- [x] Unify collision conversion rules (`stop` vs `crush_damage`) across `combat/force` and kinetic movement modules.
-- [x] Add deterministic mass/velocity/momentum source mapping from actor components/derived stats.
+## Merge Gate
 
-Acceptance:
-- [x] Force/collision behavior is deterministic and replay-stable across identical seeds.
-- [x] Existing displacement/kinetic scenario coverage remains green after migration.
-
-### D3: Catch/Release Attachment States (V2)
-Goal: add explicit attachment mechanics for shared-vector movement while preserving determinism.
-
-- [x] Define attachment state model (attach, maintain, release) and ownership rules.
-- [x] Model shared-vector updates and collision propagation for attached pairs/chains.
-- [x] Add release conditions (manual release, obstacle break, damage break, status break).
-- [x] Add focused scenarios for attach/release edge cases and collision correctness.
-
-Acceptance:
-- [x] Attach/release scenarios pass under strict deterministic replay.
-- [x] No regression in non-attachment movement flows.
-
-Notes:
-- `GRAPPLE_HOOK` now emits attachment lifecycle effects in live runtime; non-zero shared-vector carry is controlled by `ruleset.attachments.sharedVectorCarry` to preserve default behavior.
-- `START_RUN` supports deterministic `rulesetOverrides.attachments.sharedVectorCarry` so carry mode can be explicitly toggled per run.
-- `BULWARK_CHARGE` now emits attachment lifecycle effects on successful charge resolution with the same ruleset-gated carry behavior.
-
-### D4: Capability Rollout Promotion (Engine + Web)
-Goal: promote capability defaults in production only after canary evidence and rollback readiness.
-
-- [ ] Keep production defaults staged off until canary metrics remain stable for the agreed soak window.
-- [ ] Keep canary activation paths explicit and deterministic:
-  - hub toggles
-  - URL/env overrides
-  - `START_RUN.rulesetOverrides.capabilities`
-- [ ] Add/retain CI merge-gate coverage for both rollout postures:
-  - defaults off parity/fallback gates
-  - enabled override movement/capability behavior gates
-- [ ] Prepare dedicated production-default flip commit (no feature code changes) for:
-  - `apps/web/.env.production`
-  - deployment environment variable defaults
-- [ ] Document rollback procedure and verify one-command reversion to staged-off production posture.
-
-Acceptance:
-- [ ] No parity drift with defaults off (`enemy_ai_parity_corpus`, `enemy_ai_shadow_fallback_rate`).
-- [ ] Capability-on movement/runtime tests remain green.
-- [ ] Web ruleset/intel observability shows expected flags in QA.
-- [ ] Production-default flip is shipped only in a dedicated promotion PR/commit.
+```powershell
+npm run build
+npm --workspace @hop/engine run test:full
+npm --workspace @hop/web run test:run
+npm run engine:fast
+npm run upa:quick:ai
+```
 
 ## History and Archives
+
 - Historical roadmap log: `docs/ROADMAP_HISTORY.md`
-- Archived implementation plans: `docs/archive/`
+- Archived milestone and rollout documents: `docs/archive/`

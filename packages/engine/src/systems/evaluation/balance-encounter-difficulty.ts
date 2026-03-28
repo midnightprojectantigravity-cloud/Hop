@@ -43,6 +43,7 @@ export const computeEncounterDifficultyProfile = (
     const routePressureScore = round2(
         (floorProfile.pathFrictionScore * 0.9)
         + (floorProfile.hazardPressureScore * 0.8)
+        + (floorProfile.lavaClusterCount * 1.1)
         + (floorProfile.routeComplexityScore * 0.45)
     );
     const objectiveTensionScore = round2(

@@ -143,7 +143,9 @@ const buildSelectedDecision = (
             message: generic.selected.action.type === 'MOVE'
                 ? `${context.enemy.subtype || context.enemy.id} moves to (${plannedEntity.position.q}, ${plannedEntity.position.r})`
                 : undefined,
-            decision
+            decision,
+            selectedFacts: generic.selected.facts,
+            selectionSummary: generic.summary
         },
         scored
     };
@@ -232,7 +234,11 @@ export const decideEnemyIntent = (
             expectedValue: selected.decision.expectedValue || 0,
             reasoningCode: selected.decision.reasoningCode || 'SHARED_GENERIC',
             isGhost: false,
-            rngConsumption: selected.decision.rngConsumption || 0
+            rngConsumption: selected.decision.rngConsumption || 0,
+            aiTelemetry: {
+                selectedFacts: selected.selectedFacts,
+                selectionSummary: selected.selectionSummary
+            }
         }
     };
 };

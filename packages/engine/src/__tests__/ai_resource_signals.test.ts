@@ -25,11 +25,13 @@ describe('ai resource signals', () => {
 
         expect(signals.sparkRatio).toBe(1);
         expect(signals.manaRatio).toBe(1);
+        expect(signals.aiSparkBand).toBe('rested_hold');
         expect(signals.exhaustionRatio).toBe(0);
         expect(signals.reservePressure).toBe(0);
         expect(signals.fatiguePressure).toBe(0);
         expect(signals.recoveryPressure).toBe(0);
         expect(signals.actionChainPressure).toBe(0);
+        expect(signals.fullSparkBurstWindow).toBe(true);
     });
 
     it('derives normalized reserve and recovery pressure from current pools', () => {
@@ -43,11 +45,13 @@ describe('ai resource signals', () => {
 
         expect(signals.sparkRatio).toBeCloseTo(0.25, 5);
         expect(signals.manaRatio).toBeCloseTo(0.25, 5);
+        expect(signals.aiSparkBand).toBe('critical');
         expect(signals.exhaustionRatio).toBeCloseTo(0.75, 5);
         expect(signals.reservePressure).toBeCloseTo(0.75, 5);
-        expect(signals.fatiguePressure).toBeCloseTo(0.6375, 5);
+        expect(signals.fatiguePressure).toBeCloseTo(0.3375, 5);
         expect(signals.actionChainPressure).toBeCloseTo(2 / 3, 5);
-        expect(signals.recoveryPressure).toBeCloseTo(0.67979, 5);
+        expect(signals.recoveryPressure).toBeCloseTo(0.55583, 5);
+        expect(signals.criticalRisk).toBeGreaterThan(0);
     });
 
     it('pins fatigue pressure to full when the actor is exhausted', () => {
@@ -62,9 +66,10 @@ describe('ai resource signals', () => {
 
         expect(signals.sparkRatio).toBeCloseTo(0.8, 5);
         expect(signals.manaRatio).toBeCloseTo(0.875, 5);
+        expect(signals.aiSparkBand).toBe('exhausted');
         expect(signals.reservePressure).toBeCloseTo(0.2, 5);
         expect(signals.fatiguePressure).toBe(1);
-        expect(signals.recoveryPressure).toBeCloseTo(0.62, 5);
+        expect(signals.recoveryPressure).toBeCloseTo(0.45, 5);
     });
 
     it('treats the second action as higher pressure than the first', () => {
@@ -83,5 +88,7 @@ describe('ai resource signals', () => {
 
         expect(firstActionDone.actionChainPressure).toBeGreaterThan(freshTurn.actionChainPressure);
         expect(firstActionDone.recoveryPressure).toBeGreaterThan(freshTurn.recoveryPressure);
+        expect(freshTurn.canSafelyTakeSecondAction).toBe(true);
+        expect(firstActionDone.canSafelyTakeSecondAction).toBe(false);
     });
 });

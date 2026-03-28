@@ -1,3 +1,4 @@
+import type { GenericUnitAiCandidateFacts, GenericUnitAiSelectionSummary } from '../systems/ai/generic-unit-ai';
 import type { Point } from '../types';
 import type { GameState, Actor } from '../types';
 
@@ -23,6 +24,10 @@ export interface Intent {
         isGhost: boolean;       // Flag for recorded data
         rngSeed?: number;       // Injected seed for deterministic replays
         rngConsumption?: number; // Number of RNG steps consumed during decision making
+        aiTelemetry?: {
+            selectedFacts?: GenericUnitAiCandidateFacts;
+            selectionSummary?: GenericUnitAiSelectionSummary;
+        };
     };
 }
 

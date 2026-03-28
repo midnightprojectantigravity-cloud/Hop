@@ -20,7 +20,6 @@ const run = (): HardeningAuditReport => {
 
     for (const seed of seeds) {
         let state = generateInitialState(1, seed);
-        state.ruleset = { ailments: { acaeEnabled: true, version: 'acae-v1' } };
 
         for (let turn = 0; turn < 60; turn++) {
             state = applyEffects(state, [

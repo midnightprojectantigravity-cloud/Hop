@@ -15,7 +15,14 @@ export const buildBombFuseStatus = (duration = BOMB_ACTOR_CONTRACT.fuseTurns): S
     id: 'TIME_BOMB',
     type: 'time_bomb',
     duration,
-    tickWindow: 'END_OF_TURN'
+    durationModel: 'tick_window',
+    tickWindow: 'END_OF_TURN',
+    onTick: (actor) => {
+        if (!isBombActor(actor)) return [];
+        const fuse = actor.statusEffects.find(status => status.type === 'time_bomb');
+        if (!fuse || fuse.duration > 1) return [];
+        return buildBombDetonationEffects(actor);
+    }
 });
 
 export const createBombActor = (

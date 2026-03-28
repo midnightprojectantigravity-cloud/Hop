@@ -14,7 +14,7 @@ export const FALCON_SCOUT: SkillDefinition = {
     id: 'FALCON_SCOUT' as any, // Will be registered in registry.ts
     name: 'Scout Orbit',
     description: 'The actor orbits a target point in a hexagonal ring.',
-    slot: 'passive',
+    slot: 'utility',
     icon: '👁️',
     baseVariables: {
         range: 1,
@@ -25,7 +25,7 @@ export const FALCON_SCOUT: SkillDefinition = {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
 
-        const markTarget = attacker.companionState?.markTarget;
+        const markTarget = attacker.behaviorState?.anchorPoint || attacker.companionState?.markTarget;
         if (!markTarget || typeof markTarget !== 'object') {
             return { effects, messages, consumesTurn: false };
         }
@@ -70,17 +70,12 @@ export const FALCON_SCOUT: SkillDefinition = {
         return { effects, messages, consumesTurn: false };
     },
     upgrades: {},
-    getValidTargets: (state: GameState, _origin: Point) => {
-        // Autonomous skill: tactical validation should not reject AI-provided target metadata.
-        const validTargets: Point[] = [];
-        for (let q = 0; q < state.gridWidth; q++) {
-            for (let r = 0; r < state.gridHeight; r++) {
-                const candidate: Point = { q, r, s: -q - r };
-                if (SpatialSystem.isWithinBounds(state, candidate)) {
-                    validTargets.push(candidate);
-                }
-            }
+    getValidTargets: (state: GameState, origin: Point) => {
+        const attacker = getActorAt(state, origin);
+        const markTarget = attacker?.behaviorState?.anchorPoint || attacker?.companionState?.markTarget;
+        if (markTarget && typeof markTarget === 'object' && SpatialSystem.isWithinBounds(state, markTarget as Point)) {
+            return [markTarget as Point];
         }
-        return validTargets;
+        return [];
     },
 };

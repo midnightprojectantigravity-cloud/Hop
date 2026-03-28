@@ -90,4 +90,5 @@ Validated in this milestone:
 1. ACAE is off by default unless enabled in `GameState.ruleset.ailments`.
 2. Legacy status systems remain active for non-pilot paths.
 3. Pilot logic is behavior-preserving for ACAE-disabled runs; strict AI/golden acceptance remains green.
+# Historical snapshot; superseded by `docs/STATUS.md`
 

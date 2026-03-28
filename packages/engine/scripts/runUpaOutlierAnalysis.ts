@@ -22,13 +22,37 @@ const topN = (results: RunResult[], n: number) =>
     [...results]
         .sort((a, b) => b.score - a.score)
         .slice(0, n)
-        .map(r => ({ seed: r.seed, score: r.score, result: r.result, turnsSpent: r.turnsSpent }));
+        .map(r => ({
+            seed: r.seed,
+            score: r.score,
+            result: r.result,
+            turnsSpent: r.turnsSpent,
+            enemyDamageToPlayer: r.enemyAiTelemetry.damageToPlayer,
+            enemyOffensiveSkillCasts: r.enemyAiTelemetry.offensiveSkillCasts,
+            enemyIdleWithVisiblePlayer: r.enemyAiTelemetry.idleWithVisiblePlayer,
+            enemyAttackConversionRate: r.enemyAiTelemetry.attackConversionTurns / Math.max(1, r.enemyAiTelemetry.attackOpportunityTurns),
+            enemyVoluntaryExhaustionAllowed: r.enemyAiTelemetry.voluntaryExhaustionAllowed,
+            enemyWaitForBandPreservationSelections: r.enemyAiTelemetry.waitForBandPreservationSelections,
+            playerAttackConversionRate: r.pacingSignal.attackConversionCount / Math.max(1, r.pacingSignal.attackOpportunityCount)
+        }));
 
 const bottomN = (results: RunResult[], n: number) =>
     [...results]
         .sort((a, b) => a.score - b.score)
         .slice(0, n)
-        .map(r => ({ seed: r.seed, score: r.score, result: r.result, turnsSpent: r.turnsSpent }));
+        .map(r => ({
+            seed: r.seed,
+            score: r.score,
+            result: r.result,
+            turnsSpent: r.turnsSpent,
+            enemyDamageToPlayer: r.enemyAiTelemetry.damageToPlayer,
+            enemyOffensiveSkillCasts: r.enemyAiTelemetry.offensiveSkillCasts,
+            enemyIdleWithVisiblePlayer: r.enemyAiTelemetry.idleWithVisiblePlayer,
+            enemyAttackConversionRate: r.enemyAiTelemetry.attackConversionTurns / Math.max(1, r.enemyAiTelemetry.attackOpportunityTurns),
+            enemyVoluntaryExhaustionAllowed: r.enemyAiTelemetry.voluntaryExhaustionAllowed,
+            enemyWaitForBandPreservationSelections: r.enemyAiTelemetry.waitForBandPreservationSelections,
+            playerAttackConversionRate: r.pacingSignal.attackConversionCount / Math.max(1, r.pacingSignal.attackOpportunityCount)
+        }));
 
 const report = policies.map(policy => {
     const results = runBatch(

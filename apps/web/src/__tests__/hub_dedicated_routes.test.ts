@@ -43,10 +43,6 @@ describe('hub dedicated routes wiring', () => {
     };
     const tree = Hub({
       gameState: hubState,
-      capabilityPassivesEnabled: false,
-      onCapabilityPassivesEnabledChange: vi.fn(),
-      movementRuntimeEnabled: false,
-      onMovementRuntimeEnabledChange: vi.fn(),
       onSelectLoadout: vi.fn(),
       onStartRun: vi.fn(),
       onOpenArcade: vi.fn(),
@@ -72,10 +68,6 @@ describe('hub dedicated routes wiring', () => {
     };
     const tree = Hub({
       gameState: hubState,
-      capabilityPassivesEnabled: false,
-      onCapabilityPassivesEnabledChange: vi.fn(),
-      movementRuntimeEnabled: false,
-      onMovementRuntimeEnabledChange: vi.fn(),
       onSelectLoadout: vi.fn(),
       onStartRun: vi.fn(),
       onOpenArcade: vi.fn(),
@@ -88,4 +80,3 @@ describe('hub dedicated routes wiring', () => {
     expect(buttons.some((button) => textOf(button.props?.children).trim() === 'Daily')).toBe(false);
   });
 });
-

@@ -19,7 +19,7 @@ const runCommand = (commandLine: string, extraEnv?: Record<string, string>): voi
 };
 
 const strict = process.argv.includes('--strict');
-const env = strict ? { HOP_ACAE_ENABLED: '1' } : {};
+const env = strict ? {} : {};
 
 runCommand('npx vitest run src/__tests__/acae_formula_application.test.ts src/__tests__/acae_annihilation_priority_dag.test.ts src/__tests__/acae_hardening_growth.test.ts src/__tests__/acae_tile_injection.test.ts src/__tests__/acae_effect_handler_integration.test.ts src/__tests__/acae_scenarios_runner.test.ts', env);
 runCommand('npx tsx ./scripts/runAcaeLethalitySimulation.ts --check', env);

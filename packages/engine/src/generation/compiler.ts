@@ -1167,6 +1167,7 @@ const resolveRouteProfile = (
             rejoinBeforeExit: true,
             obstacleClusterBudget: 1,
             trapClusterBudget: 0,
+            lavaClusterBudget: 1,
             saferRouteBias: 'none',
             riskierRouteBias: 'none'
         };
@@ -1181,6 +1182,7 @@ const resolveRouteProfile = (
                 rejoinBeforeExit: true,
                 obstacleClusterBudget: 2,
                 trapClusterBudget: 1,
+                lavaClusterBudget: 0,
                 saferRouteBias: 'strong',
                 riskierRouteBias: 'soft'
             };
@@ -1193,6 +1195,7 @@ const resolveRouteProfile = (
                 rejoinBeforeExit: true,
                 obstacleClusterBudget: 2,
                 trapClusterBudget: 2,
+                lavaClusterBudget: 2,
                 saferRouteBias: 'soft',
                 riskierRouteBias: 'strong'
             };
@@ -1205,6 +1208,7 @@ const resolveRouteProfile = (
                 rejoinBeforeExit: true,
                 obstacleClusterBudget: 2,
                 trapClusterBudget: 1,
+                lavaClusterBudget: 2,
                 saferRouteBias: 'soft',
                 riskierRouteBias: 'strong'
             };
@@ -1217,6 +1221,7 @@ const resolveRouteProfile = (
                 rejoinBeforeExit: true,
                 obstacleClusterBudget: 1,
                 trapClusterBudget: 0,
+                lavaClusterBudget: 1,
                 saferRouteBias: 'none',
                 riskierRouteBias: 'none'
             };
@@ -1230,6 +1235,7 @@ const resolveRouteProfile = (
                 rejoinBeforeExit: true,
                 obstacleClusterBudget: 1,
                 trapClusterBudget: 0,
+                lavaClusterBudget: 0,
                 saferRouteBias: 'none',
                 riskierRouteBias: 'none'
             };
@@ -1288,6 +1294,7 @@ const buildPathSummary = (pathNetwork: GeneratedPathNetwork): PathSummary => {
         .sort();
     const obstacleClusterCount = pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'obstacle').length;
     const trapClusterCount = pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'trap').length;
+    const lavaClusterCount = pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'lava').length;
 
     return {
         mainLandmarkIds,
@@ -1299,6 +1306,7 @@ const buildPathSummary = (pathNetwork: GeneratedPathNetwork): PathSummary => {
         maxStraightRun: pathNetwork.maxStraightRun,
         obstacleClusterCount,
         trapClusterCount,
+        lavaClusterCount,
         tacticalTileCount: pathNetwork.tacticalTileKeys.length,
         visualTileCount: pathNetwork.visualTileKeys.length
     };
@@ -1314,6 +1322,7 @@ const buildPathDiagnostics = (pathNetwork: GeneratedPathNetwork): string[] => ([
     `max_straight_run=${pathNetwork.maxStraightRun}`,
     `obstacle_clusters=${pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'obstacle').length}`,
     `trap_clusters=${pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'trap').length}`,
+    `lava_clusters=${pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'lava').length}`,
     `primary_route_tiles=${new Set(pathNetwork.segments.filter(segment => segment.routeMembership === 'primary' || segment.routeMembership === 'shared').flatMap(segment => segment.tileKeys)).size}`,
     `alternate_route_tiles=${new Set(pathNetwork.segments.filter(segment => segment.routeMembership === 'alternate' || segment.routeMembership === 'shared').flatMap(segment => segment.tileKeys)).size}`,
     `tactical_tiles=${pathNetwork.tacticalTileKeys.length}`,
@@ -2169,14 +2178,36 @@ const applyEnvironmentalPressure = (
         : intent.role === 'pressure_spike' || intent.role === 'elite'
             ? ['shared', 'primary', 'alternate'] as const
             : ['shared', 'alternate', 'primary'] as const;
+    const lavaPriority = intent.role === 'pressure_spike' || intent.role === 'elite'
+        ? ['alternate', 'shared', 'primary'] as const
+        : ['shared', 'alternate', 'primary'] as const;
+
+    const isMutablePressureKey = (key: string): boolean =>
+        !hardClaimKeys.has(key)
+        && !specials.has(key)
+        && !landmarkKeys.has(key)
+        && !usedTileKeys.has(key);
+
+    const resolvePressureRouteMembership = (key: string): Exclude<RouteMembership, 'hidden'> => {
+        if (pathNetwork.visualTileKeys.includes(key)) {
+            return resolveTileRouteMembership(pathNetwork, key);
+        }
+        const neighboringMemberships = walkableNeighborKeys(parseKeyToHex(key))
+            .filter(neighborKey => pathNetwork.visualTileKeys.includes(neighborKey))
+            .map(neighborKey => resolveTileRouteMembership(pathNetwork, neighborKey));
+        if (neighboringMemberships.includes('shared')) return 'shared';
+        if (neighboringMemberships.includes('alternate')) return 'alternate';
+        return 'primary';
+    };
 
     const prioritizeHexKeys = (
         keys: string[],
-        priority: readonly ['primary' | 'alternate' | 'shared', 'primary' | 'alternate' | 'shared', 'primary' | 'alternate' | 'shared']
+        priority: readonly ['primary' | 'alternate' | 'shared', 'primary' | 'alternate' | 'shared', 'primary' | 'alternate' | 'shared'],
+        membershipResolver: (key: string) => Exclude<RouteMembership, 'hidden'> = (key) => resolveTileRouteMembership(pathNetwork, key)
     ): Point[] => priority.flatMap(routeMembership =>
         shuffleStable(
             keys
-                .filter(key => resolveTileRouteMembership(pathNetwork, key) === routeMembership)
+                .filter(key => membershipResolver(key) === routeMembership)
                 .sort((left, right) => left.localeCompare(right))
                 .map(parseKeyToHex),
             rng
@@ -2185,7 +2216,7 @@ const applyEnvironmentalPressure = (
 
     const pushObstacleCluster = (centerKey: string): boolean => {
         const center = parseKeyToHex(centerKey);
-        const routeMembership = resolveTileRouteMembership(pathNetwork, centerKey);
+        const routeMembership = resolvePressureRouteMembership(centerKey);
         const candidateKeys = walkableNeighborKeys(center)
             .sort((left, right) => left.localeCompare(right))
             .filter(key =>
@@ -2214,16 +2245,64 @@ const applyEnvironmentalPressure = (
         return true;
     };
 
+    const pushLavaCluster = (centerKey: string): boolean => {
+        const centerTile = nextTiles.get(centerKey);
+        if (!centerTile || centerTile.baseId !== 'STONE' || tacticalRouteTileKeys.has(centerKey) || !isMutablePressureKey(centerKey)) {
+            return false;
+        }
+
+        const routeMembership = resolveTileRouteMembership(pathNetwork, centerKey);
+        const clusterKeys = [centerKey];
+        nextTiles.set(centerKey, createTile('LAVA', centerTile.position));
+        usedTileKeys.add(centerKey);
+
+        const allowSecondTile = intent.role === 'pressure_spike' || intent.role === 'elite';
+        if (allowSecondTile) {
+            const secondaryKey = walkableNeighborKeys(centerTile.position)
+                .sort((left, right) => left.localeCompare(right))
+                .find(candidateKey => {
+                    const tile = nextTiles.get(candidateKey);
+                    return !!tile
+                        && tile.baseId === 'STONE'
+                        && !tacticalRouteTileKeys.has(candidateKey)
+                        && isMutablePressureKey(candidateKey)
+                    && resolvePressureRouteMembership(candidateKey) === routeMembership;
+                });
+            if (secondaryKey) {
+                const secondaryTile = nextTiles.get(secondaryKey)!;
+                nextTiles.set(secondaryKey, createTile('LAVA', secondaryTile.position));
+                usedTileKeys.add(secondaryKey);
+                clusterKeys.push(secondaryKey);
+            }
+        }
+
+        clusters.push({
+            id: `lava:${clusters.length}:${centerKey}`,
+            kind: 'lava',
+            routeMembership,
+            tileKeys: clusterKeys
+        });
+        return true;
+    };
+
     const trapTiles = prioritizeHexKeys(
         pathNetwork.visualTileKeys
-            .filter(key =>
-                !hardClaimKeys.has(key)
-                && !specials.has(key)
-                && !landmarkKeys.has(key)
-                && !usedTileKeys.has(key)
-            ),
+            .filter(key => isMutablePressureKey(key)),
         trapPriority
     );
+    const lavaCandidateKeys = Array.from(new Set(
+        pathNetwork.visualTileKeys.flatMap(key => walkableNeighborKeys(parseKeyToHex(key)))
+    ))
+        .sort((left, right) => left.localeCompare(right))
+        .filter(key => {
+            const tile = nextTiles.get(key);
+            return !!tile
+                && tile.baseId === 'STONE'
+                && !tacticalRouteTileKeys.has(key)
+                && isMutablePressureKey(key)
+                && (intent.role !== 'recovery' || resolvePressureRouteMembership(key) !== 'primary')
+                && walkableNeighborKeys(parseKeyToHex(key)).some(neighborKey => tacticalRouteTileKeys.has(neighborKey));
+        });
 
     const obstacleCenters = prioritizeHexKeys(clusterCenterKeys, obstaclePriority);
     if (!authoredFloor) {
@@ -2232,10 +2311,22 @@ const applyEnvironmentalPressure = (
             if (obstacleCount >= profile.obstacleClusterBudget) break;
             if (pushObstacleCluster(pointToKey(center))) obstacleCount += 1;
         }
+    }
 
+    const lavaBudget = intent.theme === 'inferno'
+        ? authoredFloor ? Math.min(1, profile.lavaClusterBudget) : profile.lavaClusterBudget
+        : 0;
+    let lavaCount = 0;
+    for (const point of prioritizeHexKeys(lavaCandidateKeys, lavaPriority, resolvePressureRouteMembership)) {
+        if (lavaCount >= lavaBudget) break;
+        if (pushLavaCluster(pointToKey(point))) lavaCount += 1;
+    }
+
+    if (!authoredFloor) {
         let trapCount = 0;
+        const trapBudget = Math.max(0, profile.trapClusterBudget - lavaCount);
         for (const point of trapTiles) {
-            if (trapCount >= profile.trapClusterBudget) break;
+            if (trapCount >= trapBudget) break;
             const key = pointToKey(point);
             const tile = nextTiles.get(key);
             if (!tile || tile.baseId !== 'STONE') continue;

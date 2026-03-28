@@ -30,6 +30,10 @@ const archetypes = loadouts.map(loadoutId => {
             avgTurnsToLoss: summary.avgTurnsToLoss,
             avgFinalPlayerHpRatio: summary.avgFinalPlayerHpRatio,
             avgPlayerSkillCastsPerRun: summary.avgPlayerSkillCastsPerRun,
+            attackConversionRate: summary.attackConversionRate,
+            avgIdleWithVisibleHostile: summary.avgIdleWithVisibleHostile,
+            avgEnemyDamageToPlayerPerRun: summary.enemyAiTelemetry.avgEnemyDamageToPlayerPerRun,
+            enemyAttackOpportunityConversionRate: summary.enemyAiTelemetry.enemyAttackOpportunityConversionRate,
         },
     };
 });

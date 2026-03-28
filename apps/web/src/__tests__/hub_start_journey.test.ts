@@ -45,10 +45,6 @@ describe('hub start journey wiring', () => {
     const hubState = generateHubState();
     const tree = Hub({
       gameState: hubState,
-      capabilityPassivesEnabled: false,
-      onCapabilityPassivesEnabledChange: vi.fn(),
-      movementRuntimeEnabled: false,
-      onMovementRuntimeEnabledChange: vi.fn(),
       onSelectLoadout: vi.fn(),
       onStartRun: vi.fn(),
       onOpenArcade: vi.fn(),
@@ -70,10 +66,6 @@ describe('hub start journey wiring', () => {
 
     const tree = Hub({
       gameState: hubState,
-      capabilityPassivesEnabled: false,
-      onCapabilityPassivesEnabledChange: vi.fn(),
-      movementRuntimeEnabled: false,
-      onMovementRuntimeEnabledChange: vi.fn(),
       onSelectLoadout: vi.fn(),
       onStartRun,
       onOpenArcade: vi.fn(),
@@ -107,10 +99,6 @@ describe('hub start journey wiring', () => {
 
     const tree = Hub({
       gameState: hubState,
-      capabilityPassivesEnabled: false,
-      onCapabilityPassivesEnabledChange: vi.fn(),
-      movementRuntimeEnabled: false,
-      onMovementRuntimeEnabledChange: vi.fn(),
       onSelectLoadout: vi.fn(),
       onStartRun: vi.fn(),
       onOpenArcade: vi.fn(),
@@ -144,10 +132,6 @@ describe('hub start journey wiring', () => {
 
     const tree = Hub({
       gameState: generateHubState(),
-      capabilityPassivesEnabled: false,
-      onCapabilityPassivesEnabledChange: vi.fn(),
-      movementRuntimeEnabled: false,
-      onMovementRuntimeEnabledChange: vi.fn(),
       mapShape: 'diamond',
       onMapShapeChange,
       mapSize: { width: 9, height: 11 },

@@ -33,10 +33,6 @@ export const HubRouteShell = ({
   dedicatedRoutesEnabled,
   navigateTo,
   patchUiPreferences,
-  capabilityPassivesEnabled,
-  onCapabilityPassivesEnabledChange,
-  movementRuntimeEnabled,
-  onMovementRuntimeEnabledChange,
   mapShape,
   onMapShapeChange,
   mapSize,
@@ -81,10 +77,6 @@ export const HubRouteShell = ({
   dedicatedRoutesEnabled: boolean;
   navigateTo: (path: string) => void;
   patchUiPreferences: (patch: Partial<UiPreferencesV2>) => void;
-  capabilityPassivesEnabled: boolean;
-  onCapabilityPassivesEnabledChange: (enabled: boolean) => void;
-  movementRuntimeEnabled: boolean;
-  onMovementRuntimeEnabledChange: (enabled: boolean) => void;
   mapShape: MapShape;
   onMapShapeChange: (shape: MapShape) => void;
   mapSize: GridSize;
@@ -205,10 +197,6 @@ export const HubRouteShell = ({
             onSetColorMode={(colorMode) => patchUiPreferences({ colorMode })}
             onSetMotionMode={(motionMode) => patchUiPreferences({ motionMode })}
             onSetHudDensity={(hudDensity) => patchUiPreferences({ hudDensity })}
-            capabilityPassivesEnabled={capabilityPassivesEnabled}
-            onCapabilityPassivesEnabledChange={onCapabilityPassivesEnabledChange}
-            movementRuntimeEnabled={movementRuntimeEnabled}
-            onMovementRuntimeEnabledChange={onMovementRuntimeEnabledChange}
             mapShape={mapShape}
             onMapShapeChange={onMapShapeChange}
             mapSize={mapSize}

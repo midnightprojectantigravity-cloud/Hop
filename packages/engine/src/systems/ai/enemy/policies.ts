@@ -8,8 +8,17 @@ import { SpatialSystem } from '../../spatial-system';
 import { UnifiedTileService } from '../../tiles/unified-tile-service';
 import { SkillRegistry } from '../../../skillRegistry';
 import type { EnemyAiContext, EnemyAiPolicyProfile } from './types';
+import type { GenericUnitAiCandidateFacts, GenericUnitAiSelectionSummary } from '../generic-unit-ai';
+import type { AiDecisionAction } from '../core/types';
 
-export type EnemyPlannerResult = { entity: Entity; nextState: GameState; message?: string };
+export type EnemyPlannerResult = {
+    entity: Entity;
+    nextState: GameState;
+    message?: string;
+    selectedAction?: AiDecisionAction;
+    selectedFacts?: GenericUnitAiCandidateFacts;
+    selectionSummary?: GenericUnitAiSelectionSummary;
+};
 export type EnemyPolicyHandler = (
     enemy: Entity,
     playerPos: Point,

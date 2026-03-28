@@ -26,10 +26,6 @@ interface HubScreenProps {
   onSetColorMode: (mode: UiColorMode) => void;
   onSetMotionMode: (mode: UiMotionMode) => void;
   onSetHudDensity: (density: UiHudDensity) => void;
-  capabilityPassivesEnabled: boolean;
-  onCapabilityPassivesEnabledChange: (enabled: boolean) => void;
-  movementRuntimeEnabled: boolean;
-  onMovementRuntimeEnabledChange: (enabled: boolean) => void;
   mapShape: MapShape;
   onMapShapeChange: (shape: MapShape) => void;
   mapSize: GridSize;
@@ -57,10 +53,6 @@ export const HubScreen = ({
   onSetColorMode,
   onSetMotionMode,
   onSetHudDensity,
-  capabilityPassivesEnabled,
-  onCapabilityPassivesEnabledChange,
-  movementRuntimeEnabled,
-  onMovementRuntimeEnabledChange,
   mapShape,
   onMapShapeChange,
   mapSize,
@@ -136,10 +128,6 @@ export const HubScreen = ({
       </div>
       <Hub
         gameState={gameState}
-        capabilityPassivesEnabled={capabilityPassivesEnabled}
-        onCapabilityPassivesEnabledChange={onCapabilityPassivesEnabledChange}
-        movementRuntimeEnabled={movementRuntimeEnabled}
-        onMovementRuntimeEnabledChange={onMovementRuntimeEnabledChange}
         mapShape={mapShape}
         onMapShapeChange={onMapShapeChange}
         mapSize={mapSize}

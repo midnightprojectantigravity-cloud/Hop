@@ -105,6 +105,22 @@ export const FALCON_COMMAND: SkillDefinition = {
                 target: falcon.id,
                 mode: 'roost',
             });
+            effects.push({
+                type: 'UpdateBehaviorState',
+                target: falcon.id,
+                clearOverlays: true,
+                overlays: [{
+                    id: 'falcon_roost',
+                    source: 'command',
+                    sourceId: 'falcon_roost',
+                    rangeModel: 'owner_proximity',
+                    selfPreservationBias: 0.35,
+                    controlBias: 0.2,
+                    commitBias: -0.3
+                }],
+                anchorActorId: attacker.id,
+                anchorPoint: null
+            });
             return {
                 effects,
                 messages,
@@ -141,6 +157,22 @@ export const FALCON_COMMAND: SkillDefinition = {
                 mode: 'predator',
                 markTarget: targetActor.id,
             });
+            effects.push({
+                type: 'UpdateBehaviorState',
+                target: falcon.id,
+                clearOverlays: true,
+                overlays: [{
+                    id: 'falcon_predator',
+                    source: 'command',
+                    sourceId: 'falcon_predator',
+                    desiredRange: [1, 2],
+                    offenseBias: 0.35,
+                    commitBias: 0.3,
+                    preferDamageOverPositioning: true
+                }],
+                anchorActorId: targetActor.id,
+                anchorPoint: null
+            });
             return {
                 effects,
                 messages,
@@ -171,6 +203,22 @@ export const FALCON_COMMAND: SkillDefinition = {
                 target: falcon.id,
                 mode: 'scout',
                 markTarget: target,
+            });
+            effects.push({
+                type: 'UpdateBehaviorState',
+                target: falcon.id,
+                clearOverlays: true,
+                overlays: [{
+                    id: 'falcon_scout',
+                    source: 'command',
+                    sourceId: 'falcon_scout',
+                    rangeModel: 'anchor_proximity',
+                    controlBias: 0.35,
+                    selfPreservationBias: 0.15,
+                    commitBias: -0.1
+                }],
+                anchorActorId: null,
+                anchorPoint: target || null
             });
             return {
                 effects,

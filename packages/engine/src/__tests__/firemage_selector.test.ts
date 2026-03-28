@@ -137,6 +137,48 @@ describe('Firemage selector under IRES pressure', () => {
         expect(action).toEqual({ type: 'WAIT' });
     });
 
+    it('paces before entering exhausted when a ranged cast would dump remaining spark', () => {
+        const profile = getStrategicPolicyProfile('sp-v1-default');
+        const base = generateInitialState(1, 'firemage-pre-exhaustion-pace', 'firemage-pre-exhaustion-pace', undefined, DEFAULT_LOADOUTS.FIREMAGE);
+        const config = resolveIresRuleset(base.ruleset);
+        const player = applyIresMutationToActor(
+            {
+                ...base.player,
+                position: createHex(4, 4)
+            },
+            {
+                sparkDelta: -80,
+                manaDelta: -8,
+                actionCountDelta: 1,
+                movedThisTurn: true
+            },
+            config
+        );
+        const state = {
+            ...base,
+            player,
+            enemies: [
+                createEnemy({
+                    id: 'firemage-pre-exhaustion-target',
+                    subtype: 'footman',
+                    position: createHex(4, 2),
+                    hp: 18,
+                    maxHp: 18,
+                    speed: 1,
+                    skills: ['BASIC_MOVE', 'BASIC_ATTACK']
+                })
+            ]
+        };
+
+        expect(state.player.ires?.currentState).toBe('base');
+
+        const strategicIntent = chooseStrategicIntent(state, profile);
+        const action = selectByOnePlySimulation(state, strategicIntent, profile, 'firemage-pre-exhaustion-sim', 1);
+
+        expect(strategicIntent).toBe('defense');
+        expect(action).toEqual({ type: 'WAIT' });
+    });
+
     it('ends a stressed Firemage turn instead of forcing another action', () => {
         const profile = getStrategicPolicyProfile('sp-v1-default');
         const base = generateInitialState(1, 'firemage-end-turn-choice', 'firemage-end-turn-choice', undefined, DEFAULT_LOADOUTS.FIREMAGE);

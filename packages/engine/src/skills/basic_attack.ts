@@ -27,7 +27,6 @@ export const BASIC_ATTACK: SkillDefinition = {
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
-        const acaeEnabled = state.ruleset?.ailments?.acaeEnabled === true;
 
         const stunnedThisStep = (state.timelineEvents || []).some(ev =>
             ev.phase === 'STATUS_APPLY'
@@ -189,7 +188,7 @@ export const BASIC_ATTACK: SkillDefinition = {
         });
         // Apply damage
         effects.push({ type: 'Damage', target: 'targetActor', amount: damage, reason: 'basic_attack', scoreEvent: combat.scoreEvent });
-        if (acaeEnabled && isSpearFamilyAttack) {
+        if (isSpearFamilyAttack) {
             effects.push({
                 type: 'ApplyAilment',
                 target: 'targetActor',

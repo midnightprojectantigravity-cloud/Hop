@@ -81,19 +81,15 @@ export const TILE_EFFECTS: Record<TileEffectID, TileEffectDefinition> = {
         description: 'Burning flames',
 
         onStay: (context) => ({
-            effects: context.state.ruleset?.ailments?.acaeEnabled
-                ? [
-                    {
-                        type: 'DepositAilmentCounters',
-                        target: context.actor.id,
-                        ailment: 'burn',
-                        amount: 5,
-                        source: 'tile'
-                    }
-                ]
-                : [
-                    { type: 'Damage', target: context.actor.id, amount: 1, reason: 'fire_damage' }
-                ],
+            effects: [
+                {
+                    type: 'DepositAilmentCounters',
+                    target: context.actor.id,
+                    ailment: 'burn',
+                    amount: 5,
+                    source: 'tile'
+                }
+            ],
             messages: [`${context.actor.subtype || context.actor.type} burns!`]
         }),
 

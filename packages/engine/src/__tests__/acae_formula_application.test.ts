@@ -8,8 +8,6 @@ describe('ACAE formula application', () => {
     it('computes deterministic trigger and deposit with seeded RNG', () => {
         const stateA = generateInitialState(1, 'acae-formula-seed');
         const stateB = generateInitialState(1, 'acae-formula-seed');
-        stateA.ruleset = { ailments: { acaeEnabled: true, version: 'acae-v1' } };
-        stateB.ruleset = { ailments: { acaeEnabled: true, version: 'acae-v1' } };
 
         const source = stateA.player;
         const target = stateA.enemies[0];
@@ -37,4 +35,3 @@ describe('ACAE formula application', () => {
         expect(r1.nextState.rngCounter).toBe((stateA.rngCounter || 0) + 1);
     });
 });
-

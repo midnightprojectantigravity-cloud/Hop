@@ -19,7 +19,6 @@ const run = (): LethalityReport => {
 
     for (const seed of seeds) {
         let state = generateInitialState(1, seed);
-        state.ruleset = { ailments: { acaeEnabled: true, version: 'acae-v1' } };
         let hits = 0;
         while (state.player.hp > 0 && hits < 30) {
             state = applyEffects(state, [{

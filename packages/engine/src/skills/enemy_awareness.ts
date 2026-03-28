@@ -5,14 +5,14 @@ const clamp = (value: number, min: number, max: number): number => Math.max(min,
 
 export const computeEnemyAwarenessScore = (observer: Actor): number => {
     const trinity = extractTrinityStats(observer);
-    return (0.60 * Math.max(0, trinity.instinct))
-        + (0.25 * Math.max(0, trinity.mind))
-        + (0.15 * Math.max(0, trinity.body));
+    return (0.060 * Math.max(0, trinity.instinct))
+        + (0.025 * Math.max(0, trinity.mind))
+        + (0.015 * Math.max(0, trinity.body));
 };
 
 export const computeEnemyAwarenessDetectRange = (observer: Actor): number => {
     const awarenessScore = computeEnemyAwarenessScore(observer);
-    return clamp(4 + Math.floor(awarenessScore * 1.5), 4, 9);
+    return clamp(3 + Math.floor(awarenessScore * 1.5), 4, 9);
 };
 
 export const computeEnemyButcherFactor = (observer: Actor): number => {

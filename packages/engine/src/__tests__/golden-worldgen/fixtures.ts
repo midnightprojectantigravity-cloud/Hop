@@ -30,6 +30,7 @@ export interface GoldenWorldgenFixture {
         maxStraightRun: number;
         obstacleClusterCount: number;
         trapClusterCount: number;
+        lavaClusterCount: number;
         tacticalTileCount: number;
         visualTileCount: number;
     };
@@ -57,6 +58,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             maxStraightRun: 4,
             obstacleClusterCount: 1,
             trapClusterCount: 0,
+            lavaClusterCount: 0,
             tacticalTileCount: 10,
             visualTileCount: 10
         }
@@ -82,6 +84,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             maxStraightRun: 5,
             obstacleClusterCount: 1,
             trapClusterCount: 0,
+            lavaClusterCount: 0,
             tacticalTileCount: 13,
             visualTileCount: 11
         }
@@ -91,7 +94,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 5,
         runSeed: 'golden-watch-1',
         floorSeed: 'golden-watch-1:5',
-        artifactDigest: 'a0546d81',
+        artifactDigest: '980585af',
         verificationDigest: '52780755',
         sceneId: '3cf066e5',
         moduleIds: ['inferno_cover_band', 'inferno_watch_post'],
@@ -107,6 +110,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             maxStraightRun: 4,
             obstacleClusterCount: 0,
             trapClusterCount: 0,
+            lavaClusterCount: 1,
             tacticalTileCount: 15,
             visualTileCount: 13
         }
@@ -116,7 +120,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 5,
         runSeed: 'golden-watch-2',
         floorSeed: 'golden-watch-2:5',
-        artifactDigest: '81b66f79',
+        artifactDigest: '88a91da8',
         verificationDigest: '52780755',
         sceneId: '3cf066e5',
         moduleIds: ['inferno_cover_band', 'inferno_watch_post'],
@@ -132,6 +136,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             maxStraightRun: 5,
             obstacleClusterCount: 0,
             trapClusterCount: 0,
+            lavaClusterCount: 1,
             tacticalTileCount: 15,
             visualTileCount: 15
         }
@@ -157,6 +162,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             maxStraightRun: 3,
             obstacleClusterCount: 2,
             trapClusterCount: 1,
+            lavaClusterCount: 0,
             tacticalTileCount: 13,
             visualTileCount: 13
         }
@@ -182,6 +188,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             maxStraightRun: 3,
             obstacleClusterCount: 2,
             trapClusterCount: 1,
+            lavaClusterCount: 0,
             tacticalTileCount: 15,
             visualTileCount: 15
         }
@@ -191,7 +198,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 8,
         runSeed: 'golden-escape-a',
         floorSeed: 'golden-escape-a:8',
-        artifactDigest: '8a7409ac',
+        artifactDigest: '7b94ca9d',
         verificationDigest: '52780755',
         sceneId: 'f92b8eea',
         moduleIds: ['inferno_failed_escape', 'inferno_flank_loop'],
@@ -207,6 +214,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             maxStraightRun: 6,
             obstacleClusterCount: 0,
             trapClusterCount: 0,
+            lavaClusterCount: 1,
             tacticalTileCount: 17,
             visualTileCount: 15
         }
@@ -216,7 +224,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 8,
         runSeed: 'golden-escape-2',
         floorSeed: 'golden-escape-2:8',
-        artifactDigest: 'ed11bc7a',
+        artifactDigest: 'fc4fa13f',
         verificationDigest: '52780755',
         sceneId: 'f92b8eea',
         moduleIds: ['inferno_failed_escape', 'inferno_flank_loop'],
@@ -232,6 +240,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             maxStraightRun: 5,
             obstacleClusterCount: 0,
             trapClusterCount: 0,
+            lavaClusterCount: 1,
             tacticalTileCount: 18,
             visualTileCount: 15
         }
@@ -241,7 +250,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 10,
         runSeed: 'golden-boss-1',
         floorSeed: 'golden-boss-1:10',
-        artifactDigest: '989402ee',
+        artifactDigest: 'e0411eb1',
         verificationDigest: '52780755',
         sceneId: '5ce5d93a',
         moduleIds: ['inferno_arena_ring', 'inferno_ritual_dais'],
@@ -257,6 +266,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             maxStraightRun: 6,
             obstacleClusterCount: 0,
             trapClusterCount: 0,
+            lavaClusterCount: 1,
             tacticalTileCount: 16,
             visualTileCount: 16
         }
@@ -266,7 +276,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 10,
         runSeed: 'golden-boss-2',
         floorSeed: 'golden-boss-2:10',
-        artifactDigest: '17035984',
+        artifactDigest: '4c76559d',
         verificationDigest: '52780755',
         sceneId: '5ce5d93a',
         moduleIds: ['inferno_arena_ring', 'inferno_ritual_dais'],
@@ -282,6 +292,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             maxStraightRun: 3,
             obstacleClusterCount: 0,
             trapClusterCount: 0,
+            lavaClusterCount: 1,
             tacticalTileCount: 15,
             visualTileCount: 15
         }

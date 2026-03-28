@@ -1,4 +1,4 @@
-import type { Action } from '../../types';
+import type { Action, EnemyAiRunTelemetry } from '../../types';
 import type { StrategicIntent } from '../ai/strategic-policy';
 import type { DynamicSkillMetric, SkillTelemetryTotals } from './skill-grading';
 
@@ -46,9 +46,64 @@ export interface PacingSignalSummary {
     avgReservePressure: number;
     avgFatiguePressure: number;
     avgRecoveryPressure: number;
+    avgTurnEndSparkRatio: number;
+    visibleHostileSelections: number;
+    idleWithVisibleHostile: number;
+    attackOpportunityCount: number;
+    attackConversionCount: number;
+    threatenNextTurnOpportunityCount: number;
+    threatenNextTurnConversionCount: number;
+    backtrackMoveCount: number;
+    loopMoveCount: number;
+    lowValueMobilitySelections: number;
     restSelections: number;
     endTurnSelections: number;
     continuedActionSelections: number;
+    preservedRestedTurns: number;
+    restedBatterySpendSelections: number;
+    restedReentryTurns: number;
+    trueRestRestedBonusArmedTurns: number;
+    voluntaryExhaustionAttempts: number;
+    voluntaryExhaustionAllowed: number;
+    voluntaryExhaustionBlocked: number;
+    turnsEndedRested: number;
+    turnsEndedStableOrBetter: number;
+    turnsEndedCriticalOrExhausted: number;
+    secondActionAttempts: number;
+    secondActionAllowed: number;
+    thirdActionAttempts: number;
+    thirdActionAllowed: number;
+    waitForBandPreservationSelections: number;
+    firstContactTurn: number;
+    firstDamageTurn: number;
+}
+
+export interface EnemyAiBatchSummary {
+    actionCounts: Record<string, number>;
+    skillUsage: Record<string, number>;
+    avgEnemyDamageToPlayerPerRun: number;
+    avgEnemyOffensiveSkillCastsPerRun: number;
+    enemyDamagePerOffensiveCast: number;
+    enemyAttackOpportunityConversionRate: number;
+    enemyThreatOpportunityConversionRate: number;
+    avgEnemyIdleWithVisiblePlayer: number;
+    avgEnemyBacktrackMoves: number;
+    avgEnemyLoopMoves: number;
+    avgEnemyPreservedRestedTurns: number;
+    avgEnemyRestedBatterySpendSelections: number;
+    avgEnemyRestedReentryTurns: number;
+    avgEnemyTrueRestRestedBonusArmedTurns: number;
+    avgEnemyVoluntaryExhaustionAttempts: number;
+    avgEnemyVoluntaryExhaustionAllowed: number;
+    avgEnemyVoluntaryExhaustionBlocked: number;
+    avgEnemyTurnsEndedRested: number;
+    avgEnemyTurnsEndedStableOrBetter: number;
+    avgEnemyTurnsEndedCriticalOrExhausted: number;
+    avgEnemySecondActionAttempts: number;
+    avgEnemySecondActionAllowed: number;
+    avgEnemyThirdActionAttempts: number;
+    avgEnemyThirdActionAllowed: number;
+    avgEnemyWaitForBandPreservationSelections: number;
 }
 
 export interface RunResult {
@@ -89,6 +144,7 @@ export interface RunResult {
     trinityContribution: TrinityContributionSummary;
     combatProfileSignal: CombatProfileSignalSummary;
     pacingSignal: PacingSignalSummary;
+    enemyAiTelemetry: EnemyAiRunTelemetry;
 }
 
 export interface RunDiagnostics {
@@ -136,12 +192,21 @@ export interface BatchSummary {
     strategicIntentTotals: Record<StrategicIntent, number>;
     avgStrategicIntentPerRun: Record<StrategicIntent, number>;
     avgPlayerSkillCastsPerRun: number;
+    attackConversionRate: number;
+    threatenNextTurnConversionRate: number;
+    avgIdleWithVisibleHostile: number;
+    avgBacktrackMoves: number;
+    avgLoopMoves: number;
+    avgLowValueMobilitySelections: number;
+    avgFirstContactTurn: number;
+    avgFirstDamageTurn: number;
     skillTelemetryTotals: SkillTelemetryTotals;
     autoAttackTriggerTotals: Record<string, number>;
     triangleSignal: TriangleSignalSummary;
     trinityContribution: TrinityContributionSummary;
     combatProfileSignal: CombatProfileSignalSummary;
     pacingSignal: PacingSignalSummary;
+    enemyAiTelemetry: EnemyAiBatchSummary;
     dynamicSkillGrades: Record<string, DynamicSkillMetric>;
 }
 

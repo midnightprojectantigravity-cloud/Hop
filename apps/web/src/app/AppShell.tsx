@@ -10,7 +10,6 @@ import { useWorldgenWorker } from './use-worldgen-worker';
 import { useSimulationFeedback } from './use-simulation-feedback';
 import { useTurnFlowCoordinator } from './use-turn-flow-coordinator';
 import { useTurnDriverTrace } from './use-turn-driver-trace';
-import { setUiCapabilityRollout } from './capability-rollout';
 import { emitUiMetric } from './ui-telemetry';
 import { dispatchSensoryEvent } from './sensory-dispatcher';
 import { resolveMeaningfulActionType, shouldArmAutoEndForAction } from './turn-flow-policy';
@@ -187,10 +186,6 @@ export function AppShell() {
   } = useRunSession();
 
   const {
-    hubCapabilityPassivesEnabled,
-    setHubCapabilityPassivesEnabled,
-    hubMovementRuntimeEnabled,
-    setHubMovementRuntimeEnabled,
     hubMapShape,
     setHubMapShape,
     hubMapSize,
@@ -269,8 +264,6 @@ export function AppShell() {
     worldgenWorker,
     worldgenDebugEnabled,
     dispatchWithTrace,
-    hubCapabilityPassivesEnabled,
-    hubMovementRuntimeEnabled,
     setRunResumeContext,
     dispatchSensory,
     navigateTo,
@@ -412,16 +405,6 @@ export function AppShell() {
     pathname
   ]);
 
-  const handleCapabilityPassivesEnabledChange = useCallback((enabled: boolean) => {
-    setHubCapabilityPassivesEnabled(enabled);
-    setUiCapabilityRollout({ capabilityPassivesEnabled: enabled });
-  }, [setHubCapabilityPassivesEnabled]);
-
-  const handleMovementRuntimeEnabledChange = useCallback((enabled: boolean) => {
-    setHubMovementRuntimeEnabled(enabled);
-    setUiCapabilityRollout({ movementRuntimeEnabled: enabled });
-  }, [setHubMovementRuntimeEnabled]);
-
   const handleStartRun = useCallback((mode: 'normal' | 'daily') => {
     const loadoutId = gameState.selectedLoadoutId;
     if (!loadoutId) {
@@ -546,10 +529,6 @@ export function AppShell() {
           dedicatedRoutesEnabled={dedicatedHubRoutesEnabled}
           navigateTo={navigateTo}
           patchUiPreferences={patchUiPreferences}
-          capabilityPassivesEnabled={hubCapabilityPassivesEnabled}
-          onCapabilityPassivesEnabledChange={handleCapabilityPassivesEnabledChange}
-          movementRuntimeEnabled={hubMovementRuntimeEnabled}
-          onMovementRuntimeEnabledChange={handleMovementRuntimeEnabledChange}
           mapShape={hubMapShape}
           onMapShapeChange={setHubMapShape}
           mapSize={hubMapSize}

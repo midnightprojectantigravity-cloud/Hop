@@ -37,13 +37,12 @@ export const BULWARK_CHARGE: SkillDefinition = {
             messages.push('No target!');
             return { effects, messages, consumesTurn: false };
         }
-        const sharedVectorCarryEnabled = state.ruleset?.attachments?.sharedVectorCarry === true;
         const attachEffect: AtomicEffect = {
             type: 'AttachActors',
             anchor: player.id,
             attached: first.id,
             mode: 'tow',
-            sharedVectorScale: sharedVectorCarryEnabled ? 1 : 0,
+            sharedVectorScale: 1,
             breakOnDamage: true,
             breakOnStatuses: ['stunned', 'rooted']
         };

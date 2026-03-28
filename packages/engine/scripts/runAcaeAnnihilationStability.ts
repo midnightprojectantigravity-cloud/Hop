@@ -17,7 +17,6 @@ const run = (): StabilityReport => {
     const runs = 24;
     for (let i = 0; i < runs; i++) {
         let state = generateInitialState(1, `acae-annihilation-stability-${i}`);
-        state.ruleset = { ailments: { acaeEnabled: true, version: 'acae-v1' } };
         state = applyEffects(state, [
             { type: 'DepositAilmentCounters', target: state.player.id, ailment: 'burn', amount: 14, source: 'tile' },
             { type: 'DepositAilmentCounters', target: state.player.id, ailment: 'wet', amount: 4, source: 'tile' },

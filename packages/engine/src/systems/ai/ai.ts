@@ -60,6 +60,9 @@ export const computeEnemyAction = (bt: Entity, playerMovedTo: Point, state: Game
     return {
         entity: selected.plannedEntity,
         nextState: selected.nextState,
+        selectedAction: selected.decision.action,
+        selectedFacts: selected.selectedFacts,
+        selectionSummary: selected.selectionSummary,
         ...(selected.message !== undefined ? { message: selected.message } : {})
     };
 };

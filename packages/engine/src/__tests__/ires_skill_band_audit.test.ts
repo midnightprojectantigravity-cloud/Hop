@@ -11,7 +11,7 @@ describe('IRES skill band audit', () => {
         expect(report.mappedActiveRosterSkillIds).toHaveLength(27);
         expect(report.legacyFallbackSkillIds).toHaveLength(0);
         expect(report.acceptedRiskSkillIds).toEqual(['BASIC_MOVE', 'GRAPPLE_HOOK']);
-        expect(report.rows).toHaveLength(49);
+        expect(report.rows).toHaveLength(50);
     });
 
     it('marks SENTINEL_BLAST as the highest-strain derived active-roster skill', () => {
@@ -27,10 +27,10 @@ describe('IRES skill band audit', () => {
         expect(highestStrain?.metabolicBandId).toBe('redline');
     });
 
-    it('keeps balance skill power evaluation hydrated across all 49 skills after cutover', () => {
+    it('keeps balance skill power evaluation hydrated across all 50 skills after cutover', () => {
         const profiles = computeAllSkillPowerProfiles();
 
-        expect(profiles).toHaveLength(49);
+        expect(profiles).toHaveLength(50);
     });
 
     it('reports intrinsic power deltas for the newly expanded mappings', () => {

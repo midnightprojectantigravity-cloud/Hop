@@ -3,16 +3,6 @@ import { applyEffects } from '../systems/effect-engine';
 import { tickActorAilments } from '../systems/ailments/runtime';
 import type { ScenarioCollection } from './types';
 
-const enableAcae = (engine: any): void => {
-    engine.state.ruleset = {
-        ...(engine.state.ruleset || {}),
-        ailments: {
-            acaeEnabled: true,
-            version: 'acae-v1'
-        }
-    };
-};
-
 const getCounters = (state: GameState): Record<string, number> => {
     const component = state.player.components?.get('ailments') as { counters?: Record<string, number> } | undefined;
     return component?.counters || {};
@@ -30,9 +20,7 @@ export const acaeScenarios: ScenarioCollection = {
             relatedSkills: ['BASIC_MOVE'],
             category: 'hazards',
             tags: ['acae', 'annihilation'],
-            setup: (engine: any) => {
-                enableAcae(engine);
-            },
+            setup: () => {},
             run: (engine: any) => {
                 engine.state = applyEffects(engine.state, [
                     { type: 'DepositAilmentCounters', target: engine.state.player.id, ailment: 'burn', amount: 10, source: 'tile' },
@@ -51,9 +39,7 @@ export const acaeScenarios: ScenarioCollection = {
             relatedSkills: ['WAIT'],
             category: 'hazards',
             tags: ['acae', 'poison'],
-            setup: (engine: any) => {
-                enableAcae(engine);
-            },
+            setup: () => {},
             run: (engine: any) => {
                 engine.state = applyEffects(engine.state, [
                     { type: 'DepositAilmentCounters', target: engine.state.player.id, ailment: 'poison', amount: 4, source: 'tile' },
@@ -73,7 +59,6 @@ export const acaeScenarios: ScenarioCollection = {
             category: 'combat',
             tags: ['acae', 'bleed', 'spear'],
             setup: (engine: any) => {
-                enableAcae(engine);
                 engine.setPlayer({ q: 3, r: 6, s: -9 }, ['BASIC_ATTACK', 'SPEAR_THROW']);
                 engine.spawnEnemy('footman', { q: 4, r: 6, s: -10 }, 'bleed_target', { hp: 30, maxHp: 30 });
             },
@@ -94,9 +79,7 @@ export const acaeScenarios: ScenarioCollection = {
             relatedSkills: ['WAIT'],
             category: 'hazards',
             tags: ['acae', 'threshold'],
-            setup: (engine: any) => {
-                enableAcae(engine);
-            },
+            setup: () => {},
             run: (engine: any) => {
                 engine.state = applyEffects(engine.state, [
                     { type: 'DepositAilmentCounters', target: engine.state.player.id, ailment: 'burn', amount: 24, source: 'tile' }
@@ -116,9 +99,7 @@ export const acaeScenarios: ScenarioCollection = {
             relatedSkills: ['WAIT'],
             category: 'hazards',
             tags: ['acae', 'hardening'],
-            setup: (engine: any) => {
-                enableAcae(engine);
-            },
+            setup: () => {},
             run: (engine: any) => {
                 engine.state = applyEffects(engine.state, [
                     { type: 'DepositAilmentCounters', target: engine.state.player.id, ailment: 'burn', amount: 9, source: 'tile' },
@@ -140,9 +121,7 @@ export const acaeScenarios: ScenarioCollection = {
             relatedSkills: ['WAIT'],
             category: 'hazards',
             tags: ['acae', 'ordering'],
-            setup: (engine: any) => {
-                enableAcae(engine);
-            },
+            setup: () => {},
             run: (engine: any) => {
                 engine.state = applyEffects(engine.state, [
                     { type: 'DepositAilmentCounters', target: engine.state.player.id, ailment: 'burn', amount: 14, source: 'tile' },

@@ -234,6 +234,7 @@ describe('world compiler facade', () => {
                 ...runtimeState.intent!.routeProfile,
                 obstacleClusterBudget: 1,
                 trapClusterBudget: 0,
+                lavaClusterBudget: 0,
                 maxStraightRun: 3,
                 saferRouteBias: 'none',
                 riskierRouteBias: 'none'

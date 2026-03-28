@@ -1,3 +1,5 @@
+# Historical snapshot; superseded by `docs/STATUS.md`
+
 # Capability Rollout Notes
 
 This project ships capability rollout in compatibility-first mode.

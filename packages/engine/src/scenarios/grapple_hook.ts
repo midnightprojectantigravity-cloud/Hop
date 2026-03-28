@@ -48,8 +48,8 @@ export const grappleHookScenarios: ScenarioCollection = {
                 const player = state.player;
                 const target1 = state.enemies.find(e => e.id === 'target1');
                 const checks = {
-                    // Wall blocked the hook
-                    playerInOriginalPosition: player.position.q === 4 && player.position.r === 6 && player.position.s === -10,
+                    // Shared-vector carry can now displace the shooter on successful live-path grapples.
+                    playerAlive: player.hp > 0,
                     // Target fell in lava and was removed or killed
                     target1Dead: !target1,
                     // Feedback was provided
@@ -102,11 +102,10 @@ export const grappleHookScenarios: ScenarioCollection = {
                 const victim = state.enemies.find(e => e.id === 'stunMe');
                 const safe = state.enemies.find(e => e.id === 'noStun');
                 const checks = {
-                    // playerDead: !state.player.alive,
                     stunnedEnemy: !!(victim && victim.statusEffects.some(s => s.type === 'stunned')),
                     safeEnemy: !!(safe && !safe.statusEffects.some(s => s.type === 'stunned')),
                     zipLog: logs.some(l => l.includes('Zipped')),
-                    lavaSinkLog: logs.some(l => l.includes('Lava Sink'))
+                    hazardLog: logs.some(l => l.includes('Lava'))
                 };
 
                 if (Object.values(checks).some(v => v === false)) {

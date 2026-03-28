@@ -14,7 +14,7 @@ export const FALCON_PECK: SkillDefinition = {
     id: 'FALCON_PECK',
     name: 'Peck',
     description: 'The falcon pecks an adjacent enemy for 1 damage.',
-    slot: 'passive',
+    slot: 'offensive',
     icon: '🦅',
     baseVariables: {
         range: 1,

@@ -17,9 +17,7 @@ describe('worldgen worker transport', () => {
       loadoutId: 'VANGUARD',
       mode: 'normal',
       mapSize: DEFAULT_START_RUN_MAP_SIZE,
-      mapShape: DEFAULT_START_RUN_MAP_SHAPE,
-      capabilityPassivesEnabled: true,
-      movementRuntimeEnabled: true
+      mapShape: DEFAULT_START_RUN_MAP_SHAPE
     });
 
     const context = buildStartRunCompileContext({
@@ -29,7 +27,6 @@ describe('worldgen worker transport', () => {
       date: payload.date,
       mapSize: payload.mapSize,
       mapShape: payload.mapShape,
-      rulesetOverrides: payload.rulesetOverrides as Record<string, unknown> | undefined,
       generationSpec: payload.generationSpec,
       includeDebug: true
     });

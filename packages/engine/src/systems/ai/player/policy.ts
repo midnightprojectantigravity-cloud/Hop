@@ -23,23 +23,35 @@ export const chooseStrategicIntent = (state: GameState, profile: StrategicPolicy
     const hpRatio = (state.player.hp || 0) / Math.max(1, state.player.maxHp || 1);
     const hostiles = aliveHostiles(state);
     const ires = state.player.ires;
-    const resourceSignals = getAiResourceSignals(ires);
+    const resourceSignals = getAiResourceSignals(ires, state.ruleset);
+    const adjacentThreat = adjacentHostileCount(state, state.player.position);
+    const nearestThreat = nearestHostileDistance(state);
+    const immediateThreat = adjacentThreat > 0 || nearestThreat <= 2;
+    const sparkBand = resourceSignals.aiSparkBand;
+    const preservingBandLikelyBetter = ires
+        && (
+            sparkBand === 'critical'
+            || sparkBand === 'exhausted'
+            || (sparkBand === 'caution' && Number(ires.actionCountThisTurn || 0) >= 1)
+            || (sparkBand === 'rested_edge' && Number(ires.actionCountThisTurn || 0) >= 1)
+            || (resourceSignals.postStablePressure >= 0.5 && Number(ires.actionCountThisTurn || 0) >= 1)
+        );
 
     if (hpRatio < profile.thresholds.defenseHpRatio) return 'defense';
     if (hostiles <= 0) return 'positioning';
     if (
         ires
         && (
-            resourceSignals.fatiguePressure >= 0.6
-            || resourceSignals.reservePressure >= 0.75
-            || resourceSignals.recoveryPressure >= 0.55
+            sparkBand === 'exhausted'
+            || sparkBand === 'critical'
+            || (sparkBand === 'caution' && Number(ires.actionCountThisTurn || 0) >= 1)
+            || (immediateThreat && preservingBandLikelyBetter)
+            || (immediateThreat && resourceSignals.reservePressure >= 0.82)
         )
     ) {
         return 'defense';
     }
 
-    const adjacentThreat = adjacentHostileCount(state, state.player.position);
-    const nearestThreat = nearestHostileDistance(state);
     if (adjacentThreat >= profile.thresholds.defensePressureAdjacentHostiles && hpRatio < profile.thresholds.defensePressureHpRatio) return 'defense';
     if (hasReadyTagSkill(state, 'control')
         && hostiles >= profile.thresholds.controlMinHostiles

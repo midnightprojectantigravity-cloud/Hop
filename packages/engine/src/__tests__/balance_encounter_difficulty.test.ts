@@ -29,6 +29,7 @@ const makeSummary = (): CurrentFloorSummary => ({
         maxStraightRun: 4,
         obstacleClusterCount: 2,
         trapClusterCount: 1,
+        lavaClusterCount: 0,
         tacticalTileCount: 18,
         visualTileCount: 24
     },

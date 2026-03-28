@@ -53,8 +53,6 @@ export const useWorldgenSession = ({
   worldgenWorker,
   worldgenDebugEnabled,
   dispatchWithTrace,
-  hubCapabilityPassivesEnabled,
-  hubMovementRuntimeEnabled,
   setRunResumeContext,
   dispatchSensory,
   navigateTo,
@@ -66,8 +64,6 @@ export const useWorldgenSession = ({
   worldgenWorker: WorldgenWorkerState;
   worldgenDebugEnabled: boolean;
   dispatchWithTrace: (action: Action, source: string) => void;
-  hubCapabilityPassivesEnabled: boolean;
-  hubMovementRuntimeEnabled: boolean;
   setRunResumeContext: (context: RunResumeContext) => void;
   dispatchSensory: (payload: Parameters<typeof import('./sensory-dispatcher').dispatchSensoryEvent>[0]) => void;
   navigateTo: (path: string) => void;
@@ -197,9 +193,7 @@ export const useWorldgenSession = ({
       date: params.date,
       mapSize: params.mapSize || DEFAULT_START_RUN_MAP_SIZE,
       mapShape: params.mapShape || DEFAULT_START_RUN_MAP_SHAPE,
-      mapSizeInputMode: params.mapSizeInputMode || 'usable',
-      capabilityPassivesEnabled: hubCapabilityPassivesEnabled,
-      movementRuntimeEnabled: hubMovementRuntimeEnabled
+      mapSizeInputMode: params.mapSizeInputMode || 'usable'
     });
     const context = buildStartRunCompileContext({
       loadoutId: params.loadoutId,
@@ -208,7 +202,6 @@ export const useWorldgenSession = ({
       date: payload.date,
       mapSize: payload.mapSize,
       mapShape: payload.mapShape,
-      rulesetOverrides: payload.rulesetOverrides as Record<string, unknown> | undefined,
       generationSpec: payload.generationSpec,
       includeDebug: worldgenDebugEnabled
     });
@@ -243,8 +236,6 @@ export const useWorldgenSession = ({
     dispatchSensory,
     dispatchWithTrace,
     ensureWorldgenReady,
-    hubCapabilityPassivesEnabled,
-    hubMovementRuntimeEnabled,
     onRunStarted,
     reportWorldgenUiError,
     setRunResumeContext,

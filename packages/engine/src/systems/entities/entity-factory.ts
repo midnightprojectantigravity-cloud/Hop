@@ -1,4 +1,4 @@
-import type { Actor, ArmorBurdenTier, Point, Skill, WeightClass } from '../../types';
+import type { Actor, AiBehaviorOverlayInstance, ArmorBurdenTier, Point, Skill, WeightClass } from '../../types';
 import type { GameComponent } from '../components';
 import { deriveMaxHpFromTrinity, type TrinityStats } from '../combat/trinity-resolver';
 import { getTrinityProfile } from '../combat/trinity-profiles';
@@ -388,6 +388,9 @@ export function createCompanion(config: {
     id?: string;
     trinity?: TrinityStats;
     armorBurdenTier?: ArmorBurdenTier;
+    initialBehaviorOverlay?: AiBehaviorOverlayInstance;
+    initialAnchorActorId?: string;
+    initialAnchorPoint?: Point;
 }): Actor {
     if (config.companionType === 'falcon') {
         const contract = getCompanionBalanceEntry('falcon');
@@ -413,13 +416,25 @@ export function createCompanion(config: {
             mode: 'roost',
             orbitStep: 0,
         };
+        entity.behaviorState = {
+            overlays: [{
+                id: 'falcon_roost',
+                source: 'summon',
+                sourceId: 'falcon_roost',
+                rangeModel: 'owner_proximity',
+                selfPreservationBias: 0.35,
+                controlBias: 0.2,
+                commitBias: -0.3
+            }],
+            anchorActorId: config.ownerId
+        };
 
         return entity;
     }
 
     if (config.companionType === 'skeleton') {
         const contract = getCompanionBalanceEntry('skeleton');
-        return createEntity({
+        const entity = createEntity({
             id: config.id || `${config.companionType}-${config.ownerId}`,
             type: 'enemy',
             subtype: 'skeleton',
@@ -434,6 +449,16 @@ export function createCompanion(config: {
             armorBurdenTier: config.armorBurdenTier ?? contract?.armorBurdenTier,
             trinity: config.trinity ?? contract?.trinity,
         });
+        if (config.initialBehaviorOverlay || config.initialAnchorActorId || config.initialAnchorPoint) {
+            entity.behaviorState = {
+                overlays: config.initialBehaviorOverlay
+                    ? [{ ...config.initialBehaviorOverlay }]
+                    : [],
+                anchorActorId: config.initialAnchorActorId,
+                anchorPoint: config.initialAnchorPoint
+            };
+        }
+        return entity;
     }
 
     return createEntity({

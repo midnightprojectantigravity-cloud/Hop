@@ -62,6 +62,47 @@ export const actorStateEffectHandlers: AtomicEffectHandlerMap = {
             companions: state.companions?.map(updateFunc)
         };
     },
+    UpdateBehaviorState: (state, effect, context) => {
+        const targetId = effect.target === 'self' ? (context.sourceId || state.player.id) : effect.target;
+        const updateFunc = (actor: Actor): Actor => {
+            if (actor.id !== targetId) return actor;
+            const prior = actor.behaviorState;
+            const nextOverlays = effect.clearOverlays
+                ? [...(effect.overlays || [])]
+                : effect.overlays !== undefined
+                    ? [...effect.overlays]
+                    : [...(prior?.overlays || [])];
+            return {
+                ...actor,
+                behaviorState: {
+                    overlays: nextOverlays,
+                    anchorActorId: effect.anchorActorId === null
+                        ? undefined
+                        : effect.anchorActorId !== undefined
+                            ? effect.anchorActorId
+                            : prior?.anchorActorId,
+                    anchorPoint: effect.anchorPoint === null
+                        ? undefined
+                        : effect.anchorPoint !== undefined
+                            ? effect.anchorPoint
+                            : prior?.anchorPoint
+                }
+            };
+        };
+
+        if (targetId === state.player.id) {
+            return {
+                ...state,
+                player: updateFunc(state.player)
+            };
+        }
+
+        return {
+            ...state,
+            enemies: state.enemies.map(updateFunc),
+            companions: state.companions?.map(updateFunc)
+        };
+    },
     ApplyResources: (state, effect, context, api) => {
         const config = resolveIresRuleset(state.ruleset);
         const actorId = effect.target === 'self'

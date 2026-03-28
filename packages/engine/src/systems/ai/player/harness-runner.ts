@@ -75,7 +75,15 @@ export const runHarnessPlayerLoop = ({
             const prevTurnsSpent = state.turnsSpent || 0;
             const selection = selectHarnessPlayerAction(state, policy, profile, `${seed}:${policy}`, decisionCounter++);
             const action = selection.action;
-            recordPlayerActionSelectionTelemetry(telemetry, state, action, selection.strategicIntent);
+            const turnMarker = Math.max(1, Number(state.turnsSpent || 0) + 1);
+            recordPlayerActionSelectionTelemetry(
+                telemetry,
+                state,
+                action,
+                selection.strategicIntent,
+                selection.selectedFacts,
+                selection.selectionSummary
+            );
 
             state = gameReducer(state, action);
             state = resolvePending(state);
@@ -107,9 +115,9 @@ export const runHarnessPlayerLoop = ({
 
             if (action.type === 'USE_SKILL') {
                 const metrics = transitionMetrics(prev, state, action);
-                recordPlayerSkillTransitionTelemetry(telemetry, prev, state, action, metrics);
+                recordPlayerSkillTransitionTelemetry(telemetry, prev, state, action, metrics, turnMarker);
             }
-            recordPlayerAutoAttackTransitionTelemetry(telemetry, prev, state, action);
+            recordPlayerAutoAttackTransitionTelemetry(telemetry, prev, state, action, turnMarker);
         } else {
             state = gameReducer(state, { type: 'ADVANCE_TURN' });
             state = resolvePending(state);

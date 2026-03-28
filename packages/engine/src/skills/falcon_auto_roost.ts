@@ -11,7 +11,7 @@ export const FALCON_AUTO_ROOST: SkillDefinition = {
     id: 'FALCON_AUTO_ROOST' as any,
     name: 'Auto Roost',
     description: 'Automatically returns the falcon to roost mode when mark is lost.',
-    slot: 'passive',
+    slot: 'utility',
     icon: 'R',
     baseVariables: {
         range: 0,
@@ -26,6 +26,22 @@ export const FALCON_AUTO_ROOST: SkillDefinition = {
                     target: attacker.id,
                     mode: 'roost',
                     markTarget: undefined
+                },
+                {
+                    type: 'UpdateBehaviorState',
+                    target: attacker.id,
+                    clearOverlays: true,
+                    overlays: [{
+                        id: 'falcon_roost',
+                        source: 'command',
+                        sourceId: 'falcon_roost',
+                        rangeModel: 'owner_proximity',
+                        selfPreservationBias: 0.35,
+                        controlBias: 0.2,
+                        commitBias: -0.3
+                    }],
+                    anchorActorId: attacker.companionOf || null,
+                    anchorPoint: null
                 }
             ],
             messages: ['Falcon loses prey and returns to roost mode.'],
@@ -35,4 +51,3 @@ export const FALCON_AUTO_ROOST: SkillDefinition = {
     getValidTargets: (_state: GameState, origin: Point) => [origin],
     upgrades: {}
 };
-

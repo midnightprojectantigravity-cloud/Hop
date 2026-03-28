@@ -1,98 +1,93 @@
 # The Hop Engine: Gold Standard Manifesto
 
-## Purpose
 This document defines the non-negotiable architecture and quality rules for Hop.
-Use it as the decision filter for engine, client, and balance changes.
 
-## 1) Engine and Client Contract
-1. Referee (`packages/engine`): deterministic game truth only.
-2. Juice (`apps/web`): presentation only (animation, VFX, input UX).
-3. No gameplay logic is implemented in the client.
+## 1. Engine and Client Contract
 
-## 2) Intent and Execution Contract
+1. Referee (`packages/engine`) is deterministic game truth only.
+2. Juice (`apps/web`) is presentation only.
+3. Gameplay logic does not live in the client.
+
+## 2. Intent and Execution Contract
+
 1. Intent is validated against current `GameState` before mutation.
-2. Execution emits `AtomicEffect[]`; no direct state mutation from skills.
-3. Turn consumption happens only on valid execution outcomes.
-4. Simulation/preview must remain deterministic and side-effect free.
+2. Execution emits `AtomicEffect[]`.
+3. Skills and systems do not directly mutate runtime state.
+4. Simulation and preview stay deterministic and side-effect free.
 
-## 3) Determinism Rules
-1. Use engine RNG only (`rngCounter`); no `Math.random()` in logic.
-2. Spatial tie-breakers must be deterministic.
-3. Replays must produce identical outcomes for same seed + inputs.
+## 3. Determinism Rules
 
-## 4) Grid and Tile Rules
-1. Single source of truth for world state is `state.tiles` with `UnifiedTileService`.
-2. Movement must pass through tile hooks (`onPass`, `onEnter`) via `TileResolver`.
-3. Occupancy mask is refreshed at execution-phase boundaries.
+1. Use engine RNG only.
+2. Spatial and tactical tie-breakers must be deterministic.
+3. Replays must reproduce identical outcomes for the same seed and actions.
+
+## 4. Grid and Tile Rules
+
+1. The world source of truth is `state.tiles` with `UnifiedTileService`.
+2. Movement passes through tile hooks.
+3. Occupancy is refreshed at execution boundaries.
 4. One hex, one entity.
 
-## 5) Entity and Skill Rules
-1. All actor creation goes through `EntityFactory`.
-2. Actor behavior is defined by skill loadout IDs and skill definitions.
-3. Skill targeting (`getValidTargets`) must mirror execution rules.
-4. Skill files should provide intent and effects, not isolated combat math.
+## 5. Entity and Skill Rules
 
-## 6) Content Ownership Rules
-1. Runtime enemy ownership is catalog-based (`data/enemies/enemy-catalog.ts`), not constants-table based.
-2. Floor spawn ownership is profile-based (`data/enemies/floor-spawn-profile.ts`).
-3. `ENEMY_STATS` and `FLOOR_ENEMY_*` constants are retired and must not appear in runtime source ownership paths.
-4. Content consistency must be validated at bootstrap (`ensureTacticalDataBootstrapped()`).
-5. Deprecated-constant ownership is enforced by script gate (`check-script-imports` + `checkDeprecatedConstantsUsage`).
+1. Actor creation goes through `EntityFactory`.
+2. Actor behavior is derived from loadouts, skills, and runtime state, not bespoke entity-type scripts.
+3. Skill targeting must mirror execution rules.
+4. Skill files provide intent/effects composition, not isolated runtime mutations.
 
-## 7) AI and Harness Rules
-1. Enemy AI and harness policy logic must use shared AI core contracts (`systems/ai/core/*`) for scoring and tie-break behavior.
-2. Deterministic tie-break selection must use explicit adapters (`consumeRandom` or seeded chooser), never ad hoc randomness.
-3. Strategy adapters may translate decisions, but must preserve deterministic target/action outcomes.
-4. Harness orchestration must use shared batch primitives (`systems/evaluation/harness-batch.ts`) when adding new runners.
+## 6. Content Ownership Rules
 
-## 8) Combat Math and Telemetry Rules
-1. Combat calculations are centralized through the calculator pipeline.
-2. Trinity levers (`Body`, `Mind`, `Instinct`) are shared system inputs.
-3. UPA and grade outputs are telemetry and balancing inputs, not runtime gameplay gates.
+1. Runtime enemy ownership is catalog-based.
+2. Floor spawn ownership is profile-based.
+3. Deprecated constants such as `ENEMY_STATS` and `FLOOR_ENEMY_*` are not runtime ownership sources.
+4. Content consistency must validate at bootstrap.
 
-## 9) Quality Gates
-1. Engine build must pass:
-   - `npm --workspace @hop/engine run build`
-2. Script import integrity must pass:
-   - `npm --workspace @hop/engine run check-script-imports`
-3. Strict AI acceptance must pass:
-   - `npm --workspace @hop/engine run test:ai-acceptance:strict`
-4. Strict ACAE acceptance must pass when ACAE tranche code is touched:
-   - `npm --workspace @hop/engine run test:acae:strict`
-5. Web regression gates must pass:
-   - `npm --workspace @hop/web run test:run`
-   - `npm --workspace @hop/web run build`
-6. Behavior change slices should keep scenario coverage green:
-   - `npx vitest run packages/engine/src/__tests__/scenarios_runner.test.ts --silent`
-7. Balance slices should keep UPA health gate green:
-   - `npm run upa:health:release`
+## 7. AI and Evaluation Rules
 
-## 9.1) Trinity V2 Runtime Contract
-1. The integrated runtime supports one combat ruleset: `trinity_ratio_v2`.
-2. Trinity content ships as one profile set: `core-v2-live`.
-3. Combat rollout flags and Trinity profile env overrides are retired from supported workflows.
-4. Combat/IRES formula intent is governed by `docs/COMBAT_FORMULA_LEDGER.md`.
+1. Runtime enemy AI and evaluation/harness AI share the same generic core.
+2. Tactical identity resolves through behavior overlays.
+3. Spark pacing resolves through the shared Spark doctrine.
+4. Strategy adapters may translate decisions, but may not become authoritative bespoke AI playbooks.
+5. Evaluation runners should extend shared harness primitives rather than duplicating orchestration.
 
-## 10) ACAE Runtime Rules (Pilot)
-1. ACAE is state-ruleset gated (`GameState.ruleset.ailments.acaeEnabled`) and deterministic.
-2. No runtime string eval is allowed for ailment formulas; only deterministic DSL evaluators are permitted.
-3. Ailment trigger/deposit/annihilation/tick/hardening must never use `Math.random`; use engine RNG (`consumeRandom`) when a roll is required.
-4. Pilot ailment paths must preserve legacy behavior when ACAE is disabled.
-5. Tile injectors (`LAVA`, `FIRE`, `WET`, `MIASMA`, `ICE`) must not double-apply legacy + ACAE payloads on the same path.
-6. Hardening persistence is per-run only in this tranche.
-7. Ailment interaction graph must validate as acyclic at bootstrap.
+## 8. Runtime Ruleset Rules
 
-## 11) Documentation Topology
-1. Current status board: `docs/STATUS.md`
-2. Active tracker: `docs/NEXT_LEVEL.md`
-3. AI convergence milestone: `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
-4. Post-AI phases milestone: `docs/archive/NEXT_PHASES_MILESTONE_2026-02-28.md`
-5. ACAE milestone: `docs/archive/ACAE_MILESTONE_2026-03-01.md`
-6. Active balance backlog: `docs/BALANCE_BACKLOG.md`
-7. Canonical balance doctrine: `docs/GOLD_STANDARD_BALANCING.md`
-8. UPA operations: `docs/UPA_GUIDE.md`
-9. Historical archive: `docs/ROADMAP_HISTORY.md`
-10. Archived completed plans: `docs/archive/`
-11. Biome + bestiary + trinity contract: `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`
-12. Generated audit/test artifacts: `artifacts/upa/` (not `docs/` root)
+1. Combat runs on `trinity_ratio_v2` only.
+2. Trinity content ships as `core-v2-live` only.
+3. ACAE, shared-vector carry, loadout passive capability content, and movement capability runtime are unconditional live runtime behavior.
+4. Retired rollout flags, URL params, env defaults, and retired ruleset branches are not supported runtime control surfaces.
+5. Legacy payload compatibility is hydration-only; live state must not re-emit retired branches.
 
+## 9. ACAE Runtime Rules
+
+1. ACAE is deterministic and part of the live runtime.
+2. No runtime string eval is allowed for ailment formulas.
+3. Ailment trigger, deposit, annihilation, tick, and hardening paths must never use `Math.random`.
+4. Tile injectors must not double-apply overlapping hazard payloads.
+5. Ailment interaction graphs must validate as acyclic at bootstrap.
+
+## 10. Quality Gates
+
+```powershell
+npm run build
+npm --workspace @hop/engine run test:full
+npm --workspace @hop/web run test:run
+npm run engine:fast
+npm run upa:quick:ai
+```
+
+Use stricter engine gates when touching those surfaces:
+
+```powershell
+npm --workspace @hop/engine run check-script-imports
+npm --workspace @hop/engine run test:ai-acceptance:strict
+npm --workspace @hop/engine run test:acae:strict
+```
+
+## 11. Documentation Topology
+
+1. Current runtime law: `docs/STATUS.md`
+2. Architecture overview: `docs/MASTER_TECH_STACK.md`
+3. Active tracker: `docs/NEXT_LEVEL.md`
+4. Historical milestone material: `docs/archive/`
+5. Balance doctrine: `docs/GOLD_STANDARD_BALANCING.md`

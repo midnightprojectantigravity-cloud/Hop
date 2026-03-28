@@ -11,7 +11,7 @@ export const FALCON_HEAL: SkillDefinition = {
     id: 'FALCON_HEAL',
     name: 'Roost Heal',
     description: 'The falcon roosts and restores health to its companion.',
-    slot: 'passive',
+    slot: 'utility',
     icon: '✨',
     baseVariables: {
         range: 1,
@@ -67,11 +67,14 @@ export const FALCON_HEAL: SkillDefinition = {
     },
     upgrades: {},
     getValidTargets: (state: GameState, origin: Point) => {
-        // Range 1 (adjacent)
         const result: Point[] = [];
-        const player = state.player;
-        if (hexDistance(origin, player.position) <= 1) {
-            result.push(player.position);
+        const attacker = getActorAt(state, origin);
+        const ownerId = attacker?.companionOf;
+        const owner = ownerId
+            ? (ownerId === state.player.id ? state.player : state.enemies.find(e => e.id === ownerId) || state.companions?.find(e => e.id === ownerId))
+            : state.player;
+        if (owner && hexDistance(origin, owner.position) <= 1) {
+            result.push(owner.position);
         }
         return result;
     }

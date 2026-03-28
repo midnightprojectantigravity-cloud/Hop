@@ -18,6 +18,7 @@ import { UnifiedTileService } from '../tiles/unified-tile-service';
 import { applyDamage } from '../entities/actor';
 import { addToQueue } from '../initiative';
 import { createBombActor } from '../effects/bomb-runtime';
+import { recordEnemyAiTurnTelemetry } from '../ai/enemy/runtime-telemetry';
 
 export const resolveTelegraphedAttacks = (
   state: GameState,
@@ -120,6 +121,10 @@ export const resolveSingleEnemyTurn = (
   let curState = state;
   let messages: string[] = [];
   let nextEnemy: Entity = enemy;
+  let selectedEnemyAction: ReturnType<typeof computeEnemyAction>['selectedAction'] | undefined;
+  let selectedEnemyFacts: ReturnType<typeof computeEnemyAction>['selectedFacts'] | undefined;
+  let selectedEnemySummary: ReturnType<typeof computeEnemyAction>['selectionSummary'] | undefined;
+  const playerHpBeforeEnemyTurn = Number(state.player.hp || 0);
   const stunnedAppliedThisStep = (state.timelineEvents || []).some(ev =>
     ev.phase === 'STATUS_APPLY'
     && ev.type === 'ApplyStatus'
@@ -192,9 +197,12 @@ export const resolveSingleEnemyTurn = (
     nextEnemy = { ...enemy, intent: undefined, intentPosition: undefined };
   } else {
     // Normal AI turn
-    const { entity, nextState: aiState, message } = computeEnemyAction(enemy, state.player.position, curState);
+    const { entity, nextState: aiState, message, selectedAction, selectedFacts, selectionSummary } = computeEnemyAction(enemy, state.player.position, curState);
     curState = aiState;
     nextEnemy = entity;
+    selectedEnemyAction = selectedAction;
+    selectedEnemyFacts = selectedFacts;
+    selectedEnemySummary = selectionSummary;
 
     // Check if enemy moved
     if (!hexEquals(entity.position, enemy.position)) {
@@ -250,6 +258,22 @@ export const resolveSingleEnemyTurn = (
   messages.push(...stayResult.messages);
 
   nextEnemy = curState.enemies.find(e => e.id === enemy.id) || nextEnemy;
+
+  if (selectedEnemyAction) {
+    curState = {
+      ...curState,
+      enemyAiTelemetry: recordEnemyAiTurnTelemetry({
+        telemetry: curState.enemyAiTelemetry,
+        playerId: curState.player.id,
+        actionType: selectedEnemyAction.type,
+        skillId: selectedEnemyAction.skillId,
+        selectedFacts: selectedEnemyFacts,
+        selectionSummary: selectedEnemySummary,
+        playerHpBefore: playerHpBeforeEnemyTurn,
+        playerHpAfter: Number(curState.player.hp || 0)
+      })
+    };
+  }
 
   const isDead = nextEnemy.hp <= 0;
   if (isDead) {

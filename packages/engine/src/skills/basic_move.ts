@@ -11,6 +11,7 @@ import {
     validateMovementTraversalStep
 } from '../systems/capabilities/movement-policy';
 import { TileResolver } from '../systems/tiles/tile-effects';
+import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 
 /**
  * BASIC_MOVE Skill
@@ -105,12 +106,11 @@ const collectMovementRangeWithPolicy = (
             });
             if (!traversal.isValid) continue;
 
-            const tile = state.tiles.get(key(next));
-            if (!tile) continue;
+            const resolvedTile = UnifiedTileService.getTileAt(state, next);
 
             const transition = TileResolver.processTransition(
                 actor,
-                tile,
+                resolvedTile,
                 state,
                 cur.remaining,
                 resolveBasicMoveTransitionOptions(traversalPolicy)
@@ -164,12 +164,11 @@ const findSafePathWithPolicy = (
             });
             if (!traversal.isValid) continue;
 
-            const tile = state.tiles.get(key(next));
-            if (!tile) continue;
+            const resolvedTile = UnifiedTileService.getTileAt(state, next);
 
             const transition = TileResolver.processTransition(
                 actor,
-                tile,
+                resolvedTile,
                 state,
                 curRemaining,
                 resolveBasicMoveTransitionOptions(traversalPolicy)

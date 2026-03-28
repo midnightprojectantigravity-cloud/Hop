@@ -1,4 +1,4 @@
-import type { Action, GridSize, MapShape, RunRulesetOverrides } from '@hop/engine';
+import type { Action, GridSize, MapShape } from '@hop/engine';
 
 export const DEFAULT_START_RUN_MAP_SIZE: GridSize = {
   width: 9,
@@ -44,29 +44,6 @@ export const resolveEngineGridSizeFromInput = (
   };
 };
 
-export interface BuildCapabilityRulesetOverridesOptions {
-  loadoutPassivesEnabled: boolean;
-  movementRuntimeEnabled?: boolean;
-}
-
-export const buildCapabilityRulesetOverrides = ({
-  loadoutPassivesEnabled,
-  movementRuntimeEnabled = false
-}: BuildCapabilityRulesetOverridesOptions): RunRulesetOverrides => ({
-  capabilities: {
-    loadoutPassivesEnabled,
-    movementRuntimeEnabled
-  }
-});
-
-export const buildCapabilityPassivesRulesetOverrides = (
-  loadoutPassivesEnabled: boolean
-): RunRulesetOverrides =>
-  buildCapabilityRulesetOverrides({
-    loadoutPassivesEnabled,
-    movementRuntimeEnabled: false
-  });
-
 type StartRunPayload = Extract<Action, { type: 'START_RUN' }>['payload'];
 
 export interface BuildStartRunPayloadOptions {
@@ -77,8 +54,6 @@ export interface BuildStartRunPayloadOptions {
   mapSize?: GridSize;
   mapShape?: MapShape;
   mapSizeInputMode?: MapSizeInputMode;
-  capabilityPassivesEnabled: boolean;
-  movementRuntimeEnabled?: boolean;
 }
 
 export const buildStartRunPayload = ({
@@ -88,9 +63,7 @@ export const buildStartRunPayload = ({
   date,
   mapSize,
   mapShape,
-  mapSizeInputMode = 'usable',
-  capabilityPassivesEnabled,
-  movementRuntimeEnabled = false
+  mapSizeInputMode = 'usable'
 }: BuildStartRunPayloadOptions): StartRunPayload => {
   const resolvedMapShape: MapShape = mapShape === 'rectangle' ? 'rectangle' : 'diamond';
   const resolvedMapSize = mapSize
@@ -103,10 +76,6 @@ export const buildStartRunPayload = ({
     ...(seed ? { seed } : {}),
     ...(date ? { date } : {}),
     ...(resolvedMapSize ? { mapSize: resolvedMapSize } : {}),
-    ...(mapShape ? { mapShape } : {}),
-    rulesetOverrides: buildCapabilityRulesetOverrides({
-      loadoutPassivesEnabled: capabilityPassivesEnabled,
-      movementRuntimeEnabled
-    })
+    ...(mapShape ? { mapShape } : {})
   };
 };

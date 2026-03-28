@@ -67,6 +67,7 @@ export interface RouteProfile {
     rejoinBeforeExit: boolean;
     obstacleClusterBudget: number;
     trapClusterBudget: number;
+    lavaClusterBudget: number;
     saferRouteBias: RouteRiskBias;
     riskierRouteBias: RouteRiskBias;
 }
@@ -436,7 +437,7 @@ export interface PathSegment {
 
 export interface EnvironmentalPressureCluster {
     id: string;
-    kind: 'obstacle' | 'trap';
+    kind: 'obstacle' | 'trap' | 'lava';
     routeMembership: Exclude<RouteMembership, 'hidden'>;
     tileKeys: string[];
     trapKind?: EnvironmentalTrapKind;
@@ -465,6 +466,7 @@ export interface PathSummary {
     maxStraightRun: number;
     obstacleClusterCount: number;
     trapClusterCount: number;
+    lavaClusterCount: number;
     tacticalTileCount: number;
     visualTileCount: number;
 }

@@ -2,11 +2,19 @@ import { gameReducer } from '../../../logic';
 import { SkillRegistry } from '../../../skillRegistry';
 import type { Action, GameState } from '../../../types';
 import { seededChoiceSource } from '../core/tiebreak';
+import type { GenericUnitAiCandidateFacts, GenericUnitAiSelectionSummary } from '../generic-unit-ai';
 import { selectGenericUnitAiAction } from '../generic-unit-ai';
 import { chooseStrategicIntent } from './policy';
 import type { StrategicIntent, StrategicPolicyProfile } from '../strategic-policy';
 
 export type HarnessBotPolicy = 'random' | 'heuristic';
+
+export interface HarnessPlayerSelection {
+    action: Action;
+    strategicIntent: StrategicIntent;
+    selectedFacts?: GenericUnitAiCandidateFacts;
+    selectionSummary?: GenericUnitAiSelectionSummary;
+}
 
 export const resolvePending = (state: GameState): GameState => {
     let cur = state;
@@ -53,8 +61,8 @@ export const selectHarnessPlayerAction = (
     profile: StrategicPolicyProfile,
     simSeed: string,
     decisionCounter: number
-): { action: Action; strategicIntent: StrategicIntent } => {
-    const strategicIntent = chooseStrategicIntent(state, profile);
+): HarnessPlayerSelection => {
+    let strategicIntent = chooseStrategicIntent(state, profile);
 
     if (policy === 'random') {
         const options = listRandomOptions(state);
@@ -65,8 +73,21 @@ export const selectHarnessPlayerAction = (
         };
     }
 
-    return {
-        action: selectByOnePlySimulation(state, strategicIntent, profile, simSeed, decisionCounter),
+    const selection = selectGenericUnitAiAction({
+        state,
+        actor: state.player,
+        side: 'player',
+        simSeed,
+        decisionCounter,
         strategicIntent
+    });
+    if (selection.selected.action.type === 'WAIT' && selection.summary.selectedWaitForBandPreservation) {
+        strategicIntent = 'defense';
+    }
+    return {
+        action: selection.selected.action,
+        strategicIntent,
+        selectedFacts: selection.selected.facts,
+        selectionSummary: selection.summary
     };
 };

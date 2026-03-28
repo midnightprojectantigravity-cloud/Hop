@@ -10,9 +10,10 @@ describe('generated route topology', () => {
         const sharedObstacleClusters = result.artifact.pathNetwork.environmentalPressureClusters.filter(cluster =>
             cluster.kind === 'obstacle' && cluster.routeMembership === 'shared'
         );
-        const alternateTrapClusters = result.artifact.pathNetwork.environmentalPressureClusters.filter(cluster =>
-            cluster.kind === 'trap' && cluster.routeMembership === 'alternate'
+        const hazardClusters = result.artifact.pathNetwork.environmentalPressureClusters.filter(cluster =>
+            cluster.kind === 'trap' || cluster.kind === 'lava'
         );
+        const lavaClusters = result.artifact.pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'lava');
 
         expect(result.verificationReport.code).toBe('OK');
         expect(result.generationState.currentFloorSummary?.role).toBe('pressure_spike');
@@ -20,9 +21,10 @@ describe('generated route topology', () => {
         expect(summary?.junctionCount).toBeGreaterThanOrEqual(2);
         expect(summary?.maxStraightRun).toBeLessThanOrEqual(4);
         expect(summary?.obstacleClusterCount).toBeGreaterThan(0);
-        expect(summary?.trapClusterCount).toBeGreaterThan(0);
+        expect((summary?.trapClusterCount || 0) + (summary?.lavaClusterCount || 0)).toBeGreaterThan(0);
         expect(sharedObstacleClusters.length).toBeGreaterThan(0);
-        expect(alternateTrapClusters.length).toBeGreaterThan(0);
+        expect(hazardClusters.length).toBeGreaterThan(0);
+        expect(lavaClusters.length).toBeGreaterThan(0);
     });
 
     it('keeps recovery floors biased toward an alternate risky lane', () => {
@@ -30,17 +32,17 @@ describe('generated route topology', () => {
             generationState: createGenerationState('route-topology-recovery')
         });
         const pathNetwork = result.artifact.pathNetwork;
-        const alternateTrapClusters = pathNetwork.environmentalPressureClusters.filter(cluster =>
-            cluster.kind === 'trap' && cluster.routeMembership === 'alternate'
+        const alternatePressureClusters = pathNetwork.environmentalPressureClusters.filter(cluster =>
+            (cluster.kind === 'trap' || cluster.kind === 'lava' || cluster.kind === 'obstacle') && cluster.routeMembership === 'alternate'
         );
         const primaryPressureClusters = pathNetwork.environmentalPressureClusters.filter(cluster =>
-            (cluster.kind === 'trap' || cluster.kind === 'obstacle') && cluster.routeMembership === 'primary'
+            (cluster.kind === 'trap' || cluster.kind === 'lava' || cluster.kind === 'obstacle') && cluster.routeMembership === 'primary'
         );
 
         expect(result.verificationReport.code).toBe('OK');
         expect(result.generationState.currentFloorSummary?.role).toBe('recovery');
         expect(result.generationState.currentFloorSummary?.pathSummary.routeCount).toBeGreaterThanOrEqual(2);
-        expect(alternateTrapClusters.length).toBeGreaterThan(0);
+        expect(alternatePressureClusters.length).toBeGreaterThan(0);
         expect(primaryPressureClusters.length).toBe(0);
     });
 

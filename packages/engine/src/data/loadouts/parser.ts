@@ -56,6 +56,9 @@ export const validateLoadoutDefinition = (input: unknown, path = '$'): LoadoutVa
     if (!isStr(input.description)) push(issues, `${path}.description`, 'Expected string');
     checkStringArray(input.startingUpgrades, issues, `${path}.startingUpgrades`, { unique: true });
     checkStringArray(input.startingSkills, issues, `${path}.startingSkills`, { unique: true });
+    if (input.behaviorOverlay !== undefined && !isRecord(input.behaviorOverlay)) {
+        push(issues, `${path}.behaviorOverlay`, 'Expected object when provided');
+    }
     return issues;
 };
 
@@ -91,7 +94,7 @@ export const cloneLoadoutCatalog = (catalog: LoadoutCatalog): LoadoutCatalog =>
                 ...value,
                 startingUpgrades: [...value.startingUpgrades],
                 startingSkills: [...value.startingSkills],
+                behaviorOverlay: value.behaviorOverlay ? { ...value.behaviorOverlay } : undefined,
             } satisfies LoadoutDefinition
         ])
     );
-

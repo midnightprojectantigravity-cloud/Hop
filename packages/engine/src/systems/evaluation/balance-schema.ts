@@ -99,6 +99,7 @@ export interface FloorDifficultyProfile {
     maxStraightRun: number;
     obstacleClusterCount: number;
     trapClusterCount: number;
+    lavaClusterCount: number;
     routeComplexityScore: number;
     pathFrictionScore: number;
     hazardPressureScore: number;

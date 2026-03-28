@@ -51,6 +51,7 @@ import {
 } from './generation';
 import { hydrateGameStateIres, resolveIresRuleset, withResolvedIresRuleset } from './systems/ires';
 import { mergeCombatRulesetOverride, resolveCombatRuleset } from './systems/combat/combat-ruleset';
+import { createEmptyEnemyAiRunTelemetry } from './systems/ai/enemy/runtime-telemetry';
 
 const ENGINE_DEBUG = typeof process !== 'undefined' && process.env?.HOP_ENGINE_DEBUG === '1';
 const ENGINE_WARN = typeof process !== 'undefined' && process.env?.HOP_ENGINE_WARN === '1';
@@ -90,38 +91,8 @@ const mergeRunRulesetOverrides = (
 ): GameState['ruleset'] => {
     if (!overrides) return base;
     const baseIres = resolveIresRuleset(base);
-    const nextAilments = base?.ailments
-        ? {
-            ...base.ailments,
-            ...(overrides.ailments?.acaeEnabled !== undefined
-                ? { acaeEnabled: overrides.ailments.acaeEnabled }
-                : {})
-        }
-        : undefined;
-    const nextAttachments = base?.attachments
-        ? {
-            ...base.attachments,
-            ...(overrides.attachments?.sharedVectorCarry !== undefined
-                ? { sharedVectorCarry: overrides.attachments.sharedVectorCarry }
-                : {})
-        }
-        : undefined;
-    const nextCapabilities = base?.capabilities
-        ? {
-            ...base.capabilities,
-            ...(overrides.capabilities?.loadoutPassivesEnabled !== undefined
-                ? { loadoutPassivesEnabled: overrides.capabilities.loadoutPassivesEnabled }
-                : {}),
-            ...(overrides.capabilities?.movementRuntimeEnabled !== undefined
-                ? { movementRuntimeEnabled: overrides.capabilities.movementRuntimeEnabled }
-                : {})
-        }
-        : undefined;
     return {
         ...mergeCombatRulesetOverride(base, overrides),
-        ...(nextAilments ? { ailments: nextAilments } : {}),
-        ...(nextAttachments ? { attachments: nextAttachments } : {}),
-        ...(nextCapabilities ? { capabilities: nextCapabilities } : {}),
         combat: {
             version: overrides.combat?.version || resolveCombatRuleset(base)
         },
@@ -213,9 +184,7 @@ const applyCompiledFloorArtifactToState = (
             ...state,
             ruleset: mergeRunRulesetOverrides(state.ruleset, artifact.rulesetOverrides)
         });
-        const appliedLoadout = applyLoadoutToPlayer(loadout, {
-            capabilityPassivesEnabled: mergedRuleset.capabilities?.loadoutPassivesEnabled === true
-        });
+        const appliedLoadout = applyLoadoutToPlayer(loadout);
         const player = createEntity({
             id: 'player',
             type: 'player',
@@ -269,6 +238,7 @@ const applyCompiledFloorArtifactToState = (
             completedRun: undefined,
             combatScoreEvents: [],
             runTelemetry: createEmptyRunTelemetry(),
+            enemyAiTelemetry: createEmptyEnemyAiRunTelemetry(),
             dyingEntities: [],
             visualEvents: [],
             timelineEvents: [],
@@ -317,6 +287,7 @@ const applyCompiledFloorArtifactToState = (
         rngCounter: 0,
         actionLog: [...(state.actionLog || [])],
         runTelemetry: state.runTelemetry,
+        enemyAiTelemetry: state.enemyAiTelemetry,
         dyingEntities: [],
         visualEvents: [],
         timelineEvents: [],
@@ -471,6 +442,7 @@ export const generateInitialState = (
         completedRun: undefined,
         combatScoreEvents: (preservePlayer as any)?.combatScoreEvents || [],
         runTelemetry: (preservePlayer as any)?.runTelemetry || createEmptyRunTelemetry(),
+        enemyAiTelemetry: (preservePlayer as any)?.enemyAiTelemetry || createEmptyEnemyAiRunTelemetry(),
 
         // Juice
         dyingEntities: [],
@@ -497,9 +469,7 @@ export const generateInitialState = (
         }
     };
     if (loadout && !preservePlayer?.activeSkills) {
-        const resolvedLoadout = applyLoadoutToPlayer(loadout, {
-            capabilityPassivesEnabled: tempState.ruleset?.capabilities?.loadoutPassivesEnabled === true
-        });
+        const resolvedLoadout = applyLoadoutToPlayer(loadout);
         tempState.player = {
             ...tempState.player,
             activeSkills: ensurePlayerCoreVisionSkill(

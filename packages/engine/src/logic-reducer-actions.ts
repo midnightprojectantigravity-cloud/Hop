@@ -71,38 +71,8 @@ const mergeRunRulesetOverrides = (
 ): GameState['ruleset'] => {
     if (!overrides) return base;
     const baseIres = resolveIresRuleset(base);
-    const nextAilments = base?.ailments
-        ? {
-            ...base.ailments,
-            ...(overrides.ailments?.acaeEnabled !== undefined
-                ? { acaeEnabled: overrides.ailments.acaeEnabled }
-                : {})
-        }
-        : undefined;
-    const nextAttachments = base?.attachments
-        ? {
-            ...base.attachments,
-            ...(overrides.attachments?.sharedVectorCarry !== undefined
-                ? { sharedVectorCarry: overrides.attachments.sharedVectorCarry }
-                : {})
-        }
-        : undefined;
-    const nextCapabilities = base?.capabilities
-        ? {
-            ...base.capabilities,
-            ...(overrides.capabilities?.loadoutPassivesEnabled !== undefined
-                ? { loadoutPassivesEnabled: overrides.capabilities.loadoutPassivesEnabled }
-                : {}),
-            ...(overrides.capabilities?.movementRuntimeEnabled !== undefined
-                ? { movementRuntimeEnabled: overrides.capabilities.movementRuntimeEnabled }
-                : {})
-        }
-        : undefined;
     return {
         ...mergeCombatRulesetOverride(base, overrides),
-        ...(nextAilments ? { ailments: nextAilments } : {}),
-        ...(nextAttachments ? { attachments: nextAttachments } : {}),
-        ...(nextCapabilities ? { capabilities: nextCapabilities } : {}),
         combat: {
             version: overrides.combat?.version || resolveCombatRuleset(base)
         },
@@ -189,9 +159,7 @@ export const resolveGameStateAction = (
             if (!('payload' in a)) return s;
             const loadout = a.payload as Loadout;
             const resolvedRuleset = resolveAcaeRuleset(s);
-            const applied = applyLoadoutToPlayer(loadout, {
-                capabilityPassivesEnabled: resolvedRuleset.capabilities?.loadoutPassivesEnabled === true
-            });
+            const applied = applyLoadoutToPlayer(loadout);
             return {
                 ...s,
                 ruleset: resolvedRuleset,
@@ -220,9 +188,7 @@ export const resolveGameStateAction = (
                     ...next,
                     ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)
                 });
-                const reconciledLoadout = applyLoadoutToPlayer(loadout, {
-                    capabilityPassivesEnabled: mergedRuleset.capabilities?.loadoutPassivesEnabled === true
-                });
+                const reconciledLoadout = applyLoadoutToPlayer(loadout);
                 const nextState: GameState = {
                     ...next,
                     player: {
@@ -248,9 +214,7 @@ export const resolveGameStateAction = (
                 ...next,
                 ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)
             });
-            const reconciledLoadout = applyLoadoutToPlayer(loadout, {
-                capabilityPassivesEnabled: mergedRuleset.capabilities?.loadoutPassivesEnabled === true
-            });
+            const reconciledLoadout = applyLoadoutToPlayer(loadout);
             const nextState: GameState = {
                 ...next,
                 player: {

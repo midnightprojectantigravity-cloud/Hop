@@ -5,9 +5,8 @@ import { TileResolver } from '../systems/tiles/tile-effects';
 import { pointToKey } from '../hex';
 
 describe('ACAE tile injection', () => {
-    it('lava stay injects burn counters when ACAE is enabled', () => {
+    it('lava stay injects burn counters in the live runtime', () => {
         let state = generateInitialState(1, 'acae-tile-lava-seed');
-        state.ruleset = { ailments: { acaeEnabled: true, version: 'acae-v1' } };
 
         const playerPos = state.player.position;
         const key = pointToKey(playerPos);
@@ -26,4 +25,3 @@ describe('ACAE tile injection', () => {
         expect((state.simulationEvents || []).some(ev => ev.type === 'AilmentChanged')).toBe(true);
     });
 });
-

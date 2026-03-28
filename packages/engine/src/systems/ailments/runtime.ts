@@ -4,7 +4,8 @@ import { getAilmentDefinition, listAilmentDefinitions } from '../../data/ailment
 import type { AilmentID } from '../../types/registry';
 import { hexEquals } from '../../hex';
 import { extractTrinityStats } from '../combat/combat-calculator';
-import { applyDamage } from '../entities/actor';
+import { applyDamage, applyHeal } from '../entities/actor';
+import { appendTaggedMessage } from '../engine-messages';
 import { computeAilmentApplication } from './application';
 import { resolveAilmentAnnihilation } from './annihilation';
 import { gainAilmentResilienceXp, getAilmentBaseResistancePct, getAilmentSpecificResistancePct } from './hardening';
@@ -18,10 +19,6 @@ export interface AilmentTickResultEnvelope {
     state: GameState;
     messages: string[];
 }
-
-const DEFAULT_VERSION = 'acae-v1' as const;
-const DEFAULT_ATTACHMENT_VERSION = 'attachment-v1' as const;
-const DEFAULT_CAPABILITY_VERSION = 'capabilities-v1' as const;
 
 const clonePoint = (point: Point): Point => ({ q: point.q, r: point.r, s: point.s });
 const clampPercent = (value: number): number => Math.max(0, Math.min(100, value));
@@ -245,30 +242,19 @@ const applyHardeningGainForAilment = (
     return nextState;
 };
 
-export const isAcaeEnabled = (state: GameState): boolean =>
-    state.ruleset?.ailments?.acaeEnabled === true;
-
 export const resolveAcaeRuleset = (state: GameState): NonNullable<GameState['ruleset']> => {
-    const defaultEnabled = typeof process !== 'undefined' && process.env?.HOP_ACAE_ENABLED === '1';
-    const defaultAttachmentCarryEnabled = typeof process !== 'undefined' && process.env?.HOP_ATTACHMENT_SHARED_VECTOR === '1';
-    const defaultLoadoutPassivesEnabled = typeof process !== 'undefined' && process.env?.HOP_CAP_LOADOUT_PASSIVES === '1';
-    const defaultMovementRuntimeEnabled = typeof process !== 'undefined' && process.env?.HOP_CAP_MOVEMENT_RUNTIME === '1';
-    return {
-        ...(state.ruleset || {}),
-        ailments: {
-            acaeEnabled: state.ruleset?.ailments?.acaeEnabled ?? defaultEnabled,
-            version: DEFAULT_VERSION
-        },
-        attachments: {
-            sharedVectorCarry: state.ruleset?.attachments?.sharedVectorCarry ?? defaultAttachmentCarryEnabled,
-            version: DEFAULT_ATTACHMENT_VERSION
-        },
-        capabilities: {
-            loadoutPassivesEnabled: state.ruleset?.capabilities?.loadoutPassivesEnabled ?? defaultLoadoutPassivesEnabled,
-            movementRuntimeEnabled: state.ruleset?.capabilities?.movementRuntimeEnabled ?? defaultMovementRuntimeEnabled,
-            version: DEFAULT_CAPABILITY_VERSION
-        }
+    const legacyRuleset = (state.ruleset || {}) as GameState['ruleset'] & {
+        ailments?: unknown;
+        attachments?: unknown;
+        capabilities?: unknown;
     };
+    const {
+        ailments: _retiredAilments,
+        attachments: _retiredAttachments,
+        capabilities: _retiredCapabilities,
+        ...liveRuleset
+    } = legacyRuleset;
+    return liveRuleset;
 };
 
 export const getActorAilmentCounters = (actor: Actor): Partial<Record<AilmentID, number>> => {
@@ -292,7 +278,6 @@ export const applyAilmentToTarget = (
     context: AtomicEffectContext = {},
     source: AilmentSource = 'skill'
 ): GameState => {
-    if (!isAcaeEnabled(state)) return state;
     const targetResolved = resolveTargetActor(state, target, context);
     if (!targetResolved) return state;
     const ailmentDefinition = getAilmentDefinition(ailment);
@@ -371,7 +356,6 @@ export const depositAilmentCounters = (
     context: AtomicEffectContext = {},
     source: AilmentSource = 'system'
 ): GameState => {
-    if (!isAcaeEnabled(state)) return state;
     const targetResolved = resolveTargetActor(state, target, context);
     if (!targetResolved) return state;
     const definition = getAilmentDefinition(ailment);
@@ -458,7 +442,6 @@ export const clearAilmentCounters = (
     reason: string | undefined,
     context: AtomicEffectContext = {}
 ): GameState => {
-    if (!isAcaeEnabled(state)) return state;
     const targetResolved = resolveTargetActor(state, target, context);
     if (!targetResolved) return state;
 
@@ -516,15 +499,55 @@ const applyAilmentTickDamage = (
     if (amount <= 0) return state;
     const actor = resolveActorById(state, actorId);
     if (!actor) return state;
-    const damaged = applyDamage(actor, amount);
-    let nextState = updateActorById(state, actorId, damaged);
+    const isBurnTick = ailment === 'burn';
+    const isPlayer = actorId === state.player.id;
+    const hasAbsorbFire = isBurnTick && actor.activeSkills?.some(skill => skill.id === 'ABSORB_FIRE');
+    const hasEmberWard = isBurnTick && isPlayer && state.upgrades?.includes('RELIC_EMBER_WARD');
+    const hasCinderOrb = isBurnTick && isPlayer && state.upgrades?.includes('RELIC_CINDER_ORB');
+    let nextState = state;
+    let effectiveAmount = amount;
+
+    if (hasEmberWard) {
+        effectiveAmount = Math.max(0, effectiveAmount - 1);
+        nextState.message = appendTaggedMessage(nextState.message, 'Ember Ward dampens the flames.', 'INFO', 'COMBAT');
+    }
+
+    if (hasAbsorbFire) {
+        const healAmount = effectiveAmount + (hasCinderOrb ? 1 : 0);
+        const healed = applyHeal(actor, healAmount);
+        if (hasCinderOrb) {
+            nextState.message = appendTaggedMessage(nextState.message, 'Cinder Orb amplifies the absorption.', 'INFO', 'COMBAT');
+        }
+        nextState = updateActorById(nextState, actorId, healed);
+        return appendSimulationEvent(nextState, {
+            type: 'DamageTaken',
+            actorId: context.sourceId,
+            targetId: actorId,
+            position: clonePoint(healed.position),
+            payload: {
+                amount: -healAmount,
+                reason: 'acae_burn_tick_absorbed',
+                sourceId: context.sourceId
+            }
+        });
+    }
+
+    const damaged = applyDamage(actor, effectiveAmount);
+    nextState = updateActorById(nextState, actorId, damaged);
+    if (isBurnTick && isPlayer) {
+        nextState.hazardBreaches = (nextState.hazardBreaches || 0) + 1;
+    }
+    if (isBurnTick && hasCinderOrb) {
+        nextState.player = applyHeal(nextState.player, 1);
+        nextState.message = appendTaggedMessage(nextState.message, 'Cinder Orb restores 1 HP.', 'INFO', 'COMBAT');
+    }
     nextState = appendSimulationEvent(nextState, {
         type: 'DamageTaken',
         actorId: context.sourceId,
         targetId: actorId,
         position: clonePoint(damaged.position),
         payload: {
-            amount,
+            amount: effectiveAmount,
             reason: `acae_${ailment}_tick`,
             sourceId: context.sourceId
         }
@@ -541,7 +564,6 @@ export const tickActorAilments = (
     window: 'START_OF_TURN' | 'END_OF_TURN',
     stepId?: string
 ): AilmentTickResultEnvelope => {
-    if (!isAcaeEnabled(state)) return { state, messages: [] };
     const actor = resolveActorById(state, actorId);
     if (!actor) return { state, messages: [] };
 
@@ -623,13 +645,12 @@ export const buildAilmentDeltaSummary = (events: SimulationEvent[]): string[] =>
 export const getAcaePilotAilments = (): AilmentID[] => ['burn', 'wet', 'poison', 'frozen', 'bleed'];
 
 const createAilmentEffectsIfEnabled = (
-    state: GameState,
+    _state: GameState,
     targetId: string,
     ailment: AilmentID,
     amount: number,
     source: AilmentSource
 ): AtomicEffect[] => {
-    if (!isAcaeEnabled(state)) return [];
     if (amount <= 0) return [];
     return [{
         type: 'DepositAilmentCounters',
@@ -646,7 +667,6 @@ export const createTileAilmentInjectionEffects = (
     tileKind: 'lava' | 'fire' | 'wet' | 'miasma' | 'ice',
     intensity: 'pass' | 'enter' | 'stay'
 ): AtomicEffect[] => {
-    if (!isAcaeEnabled(state)) return [];
     const amountTable: Record<typeof tileKind, Record<typeof intensity, number>> = {
         lava: { pass: 8, enter: 14, stay: 10 },
         fire: { pass: 4, enter: 6, stay: 5 },

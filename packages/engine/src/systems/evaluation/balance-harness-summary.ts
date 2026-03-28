@@ -3,6 +3,7 @@ import type {
     BatchSummary,
     BotPolicy,
     CombatProfileSignalSummary,
+    EnemyAiBatchSummary,
     PacingSignalSummary,
     RunResult,
     SkillTelemetry,
@@ -60,9 +61,64 @@ const zeroPacingSignal = (): PacingSignalSummary => ({
     avgReservePressure: 0,
     avgFatiguePressure: 0,
     avgRecoveryPressure: 0,
+    avgTurnEndSparkRatio: 0,
+    visibleHostileSelections: 0,
+    idleWithVisibleHostile: 0,
+    attackOpportunityCount: 0,
+    attackConversionCount: 0,
+    threatenNextTurnOpportunityCount: 0,
+    threatenNextTurnConversionCount: 0,
+    backtrackMoveCount: 0,
+    loopMoveCount: 0,
+    lowValueMobilitySelections: 0,
     restSelections: 0,
     endTurnSelections: 0,
-    continuedActionSelections: 0
+    continuedActionSelections: 0,
+    preservedRestedTurns: 0,
+    restedBatterySpendSelections: 0,
+    restedReentryTurns: 0,
+    trueRestRestedBonusArmedTurns: 0,
+    voluntaryExhaustionAttempts: 0,
+    voluntaryExhaustionAllowed: 0,
+    voluntaryExhaustionBlocked: 0,
+    turnsEndedRested: 0,
+    turnsEndedStableOrBetter: 0,
+    turnsEndedCriticalOrExhausted: 0,
+    secondActionAttempts: 0,
+    secondActionAllowed: 0,
+    thirdActionAttempts: 0,
+    thirdActionAllowed: 0,
+    waitForBandPreservationSelections: 0,
+    firstContactTurn: 0,
+    firstDamageTurn: 0
+});
+
+const zeroEnemyAiBatchSummary = (): EnemyAiBatchSummary => ({
+    actionCounts: {},
+    skillUsage: {},
+    avgEnemyDamageToPlayerPerRun: 0,
+    avgEnemyOffensiveSkillCastsPerRun: 0,
+    enemyDamagePerOffensiveCast: 0,
+    enemyAttackOpportunityConversionRate: 0,
+    enemyThreatOpportunityConversionRate: 0,
+    avgEnemyIdleWithVisiblePlayer: 0,
+    avgEnemyBacktrackMoves: 0,
+    avgEnemyLoopMoves: 0,
+    avgEnemyPreservedRestedTurns: 0,
+    avgEnemyRestedBatterySpendSelections: 0,
+    avgEnemyRestedReentryTurns: 0,
+    avgEnemyTrueRestRestedBonusArmedTurns: 0,
+    avgEnemyVoluntaryExhaustionAttempts: 0,
+    avgEnemyVoluntaryExhaustionAllowed: 0,
+    avgEnemyVoluntaryExhaustionBlocked: 0,
+    avgEnemyTurnsEndedRested: 0,
+    avgEnemyTurnsEndedStableOrBetter: 0,
+    avgEnemyTurnsEndedCriticalOrExhausted: 0,
+    avgEnemySecondActionAttempts: 0,
+    avgEnemySecondActionAllowed: 0,
+    avgEnemyThirdActionAttempts: 0,
+    avgEnemyThirdActionAllowed: 0,
+    avgEnemyWaitForBandPreservationSelections: 0
 });
 
 export const summarizeBatch = (
@@ -87,6 +143,32 @@ export const summarizeBatch = (
     const trinityContributionTotals = zeroTrinityContribution();
     const combatProfileSignalTotals = zeroCombatProfileSignal();
     const pacingSignalTotals = zeroPacingSignal();
+    const enemyAiActionTotals: Record<string, number> = {};
+    const enemyAiSkillTotals: Record<string, number> = {};
+    let enemyDamageToPlayerTotal = 0;
+    let enemyOffensiveSkillCastsTotal = 0;
+    let enemyIdleWithVisiblePlayerTotal = 0;
+    let enemyAttackOpportunityTurnsTotal = 0;
+    let enemyAttackConversionTurnsTotal = 0;
+    let enemyThreatOpportunityTurnsTotal = 0;
+    let enemyThreatConversionTurnsTotal = 0;
+    let enemyBacktrackMovesTotal = 0;
+    let enemyLoopMovesTotal = 0;
+    let enemyPreservedRestedTurnsTotal = 0;
+    let enemyRestedBatterySpendSelectionsTotal = 0;
+    let enemyRestedReentryTurnsTotal = 0;
+    let enemyTrueRestRestedBonusArmedTurnsTotal = 0;
+    let enemyVoluntaryExhaustionAttemptsTotal = 0;
+    let enemyVoluntaryExhaustionAllowedTotal = 0;
+    let enemyVoluntaryExhaustionBlockedTotal = 0;
+    let enemyTurnsEndedRestedTotal = 0;
+    let enemyTurnsEndedStableOrBetterTotal = 0;
+    let enemyTurnsEndedCriticalOrExhaustedTotal = 0;
+    let enemySecondActionAttemptsTotal = 0;
+    let enemySecondActionAllowedTotal = 0;
+    let enemyThirdActionAttemptsTotal = 0;
+    let enemyThirdActionAllowedTotal = 0;
+    let enemyWaitForBandPreservationSelectionsTotal = 0;
 
     for (const run of results) {
         mergeHistogram(actionTypeTotals, run.playerActionCounts || {});
@@ -116,9 +198,63 @@ export const summarizeBatch = (
         pacingSignalTotals.avgReservePressure += run.pacingSignal?.avgReservePressure || 0;
         pacingSignalTotals.avgFatiguePressure += run.pacingSignal?.avgFatiguePressure || 0;
         pacingSignalTotals.avgRecoveryPressure += run.pacingSignal?.avgRecoveryPressure || 0;
+        pacingSignalTotals.avgTurnEndSparkRatio += run.pacingSignal?.avgTurnEndSparkRatio || 0;
+        pacingSignalTotals.visibleHostileSelections += run.pacingSignal?.visibleHostileSelections || 0;
+        pacingSignalTotals.idleWithVisibleHostile += run.pacingSignal?.idleWithVisibleHostile || 0;
+        pacingSignalTotals.attackOpportunityCount += run.pacingSignal?.attackOpportunityCount || 0;
+        pacingSignalTotals.attackConversionCount += run.pacingSignal?.attackConversionCount || 0;
+        pacingSignalTotals.threatenNextTurnOpportunityCount += run.pacingSignal?.threatenNextTurnOpportunityCount || 0;
+        pacingSignalTotals.threatenNextTurnConversionCount += run.pacingSignal?.threatenNextTurnConversionCount || 0;
+        pacingSignalTotals.backtrackMoveCount += run.pacingSignal?.backtrackMoveCount || 0;
+        pacingSignalTotals.loopMoveCount += run.pacingSignal?.loopMoveCount || 0;
+        pacingSignalTotals.lowValueMobilitySelections += run.pacingSignal?.lowValueMobilitySelections || 0;
         pacingSignalTotals.restSelections += run.pacingSignal?.restSelections || 0;
         pacingSignalTotals.endTurnSelections += run.pacingSignal?.endTurnSelections || 0;
         pacingSignalTotals.continuedActionSelections += run.pacingSignal?.continuedActionSelections || 0;
+        pacingSignalTotals.preservedRestedTurns += run.pacingSignal?.preservedRestedTurns || 0;
+        pacingSignalTotals.restedBatterySpendSelections += run.pacingSignal?.restedBatterySpendSelections || 0;
+        pacingSignalTotals.restedReentryTurns += run.pacingSignal?.restedReentryTurns || 0;
+        pacingSignalTotals.trueRestRestedBonusArmedTurns += run.pacingSignal?.trueRestRestedBonusArmedTurns || 0;
+        pacingSignalTotals.voluntaryExhaustionAttempts += run.pacingSignal?.voluntaryExhaustionAttempts || 0;
+        pacingSignalTotals.voluntaryExhaustionAllowed += run.pacingSignal?.voluntaryExhaustionAllowed || 0;
+        pacingSignalTotals.voluntaryExhaustionBlocked += run.pacingSignal?.voluntaryExhaustionBlocked || 0;
+        pacingSignalTotals.turnsEndedRested += run.pacingSignal?.turnsEndedRested || 0;
+        pacingSignalTotals.turnsEndedStableOrBetter += run.pacingSignal?.turnsEndedStableOrBetter || 0;
+        pacingSignalTotals.turnsEndedCriticalOrExhausted += run.pacingSignal?.turnsEndedCriticalOrExhausted || 0;
+        pacingSignalTotals.secondActionAttempts += run.pacingSignal?.secondActionAttempts || 0;
+        pacingSignalTotals.secondActionAllowed += run.pacingSignal?.secondActionAllowed || 0;
+        pacingSignalTotals.thirdActionAttempts += run.pacingSignal?.thirdActionAttempts || 0;
+        pacingSignalTotals.thirdActionAllowed += run.pacingSignal?.thirdActionAllowed || 0;
+        pacingSignalTotals.waitForBandPreservationSelections += run.pacingSignal?.waitForBandPreservationSelections || 0;
+        pacingSignalTotals.firstContactTurn += run.pacingSignal?.firstContactTurn || 0;
+        pacingSignalTotals.firstDamageTurn += run.pacingSignal?.firstDamageTurn || 0;
+
+        mergeHistogram(enemyAiActionTotals, run.enemyAiTelemetry?.actionCounts || {});
+        mergeHistogram(enemyAiSkillTotals, run.enemyAiTelemetry?.skillUsage || {});
+        enemyDamageToPlayerTotal += run.enemyAiTelemetry?.damageToPlayer || 0;
+        enemyOffensiveSkillCastsTotal += run.enemyAiTelemetry?.offensiveSkillCasts || 0;
+        enemyIdleWithVisiblePlayerTotal += run.enemyAiTelemetry?.idleWithVisiblePlayer || 0;
+        enemyAttackOpportunityTurnsTotal += run.enemyAiTelemetry?.attackOpportunityTurns || 0;
+        enemyAttackConversionTurnsTotal += run.enemyAiTelemetry?.attackConversionTurns || 0;
+        enemyThreatOpportunityTurnsTotal += run.enemyAiTelemetry?.threatOpportunityTurns || 0;
+        enemyThreatConversionTurnsTotal += run.enemyAiTelemetry?.threatConversionTurns || 0;
+        enemyBacktrackMovesTotal += run.enemyAiTelemetry?.backtrackMoves || 0;
+        enemyLoopMovesTotal += run.enemyAiTelemetry?.loopMoves || 0;
+        enemyPreservedRestedTurnsTotal += run.enemyAiTelemetry?.preservedRestedTurns || 0;
+        enemyRestedBatterySpendSelectionsTotal += run.enemyAiTelemetry?.restedBatterySpendSelections || 0;
+        enemyRestedReentryTurnsTotal += run.enemyAiTelemetry?.restedReentryTurns || 0;
+        enemyTrueRestRestedBonusArmedTurnsTotal += run.enemyAiTelemetry?.trueRestRestedBonusArmedTurns || 0;
+        enemyVoluntaryExhaustionAttemptsTotal += run.enemyAiTelemetry?.voluntaryExhaustionAttempts || 0;
+        enemyVoluntaryExhaustionAllowedTotal += run.enemyAiTelemetry?.voluntaryExhaustionAllowed || 0;
+        enemyVoluntaryExhaustionBlockedTotal += run.enemyAiTelemetry?.voluntaryExhaustionBlocked || 0;
+        enemyTurnsEndedRestedTotal += run.enemyAiTelemetry?.turnsEndedRested || 0;
+        enemyTurnsEndedStableOrBetterTotal += run.enemyAiTelemetry?.turnsEndedStableOrBetter || 0;
+        enemyTurnsEndedCriticalOrExhaustedTotal += run.enemyAiTelemetry?.turnsEndedCriticalOrExhausted || 0;
+        enemySecondActionAttemptsTotal += run.enemyAiTelemetry?.secondActionAttempts || 0;
+        enemySecondActionAllowedTotal += run.enemyAiTelemetry?.secondActionAllowed || 0;
+        enemyThirdActionAttemptsTotal += run.enemyAiTelemetry?.thirdActionAttempts || 0;
+        enemyThirdActionAllowedTotal += run.enemyAiTelemetry?.thirdActionAllowed || 0;
+        enemyWaitForBandPreservationSelectionsTotal += run.enemyAiTelemetry?.waitForBandPreservationSelections || 0;
     }
 
     const divisor = results.length || 1;
@@ -155,9 +291,64 @@ export const summarizeBatch = (
         avgReservePressure: pacingSignalTotals.avgReservePressure / divisor,
         avgFatiguePressure: pacingSignalTotals.avgFatiguePressure / divisor,
         avgRecoveryPressure: pacingSignalTotals.avgRecoveryPressure / divisor,
+        avgTurnEndSparkRatio: pacingSignalTotals.avgTurnEndSparkRatio / divisor,
+        visibleHostileSelections: pacingSignalTotals.visibleHostileSelections,
+        idleWithVisibleHostile: pacingSignalTotals.idleWithVisibleHostile,
+        attackOpportunityCount: pacingSignalTotals.attackOpportunityCount,
+        attackConversionCount: pacingSignalTotals.attackConversionCount,
+        threatenNextTurnOpportunityCount: pacingSignalTotals.threatenNextTurnOpportunityCount,
+        threatenNextTurnConversionCount: pacingSignalTotals.threatenNextTurnConversionCount,
+        backtrackMoveCount: pacingSignalTotals.backtrackMoveCount,
+        loopMoveCount: pacingSignalTotals.loopMoveCount,
+        lowValueMobilitySelections: pacingSignalTotals.lowValueMobilitySelections,
         restSelections: pacingSignalTotals.restSelections,
         endTurnSelections: pacingSignalTotals.endTurnSelections,
-        continuedActionSelections: pacingSignalTotals.continuedActionSelections
+        continuedActionSelections: pacingSignalTotals.continuedActionSelections,
+        preservedRestedTurns: pacingSignalTotals.preservedRestedTurns,
+        restedBatterySpendSelections: pacingSignalTotals.restedBatterySpendSelections,
+        restedReentryTurns: pacingSignalTotals.restedReentryTurns,
+        trueRestRestedBonusArmedTurns: pacingSignalTotals.trueRestRestedBonusArmedTurns,
+        voluntaryExhaustionAttempts: pacingSignalTotals.voluntaryExhaustionAttempts,
+        voluntaryExhaustionAllowed: pacingSignalTotals.voluntaryExhaustionAllowed,
+        voluntaryExhaustionBlocked: pacingSignalTotals.voluntaryExhaustionBlocked,
+        turnsEndedRested: pacingSignalTotals.turnsEndedRested,
+        turnsEndedStableOrBetter: pacingSignalTotals.turnsEndedStableOrBetter,
+        turnsEndedCriticalOrExhausted: pacingSignalTotals.turnsEndedCriticalOrExhausted,
+        secondActionAttempts: pacingSignalTotals.secondActionAttempts,
+        secondActionAllowed: pacingSignalTotals.secondActionAllowed,
+        thirdActionAttempts: pacingSignalTotals.thirdActionAttempts,
+        thirdActionAllowed: pacingSignalTotals.thirdActionAllowed,
+        waitForBandPreservationSelections: pacingSignalTotals.waitForBandPreservationSelections,
+        firstContactTurn: pacingSignalTotals.firstContactTurn,
+        firstDamageTurn: pacingSignalTotals.firstDamageTurn
+    };
+    const enemyAiTelemetry: EnemyAiBatchSummary = {
+        ...zeroEnemyAiBatchSummary(),
+        actionCounts: enemyAiActionTotals,
+        skillUsage: enemyAiSkillTotals,
+        avgEnemyDamageToPlayerPerRun: enemyDamageToPlayerTotal / divisor,
+        avgEnemyOffensiveSkillCastsPerRun: enemyOffensiveSkillCastsTotal / divisor,
+        enemyDamagePerOffensiveCast: enemyDamageToPlayerTotal / Math.max(1, enemyOffensiveSkillCastsTotal),
+        enemyAttackOpportunityConversionRate: enemyAttackConversionTurnsTotal / Math.max(1, enemyAttackOpportunityTurnsTotal),
+        enemyThreatOpportunityConversionRate: enemyThreatConversionTurnsTotal / Math.max(1, enemyThreatOpportunityTurnsTotal),
+        avgEnemyIdleWithVisiblePlayer: enemyIdleWithVisiblePlayerTotal / divisor,
+        avgEnemyBacktrackMoves: enemyBacktrackMovesTotal / divisor,
+        avgEnemyLoopMoves: enemyLoopMovesTotal / divisor,
+        avgEnemyPreservedRestedTurns: enemyPreservedRestedTurnsTotal / divisor,
+        avgEnemyRestedBatterySpendSelections: enemyRestedBatterySpendSelectionsTotal / divisor,
+        avgEnemyRestedReentryTurns: enemyRestedReentryTurnsTotal / divisor,
+        avgEnemyTrueRestRestedBonusArmedTurns: enemyTrueRestRestedBonusArmedTurnsTotal / divisor,
+        avgEnemyVoluntaryExhaustionAttempts: enemyVoluntaryExhaustionAttemptsTotal / divisor,
+        avgEnemyVoluntaryExhaustionAllowed: enemyVoluntaryExhaustionAllowedTotal / divisor,
+        avgEnemyVoluntaryExhaustionBlocked: enemyVoluntaryExhaustionBlockedTotal / divisor,
+        avgEnemyTurnsEndedRested: enemyTurnsEndedRestedTotal / divisor,
+        avgEnemyTurnsEndedStableOrBetter: enemyTurnsEndedStableOrBetterTotal / divisor,
+        avgEnemyTurnsEndedCriticalOrExhausted: enemyTurnsEndedCriticalOrExhaustedTotal / divisor,
+        avgEnemySecondActionAttempts: enemySecondActionAttemptsTotal / divisor,
+        avgEnemySecondActionAllowed: enemySecondActionAllowedTotal / divisor,
+        avgEnemyThirdActionAttempts: enemyThirdActionAttemptsTotal / divisor,
+        avgEnemyThirdActionAllowed: enemyThirdActionAllowedTotal / divisor,
+        avgEnemyWaitForBandPreservationSelections: enemyWaitForBandPreservationSelectionsTotal / divisor
     };
 
     const summary: BatchSummary = {
@@ -197,12 +388,21 @@ export const summarizeBatch = (
         strategicIntentTotals,
         avgStrategicIntentPerRun,
         avgPlayerSkillCastsPerRun: average(results.map(r => r.totalPlayerSkillCasts || 0)),
+        attackConversionRate: pacingSignalTotals.attackConversionCount / Math.max(1, pacingSignalTotals.attackOpportunityCount),
+        threatenNextTurnConversionRate: pacingSignalTotals.threatenNextTurnConversionCount / Math.max(1, pacingSignalTotals.threatenNextTurnOpportunityCount),
+        avgIdleWithVisibleHostile: pacingSignalTotals.idleWithVisibleHostile / divisor,
+        avgBacktrackMoves: pacingSignalTotals.backtrackMoveCount / divisor,
+        avgLoopMoves: pacingSignalTotals.loopMoveCount / divisor,
+        avgLowValueMobilitySelections: pacingSignalTotals.lowValueMobilitySelections / divisor,
+        avgFirstContactTurn: average(results.map(r => r.pacingSignal?.firstContactTurn || 0).filter(value => value > 0)),
+        avgFirstDamageTurn: average(results.map(r => r.pacingSignal?.firstDamageTurn || 0).filter(value => value > 0)),
         skillTelemetryTotals,
         autoAttackTriggerTotals,
         triangleSignal,
         trinityContribution,
         combatProfileSignal,
         pacingSignal,
+        enemyAiTelemetry,
         dynamicSkillGrades: {}
     };
 

@@ -21,6 +21,7 @@ import {
 } from './harness-core';
 import { runHarnessSimulationBatch } from './harness-batch';
 import { recomputeVisibility } from '../visibility';
+import { selectGenericUnitAiAction } from '../ai/generic-unit-ai';
 export { summarizePvpBatch } from './pvp-harness-summary';
 
 type DuelSide = 'left' | 'right';
@@ -110,81 +111,6 @@ const resolveTargetId = (state: GameState, actorId: string, target?: Point): str
     return occupant.id;
 };
 
-const clonePoint = (p: Point): Point => ({ q: p.q, r: p.r, s: p.s });
-
-const cloneActor = (actor: Actor): Actor => {
-    const components = actor.components
-        ? new Map(Array.from(actor.components.entries()).map(([k, v]) => [k, structuredClone(v)]))
-        : new Map();
-    return {
-        ...actor,
-        position: clonePoint(actor.position),
-        previousPosition: actor.previousPosition ? clonePoint(actor.previousPosition) : actor.previousPosition,
-        activeSkills: (actor.activeSkills || []).map((skill: any) => {
-            const { actionLabel, ...rest } = skill;
-            return {
-                ...rest,
-                activeUpgrades: [...(rest.activeUpgrades || [])]
-            };
-        }),
-        statusEffects: (actor.statusEffects || []).map(status => ({ ...status })),
-        components
-    };
-};
-
-const cloneVisibility = (visibility: GameState['visibility']): GameState['visibility'] => {
-    if (!visibility) return visibility;
-    return {
-        playerFog: {
-            visibleTileKeys: [...(visibility.playerFog.visibleTileKeys || [])],
-            exploredTileKeys: [...(visibility.playerFog.exploredTileKeys || [])],
-            visibleActorIds: [...(visibility.playerFog.visibleActorIds || [])],
-            detectedActorIds: [...(visibility.playerFog.detectedActorIds || [])]
-        },
-        enemyAwarenessById: Object.fromEntries(
-            Object.entries(visibility.enemyAwarenessById || {}).map(([enemyId, awareness]) => [
-                enemyId,
-                {
-                    ...awareness,
-                    lastKnownPlayerPosition: awareness.lastKnownPlayerPosition
-                        ? clonePoint(awareness.lastKnownPlayerPosition)
-                        : null
-                }
-            ])
-        )
-    };
-};
-
-const cloneGameStateForSimulation = (state: GameState): GameState => {
-    const tiles = new Map(
-        Array.from(state.tiles.entries()).map(([key, tile]) => [
-            key,
-            {
-                ...tile,
-                position: clonePoint(tile.position),
-                traits: new Set(tile.traits),
-                effects: (tile.effects || []).map(effect => ({
-                    ...effect,
-                    metadata: effect.metadata ? { ...effect.metadata } : effect.metadata
-                }))
-            }
-        ])
-    );
-
-    return {
-        ...state,
-        player: cloneActor(state.player as Actor),
-        enemies: state.enemies.map(e => cloneActor(e as Actor)),
-        companions: (state.companions || []).map(c => cloneActor(c as Actor)),
-        occupancyMask: [...(state.occupancyMask || [])],
-        message: [...(state.message || [])],
-        visualEvents: [...(state.visualEvents || [])],
-        timelineEvents: [...(state.timelineEvents || [])],
-        tiles,
-        visibility: cloneVisibility(state.visibility)
-    };
-};
-
 const applyDuelAction = (state: GameState, actorId: string, action: DuelAction): GameState => {
     let cur = state;
     const actor = getActorById(cur, actorId);
@@ -269,36 +195,14 @@ const legalActionsForActor = (state: GameState, actor: Actor, opponent: Actor): 
     return actions;
 };
 
-const evaluateAction = (state: GameState, actorId: string, opponentId: string, action: DuelAction): number => {
-    const selfBefore = getActorById(state, actorId);
-    const oppBefore = getActorById(state, opponentId);
-    if (!selfBefore || !oppBefore) return -9999;
-    const distBefore = hexDistance(selfBefore.position, oppBefore.position);
-
-    const simState = cloneGameStateForSimulation(state);
-    const next = applyDuelAction(simState, actorId, action);
-    const selfAfter = getActorById(next, actorId);
-    const oppAfter = getActorById(next, opponentId);
-
-    const selfHpAfter = selfAfter?.hp || 0;
-    const oppHpAfter = oppAfter?.hp || 0;
-    const distAfter = selfAfter && oppAfter ? hexDistance(selfAfter.position, oppAfter.position) : 0;
-
-    const enemyDamage = (oppBefore.hp || 0) - oppHpAfter;
-    const selfDamage = (selfBefore.hp || 0) - selfHpAfter;
-    const killBonus = oppHpAfter <= 0 ? 250 : 0;
-    const deathPenalty = selfHpAfter <= 0 ? 300 : 0;
-    const distanceGain = distBefore - distAfter;
-    const waitPenalty = action.kind === 'WAIT' ? 3 : 0;
-    const noImpactPenalty = enemyDamage <= 0 && selfDamage <= 0 && distanceGain <= 0 ? 2 : 0;
-
-    return (enemyDamage * 30)
-        - (selfDamage * 22)
-        + killBonus
-        - deathPenalty
-        + (distanceGain * 2)
-        - waitPenalty
-        - noImpactPenalty;
+const mapGenericActionToDuelAction = (action: ReturnType<typeof selectGenericUnitAiAction>['selected']['action']): DuelAction => {
+    if (action.type === 'WAIT') return { kind: 'WAIT' };
+    if (action.type === 'MOVE') return { kind: 'MOVE', target: action.payload };
+    return {
+        kind: 'USE_SKILL',
+        skillId: action.payload.skillId,
+        target: action.payload.target
+    };
 };
 
 const chooseActionForActor = (
@@ -320,14 +224,15 @@ const chooseActionForActor = (
         return chooseFromSeeded(actions, `${seed}:random:${actorId}`, counter);
     }
 
-    const scored = actions.map(action => ({
-        action,
-        score: evaluateAction(state, actorId, opponentId, action)
-    }));
-    scored.sort((a, b) => b.score - a.score);
-    const bestScore = scored[0].score;
-    const ties = scored.filter(s => s.score === bestScore).map(s => s.action);
-    return chooseFromSeeded(ties, `${seed}:heuristic:${actorId}`, counter);
+    return mapGenericActionToDuelAction(
+        selectGenericUnitAiAction({
+            state,
+            actor,
+            side: actor.id === state.player.id ? 'player' : 'enemy',
+            simSeed: `${seed}:heuristic:${actorId}`,
+            decisionCounter: counter
+        }).selected.action
+    );
 };
 
 const buildDuelState = (seed: string, leftLoadoutId: ArchetypeLoadoutId, rightLoadoutId: ArchetypeLoadoutId): GameState => {

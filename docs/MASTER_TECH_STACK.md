@@ -1,211 +1,127 @@
 # Hop Master Tech Stack
 
-This document is the high-level source of truth for current engine/runtime architecture.
+This document is the high-level architecture snapshot for the live repo.
 
 ## Core Principles
 
 1. Headless-first referee
 - All gameplay truth lives in `packages/engine`.
-- The web client renders and orchestrates UX only.
+- `apps/web` renders and orchestrates UX only.
 
 2. Determinism
 - Engine RNG and `rngCounter` are authoritative.
-- No `Math.random` in engine logic paths.
-- Same seed + same actions must reproduce identical outcomes.
+- No `Math.random` in engine logic.
 
 3. Intent before execution
-- Actions/intents are validated before mutation.
-- Execution emits atomic effects; handlers perform state transitions.
+- Actions are validated before mutation.
+- Execution emits atomic effects only.
 
 4. Tile and movement contract
 - `state.tiles` is the tile source of truth.
-- Movement resolves through tile hooks (`onPass`, `onEnter`) and tile services.
+- Movement resolves through tile hooks and tile services.
 
 ## Repository Topology
 
-- `packages/engine` - deterministic game engine, AI, simulation, and evaluation.
-- `apps/web` - React/Pixi presentation layer.
-- `apps/server` - leaderboard/validation service.
+- `packages/engine` - deterministic engine, AI, simulation, evaluation
+- `apps/web` - React presentation layer
+- `apps/server` - replay validation and leaderboard service
 
-## Engine Architecture (Current)
+## Engine Runtime
 
-1. Turn and reducer core
+### Reducer and turn core
+
 - `packages/engine/src/logic.ts`
 - `packages/engine/src/logic-turn-loop.ts`
+- `packages/engine/src/logic-rules.ts`
 
-2. Effects runtime
+### Effect runtime
+
 - `packages/engine/src/systems/effect-engine.ts`
-- decomposed effect handlers in `packages/engine/src/systems/effects/`
+- effect handlers under `packages/engine/src/systems/effects/`
 
-3. Grouped systems
+### Grouped systems
+
 - AI: `packages/engine/src/systems/ai/`
 - Combat: `packages/engine/src/systems/combat/`
 - Entities: `packages/engine/src/systems/entities/`
-- Evaluation/harness: `packages/engine/src/systems/evaluation/`
+- Evaluation: `packages/engine/src/systems/evaluation/`
 - Movement: `packages/engine/src/systems/movement/`
 - Tiles: `packages/engine/src/systems/tiles/`
 - Visual metadata: `packages/engine/src/systems/visual/`
 
-4. Skills and registry
-- Skills live in `packages/engine/src/skills/`.
-- Registry generation:
-  - source: `packages/engine/scripts/generateSkillRegistry.ts`
-  - generated: `packages/engine/src/generated/skill-registry.generated.ts`
+### Combat and IRES
 
-5. World compiler and map generation
-- Deterministic map generation lives under `packages/engine/src/generation/`.
-- The public compatibility facade remains `packages/engine/src/systems/map.ts`.
-- Current shipped default worldgen surface is `DEFAULT_WORLDGEN_SPEC`, which presently resolves to inferno-authored content and inferno procedural fill.
-- Web start-run and stairs transitions use artifact-only worker transport; full `GameState` does not cross the worker boundary.
-- Tactical + visual path networks are compiler outputs and renderer inputs, not client-derived overlays.
+- Combat is live only on `trinity_ratio_v2`
+- Trinity content ships as `core-v2-live`
+- IRES is fully integrated into live runtime skill costs and pacing
 
-6. Combat and IRES runtime
-- Combat runtime is integrated on `trinity_ratio_v2` only.
-- Trinity content ships as one profile set: `core-v2-live`.
-- IRES runtime is config-driven through the metabolic config path.
-- AI pacing reads observable Spark/Mana/exhaustion state rather than internal formula coefficients.
+### ACAE and capability runtime
 
-7. ACAE runtime (feature-flagged pilot)
-- Data contracts and catalog:
-  - `packages/engine/src/data/ailments/contracts.ts`
-  - `packages/engine/src/data/ailments/mvp-ailments.ts`
-  - `packages/engine/src/data/ailments/parser.ts`
-  - `packages/engine/src/data/ailments/consistency.ts`
-- Runtime modules:
-  - `packages/engine/src/systems/ailments/application.ts`
-  - `packages/engine/src/systems/ailments/annihilation.ts`
-  - `packages/engine/src/systems/ailments/hardening.ts`
-  - `packages/engine/src/systems/ailments/tick.ts`
-  - `packages/engine/src/systems/ailments/runtime.ts`
-- Effect integration:
-  - `packages/engine/src/systems/effects/ailment-handlers.ts`
-- Flag persistence:
-  - `GameState.ruleset.ailments` (`acaeEnabled`, `version`)
+- ACAE is part of the live runtime path
+- shared-vector carry is always live
+- loadout passive capability content is always live
+- movement capability runtime policy is always live
+- retired runtime flag branches are no longer part of the supported architecture
 
-## AI Stack (Post-Convergence)
+Supported authoritative ruleset families:
 
-1. Shared AI core
-- `packages/engine/src/systems/ai/core/types.ts`
-- `packages/engine/src/systems/ai/core/scoring.ts`
-- `packages/engine/src/systems/ai/core/tiebreak.ts`
+- `ruleset.combat`
+- `ruleset.ires`
 
-2. Enemy runtime framework
-- `packages/engine/src/systems/ai/enemy/candidates.ts`
-- `packages/engine/src/systems/ai/enemy/features.ts`
-- `packages/engine/src/systems/ai/enemy/policies.ts`
-- `packages/engine/src/systems/ai/enemy/selector.ts`
-- `packages/engine/src/systems/ai/enemy/decision-adapter.ts`
+Legacy rollout-era ruleset branches may appear only in old payloads and are normalized away during hydration.
 
-3. Runtime wrappers and strategy integration
-- API-compatible wrapper: `packages/engine/src/systems/ai/ai.ts`
-- strategy adapter use: `packages/engine/src/strategy/wild.ts`
+## AI Stack
 
-4. Player/harness selector layer
+### Shared tactical identity
+
+- behavior overlays resolve actor posture from:
+  - universal default
+  - loadout overlay
+  - skill-derived identity
+  - ready-skill tactical bias
+  - temporary runtime overlays
+
+### Shared pacing
+
+- Spark doctrine applies rested-aware weighted taxes and bonuses
+- pacing logic is shared across players, enemies, companions, and summons
+- runtime selection and evaluation harnesses use the same shared AI core
+
+### Main AI entry areas
+
+- `packages/engine/src/systems/ai/generic-unit-ai.ts`
+- `packages/engine/src/systems/ai/behavior-profile.ts`
+- `packages/engine/src/systems/ai/spark-doctrine.ts`
 - `packages/engine/src/systems/ai/player/`
-- evaluation orchestration and contracts in `packages/engine/src/systems/evaluation/`
+- `packages/engine/src/systems/ai/enemy/`
 
-Reference milestone:
-- `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
+## World Compiler
 
-## Post-AI + Post-Tranche Baseline (March 1, 2026)
-
-1. Content pipeline closure
-- Canonical enemy runtime accessors:
-  - `packages/engine/src/data/enemies/enemy-catalog.ts`
-  - `packages/engine/src/data/enemies/floor-spawn-profile.ts`
-- Content consistency validation:
-  - `packages/engine/src/data/enemies/content-consistency.ts`
-  - bootstrap gate in `packages/engine/src/systems/tactical-data-bootstrap.ts`
-- Deprecated constants (`ENEMY_STATS`, floor enemy constants) are retired from source/export ownership.
-- Guardrail:
-  - `packages/engine/scripts/checkDeprecatedConstantsUsage.ts` (wired in `check-script-imports`)
-
-2. Frontend decomposition (behavior-preserving)
-- Biome sandbox state modules:
-  - `apps/web/src/components/biome-sandbox/state/`
-- Entity rendering helpers:
-  - `apps/web/src/components/entity/`
-- UI shell/panel decomposition:
-  - `apps/web/src/components/ui/`
-
-3. Harness core unification
-- Shared batch contracts and orchestration:
-  - `packages/engine/src/systems/evaluation/harness-batch.ts`
-- Runtime harness entry points (API preserved):
-  - `packages/engine/src/systems/evaluation/balance-harness.ts`
-  - `packages/engine/src/systems/evaluation/pvp-harness.ts`
-
-Reference milestone:
-- `docs/archive/NEXT_PHASES_MILESTONE_2026-02-28.md`
-
-## ACAE Pilot Baseline (March 1, 2026)
-
-1. Rollout posture
-- Hybrid pilot mode, feature-flagged in state ruleset.
-- Legacy status path remains for non-pilot effects.
-- Default gameplay remains ACAE-off unless ruleset enables it.
-
-2. Pilot coverage
-- Ailments: `burn`, `wet`, `poison`, `frozen`, `bleed`
-- Tile injections: `LAVA`, `FIRE`, `WET`, `MIASMA`, `ICE`
-- Skill pilot: spear-family bleed (`SPEAR_THROW`, spear-family `BASIC_ATTACK` path)
-- UI pilot: counter badges, preview delta lines, hardening feedback toast
-
-3. ACAE strict gate and audits
-- `npm --workspace @hop/engine run test:acae:strict`
-- Audit scripts:
-  - `packages/engine/scripts/runAcaeLethalitySimulation.ts`
-  - `packages/engine/scripts/runAcaeHardeningAudit.ts`
-  - `packages/engine/scripts/runAcaeCleansePathAudit.ts`
-  - `packages/engine/scripts/runAcaeAnnihilationStability.ts`
-
-Reference milestone:
-- `docs/archive/ACAE_MILESTONE_2026-03-01.md`
+- Deterministic map generation lives under `packages/engine/src/generation/`
+- web run starts and floor transitions use artifact-only worker transport
+- full `GameState` does not cross the worker boundary
 
 ## Quality Gates
 
-1. Engine build
-- `npm --workspace @hop/engine run build`
+```powershell
+npm run build
+npm --workspace @hop/engine run test:full
+npm --workspace @hop/web run test:run
+npm run engine:fast
+npm run upa:quick:ai
+```
 
-2. Script import integrity
-- `npm --workspace @hop/engine run check-script-imports`
-  - includes deprecated-constants ownership guard
+Additional engine gates:
 
-3. Strict AI acceptance
-- `npm --workspace @hop/engine run test:ai-acceptance:strict`
-
-4. Strict ACAE acceptance
-- `npm --workspace @hop/engine run test:acae:strict`
-
-5. Web tests (non-watch)
-- `npm --workspace @hop/web run test:run`
-
-6. Web build
-- `npm --workspace @hop/web run build`
-
-## Rollout Boundaries
-
-1. World compiler
-- Inferno world generation is integrated and gated as the default inferno map-generation/runtime path.
-- Content scope remains inferno-first; broader biome promotion is a future content expansion, not an architectural blocker.
-
-2. Capability rollout
-- Capability and movement-runtime toggles remain intentionally staged through ruleset, env, and URL override surfaces.
-- These flags are separate from worldgen completion and are still tracked by `docs/archive/CAPABILITY_ROLLOUT.md`.
-
-3. Dev-only worldgen inspection
-- `?worldgenDebug=1` remains an intentional development-only inspection gate in web.
-- It is not a production feature flag and is stripped from persisted saves.
+```powershell
+npm --workspace @hop/engine run test:ai-acceptance:strict
+npm --workspace @hop/engine run test:acae:strict
+npm --workspace @hop/engine run check-script-imports
+```
 
 ## Related Docs
 
-1. Contribution workflow: `docs/CONTRIBUTING.md`
-2. Current status: `docs/STATUS.md`
-3. Active tracker: `docs/NEXT_LEVEL.md`
-4. AI milestone: `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
-5. Post-AI phases milestone: `docs/archive/NEXT_PHASES_MILESTONE_2026-02-28.md`
-6. ACAE milestone: `docs/archive/ACAE_MILESTONE_2026-03-01.md`
-7. Historical archive: `docs/ROADMAP_HISTORY.md`
-8. Archived completed plans: `docs/archive/`
-9. UPA operations: `docs/UPA_GUIDE.md`
-10. Rules/guardrails: `docs/GOLD_STANDARD_MANIFESTO.md`
+- Current law: `docs/STATUS.md`
+- Guardrails: `docs/GOLD_STANDARD_MANIFESTO.md`
+- Active tracker: `docs/NEXT_LEVEL.md`
+- Historical milestone docs: `docs/archive/`

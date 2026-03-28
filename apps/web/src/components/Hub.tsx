@@ -25,10 +25,6 @@ const MAP_SHAPE_OPTIONS: Array<{ value: MapShape; label: string }> = [
 
 interface HubProps {
   gameState: GameState;
-  capabilityPassivesEnabled: boolean;
-  onCapabilityPassivesEnabledChange: (enabled: boolean) => void;
-  movementRuntimeEnabled: boolean;
-  onMovementRuntimeEnabledChange: (enabled: boolean) => void;
   mapShape?: MapShape;
   onMapShapeChange?: (shape: MapShape) => void;
   mapSize?: GridSize;
@@ -47,10 +43,6 @@ interface HubProps {
 
 export const Hub: React.FC<HubProps> = ({
   gameState,
-  capabilityPassivesEnabled,
-  onCapabilityPassivesEnabledChange,
-  movementRuntimeEnabled,
-  onMovementRuntimeEnabledChange,
   mapShape = DEFAULT_START_RUN_MAP_SHAPE,
   onMapShapeChange = () => {},
   mapSize = DEFAULT_START_RUN_MAP_SIZE,
@@ -85,48 +77,6 @@ export const Hub: React.FC<HubProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 lg:gap-8">
-            <div className="hidden sm:flex sm:items-center gap-3 sm:gap-4">
-              <div className="surface-panel-material torn-edge-shell rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">Capability Passives</div>
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Run Override</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onCapabilityPassivesEnabledChange(!capabilityPassivesEnabled)}
-                    aria-pressed={capabilityPassivesEnabled}
-                    className={`px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-colors ${
-                      capabilityPassivesEnabled
-                        ? 'bg-[var(--accent-royal-soft)] border-[var(--accent-royal)] text-[var(--accent-royal)]'
-                        : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--surface-panel-hover)]'
-                    }`}
-                  >
-                    {capabilityPassivesEnabled ? 'On' : 'Off'}
-                  </button>
-                </div>
-              </div>
-              <div className="surface-panel-material torn-edge-shell rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">Movement Runtime</div>
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Capability Gate</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onMovementRuntimeEnabledChange(!movementRuntimeEnabled)}
-                    aria-pressed={movementRuntimeEnabled}
-                    className={`px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-colors ${
-                      movementRuntimeEnabled
-                        ? 'bg-[var(--accent-brass-soft)] border-[var(--accent-brass)] text-[var(--text-primary)]'
-                        : 'bg-[var(--surface-panel-muted)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--surface-panel-hover)]'
-                    }`}
-                  >
-                    {movementRuntimeEnabled ? 'On' : 'Off'}
-                  </button>
-                </div>
-              </div>
-            </div>
             <div className="surface-panel-material torn-edge-shell rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2 sm:bg-transparent sm:border-0 sm:p-0">
               <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">Current Loadout</div>
               <div className="text-sm font-bold text-[var(--accent-royal)] truncate">{gameState.selectedLoadoutId || 'Select Archetype'}</div>
@@ -151,38 +101,6 @@ export const Hub: React.FC<HubProps> = ({
                 )}
               </div>
             )}
-            <details className="surface-panel-material torn-edge-shell sm:hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-3 py-2">
-              <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-black">Run Options</span>
-                <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Advanced</span>
-              </summary>
-              <div className="mt-3 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => onCapabilityPassivesEnabledChange(!capabilityPassivesEnabled)}
-                  aria-pressed={capabilityPassivesEnabled}
-                  className={`w-full min-h-11 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-colors ${
-                    capabilityPassivesEnabled
-                      ? 'bg-[var(--accent-royal-soft)] border-[var(--accent-royal)] text-[var(--accent-royal)]'
-                      : 'bg-[var(--surface-panel)] border-[var(--border-subtle)] text-[var(--text-muted)]'
-                  }`}
-                >
-                  Capability Passives: {capabilityPassivesEnabled ? 'On' : 'Off'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onMovementRuntimeEnabledChange(!movementRuntimeEnabled)}
-                  aria-pressed={movementRuntimeEnabled}
-                  className={`w-full min-h-11 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-colors ${
-                    movementRuntimeEnabled
-                      ? 'bg-[var(--accent-brass-soft)] border-[var(--accent-brass)] text-[var(--text-primary)]'
-                      : 'bg-[var(--surface-panel)] border-[var(--border-subtle)] text-[var(--text-muted)]'
-                  }`}
-                >
-                  Movement Runtime: {movementRuntimeEnabled ? 'On' : 'Off'}
-                </button>
-              </div>
-            </details>
           </div>
         </div>
       </header>

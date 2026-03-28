@@ -14,7 +14,6 @@ const baselinePath = resolve('scripts/fixtures/acae/cleanse_path.baseline.json')
 
 const run = (): CleanseAuditReport => {
     let state = generateInitialState(1, 'acae-cleanse-path-seed');
-    state.ruleset = { ailments: { acaeEnabled: true, version: 'acae-v1' } };
 
     state = applyEffects(state, [
         { type: 'DepositAilmentCounters', target: state.player.id, ailment: 'burn', amount: 10, source: 'tile' }

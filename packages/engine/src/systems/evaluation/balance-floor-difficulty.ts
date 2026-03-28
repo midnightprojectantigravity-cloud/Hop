@@ -39,11 +39,13 @@ export const computeFloorDifficultyProfile = (
     );
     const pathFrictionScore = round2(
         (pathSummary.obstacleClusterCount * 2.4)
+        + (pathSummary.lavaClusterCount * 1.2)
         + (Math.max(0, pathSummary.routeCount - 1) * 0.75)
         + (Math.max(0, 5 - pathSummary.maxStraightRun) * 0.35)
     );
     const hazardPressureScore = round2(
         (pathSummary.trapClusterCount * 3)
+        + (pathSummary.lavaClusterCount * 3.5)
         + (pathSummary.obstacleClusterCount * 0.8)
         + rolePressureModifier(summary.role)
     );
@@ -52,6 +54,7 @@ export const computeFloorDifficultyProfile = (
         (summary.role === 'recovery' ? 4 : summary.role === 'onboarding' ? 2.5 : 1)
         + (pathSummary.routeCount >= 2 ? 1.5 : 0)
         - (pathSummary.trapClusterCount * 0.35)
+        - (pathSummary.lavaClusterCount * 0.45)
         - (pathSummary.obstacleClusterCount * 0.2)
     ));
     const navigationDifficultyScore = round2(
@@ -72,7 +75,8 @@ export const computeFloorDifficultyProfile = (
         `junctions ${pathSummary.junctionCount}`,
         `straight run ${pathSummary.maxStraightRun}`,
         `obstacles ${pathSummary.obstacleClusterCount}`,
-        `traps ${pathSummary.trapClusterCount}`
+        `traps ${pathSummary.trapClusterCount}`,
+        `lava ${pathSummary.lavaClusterCount}`
     ];
 
     return {
@@ -84,6 +88,7 @@ export const computeFloorDifficultyProfile = (
         maxStraightRun: pathSummary.maxStraightRun,
         obstacleClusterCount: pathSummary.obstacleClusterCount,
         trapClusterCount: pathSummary.trapClusterCount,
+        lavaClusterCount: pathSummary.lavaClusterCount,
         routeComplexityScore,
         pathFrictionScore,
         hazardPressureScore,

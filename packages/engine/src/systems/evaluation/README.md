@@ -1,58 +1,51 @@
 # Evaluation Systems
 
-This directory is split by responsibility. Keep modules narrow and avoid reintroducing monoliths.
+This directory contains the shared evaluation and harness stack for runtime AI review.
 
 ## Module Boundaries
 
 - `harness-types.ts`
-  - Shared contracts for harness runs and summaries.
-  - Canonical place for `RunResult`, `BatchSummary`, `Matchup*`, and telemetry summary types.
-
+  - shared run, summary, and telemetry contracts
 - `harness-simulation.ts`
-  - Single-run simulation assembly (`simulateHarnessRun`, `simulateHarnessRunDetailed`).
-  - Consumes player AI runner + telemetry and assembles final run artifacts.
-
+  - single-run assembly and orchestration
 - `harness-matchup.ts`
-  - Head-to-head comparison semantics (`compareRuns`) and matchup summarization (`summarizeMatchup`).
-
+  - head-to-head comparison logic
 - `balance-harness-summary.ts`
-  - Batch aggregation (`summarizeBatch`) only.
-  - Computes aggregate metrics and dynamic skill grades.
-
+  - aggregate batch summarization
 - `balance-harness.ts`
-  - Public facade/orchestration layer.
-  - Re-exports stable types and functions used by tests/scripts.
-
+  - public evaluation facade
 - `pvp-harness.ts` / `pvp-harness-summary.ts`
-  - PvP simulation and aggregation paths.
-
+  - PvP simulation and aggregation
 - `harness-core.ts`
-  - Shared pure helpers (seeded batching, histograms, averages).
+  - shared pure helpers
 
-## Dependency Direction
+## Current AI/Evaluation Posture
 
-- Facades depend on internals, not vice versa:
-  - `balance-harness.ts` -> `harness-simulation.ts`, `harness-matchup.ts`, `balance-harness-summary.ts`
-- Summary modules should import contracts from `harness-types.ts`, not from facade files.
-- Avoid importing from `balance-harness.ts` inside other evaluation internals.
+- runtime enemy AI and player/UPA selection share the same generic core
+- behavior overlays and Spark doctrine telemetry now flow through evaluation summaries
+- harness summaries should stay aligned with the live runtime decision model, not a parallel simulator doctrine
+
+## Common Review Commands
+
+```powershell
+npm run upa:quick:ai
+npx tsx packages/engine/scripts/runUpaOutlierAnalysis.ts
+npx tsx packages/engine/scripts/runUpaCalibration.ts 300 80 heuristic artifacts/upa/UPA_CALIBRATION_BASELINE.json
+```
 
 ## Extension Rules
 
-- New run-level fields:
-  - Add to `harness-types.ts`.
-  - Populate in `harness-simulation.ts`.
-  - Aggregate in `balance-harness-summary.ts`.
-
-- New matchup win logic:
-  - Change only `harness-matchup.ts`.
-
-- New seeded helper utilities:
-  - Add to `harness-core.ts`.
+- new run-level fields:
+  - add to `harness-types.ts`
+  - populate in `harness-simulation.ts`
+  - aggregate in `balance-harness-summary.ts`
+- new matchup win logic:
+  - change `harness-matchup.ts`
+- new shared helper logic:
+  - add to `harness-core.ts`
 
 ## Regression Gate
 
-Before merging evaluation changes, run:
-
-```bash
+```powershell
 npm --workspace @hop/engine run test:ai-acceptance:strict
 ```
