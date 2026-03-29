@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runEmergentBestiarySimulation } from '../systems/entities/emergent-bestiary';
+import { runEmergentbestiarySimulation } from '../systems/entities/emergent-bestiary';
 
 describe('emergent bestiary simulation', () => {
     it('is deterministic for a fixed seed and config', () => {
@@ -10,13 +10,13 @@ describe('emergent bestiary simulation', () => {
             hazardRounds: 6,
             crossBiomeTargets: ['green', 'blue'] as const
         };
-        const first = runEmergentBestiarySimulation(config);
-        const second = runEmergentBestiarySimulation(config);
+        const first = runEmergentbestiarySimulation(config);
+        const second = runEmergentbestiarySimulation(config);
         expect(first).toEqual(second);
     });
 
     it('keeps survivor propensity near the 60/30/10 target envelope', () => {
-        const report = runEmergentBestiarySimulation({
+        const report = runEmergentbestiarySimulation({
             seed: 'eco-red-propensity',
             biome: 'red',
             batchSize: 140,
@@ -32,7 +32,7 @@ describe('emergent bestiary simulation', () => {
     });
 
     it('reports cross-biome stress when survivors enter foreign ecology', () => {
-        const report = runEmergentBestiarySimulation({
+        const report = runEmergentbestiarySimulation({
             seed: 'eco-red-cross',
             biome: 'red',
             batchSize: 120,
@@ -46,7 +46,7 @@ describe('emergent bestiary simulation', () => {
     });
 
     it('preserves the currently modeled predation arc telemetry ordering', () => {
-        const report = runEmergentBestiarySimulation({
+        const report = runEmergentbestiarySimulation({
             seed: 'eco-predation',
             biome: 'blue',
             batchSize: 90,

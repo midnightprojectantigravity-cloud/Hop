@@ -21,7 +21,7 @@ describe('asset manifest loader', () => {
           type: 'unit',
           layer: 'unit',
           recommendedFormat: 'webp',
-          path: '/assets/Bestiary/unit.goblin.footman.01.webp',
+          path: '/assets/bestiary/unit.goblin.footman.01.webp',
           width: 512,
           height: 512,
         }],
@@ -38,7 +38,7 @@ describe('asset manifest loader', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/assets/manifest.json');
     expect(manifest.assets).toHaveLength(1);
-    expect(manifest.assets[0]?.path).toBe('/assets/Bestiary/unit.goblin.footman.01.webp');
+    expect(manifest.assets[0]?.path).toBe('/assets/bestiary/unit.goblin.footman.01.webp');
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });

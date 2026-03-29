@@ -1,4 +1,4 @@
-# Biome, Bestiary, and Trinity Contract
+# Biome, bestiary, and Trinity Contract
 
 ## Purpose
 Capture one implementation-true contract for:
@@ -76,7 +76,7 @@ This document is authoritative for architecture-level decisions touching these s
 - Current example modifier:
   - Fire skill power multiplier = `1.15` on `MELTED`.
 
-## 2) Emergent Bestiary Hardships (Body, Mind, Instinct)
+## 2) Emergent bestiary Hardships (Body, Mind, Instinct)
 
 ### 2.1 Simulation Purpose
 Evaluate ecosystem viability by biome under deterministic hardship:

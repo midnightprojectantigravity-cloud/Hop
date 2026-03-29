@@ -100,7 +100,7 @@ describe('entity synapse render shell', () => {
           unitIconYOffset={0}
           unitIconScale={1}
           unitIconSize={10}
-          resolvedAssetHref="/assets/Bestiary/unit.goblin.footman.01.webp"
+          resolvedAssetHref="/assets/bestiary/unit.goblin.footman.01.webp"
           handleAssetError={() => { }}
           contrastBoost={1}
           stunned={false}

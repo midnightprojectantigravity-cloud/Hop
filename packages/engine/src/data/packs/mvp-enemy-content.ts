@@ -1,7 +1,7 @@
 import type { ArmorBurdenTier } from '../../types';
 
-export type BestiaryWeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
-export type BestiaryEnemyType = 'melee' | 'ranged' | 'boss';
+export type bestiaryWeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
+export type bestiaryEnemyType = 'melee' | 'ranged' | 'boss';
 export type EncounterRole = 'onboarding' | 'pressure_spike' | 'recovery' | 'elite' | 'boss';
 export type EnemyCombatRole =
     | 'bruiser'
@@ -56,7 +56,7 @@ export type EnemySubtypeId =
     | 'warlock'
     | 'sentinel';
 
-export interface EnemyBestiaryDefinition {
+export interface EnemybestiaryDefinition {
     subtype: EnemySubtypeId;
     name: string;
     stats: {
@@ -64,10 +64,10 @@ export interface EnemyBestiaryDefinition {
         maxHp: number;
         range: number;
         damage: number;
-        type: BestiaryEnemyType;
+        type: bestiaryEnemyType;
         cost: number;
         actionCooldown: number;
-        weightClass: BestiaryWeightClass;
+        weightClass: bestiaryWeightClass;
         speed: number;
     };
     trinity: {
@@ -83,7 +83,7 @@ export interface EnemyBestiaryDefinition {
 
 export interface MvpEnemyContentEntry {
     packUnitId: string;
-    bestiary: EnemyBestiaryDefinition;
+    bestiary: EnemybestiaryDefinition;
     runtimeSkills: {
         base: string[];
         passive: string[];

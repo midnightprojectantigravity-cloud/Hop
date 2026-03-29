@@ -733,7 +733,7 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/Bestiary/unit.goblin.footman.01.webp",
+      "path": "/assets/bestiary/unit.goblin.footman.01.webp",
       "width": 512,
       "height": 512,
       "recommendedFormat": "webp"
@@ -743,7 +743,7 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/Bestiary/unit.goblin.fodder.01.webp",
+      "path": "/assets/bestiary/unit.goblin.fodder.01.webp",
       "width": 512,
       "height": 512,
       "recommendedFormat": "webp"
@@ -753,7 +753,7 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/Bestiary/unit.goblin.barbarian.01.webp",
+      "path": "/assets/bestiary/unit.goblin.barbarian.01.webp",
       "width": 512,
       "height": 512,
       "recommendedFormat": "webp"
@@ -763,7 +763,7 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/Bestiary/unit.darkelf.assassin.01.webp",
+      "path": "/assets/bestiary/unit.darkelf.assassin.01.webp",
       "width": 512,
       "height": 512,
       "recommendedFormat": "webp"
@@ -773,7 +773,7 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/Bestiary/unit.goblin.gladiator.01.webp",
+      "path": "/assets/bestiary/unit.goblin.gladiator.01.webp",
       "width": 512,
       "height": 512,
       "recommendedFormat": "webp"
@@ -783,7 +783,7 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/Bestiary/unit.goblin.archer.01.webp",
+      "path": "/assets/bestiary/unit.goblin.archer.01.webp",
       "width": 512,
       "height": 512,
       "recommendedFormat": "webp"
@@ -793,7 +793,7 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/Bestiary/unit.goblin.shaman.01.webp",
+      "path": "/assets/bestiary/unit.goblin.shaman.01.webp",
       "width": 512,
       "height": 512,
       "recommendedFormat": "webp"
@@ -803,7 +803,7 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/Bestiary/unit.goblin.bomber.01.webp",
+      "path": "/assets/bestiary/unit.goblin.bomber.01.webp",
       "width": 512,
       "height": 512,
       "recommendedFormat": "webp"
@@ -813,7 +813,7 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/Bestiary/unit.skeleton.gladiator.01.webp",
+      "path": "/assets/bestiary/unit.skeleton.gladiator.01.webp",
       "width": 512,
       "height": 512,
       "recommendedFormat": "webp"

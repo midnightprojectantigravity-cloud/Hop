@@ -4,7 +4,7 @@ import { TACTICAL_CORE_MVP_PACK } from '../data/packs/mvp-pack';
 import { getBaseUnitDefinitionBySubtype, registerBaseUnitDefinition } from '../systems/entities/base-unit-registry';
 import { generateDungeon, generateEnemies } from '../systems/map';
 import { bootstrapTacticalData, resetTacticalDataBootstrap } from '../systems/tactical-data-bootstrap';
-import { createEnemyFromBestiary } from '../systems/entities/entity-factory';
+import { createEnemyFrombestiary } from '../systems/entities/entity-factory';
 
 const summarizeEnemies = (enemies: ReturnType<typeof generateEnemies>) =>
     enemies.map(enemy => ({
@@ -75,7 +75,7 @@ describe('map spawn registry', () => {
     });
 
     it('creates enemies from bestiary baselines and respects overrides', () => {
-        const archer = createEnemyFromBestiary({
+        const archer = createEnemyFrombestiary({
             id: 'archer-test',
             subtype: 'archer',
             position: { q: 0, r: 0, s: 0 },

@@ -68,7 +68,7 @@ export interface PredationArcReport {
     advantage: number;
 }
 
-export interface EmergentBestiaryConfig {
+export interface EmergentbestiaryConfig {
     seed: string;
     biome: EcosystemBiome;
     batchSize?: number;
@@ -78,7 +78,7 @@ export interface EmergentBestiaryConfig {
     propensityTarget?: PropensityProfile;
 }
 
-export interface EmergentBestiaryReport {
+export interface EmergentbestiaryReport {
     seed: string;
     biome: EcosystemBiome;
     generated: number;
@@ -648,9 +648,9 @@ const sanitizePropensity = (value: PropensityProfile): PropensityProfile => {
     };
 };
 
-export const runEmergentBestiarySimulation = (
-    input: EmergentBestiaryConfig
-): EmergentBestiaryReport => {
+export const runEmergentbestiarySimulation = (
+    input: EmergentbestiaryConfig
+): EmergentbestiaryReport => {
     const batchSize = Math.max(1, Math.floor(input.batchSize ?? 120));
     const hazardRounds = Math.max(1, Math.floor(input.hazardRounds ?? 6));
     const movementFloor = Math.max(1, Math.floor(input.movementFloor ?? 3));

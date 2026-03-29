@@ -13,7 +13,7 @@ Renderer model remains hybrid:
 - SVG for interaction grid and status overlays.
 
 For the full runtime layer strategy, surface hooks, and bestiary/trinity linkage, see:
-- `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`
+- `docs/BIOME_bestiary_TRINITY_CONTRACT.md`
 
 ## Runtime Control
 Biome selection is centralized in:
