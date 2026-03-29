@@ -733,9 +733,39 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/units/unit.enemy.footman.01.svg",
-      "width": 128,
-      "height": 128,
+      "path": "/assets/Bestiary/unit.goblin.footman.01.webp",
+      "width": 512,
+      "height": 512,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.sprinter.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/Bestiary/unit.goblin.fodder.01.webp",
+      "width": 512,
+      "height": 512,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.raider.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/Bestiary/unit.goblin.barbarian.01.webp",
+      "width": 512,
+      "height": 512,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.pouncer.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/Bestiary/unit.darkelf.assassin.01.webp",
+      "width": 512,
+      "height": 512,
       "recommendedFormat": "webp"
     },
     {
@@ -743,9 +773,9 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/units/unit.enemy.shield_bearer.01.svg",
-      "width": 128,
-      "height": 128,
+      "path": "/assets/Bestiary/unit.goblin.gladiator.01.webp",
+      "width": 512,
+      "height": 512,
       "recommendedFormat": "webp"
     },
     {
@@ -753,9 +783,9 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/units/unit.enemy.archer.01.svg",
-      "width": 128,
-      "height": 128,
+      "path": "/assets/Bestiary/unit.goblin.archer.01.webp",
+      "width": 512,
+      "height": 512,
       "recommendedFormat": "webp"
     },
     {
@@ -763,9 +793,9 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/units/unit.enemy.warlock.01.svg",
-      "width": 128,
-      "height": 128,
+      "path": "/assets/Bestiary/unit.goblin.shaman.01.webp",
+      "width": 512,
+      "height": 512,
       "recommendedFormat": "webp"
     },
     {
@@ -773,9 +803,19 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/units/unit.enemy.bomber.01.svg",
-      "width": 128,
-      "height": 128,
+      "path": "/assets/Bestiary/unit.goblin.bomber.01.webp",
+      "width": 512,
+      "height": 512,
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "unit.enemy.sentinel.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/Bestiary/unit.skeleton.gladiator.01.webp",
+      "width": 512,
+      "height": 512,
       "recommendedFormat": "webp"
     },
     {
