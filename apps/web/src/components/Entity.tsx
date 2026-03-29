@@ -10,6 +10,7 @@ import { SYNAPSE_PULSE_DURATION_MS } from '../app/synapse';
 import type { RegisteredActorNodes } from './game-board/actor-node-registry';
 
 const subscribeNoop = () => () => undefined;
+const DEFAULT_UNIT_VISUAL_SCALE_MULTIPLIER = 1.5;
 
 export type { EntityVisualPose } from './entity/entity-types';
 
@@ -65,7 +66,7 @@ const EntityBase: React.FC<EntityProps> = ({
 
     const visual = getEntityVisual(entity.subtype, entity.type, entity.enemyType as 'melee' | 'ranged' | 'boss', entity.archetype);
     const isFlying = isEntityFlying(entity);
-    const unitIconScale = isPlayer ? 1.34 : 0.92;
+    const unitIconScale = (isPlayer ? 1.10 : 1) * DEFAULT_UNIT_VISUAL_SCALE_MULTIPLIER;
     const unitIconYOffset = isPlayer ? -9 : -2;
     const unitIconSize = isPlayer ? 24 : 18;
     const contrastBoost = computeEntityContrastBoost(floorTheme);

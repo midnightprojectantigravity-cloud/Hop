@@ -50,6 +50,13 @@ export const resolveUnitAssetId = (actor: Actor): string => {
   switch (actor.subtype) {
     case 'footman':
       return 'unit.enemy.footman.01';
+    case 'sprinter':
+      return 'unit.enemy.sprinter.01';
+    case 'raider':
+      return 'unit.enemy.raider.01';
+    case 'pouncer':
+      return 'unit.enemy.pouncer.01';
+    case 'shieldBearer':
     case 'shield_bearer':
       return 'unit.enemy.shield_bearer.01';
     case 'archer':
@@ -58,6 +65,8 @@ export const resolveUnitAssetId = (actor: Actor): string => {
       return 'unit.enemy.warlock.01';
     case 'bomber':
       return 'unit.enemy.bomber.01';
+    case 'sentinel':
+      return 'unit.enemy.sentinel.01';
     case 'bomb':
       return 'unit.enemy.bomb.01';
     default:
@@ -89,10 +98,14 @@ const UNIT_FALLBACK_SVG_BY_ID: Record<string, string> = {
   'unit.player.necromancer.01': '/assets/units/unit.player.vanguard.01.svg',
   'unit.player.assassin.01': '/assets/units/unit.player.skirmisher.01.svg',
   'unit.enemy.footman.01': '/assets/units/unit.enemy.footman.01.svg',
+  'unit.enemy.sprinter.01': '/assets/units/unit.enemy.footman.01.svg',
+  'unit.enemy.raider.01': '/assets/units/unit.enemy.footman.01.svg',
+  'unit.enemy.pouncer.01': '/assets/units/unit.enemy.footman.01.svg',
   'unit.enemy.shield_bearer.01': '/assets/units/unit.enemy.shield_bearer.01.svg',
   'unit.enemy.archer.01': '/assets/units/unit.enemy.archer.01.svg',
   'unit.enemy.warlock.01': '/assets/units/unit.enemy.warlock.01.svg',
   'unit.enemy.bomber.01': '/assets/units/unit.enemy.bomber.01.svg',
+  'unit.enemy.sentinel.01': '/assets/units/unit.enemy.boss.01.svg',
   'unit.enemy.bomb.01': '/assets/units/unit.enemy.bomb.01.svg',
   'unit.enemy.boss.01': '/assets/units/unit.enemy.boss.01.svg'
 };

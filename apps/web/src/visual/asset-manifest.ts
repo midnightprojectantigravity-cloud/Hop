@@ -147,7 +147,7 @@ export interface VisualAssetManifest {
 
 const BASE_URL = import.meta.env.BASE_URL || '/';
 const ASSET_ID_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
-const ASSET_PATH_RE = /^\/assets\/[a-z0-9/_\-.]+$/;
+const ASSET_PATH_RE = /^\/assets\/[a-z0-9/_\-.]+$/i;
 const REQUIRED_LAYERS: VisualAssetLayer[] = ['ground', 'decal', 'prop', 'unit', 'fx', 'ui'];
 const SUPPORTED_FORMATS: VisualAssetFormat[] = ['svg', 'webp', 'avif', 'png', 'jpg', 'jpeg'];
 const UNIT_FORMATS: VisualAssetFormat[] = ['svg', 'webp', 'avif', 'png'];

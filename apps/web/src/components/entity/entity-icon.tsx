@@ -8,6 +8,9 @@ const FLOOR_THEME_LUMA: Record<string, number> = {
   frozen: 0.45,
   void: 0.08
 };
+const BESTIARY_UNIT_SCALE_MULTIPLIER = 1.4;
+const PLAYER_RASTER_UNIT_VERTICAL_OFFSET_RATIO = 0.4;
+const ENEMY_RASTER_UNIT_VERTICAL_OFFSET_RATIO = 0.5;
 
 const contrastRatio = (a: number, b: number): number => {
   const light = Math.max(a, b);
@@ -33,7 +36,12 @@ export const renderEntityIcon = (
 ) => {
   const visual = getEntityVisual(entity.subtype, entity.type, entity.enemyType as 'melee' | 'ranged' | 'boss', entity.archetype);
   const { icon, shape, color, borderColor, size: sizeMult = 1.0 } = visual;
-  const finalSize = size * sizeMult;
+  const usesBestiaryPortrait = assetHref?.includes('/assets/Bestiary/') ?? false;
+  const usesRasterPortrait = /\.(?:webp|avif|png|jpe?g)(?:$|[?#])/i.test(assetHref || '');
+  const finalSize = size * sizeMult * (usesBestiaryPortrait ? BESTIARY_UNIT_SCALE_MULTIPLIER : 1);
+  const rasterVerticalOffset = usesRasterPortrait
+    ? finalSize * (isPlayer ? PLAYER_RASTER_UNIT_VERTICAL_OFFSET_RATIO : ENEMY_RASTER_UNIT_VERTICAL_OFFSET_RATIO)
+    : 0;
   const bombFuse = entity.statusEffects?.find(s => s.type === 'time_bomb');
   const bombTimer = bombFuse ? Math.max(0, bombFuse.duration) : (entity.actionCooldown ?? 0);
   const contrastFilter = `contrast(${contrastBoost.toFixed(2)}) brightness(${(contrastBoost > 1 ? 1.12 : 1.04).toFixed(2)})`;
@@ -48,7 +56,7 @@ export const renderEntityIcon = (
         <image
           href={assetHref}
           x={-finalSize}
-          y={-finalSize}
+          y={-finalSize - rasterVerticalOffset}
           width={finalSize * 2}
           height={finalSize * 2}
           preserveAspectRatio="xMidYMid meet"
