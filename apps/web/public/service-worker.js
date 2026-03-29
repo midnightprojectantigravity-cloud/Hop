@@ -1,5 +1,6 @@
-const CACHE_VERSION = 'hop-shell-v1';
-const RUNTIME_CACHE = 'hop-runtime-v1';
+const CACHE_VERSION = 'hop-shell-v2';
+const RUNTIME_CACHE = 'hop-runtime-v2';
+const VISUAL_ASSET_RE = /\.(?:webp|avif|png|jpe?g|svg)$/i;
 
 const getScopeBaseUrl = () => {
   const scope = self.registration?.scope || self.location.origin + '/';
@@ -8,6 +9,38 @@ const getScopeBaseUrl = () => {
 };
 
 const toScopedPath = (relativePath) => new URL(relativePath, self.registration?.scope || self.location.origin).toString();
+
+const isManifestRequest = (requestUrl, basePath) =>
+  requestUrl.pathname === `${basePath}assets/manifest.json`;
+
+const isVisualAssetRequest = (requestUrl, basePath) =>
+  requestUrl.pathname.startsWith(`${basePath}assets/`)
+  && VISUAL_ASSET_RE.test(requestUrl.pathname);
+
+const cacheResponse = (request, response) => {
+  if (!response || !response.ok) return response;
+  const clone = response.clone();
+  void caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, clone));
+  return response;
+};
+
+const fetchAndCache = (request) =>
+  fetch(request).then((response) => cacheResponse(request, response));
+
+const respondNetworkFirst = async (request) => {
+  try {
+    return await fetchAndCache(request);
+  } catch {
+    const cachedResponse = await caches.match(request);
+    return cachedResponse || Response.error();
+  }
+};
+
+const respondStaleWhileRevalidate = async (request) => {
+  const cachedResponse = await caches.match(request);
+  const fetchPromise = fetchAndCache(request).catch(() => cachedResponse || Response.error());
+  return cachedResponse || fetchPromise;
+};
 
 const getPrecacheUrls = () => {
   const basePath = getScopeBaseUrl();
@@ -58,11 +91,7 @@ self.addEventListener('fetch', (event) => {
   if (isNavigation) {
     event.respondWith(
       fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, clone));
-          return response;
-        })
+        .then((response) => cacheResponse(request, response))
         .catch(async () => {
           const cache = await caches.open(RUNTIME_CACHE);
           const cachedNavigation = await cache.match(request);
@@ -73,17 +102,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      const fetchPromise = fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => cachedResponse);
+  if (isManifestRequest(requestUrl, basePath) || isVisualAssetRequest(requestUrl, basePath)) {
+    event.respondWith(respondNetworkFirst(request));
+    return;
+  }
 
-      return cachedResponse || fetchPromise;
-    })
-  );
+  event.respondWith(respondStaleWhileRevalidate(request));
 });
