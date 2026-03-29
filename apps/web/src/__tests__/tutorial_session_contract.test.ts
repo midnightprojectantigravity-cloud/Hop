@@ -11,6 +11,7 @@ describe('tutorial session contract', () => {
 
     expect(source).toContain('export interface TutorialSessionController');
     expect(source).toContain('startGuidedTutorial');
+    expect(source).toContain('dismissTutorialOnboarding');
     expect(source).toContain('finishGuidedTutorialStep');
     expect(source).toContain('skipGuidedTutorial');
     expect(source).toContain('resetGuidedTutorialProgress');

@@ -542,8 +542,10 @@ export function AppShell() {
           onStartReplay={handleHubReplayStart}
           onDismissTutorial={tutorialSession.dismissTutorialInstructions}
           onStartGuidedTutorial={tutorialSession.startGuidedTutorial}
+          tutorialOnboardingState={tutorialSession.tutorialOnboardingState}
           tutorialProgress={tutorialSession.tutorialProgress}
           activeTutorialSession={tutorialSession.activeTutorialSession}
+          onDismissTutorialOnboarding={tutorialSession.dismissTutorialOnboarding}
           onResetTutorialProgress={tutorialSession.resetGuidedTutorialProgress}
           onSkipTutorial={tutorialSession.skipGuidedTutorial}
           worldgenUiError={worldgenSession.worldgenUiError}

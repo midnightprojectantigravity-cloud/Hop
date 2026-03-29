@@ -4,7 +4,7 @@
 Provide production-ready art direction and handoff requirements for full biome visual sets in Hop's hybrid renderer.
 
 Runtime architecture and formula contracts are documented in:
-- `docs/BIOME_bestiary_TRINITY_CONTRACT.md`
+- `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`
 - `docs/VISUAL_LAYER_CONTRACT.md`
 
 This project uses a hybrid visual model:

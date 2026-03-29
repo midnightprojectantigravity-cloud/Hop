@@ -1,6 +1,6 @@
 import {
     MVP_ENEMY_CONTENT,
-    type EnemybestiaryDefinition,
+    type EnemyBestiaryDefinition,
     type EnemySubtypeId,
     type MvpEnemyContentEntry,
 } from '../packs/mvp-enemy-content';
@@ -28,7 +28,7 @@ export const getEnemyCatalogEntry = (subtype: string): EnemyCatalogEntry | undef
     return toCatalogEntry(typedSubtype);
 };
 
-export const getEnemyCatalogbestiaryEntry = (subtype: string): EnemybestiaryDefinition | undefined =>
+export const getEnemyCatalogBestiaryEntry = (subtype: string): EnemyBestiaryDefinition | undefined =>
     getEnemyCatalogEntry(subtype)?.bestiary;
 
 export const getEnemyCatalogContract = (subtype: string): EnemyCatalogEntry['contract'] | undefined =>

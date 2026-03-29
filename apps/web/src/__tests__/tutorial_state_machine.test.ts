@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   advanceTutorialSession,
   createTutorialSession,
+  readTutorialOnboardingState,
   readTutorialProgress,
+  resetTutorialOnboardingState,
   resetTutorialProgress,
   shouldPromptForTutorial,
+  shouldShowTutorialOnboarding,
+  writeTutorialOnboardingState,
   writeTutorialProgress
 } from '../app/tutorial/tutorial-state-machine';
 
@@ -54,9 +58,43 @@ describe('tutorial state machine', () => {
     });
   });
 
+  it('persists and resets tutorial onboarding dismissal', () => {
+    const storage = new MemoryStorage();
+    writeTutorialOnboardingState({ dismissed: true }, storage);
+    expect(readTutorialOnboardingState(storage)).toEqual({ dismissed: true });
+    expect(resetTutorialOnboardingState(storage)).toEqual({ dismissed: false });
+  });
+
   it('prompts only when tutorial has not been completed or skipped', () => {
     expect(shouldPromptForTutorial({ completed: false, skipped: false, lastStepId: null })).toBe(true);
     expect(shouldPromptForTutorial({ completed: true, skipped: false, lastStepId: 'wait' })).toBe(false);
     expect(shouldPromptForTutorial({ completed: false, skipped: true, lastStepId: null })).toBe(false);
+  });
+
+  it('shows first-load onboarding only for a fresh tutorial state', () => {
+    expect(
+      shouldShowTutorialOnboarding(
+        { completed: false, skipped: false, lastStepId: null },
+        { dismissed: false }
+      )
+    ).toBe(true);
+    expect(
+      shouldShowTutorialOnboarding(
+        { completed: false, skipped: false, lastStepId: null },
+        { dismissed: true }
+      )
+    ).toBe(false);
+    expect(
+      shouldShowTutorialOnboarding(
+        { completed: false, skipped: false, lastStepId: 'movement' },
+        { dismissed: false }
+      )
+    ).toBe(false);
+    expect(
+      shouldShowTutorialOnboarding(
+        { completed: true, skipped: false, lastStepId: 'wait' },
+        { dismissed: false }
+      )
+    ).toBe(false);
   });
 });

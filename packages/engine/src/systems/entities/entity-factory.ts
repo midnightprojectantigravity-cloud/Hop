@@ -3,7 +3,7 @@ import type { GameComponent } from '../components';
 import { deriveMaxHpFromTrinity, type TrinityStats } from '../combat/trinity-resolver';
 import { getTrinityProfile } from '../combat/trinity-profiles';
 import { resolveDefaultCombatProfile, type CombatProfile } from '../combat/combat-traits';
-import { getEnemybestiaryEntry, getEnemybestiarySkillLoadout } from '../../data/bestiary';
+import { getEnemyBestiaryEntry, getEnemyBestiarySkillLoadout } from '../../data/bestiary';
 import { getCompanionBalanceEntry } from '../../data/companions/content';
 import { getEnemyCatalogEntry } from '../../data/enemies';
 import { ensureActorIres } from '../ires';
@@ -175,15 +175,15 @@ const PASSIVE_SKILL_IDS = new Set<string>([
  */
 export function buildSkillLoadout(skillIds: string[]): Skill[] {
     return skillIds.map(skillId => ({
-            id: skillId as any,
-            name: String(skillId),
-            description: String(skillId),
-            slot: PASSIVE_SKILL_IDS.has(skillId) ? 'passive' : 'utility',
-            cooldown: 0,
-            currentCooldown: 0,
-            range: 0,
-            upgrades: [],
-            activeUpgrades: [],
+        id: skillId as any,
+        name: String(skillId),
+        description: String(skillId),
+        slot: PASSIVE_SKILL_IDS.has(skillId) ? 'passive' : 'utility',
+        cooldown: 0,
+        currentCooldown: 0,
+        range: 0,
+        upgrades: [],
+        activeUpgrades: [],
     })) as Skill[];
 }
 
@@ -337,7 +337,7 @@ export function createEnemy(config: {
     return entity;
 }
 
-export function createEnemyFrombestiary(config: {
+export function createEnemyFromBestiary(config: {
     id: string;
     subtype: string;
     position: Point;
@@ -352,9 +352,9 @@ export function createEnemyFrombestiary(config: {
     actionCooldown?: number;
 }): Actor {
     const catalogEntry = getEnemyCatalogEntry(config.subtype);
-    const bestiary = getEnemybestiaryEntry(config.subtype);
+    const bestiary = getEnemyBestiaryEntry(config.subtype);
     if (!bestiary || !catalogEntry) {
-        throw new Error(`Unknown enemy subtype "${config.subtype}" in createEnemyFrombestiary`);
+        throw new Error(`Unknown enemy subtype "${config.subtype}" in createEnemyFromBestiary`);
     }
 
     const entity = createEnemy({
@@ -364,7 +364,7 @@ export function createEnemyFrombestiary(config: {
         hp: config.hp ?? bestiary.stats.hp,
         maxHp: config.maxHp ?? bestiary.stats.maxHp,
         speed: config.speed ?? bestiary.stats.speed,
-        skills: config.skills ?? getEnemybestiarySkillLoadout(config.subtype),
+        skills: config.skills ?? getEnemyBestiarySkillLoadout(config.subtype),
         weightClass: config.weightClass ?? (bestiary.stats.weightClass as WeightClass),
         armorBurdenTier: config.armorBurdenTier ?? catalogEntry.contract.metabolicProfile.armorBurdenTier,
         enemyType: config.enemyType ?? bestiary.stats.type,
@@ -494,7 +494,7 @@ export function createFalcon(config: {
  * Helper: Get default skill loadout for an enemy type
  */
 export function getEnemySkillLoadout(enemyType: string): string[] {
-    const bestiarySkills = getEnemybestiarySkillLoadout(enemyType);
+    const bestiarySkills = getEnemyBestiarySkillLoadout(enemyType);
     if (bestiarySkills.length > 0) return bestiarySkills;
 
     // Legacy fallback for unknown/custom subtypes outside the bestiary.

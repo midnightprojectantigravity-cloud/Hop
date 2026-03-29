@@ -3,7 +3,7 @@
 ## Purpose
 Define a deterministic contract between engine timeline signals and web rendering layers.
 
-For the full biome + bestiary + triangle contract, see `docs/BIOME_bestiary_TRINITY_CONTRACT.md`.
+For the full biome + bestiary + triangle contract, see `docs/BIOME_BESTIARY_TRINITY_CONTRACT.md`.
 
 ## Board Layer Stack (authoritative)
 

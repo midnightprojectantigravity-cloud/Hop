@@ -4,9 +4,12 @@ import {
   advanceTutorialSession,
   createTutorialSession,
   getActiveTutorialStepId,
+  readTutorialOnboardingState,
   readTutorialProgress,
+  writeTutorialOnboardingState,
   resetTutorialProgress,
   writeTutorialProgress,
+  type TutorialOnboardingState,
   type TutorialProgress,
   type TutorialSession,
   type TutorialStepId
@@ -14,12 +17,14 @@ import {
 import { getGuidedTutorialStep } from './tutorial/tutorial-scenarios';
 
 export interface TutorialSessionController {
+  tutorialOnboardingState: TutorialOnboardingState;
   tutorialProgress: TutorialProgress;
   activeTutorialSession: TutorialSession | null;
   activeTutorialStepId: TutorialStepId | null;
   activeTutorialStep: ReturnType<typeof getGuidedTutorialStep> | null;
   tutorialInstructions: string | null;
   startGuidedTutorial: () => void;
+  dismissTutorialOnboarding: () => void;
   finishGuidedTutorialStep: (stepId: 'movement' | 'attack' | 'wait') => void;
   skipGuidedTutorial: () => void;
   resetGuidedTutorialProgress: () => void;
@@ -39,6 +44,9 @@ export const useTutorialSession = ({
   dispatchWithTrace: (action: Action, source: string) => void;
 }): TutorialSessionController => {
   const [tutorialInstructions, setTutorialInstructions] = useState<string | null>(null);
+  const [tutorialOnboardingState, setTutorialOnboardingState] = useState<TutorialOnboardingState>(
+    () => readTutorialOnboardingState()
+  );
   const [tutorialProgress, setTutorialProgress] = useState<TutorialProgress>(() => readTutorialProgress());
   const [activeTutorialSession, setActiveTutorialSession] = useState<TutorialSession | null>(null);
 
@@ -48,13 +56,19 @@ export const useTutorialSession = ({
     [activeTutorialStepId]
   );
 
+  const dismissTutorialOnboarding = useCallback(() => {
+    const dismissedOnboarding = writeTutorialOnboardingState({ dismissed: true });
+    setTutorialOnboardingState(dismissedOnboarding);
+  }, []);
+
   const startGuidedTutorial = useCallback(() => {
+    dismissTutorialOnboarding();
     const session = createTutorialSession();
     const firstStep = getGuidedTutorialStep(session.stepIds[0]);
     setActiveTutorialSession(session);
     setTutorialInstructions(firstStep.body);
     dispatchWithTrace({ type: 'LOAD_STATE', payload: firstStep.state }, 'guided_tutorial_start');
-  }, [dispatchWithTrace]);
+  }, [dispatchWithTrace, dismissTutorialOnboarding]);
 
   const finishGuidedTutorialStep = useCallback((stepId: 'movement' | 'attack' | 'wait') => {
     const pendingProgress = writeTutorialProgress({
@@ -85,6 +99,7 @@ export const useTutorialSession = ({
   }, [dispatchWithTrace]);
 
   const skipGuidedTutorial = useCallback(() => {
+    dismissTutorialOnboarding();
     const skipped = writeTutorialProgress({
       completed: false,
       skipped: true,
@@ -97,7 +112,7 @@ export const useTutorialSession = ({
       dispatchWithTrace({ type: 'EXIT_TO_HUB' }, 'guided_tutorial_skip');
       navigateTo(homePath);
     }
-  }, [dispatchWithTrace, gameStatus, homePath, navigateTo, tutorialProgress.lastStepId]);
+  }, [dismissTutorialOnboarding, dispatchWithTrace, gameStatus, homePath, navigateTo, tutorialProgress.lastStepId]);
 
   const resetGuidedTutorialProgress = useCallback(() => {
     setTutorialProgress(resetTutorialProgress());
@@ -112,12 +127,14 @@ export const useTutorialSession = ({
   }, []);
 
   return {
+    tutorialOnboardingState,
     tutorialProgress,
     activeTutorialSession,
     activeTutorialStepId,
     activeTutorialStep,
     tutorialInstructions,
     startGuidedTutorial,
+    dismissTutorialOnboarding,
     finishGuidedTutorialStep,
     skipGuidedTutorial,
     resetGuidedTutorialProgress,

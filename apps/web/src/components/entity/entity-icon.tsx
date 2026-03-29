@@ -8,7 +8,7 @@ const FLOOR_THEME_LUMA: Record<string, number> = {
   frozen: 0.45,
   void: 0.08
 };
-const bestiary_UNIT_SCALE_MULTIPLIER = 1.4;
+const BESTIARY_UNIT_SCALE_MULTIPLIER = 1.4;
 const PLAYER_RASTER_UNIT_VERTICAL_OFFSET_RATIO = 0.4;
 const ENEMY_RASTER_UNIT_VERTICAL_OFFSET_RATIO = 0.5;
 
@@ -36,9 +36,9 @@ export const renderEntityIcon = (
 ) => {
   const visual = getEntityVisual(entity.subtype, entity.type, entity.enemyType as 'melee' | 'ranged' | 'boss', entity.archetype);
   const { icon, shape, color, borderColor, size: sizeMult = 1.0 } = visual;
-  const usesbestiaryPortrait = assetHref?.includes('/assets/bestiary/') ?? false;
+  const usesBestiaryPortrait = assetHref?.includes('/assets/bestiary/') ?? false;
   const usesRasterPortrait = /\.(?:webp|avif|png|jpe?g)(?:$|[?#])/i.test(assetHref || '');
-  const finalSize = size * sizeMult * (usesbestiaryPortrait ? bestiary_UNIT_SCALE_MULTIPLIER : 1);
+  const finalSize = size * sizeMult * (usesBestiaryPortrait ? BESTIARY_UNIT_SCALE_MULTIPLIER : 1);
   const rasterVerticalOffset = usesRasterPortrait
     ? finalSize * (isPlayer ? PLAYER_RASTER_UNIT_VERTICAL_OFFSET_RATIO : ENEMY_RASTER_UNIT_VERTICAL_OFFSET_RATIO)
     : 0;

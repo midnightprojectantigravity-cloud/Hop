@@ -1,9 +1,9 @@
-# Biome, bestiary, and Trinity Contract
+# Biome, Bestiary, and Trinity Contract
 
 ## Purpose
 Capture one implementation-true contract for:
 1. Biome visual runtime strategy.
-2. Emergent bestiary hardship simulation across Body, Mind, and Instinct.
+2. Emergent Bestiary hardship simulation across Body, Mind, and Instinct.
 3. Formula-driven triangle of power.
 
 This document is authoritative for architecture-level decisions touching these systems.
@@ -76,7 +76,7 @@ This document is authoritative for architecture-level decisions touching these s
 - Current example modifier:
   - Fire skill power multiplier = `1.15` on `MELTED`.
 
-## 2) Emergent bestiary Hardships (Body, Mind, Instinct)
+## 2) Emergent Bestiary Hardships (Body, Mind, Instinct)
 
 ### 2.1 Simulation Purpose
 Evaluate ecosystem viability by biome under deterministic hardship:
@@ -191,5 +191,5 @@ Validation anchor:
 1. Keep visual and combat behavior deterministic for identical seed and input logs.
 2. Never fork alternate combat formulas outside calculator/resolver pipelines.
 3. Keep biome readability rules as hard requirements, not art-only guidance.
-4. Keep bestiary hardship simulation formula-driven and reproducible.
+4. Keep Bestiary hardship simulation formula-driven and reproducible.
 5. Keep this contract synchronized with runtime code when formulas or layer semantics change.

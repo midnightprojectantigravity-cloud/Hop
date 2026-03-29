@@ -13,11 +13,20 @@ export type TutorialSession = {
 };
 
 export const TUTORIAL_PROGRESS_STORAGE_KEY = 'hop_tutorial_progress_v1';
+export const TUTORIAL_ONBOARDING_STORAGE_KEY = 'hop_tutorial_onboarding_v1';
 
 const DEFAULT_TUTORIAL_PROGRESS: TutorialProgress = {
   completed: false,
   skipped: false,
   lastStepId: null
+};
+
+export type TutorialOnboardingState = {
+  dismissed: boolean;
+};
+
+const DEFAULT_TUTORIAL_ONBOARDING_STATE: TutorialOnboardingState = {
+  dismissed: false
 };
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -63,6 +72,41 @@ export const resetTutorialProgress = (storage: StorageLike | null = getBrowserSt
   return { ...DEFAULT_TUTORIAL_PROGRESS };
 };
 
+export const readTutorialOnboardingState = (
+  storage: StorageLike | null = getBrowserStorage()
+): TutorialOnboardingState => {
+  if (!storage) return { ...DEFAULT_TUTORIAL_ONBOARDING_STATE };
+  try {
+    const raw = storage.getItem(TUTORIAL_ONBOARDING_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_TUTORIAL_ONBOARDING_STATE };
+    const parsed = JSON.parse(raw) as Partial<TutorialOnboardingState>;
+    return {
+      dismissed: parsed.dismissed === true
+    };
+  } catch {
+    return { ...DEFAULT_TUTORIAL_ONBOARDING_STATE };
+  }
+};
+
+export const writeTutorialOnboardingState = (
+  onboardingState: TutorialOnboardingState,
+  storage: StorageLike | null = getBrowserStorage()
+): TutorialOnboardingState => {
+  if (storage) {
+    storage.setItem(TUTORIAL_ONBOARDING_STORAGE_KEY, JSON.stringify(onboardingState));
+  }
+  return onboardingState;
+};
+
+export const resetTutorialOnboardingState = (
+  storage: StorageLike | null = getBrowserStorage()
+): TutorialOnboardingState => {
+  if (storage) {
+    storage.removeItem(TUTORIAL_ONBOARDING_STORAGE_KEY);
+  }
+  return { ...DEFAULT_TUTORIAL_ONBOARDING_STATE };
+};
+
 export const createTutorialSession = (): TutorialSession => ({
   tutorialId: 'first_run',
   stepIds: ['movement', 'attack', 'wait'],
@@ -85,3 +129,12 @@ export const advanceTutorialSession = (session: TutorialSession): TutorialSessio
 
 export const shouldPromptForTutorial = (progress: TutorialProgress): boolean =>
   !progress.completed && !progress.skipped;
+
+export const shouldShowTutorialOnboarding = (
+  progress: TutorialProgress,
+  onboardingState: TutorialOnboardingState
+): boolean =>
+  !onboardingState.dismissed
+  && !progress.completed
+  && !progress.skipped
+  && progress.lastStepId === null;

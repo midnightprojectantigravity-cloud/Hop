@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
 import type { GameState, GridSize, Loadout, MapShape } from '@hop/engine';
 import type { UiPreferencesV2 } from './ui-preferences';
-import type { TutorialProgress, TutorialSession } from './tutorial/tutorial-state-machine';
-import { shouldPromptForTutorial } from './tutorial/tutorial-state-machine';
+import type { TutorialOnboardingState, TutorialProgress, TutorialSession } from './tutorial/tutorial-state-machine';
+import { shouldShowTutorialOnboarding } from './tutorial/tutorial-state-machine';
 import { TutorialOnboardingPrompt } from './tutorial/tutorial-step-overlay';
 import {
   LazyHubScreen,
@@ -43,8 +43,10 @@ export const HubRouteShell = ({
   onStartReplay,
   onDismissTutorial,
   onStartGuidedTutorial,
+  tutorialOnboardingState,
   tutorialProgress,
   activeTutorialSession,
+  onDismissTutorialOnboarding,
   onResetTutorialProgress,
   onSkipTutorial,
   worldgenUiError,
@@ -87,8 +89,10 @@ export const HubRouteShell = ({
   onStartReplay: (record: any) => void;
   onDismissTutorial: () => void;
   onStartGuidedTutorial: () => void;
+  tutorialOnboardingState: TutorialOnboardingState;
   tutorialProgress: TutorialProgress;
   activeTutorialSession: TutorialSession | null;
+  onDismissTutorialOnboarding: () => void;
   onResetTutorialProgress: () => void;
   onSkipTutorial: () => void;
   worldgenUiError: WorldgenUiError | null;
@@ -215,9 +219,9 @@ export const HubRouteShell = ({
         onDismiss={onDismissWorldgenError}
       />
       <TutorialOnboardingPrompt
-        visible={!activeTutorialSession && shouldPromptForTutorial(tutorialProgress)}
+        visible={!activeTutorialSession && shouldShowTutorialOnboarding(tutorialProgress, tutorialOnboardingState)}
         onStart={onStartGuidedTutorial}
-        onSkip={onSkipTutorial}
+        onContinue={onDismissTutorialOnboarding}
       />
     </>
   );

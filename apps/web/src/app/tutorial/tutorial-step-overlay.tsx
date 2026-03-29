@@ -61,22 +61,33 @@ export const TutorialStepOverlay = ({
 export const TutorialOnboardingPrompt = ({
   visible,
   onStart,
-  onSkip
+  onContinue
 }: {
   visible: boolean;
   onStart: () => void;
-  onSkip: () => void;
+  onContinue: () => void;
 }) => {
   if (!visible) return null;
   return (
     <div className="fixed inset-0 z-[240] flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
-      <div className="surface-panel-material torn-edge-shell w-[min(92vw,34rem)] rounded-3xl border border-[var(--accent-royal)] bg-[var(--surface-panel)] p-6">
-        <div className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--accent-royal)]">First-Run Tutorial</div>
+      <div className="surface-panel-material torn-edge-shell w-[min(92vw,38rem)] rounded-3xl border border-[var(--accent-royal)] bg-[var(--surface-panel)] p-6">
+        <div className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--accent-royal)]">First Dawn In Hop</div>
         <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-[var(--text-primary)] font-[var(--font-heading)]">
-          Learn Hop In Three Steps
+          The March Begins In Ash
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-[var(--text-primary)]">
-          We will guide movement, attack flow, and waiting with deterministic training setups. You can skip this now and relaunch it later from Tutorials.
+          The old roads are gone, the world is fractured into hexes, and every crossing is a wager against ruin. You wake as one
+          more survivor carrying steel, memory, and a little light into the dark.
+        </p>
+        <div className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] px-4 py-3">
+          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--accent-royal)]">First-Run Tutorial</div>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--text-primary)]">
+            Learn movement, attack flow, and waiting in three quick guided encounters. If you would rather jump straight in, you
+            can launch the tutorial later from Tutorials.
+          </p>
+        </div>
+        <p className="mt-4 text-xs leading-relaxed text-[var(--text-muted)]">
+          This intro only appears on first load unless you choose to start the tutorial now.
         </p>
         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
@@ -88,10 +99,10 @@ export const TutorialOnboardingPrompt = ({
           </button>
           <button
             type="button"
-            onClick={onSkip}
+            onClick={onContinue}
             className="min-h-12 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] text-[var(--text-muted)] text-xs font-black uppercase tracking-[0.18em]"
           >
-            Skip For Now
+            Continue To Hub
           </button>
         </div>
       </div>

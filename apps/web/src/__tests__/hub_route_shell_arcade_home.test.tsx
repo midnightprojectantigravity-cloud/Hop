@@ -50,12 +50,16 @@ const baseProps = {
   onStartReplay: vi.fn(),
   onDismissTutorial: vi.fn(),
   onStartGuidedTutorial: vi.fn(),
+  tutorialOnboardingState: {
+    dismissed: true
+  },
   tutorialProgress: {
     completed: true,
     skipped: false,
     lastStepId: null
   },
   activeTutorialSession: null,
+  onDismissTutorialOnboarding: vi.fn(),
   onResetTutorialProgress: vi.fn(),
   onSkipTutorial: vi.fn(),
   worldgenUiError: null,
@@ -97,5 +101,20 @@ describe('hub route shell route split', () => {
 
     expect(html).toContain('Strategic Hub /Hop');
     expect(html).not.toContain('ASHES');
+  });
+
+  it('shows the first-load onboarding story before the tutorial for pristine progress', () => {
+    const html = renderToStaticMarkup(
+      <HubRouteShell
+        {...baseProps}
+        tutorialOnboardingState={{ dismissed: false }}
+        tutorialProgress={{ completed: false, skipped: false, lastStepId: null }}
+      />
+    );
+
+    expect(html).toContain('First Dawn In Hop');
+    expect(html).toContain('The March Begins In Ash');
+    expect(html).toContain('Start Tutorial');
+    expect(html).toContain('Continue To Hub');
   });
 });

@@ -86,7 +86,7 @@ const createEnemyUnit = (config: {
     }
 });
 
-const createEnemyUnitFrombestiary = (
+const createEnemyUnitFromBestiary = (
     subtype: EnemySubtypeId
 ): BaseUnitDefinition => {
     const content = getMvpEnemyContentEntry(subtype);
@@ -192,15 +192,15 @@ const SHIELD_BASH_V1: CompositeSkillDefinition = {
 export const TACTICAL_CORE_MVP_PACK: TacticalDataPack = {
     version: '1.0.0',
     units: [
-        createEnemyUnitFrombestiary('footman'),
-        createEnemyUnitFrombestiary('sprinter'),
-        createEnemyUnitFrombestiary('raider'),
-        createEnemyUnitFrombestiary('pouncer'),
-        createEnemyUnitFrombestiary('shieldBearer'),
-        createEnemyUnitFrombestiary('archer'),
-        createEnemyUnitFrombestiary('bomber'),
-        createEnemyUnitFrombestiary('warlock'),
-        createEnemyUnitFrombestiary('sentinel')
+        createEnemyUnitFromBestiary('footman'),
+        createEnemyUnitFromBestiary('sprinter'),
+        createEnemyUnitFromBestiary('raider'),
+        createEnemyUnitFromBestiary('pouncer'),
+        createEnemyUnitFromBestiary('shieldBearer'),
+        createEnemyUnitFromBestiary('archer'),
+        createEnemyUnitFromBestiary('bomber'),
+        createEnemyUnitFromBestiary('warlock'),
+        createEnemyUnitFromBestiary('sentinel')
     ],
     skills: [SHIELD_BASH_V1]
 };

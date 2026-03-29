@@ -56,7 +56,7 @@ export type EnemySubtypeId =
     | 'warlock'
     | 'sentinel';
 
-export interface EnemybestiaryDefinition {
+export interface EnemyBestiaryDefinition {
     subtype: EnemySubtypeId;
     name: string;
     stats: {
@@ -83,7 +83,7 @@ export interface EnemybestiaryDefinition {
 
 export interface MvpEnemyContentEntry {
     packUnitId: string;
-    bestiary: EnemybestiaryDefinition;
+    bestiary: EnemyBestiaryDefinition;
     runtimeSkills: {
         base: string[];
         passive: string[];

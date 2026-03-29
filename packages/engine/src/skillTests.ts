@@ -6,7 +6,7 @@ import { buildInitiativeQueue } from './systems/initiative';
 import { SCENARIO_COLLECTIONS } from './scenarios';
 import { addStatus } from './systems/entities/actor';
 import { pointToKey, UnifiedTileService } from './systems/tiles/unified-tile-service';
-import { createEnemy, createEnemyFrombestiary, createFalcon, createPlayer } from './systems/entities/entity-factory';
+import { createEnemy, createEnemyFromBestiary, createFalcon, createPlayer } from './systems/entities/entity-factory';
 import { recomputeVisibilityFromScratch } from './systems/visibility';
 import { buildIntentPreview } from './systems/telegraph-projection';
 import { SpatialSystem } from './systems/spatial-system';
@@ -62,7 +62,7 @@ export class ScenarioEngine {
         const stats = getEnemyCatalogEntry(type)?.bestiary.stats;
         const entity = (() => {
             try {
-                return createEnemyFrombestiary({
+                return createEnemyFromBestiary({
                     id,
                     subtype: type,
                     position: { ...pos },
