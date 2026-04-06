@@ -357,18 +357,22 @@ export function createEnemyFromBestiary(config: {
         throw new Error(`Unknown enemy subtype "${config.subtype}" in createEnemyFromBestiary`);
     }
 
+    const resolvedTrinity = config.trinity ?? bestiary.trinity;
+    const resolvedMaxHp = Math.max(1, config.maxHp ?? deriveMaxHpFromTrinity(resolvedTrinity));
+    const resolvedHp = Math.min(resolvedMaxHp, Math.max(0, config.hp ?? resolvedMaxHp));
+
     const entity = createEnemy({
         id: config.id,
         subtype: config.subtype,
         position: config.position,
-        hp: config.hp ?? bestiary.stats.hp,
-        maxHp: config.maxHp ?? bestiary.stats.maxHp,
+        hp: resolvedHp,
+        maxHp: resolvedMaxHp,
         speed: config.speed ?? bestiary.stats.speed,
         skills: config.skills ?? getEnemyBestiarySkillLoadout(config.subtype),
         weightClass: config.weightClass ?? (bestiary.stats.weightClass as WeightClass),
         armorBurdenTier: config.armorBurdenTier ?? catalogEntry.contract.metabolicProfile.armorBurdenTier,
         enemyType: config.enemyType ?? bestiary.stats.type,
-        trinity: config.trinity ?? bestiary.trinity
+        trinity: resolvedTrinity
     });
 
     if (config.actionCooldown !== undefined || bestiary.stats.actionCooldown !== undefined) {

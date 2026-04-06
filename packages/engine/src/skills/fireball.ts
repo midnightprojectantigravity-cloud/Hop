@@ -26,6 +26,14 @@ export const FIREBALL: SkillDefinition = {
         range: 3,
         cost: 1,
         cooldown: 2,
+        basePower: 10,
+        damage: 1,
+    },
+    combat: {
+        damageClass: 'magical',
+        attackProfile: 'spell',
+        trackingSignature: 'magic',
+        weights: { mind: 1 }
     },
     execute: (_state: GameState, attacker: Actor, target?: Point) => {
         const effects: AtomicEffect[] = [];
@@ -51,14 +59,12 @@ export const FIREBALL: SkillDefinition = {
                 attackerId: attacker.id,
                 targetId: actorAtPoint?.id || pointToKey(p),
                 skillId: 'FIREBALL',
-                basePower: 1,
+                basePower: FIREBALL.baseVariables.basePower ?? 0,
+                skillDamageMultiplier: FIREBALL.baseVariables.damage ?? 1,
                 trinity,
                 targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
-                damageClass: 'magical',
-                attackProfile: 'spell',
-                trackingSignature: 'magic',
+                ...FIREBALL.combat,
                 engagementContext: { distance: hexDistance(attacker.position, p) },
-                scaling: [{ attribute: 'mind', coefficient: 0.2 }],
                 statusMultipliers: surfaceMultiplier === 1
                     ? []
                     : [{ id: `surface_${surfaceStatus}`, multiplier: surfaceMultiplier }],

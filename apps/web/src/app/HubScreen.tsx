@@ -15,6 +15,7 @@ interface HubScreenProps {
   homePath: string;
   biomesPath: string;
   themeLabPath: string;
+  dungeonLabPath: string;
   settingsPath: string;
   leaderboardPath: string;
   tutorialsPath: string;
@@ -42,6 +43,7 @@ export const HubScreen = ({
   homePath,
   biomesPath,
   themeLabPath,
+  dungeonLabPath,
   settingsPath,
   leaderboardPath,
   tutorialsPath,
@@ -111,6 +113,13 @@ export const HubScreen = ({
         </select>
       </div>
       <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => navigateTo(dungeonLabPath)}
+          className="px-4 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel-muted)] hover:bg-[var(--surface-panel-hover)] text-[10px] font-black uppercase tracking-[0.2em]"
+        >
+          Dungeon Lab
+        </button>
         <button
           type="button"
           onClick={() => navigateTo(themeLabPath)}

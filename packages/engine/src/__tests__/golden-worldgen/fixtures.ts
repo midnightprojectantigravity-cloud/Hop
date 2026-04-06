@@ -250,7 +250,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 10,
         runSeed: 'golden-boss-1',
         floorSeed: 'golden-boss-1:10',
-        artifactDigest: 'e0411eb1',
+        artifactDigest: 'e24f29ff',
         verificationDigest: '52780755',
         sceneId: '5ce5d93a',
         moduleIds: ['inferno_arena_ring', 'inferno_ritual_dais'],
@@ -263,12 +263,12 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
             hiddenLandmarkIds: [],
             routeCount: 1,
             junctionCount: 0,
-            maxStraightRun: 6,
+            maxStraightRun: 3,
             obstacleClusterCount: 0,
             trapClusterCount: 0,
             lavaClusterCount: 1,
-            tacticalTileCount: 16,
-            visualTileCount: 16
+            tacticalTileCount: 15,
+            visualTileCount: 15
         }
     },
     {
@@ -276,7 +276,7 @@ export const GOLDEN_WORLDGEN_FIXTURES: GoldenWorldgenFixture[] = [
         floor: 10,
         runSeed: 'golden-boss-2',
         floorSeed: 'golden-boss-2:10',
-        artifactDigest: '4c76559d',
+        artifactDigest: '5c4f8037',
         verificationDigest: '52780755',
         sceneId: '5ce5d93a',
         moduleIds: ['inferno_arena_ring', 'inferno_ritual_dais'],

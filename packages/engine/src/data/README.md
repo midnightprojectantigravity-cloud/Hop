@@ -16,7 +16,7 @@ This folder seeds the parser contract for Architecture Phase:
 - Read `instantiate.drawOrder` in order.
 - For each key, evaluate `propensities[key]` with engine RNG only.
 - If `counterMode = consume_global`, consume `GameState.rngCounter` per roll.
-- Build `trinity`, `mass`, `speed`, then resolve `derivedStats` (`trinity_hp_v1` maps to `deriveMaxHpFromTrinity`).
+- Build `trinity`, `mass`, `speed`, then resolve `derivedStats` (`formulaId: 'trinity_hp_v1'` maps to `deriveMaxHpFromTrinity`).
 - Build actor using `createEntity`.
 
 2. Composite skill materialization:

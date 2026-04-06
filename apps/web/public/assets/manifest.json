@@ -809,11 +809,21 @@
       "recommendedFormat": "webp"
     },
     {
+      "id": "unit.enemy.butcher.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/bestiary/unit.goblin.butcher.01.webp",
+      "width": 512,
+      "height": 512,
+      "recommendedFormat": "webp"
+    },
+    {
       "id": "unit.enemy.sentinel.01",
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/bestiary/unit.skeleton.gladiator.01.webp",
+      "path": "/assets/bestiary/unit.goblin.warrior.01.webp",
       "width": 512,
       "height": 512,
       "recommendedFormat": "webp"
@@ -823,9 +833,9 @@
       "type": "unit",
       "layer": "unit",
       "theme": "core",
-      "path": "/assets/units/unit.enemy.bomb.01.svg",
-      "width": 128,
-      "height": 128,
+      "path": "/assets/bestiary/unit.inanimate.bomb.01.webp",
+      "width": 512,
+      "height": 512,
       "recommendedFormat": "webp"
     },
     {

@@ -23,3 +23,5 @@ export * from './balance-budget-gates';
 export * from './balance-stack';
 export * from './ires-metabolic-analysis';
 export * from './ires-skill-band-audit';
+export * from './dungeon-lab';
+export * from './dungeon-lab-arena';

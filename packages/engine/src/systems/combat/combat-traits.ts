@@ -35,6 +35,7 @@ const ENEMY_SUBTYPE_PROFILES: Record<string, CombatProfile> = {
     archer: { outgoingPhysical: 2.6, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
     bomber: { outgoingPhysical: 2.8, outgoingMagical: 3.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
     warlock: { outgoingPhysical: 1.5, outgoingMagical: 3.5, incomingPhysical: 1.0, incomingMagical: 1.0 },
+    butcher: { outgoingPhysical: 4.0, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
     sentinel: { outgoingPhysical: 4.0, outgoingMagical: 4.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
 };
 

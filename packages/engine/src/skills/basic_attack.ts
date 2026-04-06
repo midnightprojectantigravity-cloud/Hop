@@ -24,6 +24,12 @@ export const BASIC_ATTACK: SkillDefinition = {
         cooldown: 0,
         damage: 1,
     },
+    combat: {
+        damageClass: 'physical',
+        attackProfile: 'melee',
+        trackingSignature: 'melee',
+        weights: { body: 1 }
+    },
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
@@ -74,26 +80,27 @@ export const BASIC_ATTACK: SkillDefinition = {
         }
 
         // Calculate damage through the centralized combat calculator.
-        let baseDamage = 1;
-        if (activeUpgrades.includes('POWER_STRIKE')) baseDamage += 2;
+        const baseDamage = BASIC_ATTACK.baseVariables.damage ?? 1;
         const heldPosition = hexEquals(attacker.previousPosition || attacker.position, attacker.position);
-        if (activeUpgrades.includes('EXTENDED_REACH') && heldPosition) {
-            baseDamage += 1;
-        }
+        const upgradeDamageBonus = Object.values(BASIC_ATTACK.upgrades)
+            .filter(upgrade => activeUpgrades.includes(upgrade.id))
+            .filter(upgrade => !upgrade.requiresStationary || heldPosition)
+            .reduce((sum, upgrade) => sum + (upgrade.modifyDamage ?? 0), 0);
+        const skillDamageMultiplier = baseDamage + upgradeDamageBonus;
         const combat = calculateCombat({
             attackerId: attacker.id,
             targetId: targetActor.id,
             skillId: 'BASIC_ATTACK',
-            basePower: baseDamage,
+            basePower: 0,
+            skillDamageMultiplier,
             trinity: extractTrinityStats(attacker),
             targetTrinity: extractTrinityStats(targetActor),
             damageClass: 'physical',
             attackProfile: 'melee',
             trackingSignature: 'melee',
-            scaling: [{ attribute: 'body', coefficient: 0.5 }],
             statusMultipliers: [],
             inDangerPreviewHex: !!state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position)),
-            theoreticalMaxPower: baseDamage
+            theoreticalMaxPower: skillDamageMultiplier * Math.max(0, extractTrinityStats(attacker).body || 0)
         });
         const damage = combat.finalPower;
 
@@ -251,12 +258,15 @@ export const BASIC_ATTACK: SkillDefinition = {
         EXTENDED_REACH: {
             id: 'EXTENDED_REACH',
             name: 'Disciplined Stance',
-            description: '+1 damage when attacking without moving first.'
+            description: '+1 damage when attacking without moving first.',
+            modifyDamage: 1,
+            requiresStationary: true
         },
         POWER_STRIKE: {
             id: 'POWER_STRIKE',
             name: 'Power Strike',
-            description: 'Damage +2'
+            description: 'Damage +2',
+            modifyDamage: 2
         },
         VAMPIRIC: {
             id: 'VAMPIRIC',

@@ -8,36 +8,37 @@ import {
     computeSparkCost,
     GrandCalculator
 } from '../systems/combat/combat-calculator';
+import { resolveCombatTuning } from '../data/combat-tuning-ledger';
 import type { Actor } from '../types';
 
 describe('combat-calculator', () => {
-    it('applies base, scaling, status, and quality stack deterministically', () => {
+    it('layers the shared combat variables with the skill tuning row', () => {
+        const tuning = resolveCombatTuning('BASIC_ATTACK');
+
+        expect(tuning.trinityLevers.bodyDamageMultiplierPerPoint).toBe(0.5);
+        expect(tuning.trinityLevers.basePowerMultiplier).toBe(1);
+
         const result = calculateCombat({
             attackerId: 'player',
             targetId: 'enemy_1',
-            skillId: 'FIREBALL',
-            basePower: 10,
-            trinity: { body: 2, mind: 3, instinct: 1 },
-            scaling: [
-                { attribute: 'body', coefficient: 1 },
-                { attribute: 'mind', coefficient: 0.5 }
-            ],
-            statusMultipliers: [
-                { id: 'BURNING', multiplier: 1.2 },
-                { id: 'WEAKENED', multiplier: 0.9 }
-            ],
-            inDangerPreviewHex: true,
-            proximityDistance: 1,
-            theoreticalMaxPower: 25
+            skillId: 'BASIC_ATTACK',
+            basePower: 0,
+            trinity: { body: 100, mind: 0, instinct: 0 },
+            targetTrinity: { body: 0, mind: 0, instinct: 0 },
+            damageClass: 'physical',
+            attackProfile: 'melee',
+            trackingSignature: 'melee',
+            scaling: [{ attribute: 'body', coefficient: 1 }],
+            statusMultipliers: [],
+            engagementContext: { distance: 1 },
+            theoreticalMaxPower: 50
         });
 
-        expect(result.bodyScaledPower).toBe(13.5);
-        expect(result.finalPower).toBe(36);
-        expect(result.statusMultiplier).toBe(1.08);
-        expect(result.riskMultiplier).toBe(1);
-        expect(result.criticalMultiplier).toBe(2.5);
-        expect(result.scoreEvent.efficiency).toBe(1);
-        expect(result.scoreEvent.riskBonusApplied).toBe(false);
+        expect(result.attackProjection).toBe(50);
+        expect(result.bodyScaledPower).toBe(50);
+        expect(result.basePhysicalDamage).toBe(50);
+        expect(result.scoreEvent.baseDamagePressure).toBe(50);
+        expect(result.scoreEvent.attackProjection).toBe(50);
     });
 
     it('never returns negative final power', () => {
@@ -81,5 +82,46 @@ describe('combat-calculator', () => {
         expect(computeCriticalMultiplier(trinity)).toBe(1.06);
         expect(computeSparkCost(5, trinity)).toBe(4.8);
         expect(GrandCalculator.resolveSparkCost(5, trinity)).toBe(4.8);
+    });
+
+    it('uses the same layered path for archer and fireball skills', () => {
+        const archer = calculateCombat({
+            attackerId: 'archer',
+            targetId: 'enemy_1',
+            skillId: 'ARCHER_SHOT',
+            basePower: 0,
+            trinity: { body: 0, mind: 0, instinct: 100 },
+            targetTrinity: { body: 0, mind: 0, instinct: 0 },
+            damageClass: 'physical',
+            attackProfile: 'projectile',
+            trackingSignature: 'projectile',
+            engagementContext: { distance: 4 },
+            scaling: [{ attribute: 'instinct', coefficient: 1 }],
+            statusMultipliers: [],
+            theoreticalMaxPower: 20
+        });
+
+        const fireball = calculateCombat({
+            attackerId: 'mage',
+            targetId: 'enemy_1',
+            skillId: 'FIREBALL',
+            basePower: 0,
+            trinity: { body: 0, mind: 100, instinct: 0 },
+            targetTrinity: { body: 0, mind: 0, instinct: 0 },
+            damageClass: 'magical',
+            attackProfile: 'spell',
+            trackingSignature: 'magic',
+            engagementContext: { distance: 4 },
+            scaling: [{ attribute: 'mind', coefficient: 1 }],
+            statusMultipliers: [],
+            theoreticalMaxPower: 20
+        });
+
+        expect(resolveCombatTuning('ARCHER_SHOT').trinityLevers.instinctDamageMultiplierPerPoint).toBe(0.5);
+        expect(resolveCombatTuning('FIREBALL').trinityLevers.mindDamageMultiplierPerPoint).toBe(0.5);
+        expect(archer.attackProjection).toBe(50);
+        expect(archer.bodyScaledPower).toBe(50);
+        expect(fireball.attackProjection).toBe(50);
+        expect(fireball.baseMagicalDamage).toBe(50);
     });
 });

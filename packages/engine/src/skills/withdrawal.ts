@@ -92,7 +92,14 @@ export const WITHDRAWAL: SkillDefinition = {
         range: SHOT_RANGE,
         cost: 0,
         cooldown: SKILL_COOLDOWN,
+        basePower: SHOT_DAMAGE,
         damage: SHOT_DAMAGE,
+    },
+    combat: {
+        damageClass: 'physical',
+        attackProfile: 'projectile',
+        trackingSignature: 'projectile',
+        weights: { instinct: 1 }
     },
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []) => {
         const effects: AtomicEffect[] = [];
@@ -122,14 +129,12 @@ export const WITHDRAWAL: SkillDefinition = {
             attackerId: attacker.id,
             targetId: targetActor.id,
             skillId: 'WITHDRAWAL',
-            basePower: SHOT_DAMAGE + (hasPartingShot ? 1 : 0),
+            basePower: (WITHDRAWAL.baseVariables.basePower ?? 0) + (hasPartingShot ? 1 : 0),
+            skillDamageMultiplier: WITHDRAWAL.baseVariables.damage ?? 1,
             trinity: extractTrinityStats(attacker),
             targetTrinity: extractTrinityStats(targetActor),
-            damageClass: 'physical',
-            attackProfile: 'projectile',
-            trackingSignature: 'projectile',
+            ...WITHDRAWAL.combat,
             engagementContext: { distance: dist },
-            scaling: [{ attribute: 'instinct', coefficient: 0.2 }],
             statusMultipliers: []
         });
 

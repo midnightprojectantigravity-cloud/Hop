@@ -35,6 +35,14 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
         range: 4,
         cost: 1,
         cooldown: 2,
+        basePower: 2,
+        damage: 1,
+    },
+    combat: {
+        damageClass: 'magical',
+        attackProfile: 'spell',
+        trackingSignature: 'magic',
+        weights: { mind: 1 }
     },
     execute: (state: GameState, attacker: Actor, target?: Point) => {
         const effects: AtomicEffect[] = [];
@@ -64,14 +72,12 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
                 attackerId: attacker.id,
                 targetId: actorAtPoint?.id || pointToKey(p),
                 skillId: 'CORPSE_EXPLOSION',
-                basePower: 2,
+                basePower: CORPSE_EXPLOSION.baseVariables.basePower ?? 0,
+                skillDamageMultiplier: CORPSE_EXPLOSION.baseVariables.damage ?? 1,
                 trinity,
                 targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
-                damageClass: 'magical',
-                attackProfile: 'spell',
-                trackingSignature: 'magic',
+                ...CORPSE_EXPLOSION.combat,
                 engagementContext: { distance: hexDistance(attacker.position, p) },
-                scaling: [{ attribute: 'mind', coefficient: 0.25 }],
                 statusMultipliers: [],
                 inDangerPreviewHex,
                 theoreticalMaxPower: 2

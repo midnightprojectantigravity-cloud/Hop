@@ -1,6 +1,8 @@
 import type { BaseUnitDefinition } from '../contracts';
 import type { TacticalDataPack } from '../contracts';
 import { listEnemyCatalogEntries } from './enemy-catalog';
+import { deriveMaxHpFromTrinity } from '../../systems/combat/trinity-resolver';
+import { deriveEnemyBestiaryStats } from './derived-combat-stats';
 
 export interface EnemyContentConsistencyIssue {
     code:
@@ -9,6 +11,8 @@ export interface EnemyContentConsistencyIssue {
         | 'WEIGHT_CLASS_MISMATCH'
         | 'SPEED_PROPENSITY_MISMATCH'
         | 'TRINITY_PROPENSITY_MISMATCH'
+        | 'DERIVED_HP_MISMATCH'
+        | 'DERIVED_COMBAT_STATS_MISMATCH'
         | 'BASE_SKILL_LOADOUT_MISMATCH'
         | 'PASSIVE_SKILL_LOADOUT_MISMATCH';
     subtype: string;
@@ -88,6 +92,49 @@ export const validateEnemyContentConsistency = (
             });
         }
 
+        const derivedHp = deriveMaxHpFromTrinity(catalogEntry.bestiary.trinity);
+        if (
+            catalogEntry.bestiary.stats.hp !== derivedHp
+            || catalogEntry.bestiary.stats.maxHp !== derivedHp
+        ) {
+            issues.push({
+                code: 'DERIVED_HP_MISMATCH',
+                subtype: catalogEntry.subtype,
+                message: `bestiary hp/maxHp {hp:${catalogEntry.bestiary.stats.hp}, maxHp:${catalogEntry.bestiary.stats.maxHp}} do not match derived trinity HP ${derivedHp}`,
+            });
+        }
+
+        const derivedStats = deriveEnemyBestiaryStats({
+            trinity: catalogEntry.bestiary.trinity,
+            bestiarySkills: catalogEntry.bestiary.skills,
+            runtimeSkills: catalogEntry.runtimeSkills,
+            cost: catalogEntry.bestiary.stats.cost,
+            weightClass: catalogEntry.bestiary.stats.weightClass
+        });
+        const combatStatDrift: string[] = [];
+        if (catalogEntry.bestiary.stats.range !== derivedStats.range) {
+            combatStatDrift.push(`range ${catalogEntry.bestiary.stats.range} != ${derivedStats.range}`);
+        }
+        if (catalogEntry.bestiary.stats.damage !== derivedStats.damage) {
+            combatStatDrift.push(`damage ${catalogEntry.bestiary.stats.damage} != ${derivedStats.damage}`);
+        }
+        if (catalogEntry.bestiary.stats.type !== derivedStats.type) {
+            combatStatDrift.push(`type ${catalogEntry.bestiary.stats.type} != ${derivedStats.type}`);
+        }
+        if (catalogEntry.bestiary.stats.speed !== derivedStats.speed) {
+            combatStatDrift.push(`speed ${catalogEntry.bestiary.stats.speed} != ${derivedStats.speed}`);
+        }
+        if (catalogEntry.bestiary.stats.actionCooldown !== derivedStats.actionCooldown) {
+            combatStatDrift.push(`actionCooldown ${catalogEntry.bestiary.stats.actionCooldown} != ${derivedStats.actionCooldown}`);
+        }
+        if (combatStatDrift.length > 0) {
+            issues.push({
+                code: 'DERIVED_COMBAT_STATS_MISMATCH',
+                subtype: catalogEntry.subtype,
+                message: `bestiary combat stats drifted from derivation: ${combatStatDrift.join(', ')}`,
+            });
+        }
+
         const expectedBaseSkills = catalogEntry.runtimeSkills.base;
         const expectedPassiveSkills = catalogEntry.runtimeSkills.passive;
 
@@ -118,4 +165,3 @@ export const assertEnemyContentConsistency = (pack: TacticalDataPack): void => {
     const details = issues.map(issue => `[${issue.code}] ${issue.subtype}: ${issue.message}`).join(' | ');
     throw new Error(`Enemy content consistency validation failed: ${details}`);
 };
-

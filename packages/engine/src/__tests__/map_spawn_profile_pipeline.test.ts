@@ -5,13 +5,13 @@ import { bootstrapTacticalData, resetTacticalDataBootstrap } from '../systems/ta
 
 describe('map spawn profile pipeline', () => {
     it('clamps floor spawn profile lookups at max configured floor', () => {
-        const floorNine = getFloorSpawnProfile(9);
+        const floorTen = getFloorSpawnProfile(10);
         const floorNinetyNine = getFloorSpawnProfile(99);
 
-        expect(floorNinetyNine.floor).toBeGreaterThanOrEqual(floorNine.floor);
-        expect(floorNinetyNine.budget).toBe(0);
-        expect(floorNinetyNine.allowedSubtypes.length).toBe(0);
-        expect(floorNine.role).toBe('boss');
+        expect(floorNinetyNine.floor).toBeGreaterThanOrEqual(floorTen.floor);
+        expect(floorNinetyNine.budget).toBe(floorTen.budget);
+        expect(floorNinetyNine.allowedSubtypes).toEqual(floorTen.allowedSubtypes);
+        expect(floorTen.role).toBe('boss');
     });
 
     it('uses catalog-backed floor spawn profiles for enemy generation', () => {
@@ -57,6 +57,24 @@ describe('map spawn profile pipeline', () => {
         expect(sentinelCount).toBeLessThanOrEqual(profile.composition.bossAnchorMax);
         expect(rangedOrBossCount).toBeLessThanOrEqual(profile.composition.rangedMax);
         expect(frontlineCount).toBeGreaterThanOrEqual(profile.composition.frontlineMin);
+
+        resetTacticalDataBootstrap();
+    });
+
+    it('reserves floor 10 for a single butcher anchor', () => {
+        resetTacticalDataBootstrap();
+        bootstrapTacticalData();
+
+        const floor = 10;
+        const seed = 'profile-pipeline-floor-10';
+        const dungeon = generateDungeon(floor, seed);
+        const enemies = generateEnemies(floor, dungeon.spawnPositions, seed);
+        const profile = getFloorSpawnProfile(floor);
+
+        expect(profile.allowedSubtypes).toEqual(['butcher']);
+        expect(enemies).toHaveLength(1);
+        expect(enemies[0]?.subtype).toBe('butcher');
+        expect(enemies[0]?.enemyType).toBe('boss');
 
         resetTacticalDataBootstrap();
     });

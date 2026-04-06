@@ -1,8 +1,11 @@
 import { gameReducer, generateInitialState } from '../../../logic';
-import type { GameState } from '../../../types';
+import type { GameState, GridSize, MapShape } from '../../../types';
+import { DEFAULT_START_RUN_MAP_SHAPE, resolveStartRunMapConfig } from '../../../constants';
+import { BASIC_MOVE } from '../../../skills/basic_move';
 import { DEFAULT_LOADOUTS } from '../../loadout';
 import { isPlayerTurn } from '../../initiative';
-import { getStrategicPolicyProfile } from '../strategic-policy';
+import { SpatialSystem } from '../../spatial-system';
+import { getGenericAiGoalProfile } from './policy';
 import { resolvePending, selectHarnessPlayerAction } from './selector';
 import { transitionMetrics } from './features';
 import {
@@ -30,17 +33,55 @@ export interface HarnessRunLoopOptions {
     maxTurns?: number;
     loadoutId?: HarnessLoadoutId;
     policyProfileId?: string;
+    startFloor?: number;
+    mapSize?: GridSize;
+    mapShape?: MapShape;
+    initialState?: GameState;
 }
+
+const validateHarnessStartState = (state: GameState, startFloor: number): void => {
+    const generationFailureCode = (state.worldgenDebug as { failure?: { code?: string } } | undefined)?.failure?.code;
+    const inBounds = SpatialSystem.isWithinBounds(state, state.player.position);
+    const legalMoveTargets = BASIC_MOVE.getValidTargets?.(state, state.player.position) || [];
+
+    if (generationFailureCode) {
+        throw new Error(
+            `Invalid harness start on floor ${startFloor}: worldgen compile failed with ${generationFailureCode}.`
+        );
+    }
+
+    if (inBounds && legalMoveTargets.length > 0) return;
+
+    const map = `${state.gridWidth}x${state.gridHeight} ${state.mapShape || DEFAULT_START_RUN_MAP_SHAPE}`;
+    throw new Error(
+        `Invalid harness start on floor ${startFloor}: player spawn ${state.player.position.q},${state.player.position.r},${state.player.position.s}`
+        + ` is ${inBounds ? 'immobile' : 'out of bounds'} on ${map}.`
+    );
+};
 
 export const runHarnessPlayerLoop = ({
     seed,
     policy,
     maxTurns = 80,
     loadoutId = 'VANGUARD',
-    policyProfileId = 'sp-v1-default'
+    policyProfileId = 'sp-v1-default',
+    startFloor = 1,
+    mapSize,
+    mapShape,
+    initialState
 }: HarnessRunLoopOptions): HarnessRunLoopResult => {
-    const profile = getStrategicPolicyProfile(policyProfileId);
-    let state = generateInitialState(1, seed, seed, undefined, DEFAULT_LOADOUTS[loadoutId]);
+    const profile = getGenericAiGoalProfile(policyProfileId);
+    const resolvedMapConfig = resolveStartRunMapConfig(mapSize, mapShape);
+    let state = initialState || generateInitialState(
+        startFloor,
+        seed,
+        seed,
+        undefined,
+        DEFAULT_LOADOUTS[loadoutId],
+        resolvedMapConfig,
+        resolvedMapConfig.mapShape
+    );
+    validateHarnessStartState(state, startFloor);
     let peakPlayerExhaustion = Number(state.player.ires?.exhaustion || 0);
     let decisionCounter = 0;
     let guard = 0;
@@ -80,7 +121,7 @@ export const runHarnessPlayerLoop = ({
                 telemetry,
                 state,
                 action,
-                selection.strategicIntent,
+                selection.goal,
                 selection.selectedFacts,
                 selection.selectionSummary
             );

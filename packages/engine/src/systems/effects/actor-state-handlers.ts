@@ -85,7 +85,17 @@ export const actorStateEffectHandlers: AtomicEffectHandlerMap = {
                         ? undefined
                         : effect.anchorPoint !== undefined
                             ? effect.anchorPoint
-                            : prior?.anchorPoint
+                            : prior?.anchorPoint,
+                    goal: effect.goal === null
+                        ? undefined
+                        : effect.goal !== undefined
+                            ? effect.goal
+                            : prior?.goal,
+                    controller: effect.controller === null
+                        ? undefined
+                        : effect.controller !== undefined
+                            ? effect.controller
+                            : prior?.controller
                 }
             };
         };

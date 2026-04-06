@@ -6,6 +6,13 @@ import { validateRange, validateAxialDirection, hasClearLineToActor } from '../s
 import { SKILL_JUICE_SIGNATURES } from '../systems/visual/juice-manifest';
 import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
+const SPEAR_THROW_COMBAT = {
+    damageClass: 'physical' as const,
+    attackProfile: 'projectile' as const,
+    trackingSignature: 'projectile' as const,
+    weights: { body: 1, instinct: 1 }
+};
+
 /**
  * Implementation of the Spear Throw skill using the Compositional Skill Framework.
  * Handles both Throwing and Recalling the spear.
@@ -24,6 +31,7 @@ export const SPEAR_THROW: SkillDefinition = {
         cooldown: 0,
         damage: 1,
     },
+    combat: SPEAR_THROW_COMBAT,
     execute: (state: GameState, shooter: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
@@ -54,13 +62,16 @@ export const SPEAR_THROW: SkillDefinition = {
                         targetId: enemy.id,
                         skillId: 'SPEAR_THROW',
                         basePower: 99,
+                        skillDamageMultiplier: SPEAR_THROW.baseVariables.damage ?? 1,
                         trinity,
                         targetTrinity: extractTrinityStats(enemy),
-                        damageClass: 'physical',
-                        attackProfile: 'melee',
-                        trackingSignature: 'melee',
+                        combat: {
+                            damageClass: 'physical',
+                            attackProfile: 'melee',
+                            trackingSignature: 'melee',
+                            weights: { body: 1, instinct: 1 }
+                        },
                         engagementContext: { distance: hexDistance(shooter.position, target) },
-                        scaling: [{ attribute: 'body', coefficient: 0.1 }, { attribute: 'instinct', coefficient: 0.2 }],
                         statusMultipliers: []
                     });
                     effects.push({ type: 'Displacement', target: 'self', destination: target, simulatePath: true });
@@ -77,13 +88,16 @@ export const SPEAR_THROW: SkillDefinition = {
                                     targetId: e.id,
                                     skillId: 'SPEAR_THROW',
                                     basePower: 1,
+                                    skillDamageMultiplier: SPEAR_THROW.baseVariables.damage ?? 1,
                                     trinity,
                                     targetTrinity: extractTrinityStats(e),
-                                    damageClass: 'physical',
-                                    attackProfile: 'melee',
-                                    trackingSignature: 'melee',
+                                    combat: {
+                                        damageClass: 'physical',
+                                        attackProfile: 'melee',
+                                        trackingSignature: 'melee',
+                                        weights: { body: 1 }
+                                    },
                                     engagementContext: { distance: hexDistance(target, n) },
-                                    scaling: [{ attribute: 'instinct', coefficient: 0.15 }],
                                     statusMultipliers: []
                                 });
                                 effects.push({ type: 'Damage', target: e.id, amount: arcCombat.finalPower, scoreEvent: arcCombat.scoreEvent });
@@ -136,13 +150,11 @@ export const SPEAR_THROW: SkillDefinition = {
                     targetId: hitEnemy.id,
                     skillId: 'SPEAR_THROW',
                     basePower: 99,
+                    skillDamageMultiplier: SPEAR_THROW.baseVariables.damage ?? 1,
                     trinity,
                     targetTrinity: extractTrinityStats(hitEnemy),
-                    damageClass: 'physical',
-                    attackProfile: 'projectile',
-                    trackingSignature: 'projectile',
+                    combat: SPEAR_THROW_COMBAT,
                     engagementContext: { distance: hexDistance(shooter.position, hitPos) },
-                    scaling: [{ attribute: 'body', coefficient: 0.1 }, { attribute: 'instinct', coefficient: 0.2 }],
                     statusMultipliers: []
                 });
                 effects.push(...SKILL_JUICE_SIGNATURES.SPEAR_THROW.impact(hitPos, true));
@@ -184,13 +196,16 @@ export const SPEAR_THROW: SkillDefinition = {
                             targetId: enemy.id,
                             skillId: 'SPEAR_THROW',
                             basePower: 1,
+                            skillDamageMultiplier: SPEAR_THROW.baseVariables.damage ?? 1,
                             trinity,
                             targetTrinity: extractTrinityStats(enemy),
-                            damageClass: 'physical',
-                            attackProfile: 'projectile',
-                            trackingSignature: 'projectile',
+                            combat: {
+                                damageClass: 'physical',
+                                attackProfile: 'projectile',
+                                trackingSignature: 'projectile',
+                                weights: { instinct: 1 }
+                            },
                             engagementContext: { distance: hexDistance(shooter.position, p) },
-                            scaling: [{ attribute: 'instinct', coefficient: 0.15 }],
                             statusMultipliers: []
                         });
                         effects.push({ type: 'Damage', target: enemy.id, amount: recallCombat.finalPower, scoreEvent: recallCombat.scoreEvent });
@@ -212,13 +227,16 @@ export const SPEAR_THROW: SkillDefinition = {
                         targetId: enemy.id,
                         skillId: 'SPEAR_THROW',
                         basePower: 1,
+                        skillDamageMultiplier: SPEAR_THROW.baseVariables.damage ?? 1,
                         trinity,
                         targetTrinity: extractTrinityStats(enemy),
-                        damageClass: 'physical',
-                        attackProfile: 'melee',
-                        trackingSignature: 'melee',
+                        combat: {
+                            damageClass: 'physical',
+                            attackProfile: 'melee',
+                            trackingSignature: 'melee',
+                            weights: { body: 1 }
+                        },
                         engagementContext: { distance: hexDistance(spearPos, n) },
-                        scaling: [{ attribute: 'body', coefficient: 0.1 }],
                         statusMultipliers: []
                     });
                     effects.push({ type: 'Damage', target: enemy.id, amount: cleaveCombat.finalPower, scoreEvent: cleaveCombat.scoreEvent });

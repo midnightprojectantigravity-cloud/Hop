@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { runBatch, runHeadToHeadBatch, simulateRun, summarizeBatch, summarizeMatchup } from '../systems/evaluation/balance-harness';
+import {
+    buildFloor10ButcherDuelState,
+    runBatch,
+    runFloor10ButcherDuelBatch,
+    runHeadToHeadBatch,
+    simulateFloor10ButcherDuelDetailed,
+    simulateRun,
+    summarizeBatch,
+    summarizeMatchup
+} from '../systems/evaluation/balance-harness';
 import { compareRuns } from '../systems/evaluation/harness-matchup';
 import { runHarnessHeadToHeadBatch, runHarnessSimulationBatch } from '../systems/evaluation/harness-batch';
 import * as EvaluationSurface from '../systems/evaluation';
@@ -61,6 +70,40 @@ describe('Balance Harness', () => {
         const seeds = ['arch-seed-1'];
         const results = runBatch(seeds, 'heuristic', 8, 'HUNTER');
         expect(results.every(r => r.loadoutId === 'HUNTER')).toBe(true);
+    });
+
+    it('supports starting harness review from a later floor', () => {
+        const run = simulateRun('floor10-harness-1', 'heuristic', 1, 'VANGUARD', 'sp-v1-default', 10);
+        expect(run.floor).toBe(10);
+        expect((run.playerActionCounts.MOVE || 0) + (run.playerActionCounts.USE_SKILL || 0)).toBeGreaterThan(0);
+    });
+
+    it('builds a focused Floor 10 butcher duel inside the authored arena', () => {
+        const duel = buildFloor10ButcherDuelState('floor10-duel-state');
+        const butcher = duel.enemies.find(enemy => enemy.subtype === 'butcher');
+
+        expect(duel.floor).toBe(10);
+        expect(duel.player.position).toEqual({ q: 4, r: 5, s: -9 });
+        expect(duel.player.behaviorState?.goal).toBe('engage');
+        expect(duel.shrinePosition).toBeUndefined();
+        expect(duel.stairsPosition).toEqual({ q: 4, r: 5, s: -9 });
+        expect(butcher?.position).toEqual({ q: 5, r: 2, s: -7 });
+        expect(butcher?.behaviorState?.goal).toBe('engage');
+    });
+
+    it('keeps the focused Floor 10 butcher duel on combat rails instead of objective drift', () => {
+        const duel = simulateFloor10ButcherDuelDetailed('floor10-duel-run', 'heuristic', 1);
+        expect(duel.run.floor).toBe(10);
+        expect(duel.run.goalCounts.engage).toBeGreaterThan(0);
+        expect((duel.run.playerActionCounts.MOVE || 0) + (duel.run.playerActionCounts.USE_SKILL || 0)).toBeGreaterThan(0);
+        expect(duel.diagnostics.actionLog.length).toBeGreaterThan(0);
+    });
+
+    it('runs focused Floor 10 butcher duel batches deterministically', () => {
+        const seeds = ['floor10-duel-batch-1', 'floor10-duel-batch-2'];
+        const first = runFloor10ButcherDuelBatch(seeds, 'heuristic', 8);
+        const second = runFloor10ButcherDuelBatch(seeds, 'heuristic', 8);
+        expect(first).toEqual(second);
     });
 
     it('produces deterministic trinity contribution telemetry', () => {
@@ -157,6 +200,10 @@ describe('Balance Harness', () => {
             'runHeadToHeadBatch',
             'summarizeBatch',
             'summarizeMatchup',
+            'buildFloor10ButcherDuelState',
+            'simulateFloor10ButcherDuel',
+            'simulateFloor10ButcherDuelDetailed',
+            'runFloor10ButcherDuelBatch',
             'simulatePvpRun',
             'runPvpBatch',
             'summarizePvpBatch',

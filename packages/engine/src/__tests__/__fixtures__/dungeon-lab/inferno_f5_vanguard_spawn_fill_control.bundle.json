@@ -1,0 +1,77 @@
+{
+  "version": "dungeon-lab-library-v1",
+  "entities": [
+    {
+      "id": "vanguard",
+      "name": "Vanguard",
+      "trinity": {
+        "body": 30,
+        "instinct": 15,
+        "mind": 5
+      },
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "AUTO_ATTACK",
+        "SPEAR_THROW",
+        "SHIELD_BASH",
+        "JUMP"
+      ]
+    },
+    {
+      "id": "footman",
+      "name": "Footman",
+      "trinity": {
+        "body": 18,
+        "instinct": 12,
+        "mind": 0
+      },
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK"
+      ]
+    }
+  ],
+  "prefabs": [],
+  "floors": [
+    {
+      "id": "inferno-f5-vanguard-spawn-fill-control",
+      "name": "Inferno F5 / Vanguard Spawn Fill Control",
+      "seed": "dungeon-lab-floor5-spawnfill",
+      "floor": 5,
+      "themeId": "inferno",
+      "mapSize": {
+        "width": 9,
+        "height": 11
+      },
+      "mapShape": "diamond",
+      "prefabPlacements": [],
+      "looseActorPlacements": [
+        {
+          "id": "vanguard",
+          "entityId": "vanguard",
+          "side": "player",
+          "position": {
+            "q": 4,
+            "r": 10,
+            "s": -14
+          },
+          "goal": "explore"
+        },
+        {
+          "id": "baseline-footman",
+          "entityId": "footman",
+          "side": "enemy",
+          "position": {
+            "q": 4,
+            "r": 7,
+            "s": -11
+          },
+          "goal": "engage",
+          "subtypeRef": "footman"
+        }
+      ],
+      "spawnFillPolicy": "fill_remaining_spawn_slots"
+    }
+  ]
+}

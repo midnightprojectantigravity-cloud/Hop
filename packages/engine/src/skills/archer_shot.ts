@@ -24,6 +24,12 @@ export const ARCHER_SHOT: SkillDefinition = {
         cooldown: 0,
         damage: 1,
     },
+    combat: {
+        damageClass: 'physical',
+        attackProfile: 'projectile',
+        trackingSignature: 'projectile',
+        weights: { instinct: 1 }
+    },
     execute: (state: GameState, shooter: Actor, target?: Point): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
@@ -60,14 +66,14 @@ export const ARCHER_SHOT: SkillDefinition = {
             attackerId: shooter.id,
             targetId: targetActor.id,
             skillId: 'ARCHER_SHOT',
-            basePower: 1,
+            basePower: 0,
+            skillDamageMultiplier: ARCHER_SHOT.baseVariables.damage ?? 1,
             trinity,
             targetTrinity: extractTrinityStats(targetActor),
             damageClass: 'physical',
             attackProfile: 'projectile',
             trackingSignature: 'projectile',
             engagementContext: { distance: hexDistance(shooter.position, target) },
-            scaling: [{ attribute: 'instinct', coefficient: 0.2 }],
             statusMultipliers: []
         });
 

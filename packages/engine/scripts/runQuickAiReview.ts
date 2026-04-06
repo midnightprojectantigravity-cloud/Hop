@@ -8,7 +8,45 @@ const loadoutId = (process.argv[4] || 'VANGUARD') as ArchetypeLoadoutId;
 const policy = (process.argv[5] || 'heuristic') as BotPolicy;
 const policyProfileId = process.argv[6] || 'sp-v1-default';
 const seedPrefix = process.argv[7] || 'quick-ai-seed';
+const startFloor = Number(process.argv[8] || 1);
+const extraArgs = process.argv.slice(9);
 const verbose = process.env.HOP_AI_REVIEW_VERBOSE === '1';
+
+const parseMapOptions = (args: string[]) => {
+    const parsed: { mapSize?: { width: number; height: number }; mapShape?: 'diamond' | 'rectangle' } = {};
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        const next = args[i + 1];
+        if (arg === '--mapWidth' && Number.isInteger(Number(next)) && Number(next) > 0) {
+            parsed.mapSize = {
+                width: Number(next),
+                height: parsed.mapSize?.height || 0
+            };
+            i += 1;
+            continue;
+        }
+        if (arg === '--mapHeight' && Number.isInteger(Number(next)) && Number(next) > 0) {
+            parsed.mapSize = {
+                width: parsed.mapSize?.width || 0,
+                height: Number(next)
+            };
+            i += 1;
+            continue;
+        }
+        if (arg === '--mapShape' && (next === 'diamond' || next === 'rectangle')) {
+            parsed.mapShape = next;
+            i += 1;
+        }
+    }
+
+    if (parsed.mapSize && (!parsed.mapSize.width || !parsed.mapSize.height)) {
+        parsed.mapSize = undefined;
+    }
+
+    return parsed;
+};
+
+const mapOptions = parseMapOptions(extraArgs);
 
 const originalLog = console.log;
 const originalWarn = console.warn;
@@ -20,7 +58,7 @@ if (!verbose) {
 const seeds = Array.from({ length: count }, (_, i) => `${seedPrefix}-${i + 1}`);
 const entitySnapshot = buildUpaEntitySnapshot(loadoutId);
 const trinityProfile = TRINITY_PROFILE_SET_VERSION;
-const runs = runBatch(seeds, policy, maxTurns, loadoutId, policyProfileId);
+const runs = runBatch(seeds, policy, maxTurns, loadoutId, policyProfileId, startFloor, mapOptions);
 
 if (!verbose) {
     console.log = originalLog;
@@ -42,7 +80,7 @@ const compactRun = (run: RunResult) => ({
     topActions: topEntries(run.playerActionCounts),
     topSkills: topEntries(run.playerSkillUsage),
     autoAttackTriggersByActionType: run.autoAttackTriggersByActionType || {},
-    strategicIntent: run.strategicIntentCounts,
+    goals: run.goalCounts,
     casts: run.totalPlayerSkillCasts,
     playerTactical: {
         attackOpportunityCount: run.pacingSignal.attackOpportunityCount,
@@ -121,14 +159,13 @@ const aggregate = {
             sinkRate: totals.casts > 0 ? Number((totals.lavaSinks / totals.casts).toFixed(4)) : 0
         };
     })(),
-    intentTotals: runs.reduce(
+    goalTotals: runs.reduce(
         (acc, run) => ({
-            offense: acc.offense + (run.strategicIntentCounts.offense || 0),
-            defense: acc.defense + (run.strategicIntentCounts.defense || 0),
-            positioning: acc.positioning + (run.strategicIntentCounts.positioning || 0),
-            control: acc.control + (run.strategicIntentCounts.control || 0)
+            engage: acc.engage + (run.goalCounts.engage || 0),
+            explore: acc.explore + (run.goalCounts.explore || 0),
+            recover: acc.recover + (run.goalCounts.recover || 0)
         }),
-        { offense: 0, defense: 0, positioning: 0, control: 0 }
+        { engage: 0, explore: 0, recover: 0 }
     ),
     playerDashboard: {
         attackConversionRate: runs.reduce((sum, run) => sum + run.pacingSignal.attackConversionCount, 0)
@@ -176,7 +213,7 @@ console.log(
     JSON.stringify(
         {
             generatedAt: new Date().toISOString(),
-            params: { count, maxTurns, loadoutId, policy, policyProfileId, seedPrefix },
+            params: { count, maxTurns, loadoutId, policy, policyProfileId, seedPrefix, startFloor, ...mapOptions },
             trinityProfile,
             entitySnapshot,
             aggregate,

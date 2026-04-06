@@ -69,7 +69,8 @@ export const INFERNO_VERTICAL_SLICE_SPEC: GenerationSpecInput = {
                 exit: point(4, 0),
                 boss_anchor: point(4, 2),
                 primary_slot: point(4, 5),
-                secondary_slot: point(4, 2)
+                secondary_slot: point(4, 2),
+                shrine: point(7, 5)
             },
             pathOverrides: {
                 primary_slot: { onPath: true, pathOrder: 120 },
@@ -79,6 +80,24 @@ export const INFERNO_VERTICAL_SLICE_SPEC: GenerationSpecInput = {
             pinnedModules: [
                 { id: 'inferno_arena_ring', anchor: point(4, 5) },
                 { id: 'inferno_ritual_dais', anchor: point(4, 2) }
+            ],
+            tileStamps: [
+                { dq: 3, dr: 2, baseId: 'WALL' },
+                { dq: 3, dr: 3, baseId: 'WALL' },
+                { dq: 4, dr: 3, baseId: 'WALL' },
+                { dq: 3, dr: 4, baseId: 'WALL' },
+                { dq: 4, dr: 4, baseId: 'WALL' },
+                { dq: 3, dr: 5, baseId: 'WALL' },
+                { dq: 3, dr: 6, baseId: 'WALL' },
+                { dq: 4, dr: 6, baseId: 'WALL' },
+                { dq: 5, dr: 6, baseId: 'WALL' },
+                { dq: 3, dr: 7, baseId: 'WALL' },
+                { dq: 4, dr: 7, baseId: 'WALL' },
+                { dq: 3, dr: 8, baseId: 'WALL' },
+                { dq: 4, dr: 8, baseId: 'WALL' }
+            ],
+            enemySeeds: [
+                { q: 5, r: 2, s: -7, subtype: 'butcher' }
             ],
             closedPaths: [
                 {

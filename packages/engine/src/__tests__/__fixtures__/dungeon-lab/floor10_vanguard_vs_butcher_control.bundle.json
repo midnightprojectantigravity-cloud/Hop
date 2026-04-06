@@ -1,0 +1,89 @@
+{
+  "version": "dungeon-lab-library-v1",
+  "entities": [
+    {
+      "id": "vanguard",
+      "name": "Vanguard",
+      "trinity": {
+        "body": 30,
+        "instinct": 15,
+        "mind": 5
+      },
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK",
+        "AUTO_ATTACK",
+        "SPEAR_THROW",
+        "SHIELD_BASH",
+        "JUMP",
+        "STANDARD_VISION",
+        "BASIC_AWARENESS",
+        "BURROW"
+      ]
+    },
+    {
+      "id": "butcher",
+      "name": "Butcher",
+      "visualAssetRef": "apps/web/public/assets/bestiary/unit.goblin.butcher.01.webp",
+      "trinity": {
+        "body": 20,
+        "instinct": 29,
+        "mind": 0
+      },
+      "skillIds": [
+        "BASIC_MOVE",
+        "BASIC_ATTACK"
+      ]
+    }
+  ],
+  "prefabs": [],
+  "floors": [
+    {
+      "id": "floor10-vanguard-vs-butcher-control",
+      "name": "Floor 10 / Vanguard vs Butcher Control",
+      "seed": "dungeon-lab-floor10",
+      "floor": 10,
+      "themeId": "inferno",
+      "mapSize": {
+        "width": 9,
+        "height": 11
+      },
+      "mapShape": "diamond",
+      "prefabPlacements": [],
+      "looseActorPlacements": [
+        {
+          "id": "vanguard",
+          "entityId": "vanguard",
+          "side": "player",
+          "position": {
+            "q": 4,
+            "r": 5,
+            "s": -9
+          },
+          "goal": "engage"
+        },
+        {
+          "id": "butcher",
+          "entityId": "butcher",
+          "side": "enemy",
+          "position": {
+            "q": 5,
+            "r": 2,
+            "s": -7
+          },
+          "goal": "engage",
+          "subtypeRef": "butcher"
+        }
+      ],
+      "objectiveOverrides": {
+        "shrinePosition": null,
+        "stairsPosition": {
+          "q": 4,
+          "r": 5,
+          "s": -9
+        }
+      },
+      "spawnFillPolicy": "none"
+    }
+  ]
+}

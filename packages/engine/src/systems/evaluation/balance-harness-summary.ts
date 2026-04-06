@@ -11,7 +11,7 @@ import type {
     TrinityContributionSummary,
 } from './harness-types';
 import { computeDynamicSkillGrades, type SkillTelemetryTotals } from './skill-grading';
-import type { StrategicIntent } from '../ai/strategic-policy';
+import type { GenericAiGoal } from '../ai/generic-goal';
 import {
     average,
     averageHistogramPerEntry,
@@ -131,11 +131,10 @@ export const summarizeBatch = (
     const timeouts = results.filter(r => r.result === 'timeout');
     const actionTypeTotals: Record<string, number> = {};
     const skillUsageTotals: Record<string, number> = {};
-    const strategicIntentTotals: Record<StrategicIntent, number> = {
-        offense: 0,
-        defense: 0,
-        positioning: 0,
-        control: 0
+    const goalTotals: Record<GenericAiGoal, number> = {
+        engage: 0,
+        explore: 0,
+        recover: 0
     };
     const skillTelemetryTotals: SkillTelemetryTotals = {};
     const autoAttackTriggerTotals: Record<string, number> = {};
@@ -173,10 +172,9 @@ export const summarizeBatch = (
     for (const run of results) {
         mergeHistogram(actionTypeTotals, run.playerActionCounts || {});
         mergeHistogram(skillUsageTotals, run.playerSkillUsage || {});
-        strategicIntentTotals.offense += run.strategicIntentCounts?.offense || 0;
-        strategicIntentTotals.defense += run.strategicIntentCounts?.defense || 0;
-        strategicIntentTotals.positioning += run.strategicIntentCounts?.positioning || 0;
-        strategicIntentTotals.control += run.strategicIntentCounts?.control || 0;
+        goalTotals.engage += run.goalCounts?.engage || 0;
+        goalTotals.explore += run.goalCounts?.explore || 0;
+        goalTotals.recover += run.goalCounts?.recover || 0;
         mergeSkillTelemetry(skillTelemetryTotals, run.playerSkillTelemetry || {});
         mergeHistogram(autoAttackTriggerTotals, run.autoAttackTriggersByActionType || {});
         triangleSignalTotals.samples += run.triangleSignal?.samples || 0;
@@ -259,11 +257,10 @@ export const summarizeBatch = (
 
     const divisor = results.length || 1;
     const avgSkillUsagePerRun = averageHistogramPerEntry(skillUsageTotals, results.length);
-    const avgStrategicIntentPerRun: Record<StrategicIntent, number> = {
-        offense: strategicIntentTotals.offense / divisor,
-        defense: strategicIntentTotals.defense / divisor,
-        positioning: strategicIntentTotals.positioning / divisor,
-        control: strategicIntentTotals.control / divisor
+    const avgGoalPerRun: Record<GenericAiGoal, number> = {
+        engage: goalTotals.engage / divisor,
+        explore: goalTotals.explore / divisor,
+        recover: goalTotals.recover / divisor
     };
     const triangleSignal: TriangleSignalSummary = {
         samples: triangleSignalTotals.samples,
@@ -385,8 +382,8 @@ export const summarizeBatch = (
         actionTypeTotals,
         skillUsageTotals,
         avgSkillUsagePerRun,
-        strategicIntentTotals,
-        avgStrategicIntentPerRun,
+        goalTotals,
+        avgGoalPerRun,
         avgPlayerSkillCastsPerRun: average(results.map(r => r.totalPlayerSkillCasts || 0)),
         attackConversionRate: pacingSignalTotals.attackConversionCount / Math.max(1, pacingSignalTotals.attackOpportunityCount),
         threatenNextTurnConversionRate: pacingSignalTotals.threatenNextTurnConversionCount / Math.max(1, pacingSignalTotals.threatenNextTurnOpportunityCount),

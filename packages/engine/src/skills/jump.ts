@@ -10,6 +10,17 @@ import {
     validateMovementDestination
 } from '../systems/capabilities/movement-policy';
 
+const resolveJumpLandingPolicy = (
+    movementPolicy: ReturnType<typeof resolveSkillMovementPolicy>
+) => ({
+    ignoreWalls: movementPolicy.ignoreWalls,
+    movementModel: {
+        ...movementPolicy.movementModel,
+        pathing: 'walk' as const,
+        ignoreGroundHazards: false
+    }
+});
+
 /**
  * Implementation of the Jump skill using the Compositional Skill Framework.
  */
@@ -23,6 +34,14 @@ export const JUMP: SkillDefinition = {
         range: 2,
         cost: 0,
         cooldown: 2,
+        basePower: 99,
+        damage: 1,
+    },
+    combat: {
+        damageClass: 'physical',
+        attackProfile: 'melee',
+        trackingSignature: 'melee',
+        weights: { body: 1 }
     },
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
@@ -44,6 +63,7 @@ export const JUMP: SkillDefinition = {
             basePathing: 'flight',
             baseIgnoreGroundHazards: true
         });
+        const landingPolicy = resolveJumpLandingPolicy(movementPolicy);
         const range = movementPolicy.range;
 
         // 2. Precise Range Validation
@@ -53,7 +73,7 @@ export const JUMP: SkillDefinition = {
         }
 
         // 3. Occupancy & Environmental Check
-        const destination = validateMovementDestination(state, attacker, target, movementPolicy, {
+        const destination = validateMovementDestination(state, attacker, target, landingPolicy, {
             occupancy: hasMeteor ? 'enemy' : 'none'
         });
         if (!destination.isValid) {
@@ -74,13 +94,11 @@ export const JUMP: SkillDefinition = {
                 attackerId: attacker.id,
                 targetId: obstacle.id,
                 skillId: 'JUMP',
-                basePower: 99,
+                basePower: JUMP.baseVariables.basePower ?? 0,
+                skillDamageMultiplier: JUMP.baseVariables.damage ?? 1,
                 trinity: extractTrinityStats(attacker),
                 targetTrinity: extractTrinityStats(obstacle),
-                damageClass: 'physical',
-                attackProfile: 'melee',
-                trackingSignature: 'melee',
-                scaling: [{ attribute: 'body', coefficient: 0.15 }],
+                ...JUMP.combat,
                 statusMultipliers: []
             });
             effects.push({ type: 'Damage', target: obstacle.id, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
@@ -157,12 +175,13 @@ export const JUMP: SkillDefinition = {
             basePathing: 'flight',
             baseIgnoreGroundHazards: true
         });
+        const landingPolicy = resolveJumpLandingPolicy(movementPolicy);
         const range = movementPolicy.range;
         const hasMeteor = upgrades.has('METEOR_IMPACT');
 
         return SpatialSystem.getAreaTargets(state, origin, range).filter(p => {
             if (hexEquals(p, origin)) return false;
-            return validateMovementDestination(state, actor, p, movementPolicy, {
+            return validateMovementDestination(state, actor, p, landingPolicy, {
                 occupancy: hasMeteor ? 'enemy' : 'none'
             }).isValid;
         });

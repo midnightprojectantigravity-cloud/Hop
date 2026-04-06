@@ -2933,7 +2933,7 @@ const generateFloorEnemiesInternal = (
         if (!entry || remainingBudget < entry.bestiary.stats.cost) continue;
         const key = pointToKey(forced);
         if (usedKeys.has(key)) continue;
-        const enemy = instantiateSeed(forced.subtype, forced);
+        const enemy = instantiateSeed(forced.subtype, createHex(forced.q, forced.r));
         if (!enemy) continue;
         usedKeys.add(key);
         enemies.push(enemy);

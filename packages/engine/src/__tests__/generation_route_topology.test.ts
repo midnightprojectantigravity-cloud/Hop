@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileStandaloneFloor, createGenerationState } from '../generation';
+import { compileStandaloneFloor, createGenerationState, hexDistanceInt } from '../generation';
 
 describe('generated route topology', () => {
     it('builds multi-route pressure floors with bounded straight runs and visible pressure beats', () => {
@@ -51,9 +51,20 @@ describe('generated route topology', () => {
             generationState: createGenerationState('route-topology-boss')
         });
         const summary = result.generationState.currentFloorSummary?.pathSummary;
+        const arenaCenter = result.dungeon.rooms[0]?.center || { q: 3, r: 5, s: -8 };
+        const centralBlockers = Array.from(result.dungeon.tiles.values()).filter(tile =>
+            tile.baseId === 'WALL'
+            && hexDistanceInt(tile.position, arenaCenter) <= 3
+        );
 
         expect(result.verificationReport.code).toBe('OK');
+        expect(result.artifact.enemySpawns).toHaveLength(1);
+        expect(result.artifact.enemySpawns[0]?.subtype).toBe('butcher');
+        expect(result.artifact.enemySpawns[0]?.position).toEqual({ q: 5, r: 2, s: -7 });
         expect(summary?.routeCount).toBe(1);
         expect(summary?.trapClusterCount).toBe(0);
+        expect(summary?.maxStraightRun).toBeLessThanOrEqual(4);
+        expect(centralBlockers.length).toBeGreaterThanOrEqual(13);
+        expect(centralBlockers.some(tile => hexDistanceInt(tile.position, arenaCenter) === 3)).toBe(true);
     });
 });

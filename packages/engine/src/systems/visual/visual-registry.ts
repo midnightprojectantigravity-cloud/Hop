@@ -174,6 +174,14 @@ export const ENTITY_VISUALS: Record<string, EntityVisualConfig> = {
     },
 
     // Boss
+    butcher: {
+        icon: 'B',
+        shape: 'diamond',
+        color: '#dc2626',
+        borderColor: '#fbbf24',
+        isRanged: false,
+        size: 1.5,
+    },
     sentinel: {
         icon: '👑',
         shape: 'diamond',

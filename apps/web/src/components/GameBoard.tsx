@@ -25,6 +25,7 @@ import type {
 import {
     type CameraInsetsPx,
     type CameraRect,
+    expandRect,
 } from '../visual/camera';
 import { createCameraEnvelope } from '../visual/camera-envelope';
 import { resolveTileAssetId } from '../visual/asset-selectors';
@@ -80,6 +81,8 @@ const getHexPoints = (size: number): string => {
     }
     return points.join(' ');
 };
+
+export const BOARD_EDGE_PADDING_WORLD = Math.sqrt(3) * TILE_SIZE;
 
 export const resolveBoardCells = (gameState: GameState): Point[] => {
     if (gameState.tiles.size > 0) {
@@ -181,11 +184,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             maxY = Math.max(maxY, y + halfHeight);
         });
 
-        return {
-            minX,
-            minY,
+        const paddedRect = expandRect({
+            x: minX,
+            y: minY,
             width: maxX - minX,
             height: maxY - minY
+        }, BOARD_EDGE_PADDING_WORLD);
+
+        return {
+            minX: paddedRect.x,
+            minY: paddedRect.y,
+            width: paddedRect.width,
+            height: paddedRect.height
         };
     }, [cells]);
 
@@ -200,7 +210,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         width: bounds.width,
         height: bounds.height
     }), [bounds.minX, bounds.minY, bounds.width, bounds.height]);
-    const cameraEnvelope = useMemo(() => createCameraEnvelope(cells, TILE_SIZE), [cells]);
+    const cameraEnvelope = useMemo(
+        () => createCameraEnvelope(cells, TILE_SIZE, BOARD_EDGE_PADDING_WORLD),
+        [cells]
+    );
     const {
         movementSkillByTargetKey,
         movementTargetSet,

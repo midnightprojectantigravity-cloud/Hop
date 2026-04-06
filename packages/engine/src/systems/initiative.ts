@@ -78,6 +78,10 @@ export const getInitiativeScore = (actor: Actor, ruleset?: GameState['ruleset'])
  */
 export const buildInitiativeQueue = (state: GameState): InitiativeQueue => {
     const entries: InitiativeEntry[] = [];
+    const resolveTieBreakKey = (actor: Actor): string =>
+        state.simulationMode === 'arena_symmetric'
+            ? (actor.behaviorState?.arenaTieBreakKey || actor.id)
+            : actor.id;
 
     // Add player
     entries.push({
@@ -97,12 +101,32 @@ export const buildInitiativeQueue = (state: GameState): InitiativeQueue => {
         });
     }
 
-    // Sort by initiative (descending - higher goes first), with ID tie-breaker (Player always wins ties)
+    for (const companion of state.companions || []) {
+        entries.push({
+            actorId: companion.id,
+            initiative: getInitiativeScore(companion, state.ruleset),
+            hasActed: false,
+            turnStartPosition: undefined,
+        });
+    }
+
+    // Sort by initiative (descending - higher goes first). Standard gameplay keeps
+    // the historical player-slot tie-break, while arena mode is fully symmetric.
     entries.sort((a, b) => {
         if (b.initiative !== a.initiative) return b.initiative - a.initiative;
-        if (a.actorId === 'player') return -1;
-        if (b.actorId === 'player') return 1;
-        return a.actorId.localeCompare(b.actorId);
+        if (state.simulationMode !== 'arena_symmetric') {
+            if (a.actorId === 'player') return -1;
+            if (b.actorId === 'player') return 1;
+        }
+        const leftActor = a.actorId === state.player.id
+            ? state.player
+            : state.enemies.find(enemy => enemy.id === a.actorId) || state.companions?.find(companion => companion.id === a.actorId);
+        const rightActor = b.actorId === state.player.id
+            ? state.player
+            : state.enemies.find(enemy => enemy.id === b.actorId) || state.companions?.find(companion => companion.id === b.actorId);
+        const leftKey = leftActor ? resolveTieBreakKey(leftActor) : a.actorId;
+        const rightKey = rightActor ? resolveTieBreakKey(rightActor) : b.actorId;
+        return leftKey.localeCompare(rightKey);
     });
 
     // console.log(`DEBUG: Built queue with ${entries.length} entries: ${entries.map(e => e.actorId).join(', ')}`);
@@ -127,7 +151,9 @@ export const getCurrentActor = (state: GameState): Actor | null => {
         return state.player;
     }
 
-    return state.enemies.find(e => e.id === entry.actorId) ?? null;
+    return state.enemies.find(e => e.id === entry.actorId)
+        || state.companions?.find(companion => companion.id === entry.actorId)
+        || null;
 };
 
 /**
@@ -333,9 +359,13 @@ export const formatInitiativeQueue = (state: GameState): string => {
     const lines = queue.entries.map((entry, index) => {
         const actor = entry.actorId === state.player.id
             ? state.player
-            : state.enemies.find(e => e.id === entry.actorId);
+            : state.enemies.find(e => e.id === entry.actorId) || state.companions?.find(companion => companion.id === entry.actorId);
 
-        const name = actor?.type === 'player' ? 'Player' : (actor?.subtype ?? 'Unknown');
+        const name = actor?.type === 'player'
+            ? 'Player'
+            : actor?.companionOf
+                ? `Companion:${actor?.subtype ?? actor?.id ?? 'Unknown'}`
+                : (actor?.subtype ?? 'Unknown');
         const marker = index === queue.currentIndex ? '→ ' : '  ';
         const acted = entry.hasActed ? ' ✓' : '';
 

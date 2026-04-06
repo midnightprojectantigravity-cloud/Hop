@@ -24,6 +24,7 @@ export const HubRouteShell = ({
   hubPath,
   biomesPath,
   themeLabPath,
+  dungeonLabPath,
   settingsPath,
   leaderboardPath,
   tutorialsPath,
@@ -70,6 +71,7 @@ export const HubRouteShell = ({
   hubPath: string;
   biomesPath: string;
   themeLabPath: string;
+  dungeonLabPath: string;
   settingsPath: string;
   leaderboardPath: string;
   tutorialsPath: string;
@@ -190,6 +192,7 @@ export const HubRouteShell = ({
             homePath={homePath}
             biomesPath={biomesPath}
             themeLabPath={themeLabPath}
+            dungeonLabPath={dungeonLabPath}
             settingsPath={settingsPath}
             leaderboardPath={leaderboardPath}
             tutorialsPath={tutorialsPath}

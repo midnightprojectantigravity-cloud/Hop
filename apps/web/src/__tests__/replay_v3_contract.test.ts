@@ -79,4 +79,25 @@ describe('replay v3 contract', () => {
     expect(rejected.record).toBeUndefined();
     expect((rejected.error || '').toLowerCase()).toContain('replayenvelopev3');
   });
+
+  it('replay controller honors a provided initState for retained custom simulations', () => {
+    const state = generateInitialState(1, 'custom-init-seed');
+    const built = buildReplayRecordFromGameState({
+      ...state,
+      gameStatus: 'won' as const
+    }) as ReplayRecord;
+    const customInitState = {
+      ...state,
+      floor: 10,
+      turnNumber: 7
+    };
+
+    const result = validateReplayRecordForPlayback({
+      ...built,
+      initState: customInitState
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.initState).toEqual(customInitState);
+  });
 });

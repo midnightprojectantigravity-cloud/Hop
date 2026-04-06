@@ -1,4 +1,5 @@
 export * from './ai';
+export * from './generic-goal';
 export * from './strategic-policy';
 export * from './strategy-registry';
 export * from './core/types';
@@ -8,3 +9,4 @@ export * from './enemy/types';
 export * from './enemy/policies';
 export { selectEnemyDecision } from './enemy/selector';
 export * from './enemy/intent-adapter';
+export { resolvePending } from './player/selector';

@@ -1,11 +1,14 @@
+import {
+  DEFAULT_START_RUN_MAP_SHAPE as ENGINE_DEFAULT_START_RUN_MAP_SHAPE,
+  DEFAULT_START_RUN_MAP_SIZE as ENGINE_DEFAULT_START_RUN_MAP_SIZE,
+} from '@hop/engine';
 import type { Action, GridSize, MapShape } from '@hop/engine';
 
 export const DEFAULT_START_RUN_MAP_SIZE: GridSize = {
-  width: 9,
-  height: 11
+  ...ENGINE_DEFAULT_START_RUN_MAP_SIZE
 };
 
-export const DEFAULT_START_RUN_MAP_SHAPE: MapShape = 'diamond';
+export const DEFAULT_START_RUN_MAP_SHAPE: MapShape = ENGINE_DEFAULT_START_RUN_MAP_SHAPE;
 
 export type MapSizeInputMode = 'usable' | 'grid';
 

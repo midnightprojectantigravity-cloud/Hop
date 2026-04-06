@@ -19,7 +19,14 @@ export const SENTINEL_BLAST: SkillDefinition = {
         range: 3,
         cost: 0,
         cooldown: 0,
-        damage: 2
+        basePower: 2,
+        damage: 1
+    },
+    combat: {
+        damageClass: 'magical',
+        attackProfile: 'spell',
+        trackingSignature: 'magic',
+        weights: { mind: 1 }
     },
     execute: (_state: GameState, _attacker: Actor, target?: Point) => {
         if (!target) return { effects: [], messages: [] };
@@ -28,13 +35,11 @@ export const SENTINEL_BLAST: SkillDefinition = {
             attackerId: _attacker.id,
             targetId: pointToKey(target),
             skillId: 'SENTINEL_BLAST',
-            basePower: 2,
+            basePower: SENTINEL_BLAST.baseVariables.basePower ?? 0,
+            skillDamageMultiplier: SENTINEL_BLAST.baseVariables.damage ?? 1,
             trinity,
-            damageClass: 'magical',
-            attackProfile: 'spell',
-            trackingSignature: 'magic',
+            ...SENTINEL_BLAST.combat,
             engagementContext: { distance: hexDistance(_attacker.position, target) },
-            scaling: [{ attribute: 'mind', coefficient: 0.2 }],
             statusMultipliers: []
         });
 
@@ -65,13 +70,11 @@ export const SENTINEL_BLAST: SkillDefinition = {
                 attackerId: _attacker.id,
                 targetId: pointToKey(n),
                 skillId: 'SENTINEL_BLAST',
-                basePower: 1,
+                basePower: SENTINEL_BLAST.baseVariables.basePower ?? 0,
+                skillDamageMultiplier: SENTINEL_BLAST.baseVariables.damage ?? 1,
                 trinity,
-                damageClass: 'magical',
-                attackProfile: 'spell',
-                trackingSignature: 'magic',
+                ...SENTINEL_BLAST.combat,
                 engagementContext: { distance: hexDistance(_attacker.position, n) },
-                scaling: [{ attribute: 'mind', coefficient: 0.1 }],
                 statusMultipliers: []
             });
             effects.push({ type: 'Damage', target: n, amount: combat.finalPower, scoreEvent: combat.scoreEvent });

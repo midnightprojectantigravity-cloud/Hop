@@ -5,6 +5,13 @@ import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
+const SNEAK_ATTACK_COMBAT = {
+    damageClass: 'physical' as const,
+    attackProfile: 'melee' as const,
+    trackingSignature: 'melee' as const,
+    weights: { instinct: 1 }
+};
+
 /**
  * SNEAK_ATTACK Skill
  * Melee range. Deals extra damage if stealthCounter > 0.
@@ -19,7 +26,9 @@ export const SNEAK_ATTACK: SkillDefinition = {
         range: 1,
         cost: 0,
         cooldown: 0,
+        damage: 3,
     },
+    combat: SNEAK_ATTACK_COMBAT,
     execute: (state: GameState, attacker: Actor, target?: Point) => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
@@ -33,18 +42,15 @@ export const SNEAK_ATTACK: SkillDefinition = {
 
         // Damage Calculation
         const isStealthed = (attacker.stealthCounter || 0) > 0;
-        const baseDamage = isStealthed ? 5 : 3;
         const combat = calculateCombat({
             attackerId: attacker.id,
             targetId: enemy.id,
             skillId: 'SNEAK_ATTACK',
-            basePower: baseDamage,
+            basePower: 0,
+            skillDamageMultiplier: (SNEAK_ATTACK.baseVariables.damage ?? 1) + (isStealthed ? 2 : 0),
             trinity: extractTrinityStats(attacker),
             targetTrinity: extractTrinityStats(enemy),
-            damageClass: 'physical',
-            attackProfile: 'melee',
-            trackingSignature: 'melee',
-            scaling: [{ attribute: 'instinct', coefficient: 0.25 }],
+            ...SNEAK_ATTACK_COMBAT,
             statusMultipliers: []
         });
 

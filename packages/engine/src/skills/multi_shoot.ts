@@ -7,6 +7,13 @@ import { validateAxialDirection, validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
 import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
+const MULTI_SHOOT_COMBAT = {
+    damageClass: 'physical' as const,
+    attackProfile: 'projectile' as const,
+    trackingSignature: 'projectile' as const,
+    weights: { instinct: 1, mind: 1 }
+};
+
 /**
  * MULTI_SHOOT Skill
  * Axial range 4, centered on target.
@@ -22,6 +29,13 @@ export const MULTI_SHOOT: SkillDefinition = {
         range: 4,
         cost: 1,
         cooldown: 1,
+        damage: 1,
+    },
+    combat: {
+        damageClass: 'physical',
+        attackProfile: 'projectile',
+        trackingSignature: 'projectile',
+        weights: { instinct: 1, mind: 1 }
     },
     execute: (_state: GameState, attacker: Actor, target?: Point) => {
         const effects: AtomicEffect[] = [];
@@ -44,14 +58,12 @@ export const MULTI_SHOOT: SkillDefinition = {
                 attackerId: attacker.id,
                 targetId: actorAtPoint?.id || pointToKey(p),
                 skillId: 'MULTI_SHOOT',
-                basePower: 1,
+                basePower: 0,
+                skillDamageMultiplier: MULTI_SHOOT.baseVariables.damage ?? 1,
                 trinity,
                 targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
-                damageClass: 'physical',
-                attackProfile: 'projectile',
-                trackingSignature: 'projectile',
                 engagementContext: { distance: hexDistance(attacker.position, p) },
-                scaling: [{ attribute: 'instinct', coefficient: 0.1 }, { attribute: 'mind', coefficient: 0.1 }],
+                ...MULTI_SHOOT_COMBAT,
                 statusMultipliers: []
             });
             effects.push({ type: 'Damage', target: p, amount: combat.finalPower, reason: 'multi_shoot', scoreEvent: combat.scoreEvent });

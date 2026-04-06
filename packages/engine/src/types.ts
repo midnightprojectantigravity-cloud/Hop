@@ -385,6 +385,8 @@ export type AtomicEffect =
         overlays?: AiBehaviorOverlayInstance[];
         anchorActorId?: string | null;
         anchorPoint?: Point | null;
+        goal?: GenericAiGoal | null;
+        controller?: 'manual' | 'generic_ai' | null;
         clearOverlays?: boolean;
     }
     | { type: 'GameOver'; reason: 'PLAYER_DIED' | 'OUT_OF_TIME' };
@@ -580,6 +582,8 @@ export interface SkillModifier {
     description: string;
     modifyRange?: number;
     modifyCooldown?: number;
+    modifyDamage?: number;
+    requiresStationary?: boolean;
     extraEffects?: AtomicEffect[];
 }
 
@@ -652,6 +656,8 @@ export interface ResolvedAiBehaviorProfile extends AiBehaviorProfile {
     sourceIds: string[];
     hasDirectDamagePlan: boolean;
 }
+
+export type GenericAiGoal = 'engage' | 'explore' | 'recover';
 
 export type AiSparkBand =
     | 'rested_hold'
@@ -961,8 +967,19 @@ export interface SkillDefinition {
         range: number;
         cost: number;
         cooldown: number;
+        basePower?: number;
         damage?: number;
         momentum?: number;
+    };
+    combat?: {
+        damageClass: 'physical' | 'magical' | 'true';
+        attackProfile: 'melee' | 'projectile' | 'spell' | 'status';
+        trackingSignature: 'melee' | 'projectile' | 'magic';
+        weights: {
+            body?: number;
+            mind?: number;
+            instinct?: number;
+        };
     };
     /** Core Logic: Functional execution returning a list of effects */
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades?: string[], context?: Record<string, any>) => SkillExecutionResult;
@@ -1055,6 +1072,9 @@ export interface Actor {
         overlays: AiBehaviorOverlayInstance[];
         anchorActorId?: string;
         anchorPoint?: Point;
+        goal?: GenericAiGoal;
+        controller?: 'manual' | 'generic_ai';
+        arenaTieBreakKey?: string;
     };
     ires?: IresRuntimeState;
 }
@@ -1104,6 +1124,7 @@ export interface GameState {
     gridWidth: number;
     gridHeight: number;
     mapShape?: MapShape;
+    simulationMode?: 'default' | 'arena_symmetric';
     gameStatus: 'hub' | 'playing' | 'won' | 'lost' | 'choosing_upgrade';
     message: string[];
     hasSpear: boolean;

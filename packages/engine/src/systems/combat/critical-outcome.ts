@@ -1,3 +1,4 @@
+import { COMBAT_TUNING_VARIABLES } from '../../data/combat-tuning-ledger';
 import type { HitQualityTier } from './hit-quality';
 
 export interface CriticalOutcomeInput {
@@ -19,11 +20,11 @@ export interface CriticalOutcomeResult {
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
 export const calculateCriticalOutcome = (input: CriticalOutcomeInput): CriticalOutcomeResult => {
-    const baseCritSeverity = Number.isFinite(input.baseCritSeverity) ? Number(input.baseCritSeverity) : 2.5;
-    const bodyResilience = clamp(Math.max(0, Number(input.defenderBody || 0)) * 0.05, 0, 1.5);
-    const critSeverity = Math.max(1.1, baseCritSeverity - bodyResilience);
+    const baseCritSeverity = Number.isFinite(input.baseCritSeverity) ? Number(input.baseCritSeverity) : COMBAT_TUNING_VARIABLES.critical.baseSeverity;
+    const bodyResilience = clamp(Math.max(0, Number(input.defenderBody || 0)) * COMBAT_TUNING_VARIABLES.critical.bodyResiliencePerPoint, 0, 1.5);
+    const critSeverity = Math.max(COMBAT_TUNING_VARIABLES.critical.minSeverity, baseCritSeverity - bodyResilience);
     const instinct = Math.max(1, Number(input.attackerInstinct || 1));
-    const critChance = clamp((Math.log(instinct) / 5), 0, 1);
+    const critChance = clamp((Math.log(instinct) / COMBAT_TUNING_VARIABLES.critical.critChanceLogDivisor), 0, 1);
 
     if (input.hitQualityTier !== 'critical' && input.hitQualityTier !== 'multi_critical') {
         return {

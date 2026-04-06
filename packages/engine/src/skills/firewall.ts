@@ -21,6 +21,14 @@ export const FIREWALL: SkillDefinition = {
         range: 4,
         cost: 1,
         cooldown: 4,
+        basePower: 1,
+        damage: 1,
+    },
+    combat: {
+        damageClass: 'magical',
+        attackProfile: 'spell',
+        trackingSignature: 'magic',
+        weights: { mind: 1 }
     },
     execute: (state: GameState, attacker: Actor, target?: Point) => {
         const effects: AtomicEffect[] = [];
@@ -64,14 +72,12 @@ export const FIREWALL: SkillDefinition = {
                         attackerId: attacker.id,
                         targetId: actor.id,
                         skillId: 'FIREWALL',
-                        basePower: 1,
+                        basePower: FIREWALL.baseVariables.basePower ?? 0,
+                        skillDamageMultiplier: FIREWALL.baseVariables.damage ?? 1,
                         trinity: extractTrinityStats(attacker),
                         targetTrinity: extractTrinityStats(actor),
-                        damageClass: 'magical',
-                        attackProfile: 'spell',
-                        trackingSignature: 'magic',
+                        ...FIREWALL.combat,
                         engagementContext: { distance: hexDistance(attacker.position, p) },
-                        scaling: [{ attribute: 'mind', coefficient: 0.15 }],
                         statusMultipliers: surfaceMultiplier === 1
                             ? []
                             : [{ id: `surface_${surfaceStatus}`, multiplier: surfaceMultiplier }]

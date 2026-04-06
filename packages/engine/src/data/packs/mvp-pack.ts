@@ -63,7 +63,7 @@ const createEnemyUnit = (config: {
     },
     derivedStats: {
         maxHp: {
-            formula: 'trinity_hp_v1'
+            formulaId: 'trinity_hp_v1'
         }
     },
     physics: {
@@ -200,6 +200,7 @@ export const TACTICAL_CORE_MVP_PACK: TacticalDataPack = {
         createEnemyUnitFromBestiary('archer'),
         createEnemyUnitFromBestiary('bomber'),
         createEnemyUnitFromBestiary('warlock'),
+        createEnemyUnitFromBestiary('butcher'),
         createEnemyUnitFromBestiary('sentinel')
     ],
     skills: [SHIELD_BASH_V1]

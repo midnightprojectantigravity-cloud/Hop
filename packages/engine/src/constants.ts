@@ -1,3 +1,5 @@
+import type { GridSize, MapShape } from './types';
+
 /**
  * GAME CONSTANTS
  * Central repository for stats, types, and grid configuration.
@@ -7,6 +9,37 @@
 export const GRID_WIDTH = 7;   // Tiles wide
 export const GRID_HEIGHT = 9;  // Tiles tall
 export const TILE_SIZE = 36;   // Pixel size for mobile-friendly rendering
+
+// Canonical run-start defaults shared by the web app and evaluation harness.
+export const DEFAULT_START_RUN_MAP_SIZE: GridSize = {
+    width: 9,
+    height: 11
+};
+
+export const DEFAULT_START_RUN_MAP_SHAPE: MapShape = 'diamond';
+
+export const resolveStartRunMapConfig = (
+    mapSize?: GridSize,
+    mapShape?: MapShape
+): GridSize & { mapShape: MapShape } => {
+    const width = Number(mapSize?.width);
+    const height = Number(mapSize?.height);
+    const resolvedMapShape: MapShape = mapShape === 'rectangle' ? 'rectangle' : DEFAULT_START_RUN_MAP_SHAPE;
+    const normalizedWidth = Number.isInteger(width) && width > 0 ? width : DEFAULT_START_RUN_MAP_SIZE.width;
+    const normalizedHeight = Number.isInteger(height) && height > 0 ? height : DEFAULT_START_RUN_MAP_SIZE.height;
+    const widthWithShapeConstraint = resolvedMapShape === 'diamond' && normalizedWidth % 2 === 0
+        ? normalizedWidth + 1
+        : normalizedWidth;
+    const heightWithShapeConstraint = resolvedMapShape === 'diamond' && normalizedHeight % 2 === 0
+        ? normalizedHeight + 1
+        : normalizedHeight;
+
+    return {
+        width: widthWithShapeConstraint,
+        height: heightWithShapeConstraint,
+        mapShape: resolvedMapShape
+    };
+};
 
 // Legacy constant for backwards compat (will be phased out)
 export const GRID_RADIUS = 5;

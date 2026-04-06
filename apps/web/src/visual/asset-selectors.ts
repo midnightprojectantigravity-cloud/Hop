@@ -65,6 +65,8 @@ export const resolveUnitAssetId = (actor: Actor): string => {
       return 'unit.enemy.warlock.01';
     case 'bomber':
       return 'unit.enemy.bomber.01';
+    case 'butcher':
+      return 'unit.enemy.butcher.01';
     case 'sentinel':
       return 'unit.enemy.sentinel.01';
     case 'bomb':
@@ -105,6 +107,7 @@ const UNIT_FALLBACK_SVG_BY_ID: Record<string, string> = {
   'unit.enemy.archer.01': '/assets/units/unit.enemy.archer.01.svg',
   'unit.enemy.warlock.01': '/assets/units/unit.enemy.warlock.01.svg',
   'unit.enemy.bomber.01': '/assets/units/unit.enemy.bomber.01.svg',
+  'unit.enemy.butcher.01': '/assets/units/unit.enemy.boss.01.svg',
   'unit.enemy.sentinel.01': '/assets/units/unit.enemy.boss.01.svg',
   'unit.enemy.bomb.01': '/assets/units/unit.enemy.bomb.01.svg',
   'unit.enemy.boss.01': '/assets/units/unit.enemy.boss.01.svg'

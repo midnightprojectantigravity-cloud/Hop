@@ -135,6 +135,36 @@ describe('behavior profile resolution', () => {
         expect(resolved.sourceIds).not.toContain('skill_ready:ARCHER_SHOT');
     });
 
+    it('does not change melee behavior profile resolution based on subtype labels alone', () => {
+        const footman = createEnemy({
+            id: 'behavior-footman-shell',
+            subtype: 'footman',
+            position: createHex(4, 2),
+            hp: 18,
+            maxHp: 18,
+            speed: 1,
+            skills: ['BASIC_MOVE', 'BASIC_ATTACK']
+        });
+        const butcher = createEnemy({
+            id: 'behavior-butcher-shell',
+            subtype: 'butcher',
+            position: createHex(5, 2),
+            hp: 18,
+            maxHp: 18,
+            speed: 1,
+            skills: ['BASIC_MOVE', 'BASIC_ATTACK']
+        });
+        const state = buildState({
+            seed: 'behavior-butcher-shell',
+            enemies: [footman, butcher]
+        });
+
+        const footmanResolved = resolveBehaviorProfile(state, state.enemies[0]);
+        const butcherResolved = resolveBehaviorProfile(state, state.enemies[1]);
+
+        expect(butcherResolved).toEqual(footmanResolved);
+    });
+
     it('applies support fallback when an actor has no direct damage path', () => {
         const actor = createEnemy({
             id: 'behavior-support',

@@ -16,6 +16,7 @@ const loadBiomeSandboxModule = createCachedLoader(() => import('../components/Bi
 const loadHubScreenModule = createCachedLoader(() => import('./HubScreen'));
 const loadGameScreenModule = createCachedLoader(() => import('./GameScreen'));
 const loadThemeManagerScreenModule = createCachedLoader(() => import('./ThemeManagerScreen'));
+const loadDungeonLabScreenModule = createCachedLoader(() => import('./DungeonLabScreen'));
 const loadSettingsScreenModule = createCachedLoader(() => import('./SettingsScreen'));
 const loadLeaderboardScreenModule = createCachedLoader(() => import('./LeaderboardScreen'));
 const loadTutorialReplayScreenModule = createCachedLoader(() => import('./TutorialReplayScreen'));
@@ -40,6 +41,11 @@ export const LazyThemeManagerScreen = lazy(async () => {
   return { default: module.ThemeManagerScreen };
 });
 
+export const LazyDungeonLabScreen = lazy(async () => {
+  const module = await loadDungeonLabScreenModule();
+  return { default: module.DungeonLabScreen };
+});
+
 export const LazySettingsScreen = lazy(async () => {
   const module = await loadSettingsScreenModule();
   return { default: module.SettingsScreen };
@@ -59,6 +65,7 @@ export const prefetchBiomeSandbox = (): Promise<void> => loadBiomeSandboxModule(
 export const prefetchHubScreen = (): Promise<void> => loadHubScreenModule().then(() => undefined);
 export const prefetchGameScreen = (): Promise<void> => loadGameScreenModule().then(() => undefined);
 export const prefetchThemeManagerScreen = (): Promise<void> => loadThemeManagerScreenModule().then(() => undefined);
+export const prefetchDungeonLabScreen = (): Promise<void> => loadDungeonLabScreenModule().then(() => undefined);
 export const prefetchSettingsScreen = (): Promise<void> => loadSettingsScreenModule().then(() => undefined);
 export const prefetchLeaderboardScreen = (): Promise<void> => loadLeaderboardScreenModule().then(() => undefined);
 export const prefetchTutorialReplayScreen = (): Promise<void> => loadTutorialReplayScreenModule().then(() => undefined);

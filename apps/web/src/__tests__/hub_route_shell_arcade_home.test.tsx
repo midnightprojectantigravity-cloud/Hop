@@ -21,6 +21,7 @@ const baseProps = {
   hubPath: '/Hop/Hub',
   biomesPath: '/Hop/Biomes',
   themeLabPath: '/Hop/ThemeLab',
+  dungeonLabPath: '/Hop/DungeonLab',
   settingsPath: '/Hop/Settings',
   leaderboardPath: '/Hop/Leaderboard',
   tutorialsPath: '/Hop/Tutorials',

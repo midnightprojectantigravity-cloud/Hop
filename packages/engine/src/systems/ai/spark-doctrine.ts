@@ -14,6 +14,8 @@ const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 export const RESTED_PRESERVE_PRODUCTIVE_BONUS = 16;
 export const RESTED_TRUE_REST_BONUS = 18;
 export const RESTED_REENTRY_BONUS = 20;
+export const RESTED_REENTRY_SETUP_STANDARD_PENALTY = 14;
+export const RESTED_REENTRY_SETUP_LOW_PAYOFF_PENALTY = 22;
 export const RESTED_EXIT_LOW_PAYOFF_PENALTY = 20;
 export const RESTED_EXIT_STANDARD_PENALTY = 8;
 export const STABLE_HOLD_BONUS = 6;
@@ -21,8 +23,10 @@ export const DROP_TO_CAUTION_PENALTY = 12;
 export const DROP_TO_CRITICAL_PENALTY = 24;
 export const EXHAUSTION_ENTRY_PENALTY = 60;
 export const ACT_WHILE_EXHAUSTED_PENALTY = 80;
-export const SECOND_ACTION_OVERREACH_PENALTY = 18;
-export const THIRD_ACTION_OVERREACH_PENALTY = 32;
+export const SECOND_ACTION_OVERREACH_PENALTY = 26;
+export const THIRD_ACTION_OVERREACH_PENALTY = 40;
+export const SECOND_ACTION_NON_BIG_COMMIT_PENALTY = 10;
+export const THIRD_ACTION_NON_BIG_COMMIT_PENALTY = 8;
 
 type SparkDoctrineActionType = 'WAIT' | 'MOVE' | 'USE_SKILL';
 
@@ -53,6 +57,7 @@ export interface SparkDoctrineEvaluationInput {
     assessment: AiSparkAssessment;
     restedOpportunityMode: AiRestedOpportunityMode;
     hasStandardOrBetterNonExhaustingAlternative: boolean;
+    decisivePayoff?: boolean;
     disciplineMultiplier?: number;
 }
 
@@ -153,13 +158,12 @@ export const classifyRestedOpportunityMode = (
         return 'productive_preserve';
     }
 
-    const setupTrueRest = candidates.some(candidate =>
+    const waitBandPreservation = candidates.some(candidate =>
         candidate.actionType === 'WAIT'
         && !!candidate.assessment
-        && candidate.assessment.isTrueRestTurn
         && (candidate.assessment.wouldPreserveRested || candidate.assessment.wouldReenterRested)
     );
-    return setupTrueRest ? 'setup_preserve' : 'battery_only';
+    return waitBandPreservation ? 'setup_preserve' : 'battery_only';
 };
 
 export const evaluateSparkDoctrine = ({
@@ -168,17 +172,18 @@ export const evaluateSparkDoctrine = ({
     assessment,
     restedOpportunityMode,
     hasStandardOrBetterNonExhaustingAlternative,
+    decisivePayoff = false,
     disciplineMultiplier = 1
 }: SparkDoctrineEvaluationInput): AiSparkDoctrineResult => {
     const cadence = cadenceMultiplier(assessment) * Math.max(0.9, Math.min(1.1, disciplineMultiplier));
-    const override = payoff === 'big_payoff'
+    const override = payoff === 'big_payoff' && decisivePayoff
         ? 'big_payoff'
         : (
-            assessment.sparkBandBefore === 'rested_hold'
+            actionType === 'USE_SKILL'
+            && payoff === 'standard_payoff'
+            && assessment.sparkBandBefore === 'rested_hold'
             && assessment.fullSparkBurstWindow
             && assessment.wouldEnterExhausted
-            && payoff !== 'low_payoff'
-            && payoff !== 'non_productive'
             && !hasStandardOrBetterNonExhaustingAlternative
         )
             ? 'surge_only_option'
@@ -285,6 +290,19 @@ export const evaluateSparkDoctrine = ({
         }
     }
 
+    if (
+        restedOpportunityMode === 'setup_preserve'
+        && actionType !== 'WAIT'
+        && !assessment.wouldPreserveRested
+        && !assessment.wouldReenterRested
+    ) {
+        if (payoff === 'standard_payoff') {
+            penalty += RESTED_REENTRY_SETUP_STANDARD_PENALTY;
+        } else if (payoff === 'low_payoff' || payoff === 'non_productive') {
+            penalty += RESTED_REENTRY_SETUP_LOW_PAYOFF_PENALTY;
+        }
+    }
+
     if (assessment.wouldDropBelowStable) {
         penalty += DROP_TO_CAUTION_PENALTY * cadence;
     }
@@ -299,9 +317,15 @@ export const evaluateSparkDoctrine = ({
     }
     if (assessment.isSecondAction && (assessment.wouldExitRested || assessment.wouldDropBelowStable || voluntaryExhaustionAttempt)) {
         penalty += SECOND_ACTION_OVERREACH_PENALTY;
+        if (actionType !== 'WAIT' && payoff !== 'big_payoff') {
+            penalty += SECOND_ACTION_NON_BIG_COMMIT_PENALTY;
+        }
     }
     if (assessment.isThirdActionOrLater) {
         penalty += THIRD_ACTION_OVERREACH_PENALTY;
+        if (actionType !== 'WAIT' && payoff !== 'big_payoff') {
+            penalty += THIRD_ACTION_NON_BIG_COMMIT_PENALTY;
+        }
     }
 
     const discountedPenalty = applyPenaltyDiscount(penalty, payoff);

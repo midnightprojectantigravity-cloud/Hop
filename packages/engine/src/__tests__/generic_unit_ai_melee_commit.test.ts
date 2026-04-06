@@ -61,7 +61,7 @@ describe('generic unit ai melee commit', () => {
             side: 'player',
             simSeed: 'generic-melee-hit-now',
             decisionCounter: 0,
-            strategicIntent: 'offense'
+            goal: 'engage'
         });
 
         expect(result.summary.engagementMode).toBe('engage');
@@ -82,7 +82,7 @@ describe('generic unit ai melee commit', () => {
             side: 'player',
             simSeed: 'generic-gap-close-shadow',
             decisionCounter: 0,
-            strategicIntent: 'offense'
+            goal: 'engage'
         });
 
         expect(result.summary.engagementMode).toBe('engage');

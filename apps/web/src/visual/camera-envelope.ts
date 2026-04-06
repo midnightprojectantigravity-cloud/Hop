@@ -119,7 +119,8 @@ const clampVerticalCenterToEnvelope = (
 
 export const createCameraEnvelope = (
     cells: Point[],
-    tileSize: number
+    tileSize: number,
+    slackWorld = Math.max(1, tileSize * 0.5)
 ): CameraEnvelope => {
     const halfWidth = Math.max(1, tileSize);
     const halfHeight = Math.max(1, (Math.sqrt(3) * tileSize) / 2);
@@ -187,7 +188,7 @@ export const createCameraEnvelope = (
             centroid: { x: 0, y: 0 },
             rowExtents: [],
             columnExtents: [],
-            slackWorld: Math.max(1, tileSize * 0.5)
+            slackWorld: Math.max(1, slackWorld)
         };
     }
 
@@ -204,7 +205,7 @@ export const createCameraEnvelope = (
         },
         rowExtents: Array.from(rowMap.values()).sort((a, b) => a.centerY - b.centerY),
         columnExtents: Array.from(columnMap.values()).sort((a, b) => a.centerX - b.centerX),
-        slackWorld: Math.max(1, tileSize * 0.5)
+        slackWorld: Math.max(1, slackWorld)
     };
 };
 

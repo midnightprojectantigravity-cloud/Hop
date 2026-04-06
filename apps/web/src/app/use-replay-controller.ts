@@ -48,17 +48,22 @@ export const validateReplayRecordForPlayback = (record: ReplayRecord): ReplayPla
     };
   }
 
-  const run = validation.envelope.run;
-  const seed = run.seed;
-  const loadout = run.loadoutId ? (DEFAULT_LOADOUTS as any)[run.loadoutId] : undefined;
-  const startFloor = run.startFloor ?? 1;
-  const init = generateInitialState(startFloor, seed, run.initialSeed || seed, undefined, loadout, run.mapSize, run.mapShape);
-  init.ruleset = {
-    ...(init.ruleset || {}),
-    combat: {
-      version: run.combatVersion || resolveCombatRuleset(init)
-    }
-  };
+  const init = record.initState
+    ? { ...record.initState }
+    : (() => {
+        const run = validation.envelope.run;
+        const seed = run.seed;
+        const loadout = run.loadoutId ? (DEFAULT_LOADOUTS as any)[run.loadoutId] : undefined;
+        const startFloor = run.startFloor ?? 1;
+        const generated = generateInitialState(startFloor, seed, run.initialSeed || seed, undefined, loadout, run.mapSize, run.mapShape);
+        generated.ruleset = {
+          ...(generated.ruleset || {}),
+          combat: {
+            version: run.combatVersion || resolveCombatRuleset(generated)
+          }
+        };
+        return generated;
+      })();
 
   return {
     ok: true,

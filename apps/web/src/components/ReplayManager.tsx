@@ -8,6 +8,7 @@ export interface ReplayRecord {
   score: number;
   floor: number;
   date: string;
+  initState?: GameState;
   diagnostics?: {
     actionCount: number;
     hasTurnAdvance: boolean;

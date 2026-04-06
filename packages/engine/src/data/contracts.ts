@@ -51,11 +51,13 @@ export interface DerivedLinearTerm {
 }
 
 export interface DerivedStatDefinition {
-    formula: 'trinity_hp_v1' | 'linear';
+    formulaId?: 'trinity_hp_v1' | 'linear' | string;
+    formula?: 'trinity_hp_v1' | 'linear' | string;
     base?: number;
     terms?: DerivedLinearTerm[];
     round?: RoundMode;
     clamp?: ClampRange;
+    params?: Record<string, number>;
 }
 
 export interface BaseUnitDefinition {

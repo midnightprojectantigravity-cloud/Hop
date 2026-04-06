@@ -3,6 +3,13 @@ import { hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
 import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
+const FALCON_APEX_STRIKE_COMBAT = {
+    damageClass: 'physical' as const,
+    attackProfile: 'melee' as const,
+    trackingSignature: 'melee' as const,
+    weights: { instinct: 1 }
+};
+
 /**
  * FALCON_APEX_STRIKE Skill
  * 
@@ -20,6 +27,7 @@ export const FALCON_APEX_STRIKE: SkillDefinition = {
         cooldown: 2,
         damage: 40,
     },
+    combat: FALCON_APEX_STRIKE_COMBAT,
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
@@ -45,13 +53,11 @@ export const FALCON_APEX_STRIKE: SkillDefinition = {
             attackerId: attacker.id,
             targetId: targetActor.id,
             skillId: 'FALCON_APEX_STRIKE',
-            basePower: 40,
+            basePower: 0,
+            skillDamageMultiplier: FALCON_APEX_STRIKE.baseVariables.damage ?? 1,
             trinity: extractTrinityStats(attacker),
             targetTrinity: extractTrinityStats(targetActor),
-            damageClass: 'physical',
-            attackProfile: 'melee',
-            trackingSignature: 'melee',
-            scaling: [{ attribute: 'instinct', coefficient: 0.2 }],
+            ...FALCON_APEX_STRIKE_COMBAT,
             statusMultipliers: []
         });
 

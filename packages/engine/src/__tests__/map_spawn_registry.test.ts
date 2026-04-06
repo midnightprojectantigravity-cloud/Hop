@@ -5,6 +5,7 @@ import { getBaseUnitDefinitionBySubtype, registerBaseUnitDefinition } from '../s
 import { generateDungeon, generateEnemies } from '../systems/map';
 import { bootstrapTacticalData, resetTacticalDataBootstrap } from '../systems/tactical-data-bootstrap';
 import { createEnemyFromBestiary } from '../systems/entities/entity-factory';
+import { deriveMaxHpFromTrinity } from '../systems/combat/trinity-resolver';
 
 const summarizeEnemies = (enemies: ReturnType<typeof generateEnemies>) =>
     enemies.map(enemy => ({
@@ -90,5 +91,17 @@ describe('map spawn registry', () => {
         expect(archer.speed).toBe(1); // baseline preserved
         expect(archer.armorBurdenTier).toBe('Light');
         expect(archer.activeSkills.map(s => s.id)).toContain('ARCHER_SHOT');
+    });
+
+    it('derives baseline hp from trinity when callers override bestiary trinity', () => {
+        const butcher = createEnemyFromBestiary({
+            id: 'butcher-trinity-override',
+            subtype: 'butcher',
+            position: { q: 0, r: 0, s: 0 },
+            trinity: { body: 30, mind: 0, instinct: 20 }
+        });
+
+        expect(butcher.maxHp).toBe(deriveMaxHpFromTrinity({ body: 30, mind: 0, instinct: 20 }));
+        expect(butcher.hp).toBe(butcher.maxHp);
     });
 });

@@ -109,7 +109,8 @@ const evalDerivedStat = (
     baseStats: Record<string, number>,
     trinity: TrinityStats
 ): number => {
-    if (derived.formula === 'trinity_hp_v1') return deriveMaxHpFromTrinity(trinity);
+    const formulaId = derived.formulaId || derived.formula;
+    if (formulaId === 'trinity_hp_v1') return deriveMaxHpFromTrinity(trinity);
     const base = derived.base ?? 0;
     const terms = derived.terms || [];
     const raw = terms.reduce((sum, term) => sum + ((baseStats[term.stat] ?? 0) * term.coefficient), base);

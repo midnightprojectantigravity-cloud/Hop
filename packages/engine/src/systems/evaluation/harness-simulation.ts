@@ -1,4 +1,5 @@
 import { fingerprintFromState } from '../../logic';
+import type { GameState, GridSize, MapShape } from '../../types';
 import { computeScore } from '../score';
 import { summarizePlayerCombatSignals } from '../ai/player/harness-telemetry';
 import { runHarnessPlayerLoop } from '../ai/player/harness-runner';
@@ -19,7 +20,11 @@ export const simulateHarnessRunDetailed = (
     policy: BotPolicy,
     maxTurns = 80,
     loadoutId: ArchetypeLoadoutId = 'VANGUARD',
-    policyProfileId = 'sp-v1-default'
+    policyProfileId = 'sp-v1-default',
+    startFloor = 1,
+    mapSize?: GridSize,
+    mapShape?: MapShape,
+    initialState?: GameState
 ): SimulatedRunDetailed => {
     const {
         state,
@@ -32,7 +37,11 @@ export const simulateHarnessRunDetailed = (
         policy,
         maxTurns,
         loadoutId,
-        policyProfileId
+        policyProfileId,
+        startFloor,
+        mapSize,
+        mapShape,
+        initialState
     });
 
     const result: RunResult['result'] = terminalOverride || (state.gameStatus === 'won'
@@ -119,7 +128,7 @@ export const simulateHarnessRunDetailed = (
         directorResourceStressBand: Number(directorState?.resourceStressBand || 0),
         playerActionCounts: telemetry.playerActionCounts,
         playerSkillUsage: telemetry.playerSkillUsage,
-        strategicIntentCounts: telemetry.strategicIntentCounts,
+        goalCounts: telemetry.goalCounts,
         totalPlayerSkillCasts: telemetry.totalPlayerSkillCasts,
         playerSkillTelemetry: telemetry.playerSkillTelemetry,
         autoAttackTriggersByActionType: telemetry.autoAttackTriggersByActionType,
@@ -220,7 +229,11 @@ export const simulateHarnessRun = (
     policy: BotPolicy,
     maxTurns = 80,
     loadoutId: ArchetypeLoadoutId = 'VANGUARD',
-    policyProfileId = 'sp-v1-default'
+    policyProfileId = 'sp-v1-default',
+    startFloor = 1,
+    mapSize?: GridSize,
+    mapShape?: MapShape,
+    initialState?: GameState
 ): RunResult => {
-    return simulateHarnessRunDetailed(seed, policy, maxTurns, loadoutId, policyProfileId).run;
+    return simulateHarnessRunDetailed(seed, policy, maxTurns, loadoutId, policyProfileId, startFloor, mapSize, mapShape, initialState).run;
 };

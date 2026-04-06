@@ -24,6 +24,12 @@ export const AUTO_ATTACK: SkillDefinition = {
         cooldown: 0,
         damage: 1,
     },
+    combat: {
+        damageClass: 'physical',
+        attackProfile: 'melee',
+        trackingSignature: 'melee',
+        weights: { body: 1 }
+    },
     /**
      * Unlike other skills, AUTO_ATTACK is not directly executed via USE_SKILL action.
      * Instead, it's triggered by the game engine at the end of the entity's turn.
@@ -77,9 +83,9 @@ export const AUTO_ATTACK: SkillDefinition = {
         // Get current neighbors
         const currentNeighbors = getNeighbors(attacker.position);
 
-        // Calculate damage
-        let damage = 1;
-        if (activeUpgrades.includes('HEAVY_HANDS')) damage += 1;
+        // Calculate the skill-owned multiplier.
+        const damage = (AUTO_ATTACK.baseVariables.damage ?? 1)
+            + (activeUpgrades.includes('HEAVY_HANDS') ? 1 : 0);
         let strikeSeqIndex = 0;
 
         const pushAutoAttackStrikeJuice = (
@@ -220,13 +226,11 @@ export const AUTO_ATTACK: SkillDefinition = {
                     attackerId: attacker.id,
                     targetId: targetActor.id,
                     skillId: 'AUTO_ATTACK',
-                    basePower: damage,
+                    basePower: 0,
+                    skillDamageMultiplier: damage,
                     trinity: extractTrinityStats(attacker),
                     targetTrinity: extractTrinityStats(targetActor),
-                    damageClass: 'physical',
-                    attackProfile: 'melee',
-                    trackingSignature: 'melee',
-                    scaling: [{ attribute: 'body', coefficient: 0.4 }],
+                    ...AUTO_ATTACK.combat,
                     statusMultipliers: []
                 });
                 pushAutoAttackStrikeJuice(targetActor, neighborPos, combat.finalPower);
@@ -268,13 +272,11 @@ export const AUTO_ATTACK: SkillDefinition = {
                     attackerId: attacker.id,
                     targetId: targetActor.id,
                     skillId: 'AUTO_ATTACK',
-                    basePower: damage,
+                    basePower: 0,
+                    skillDamageMultiplier: damage,
                     trinity: extractTrinityStats(attacker),
                     targetTrinity: extractTrinityStats(targetActor),
-                    damageClass: 'physical',
-                    attackProfile: 'melee',
-                    trackingSignature: 'melee',
-                    scaling: [{ attribute: 'body', coefficient: 0.4 }],
+                    ...AUTO_ATTACK.combat,
                     statusMultipliers: []
                 });
                 pushAutoAttackStrikeJuice(targetActor, neighborPos, combat.finalPower);

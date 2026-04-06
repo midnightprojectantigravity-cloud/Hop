@@ -267,11 +267,13 @@ export const UiInitiativeSection: React.FC<{ hideInitiativeQueue: boolean; gameS
 
 export const UiSentinelDirectiveSection: React.FC<StatusIntelProps> = ({ gameState, intelMode }) => (
   <>
-    {gameState.enemies.filter(enemy => enemy.subtype === 'sentinel').map((boss) => {
+    {gameState.enemies.filter(enemy =>
+      enemy.enemyType === 'boss' || enemy.subtype === 'sentinel' || enemy.subtype === 'butcher'
+    ).map((boss) => {
       const info = getUiActorInformation(gameState, gameState.player.id, boss.id, intelMode);
       const showName = info.reveal.name;
       const showHp = info.reveal.hp;
-      const bossLabel = showName ? (info.data.name || 'Sentinel Directive') : 'Unknown Directive';
+      const bossLabel = showName ? (info.data.name || 'Boss Directive') : 'Unknown Directive';
       const hpCurrent = showHp ? boss.hp : 0;
       const hpMax = showHp ? boss.maxHp : 0;
       const hpWidth = showHp ? (boss.hp / boss.maxHp) * 100 : 0;

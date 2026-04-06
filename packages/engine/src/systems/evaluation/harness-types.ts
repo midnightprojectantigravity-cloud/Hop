@@ -1,5 +1,5 @@
 import type { Action, EnemyAiRunTelemetry } from '../../types';
-import type { StrategicIntent } from '../ai/strategic-policy';
+import type { GenericAiGoal } from '../ai/generic-goal';
 import type { DynamicSkillMetric, SkillTelemetryTotals } from './skill-grading';
 
 export type BotPolicy = 'random' | 'heuristic';
@@ -136,7 +136,7 @@ export interface RunResult {
     directorResourceStressBand: number;
     playerActionCounts: Record<string, number>;
     playerSkillUsage: Record<string, number>;
-    strategicIntentCounts: Record<StrategicIntent, number>;
+    goalCounts: Record<GenericAiGoal, number>;
     totalPlayerSkillCasts: number;
     playerSkillTelemetry: Record<string, SkillTelemetry>;
     autoAttackTriggersByActionType: Record<string, number>;
@@ -189,8 +189,8 @@ export interface BatchSummary {
     actionTypeTotals: Record<string, number>;
     skillUsageTotals: Record<string, number>;
     avgSkillUsagePerRun: Record<string, number>;
-    strategicIntentTotals: Record<StrategicIntent, number>;
-    avgStrategicIntentPerRun: Record<StrategicIntent, number>;
+    goalTotals: Record<GenericAiGoal, number>;
+    avgGoalPerRun: Record<GenericAiGoal, number>;
     avgPlayerSkillCastsPerRun: number;
     attackConversionRate: number;
     threatenNextTurnConversionRate: number;

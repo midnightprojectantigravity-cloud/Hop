@@ -1,6 +1,6 @@
 import type { Action, GameState } from '../../../types';
 import type { TransitionMetrics } from './features';
-import type { StrategicIntent } from '../strategic-policy';
+import type { GenericAiGoal } from '../generic-goal';
 import { getAiResourceSignals } from '../resource-signals';
 import { resolveWaitPreview } from '../../ires';
 import type { GenericUnitAiCandidateFacts, GenericUnitAiSelectionSummary } from '../generic-unit-ai';
@@ -87,7 +87,7 @@ export interface PlayerCombatSignals {
 export interface PlayerTurnTelemetryAccumulator {
     playerActionCounts: Record<string, number>;
     playerSkillUsage: Record<string, number>;
-    strategicIntentCounts: Record<StrategicIntent, number>;
+    goalCounts: Record<GenericAiGoal, number>;
     totalPlayerSkillCasts: number;
     playerSkillTelemetry: Record<string, PlayerSkillTelemetry>;
     autoAttackTriggersByActionType: Record<string, number>;
@@ -174,11 +174,10 @@ const zeroPacingSignal = (): PlayerPacingSignalSummaryLike => ({
 export const createPlayerTurnTelemetryAccumulator = (): PlayerTurnTelemetryAccumulator => ({
     playerActionCounts: {},
     playerSkillUsage: {},
-    strategicIntentCounts: {
-        offense: 0,
-        defense: 0,
-        positioning: 0,
-        control: 0
+    goalCounts: {
+        engage: 0,
+        explore: 0,
+        recover: 0
     },
     totalPlayerSkillCasts: 0,
     playerSkillTelemetry: {},
@@ -190,11 +189,11 @@ export const recordPlayerActionSelectionTelemetry = (
     accumulator: PlayerTurnTelemetryAccumulator,
     state: GameState,
     action: Action,
-    strategicIntent: StrategicIntent,
+    goal: GenericAiGoal,
     selectedFacts?: GenericUnitAiCandidateFacts,
     selectionSummary?: GenericUnitAiSelectionSummary
 ): void => {
-    accumulator.strategicIntentCounts[strategicIntent] += 1;
+    accumulator.goalCounts[goal] += 1;
     incrementHistogram(accumulator.playerActionCounts, action.type);
     const signals = getAiResourceSignals(state.player.ires, state.ruleset);
     const turnMarker = Math.max(1, Number(state.turnsSpent || 0) + 1);

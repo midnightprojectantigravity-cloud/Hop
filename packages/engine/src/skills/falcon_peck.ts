@@ -4,6 +4,13 @@ import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
 
+const FALCON_PECK_COMBAT = {
+    damageClass: 'physical' as const,
+    attackProfile: 'melee' as const,
+    trackingSignature: 'melee' as const,
+    weights: { instinct: 1 }
+};
+
 /**
  * FALCON_PECK Skill
  * 
@@ -22,6 +29,7 @@ export const FALCON_PECK: SkillDefinition = {
         cooldown: 0,
         damage: 1,
     },
+    combat: FALCON_PECK_COMBAT,
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
@@ -62,13 +70,11 @@ export const FALCON_PECK: SkillDefinition = {
                 attackerId: attacker.id,
                 targetId: victim.id,
                 skillId: 'FALCON_PECK',
-                basePower: 1,
+                basePower: 0,
+                skillDamageMultiplier: FALCON_PECK.baseVariables.damage ?? 1,
                 trinity: extractTrinityStats(attacker),
                 targetTrinity: extractTrinityStats(victim),
-                damageClass: 'physical',
-                attackProfile: 'melee',
-                trackingSignature: 'melee',
-                scaling: [{ attribute: 'instinct', coefficient: 0.15 }],
+                ...FALCON_PECK_COMBAT,
                 statusMultipliers: []
             });
 

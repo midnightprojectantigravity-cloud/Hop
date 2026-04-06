@@ -1,5 +1,6 @@
 import type { CombatAttribute } from './combat-calculator';
 import type { TrackingSignature } from './hit-quality';
+import { COMBAT_TUNING_VARIABLES } from '../../data/combat-tuning-ledger';
 
 export interface ProjectionCoefficientSet {
     body: number;
@@ -27,40 +28,40 @@ export interface HitQualityCoefficientSet {
 }
 
 export const TRINITY_RATIO_V2_HP_COEFFICIENTS = {
-    body: 6,
-    instinct: 3,
-    mind: 1
+    body: COMBAT_TUNING_VARIABLES.trinityHp.body,
+    instinct: COMBAT_TUNING_VARIABLES.trinityHp.instinct,
+    mind: COMBAT_TUNING_VARIABLES.trinityHp.mind
 } as const;
 
 export const TRINITY_RATIO_V2_DEFENSE_DEFAULTS = {
     physical: {
-        body: 0.2,
+        body: COMBAT_TUNING_VARIABLES.projection.physicalDefenseBody,
         instinct: 0,
         mind: 0
     },
     magical: {
         body: 0,
         instinct: 0,
-        mind: 0.5
+        mind: COMBAT_TUNING_VARIABLES.projection.magicalDefenseMind
     }
 } as const;
 
 export const TRINITY_RATIO_V2_HQ_COEFFICIENTS: HitQualityCoefficientSet = {
-    hqFloor: 1,
+    hqFloor: COMBAT_TUNING_VARIABLES.hitQuality.floor,
     melee: {
-        attackerInstinct: 1,
-        defenderInstinct: 1,
-        adjacency: 40
+        attackerInstinct: COMBAT_TUNING_VARIABLES.hitQuality.melee.attackerInstinct,
+        defenderInstinct: COMBAT_TUNING_VARIABLES.hitQuality.melee.defenderInstinct,
+        adjacency: COMBAT_TUNING_VARIABLES.hitQuality.melee.adjacency
     },
     projectile: {
-        attackerInstinct: 1,
-        defenderInstinct: 1,
-        range: 0.08
+        attackerInstinct: COMBAT_TUNING_VARIABLES.hitQuality.projectile.attackerInstinct,
+        defenderInstinct: COMBAT_TUNING_VARIABLES.hitQuality.projectile.defenderInstinct,
+        range: COMBAT_TUNING_VARIABLES.hitQuality.projectile.range
     },
     spell: {
-        attackerMind: 1,
-        defenderInstinct: 1,
-        distanceDodge: 4
+        attackerMind: COMBAT_TUNING_VARIABLES.hitQuality.spell.attackerMind,
+        defenderInstinct: COMBAT_TUNING_VARIABLES.hitQuality.spell.defenderInstinct,
+        distanceDodge: COMBAT_TUNING_VARIABLES.hitQuality.spell.distanceDodge
     }
 };
 

@@ -9,6 +9,7 @@ describe('app routing contract', () => {
     expect(routed.arcadePath).toBe('/Hop/Arcade');
     expect(routed.biomesPath).toBe('/Hop/Biomes');
     expect(routed.themeLabPath).toBe('/Hop/ThemeLab');
+    expect(routed.dungeonLabPath).toBe('/Hop/DungeonLab');
     expect(routed.settingsPath).toBe('/Hop/Settings');
     expect(routed.leaderboardPath).toBe('/Hop/Leaderboard');
     expect(routed.tutorialsPath).toBe('/Hop/Tutorials');
@@ -43,5 +44,10 @@ describe('app routing contract', () => {
     expect(deriveAppRouting('/ThemeLab').isThemeLabRoute).toBe(true);
     expect(deriveAppRouting('/theme-manager').isThemeLabRoute).toBe(true);
     expect(deriveAppRouting('/style-guide').isThemeLabRoute).toBe(true);
+  });
+
+  it('recognizes the dedicated dungeon lab route', () => {
+    expect(deriveAppRouting('/DungeonLab').isDungeonLabRoute).toBe(true);
+    expect(deriveAppRouting('/Hop/DungeonLab').isDungeonLabRoute).toBe(true);
   });
 });

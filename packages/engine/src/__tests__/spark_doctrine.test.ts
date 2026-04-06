@@ -137,5 +137,27 @@ describe('spark doctrine classification', () => {
                 })
             }
         ])).toBe('setup_preserve');
+
+        expect(classifyRestedOpportunityMode([
+            {
+                actionType: 'WAIT',
+                payoff: 'non_productive',
+                assessment: makeAssessment({
+                    sparkBandBefore: 'rested_edge',
+                    sparkBandAfterAction: 'rested_edge',
+                    sparkBandIfEndedNow: 'rested_edge',
+                    sparkRatioBefore: 0.62,
+                    sparkRatioAfterAction: 0.61,
+                    sparkRatioIfEndedNow: 0.61,
+                    actionCountBefore: 1,
+                    actionCountAfter: 0,
+                    isFirstAction: false,
+                    isSecondAction: true,
+                    wouldPreserveRested: true,
+                    wouldDropBelowStable: false,
+                    isTrueRestTurn: false
+                })
+            }
+        ])).toBe('setup_preserve');
     });
 });

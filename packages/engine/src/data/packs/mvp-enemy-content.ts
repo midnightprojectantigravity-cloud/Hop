@@ -1,4 +1,5 @@
 import type { ArmorBurdenTier } from '../../types';
+import { deriveEnemyBestiaryStats } from '../enemies/derived-combat-stats';
 
 export type bestiaryWeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
 export type bestiaryEnemyType = 'melee' | 'ranged' | 'boss';
@@ -54,6 +55,7 @@ export type EnemySubtypeId =
     | 'archer'
     | 'bomber'
     | 'warlock'
+    | 'butcher'
     | 'sentinel';
 
 export interface EnemyBestiaryDefinition {
@@ -91,13 +93,43 @@ export interface MvpEnemyContentEntry {
     contract: EnemyBalanceContract;
 }
 
-export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
+type EnemyBestiaryStatsInput = Pick<EnemyBestiaryDefinition['stats'], 'cost' | 'weightClass'>;
+
+type MvpEnemyContentEntryInput = Omit<MvpEnemyContentEntry, 'bestiary'> & {
+    bestiary: Omit<EnemyBestiaryDefinition, 'stats'> & {
+        stats: EnemyBestiaryStatsInput;
+    };
+};
+
+const withDerivedEnemyStats = (
+    entries: Record<EnemySubtypeId, MvpEnemyContentEntryInput>
+): Record<EnemySubtypeId, MvpEnemyContentEntry> =>
+    Object.fromEntries(
+        Object.entries(entries).map(([subtype, entry]) => {
+            const derivedStats = deriveEnemyBestiaryStats({
+                trinity: entry.bestiary.trinity,
+                bestiarySkills: entry.bestiary.skills,
+                runtimeSkills: entry.runtimeSkills,
+                cost: entry.bestiary.stats.cost,
+                weightClass: entry.bestiary.stats.weightClass
+            });
+            return [subtype, {
+                ...entry,
+                bestiary: {
+                    ...entry.bestiary,
+                    stats: derivedStats
+                }
+            }];
+        })
+    ) as Record<EnemySubtypeId, MvpEnemyContentEntry>;
+
+export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = withDerivedEnemyStats({
     footman: {
         packUnitId: 'ENEMY_FOOTMAN_V1',
         bestiary: {
             subtype: 'footman',
             name: 'Footman',
-            stats: { hp: 93, maxHp: 93, range: 1, damage: 2, type: 'melee', cost: 2, actionCooldown: 2, weightClass: 'Standard', speed: 1 },
+            stats: { cost: 2, weightClass: 'Standard' },
             trinity: { body: 12, mind: 3, instinct: 6 },
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK'], passive: ['AUTO_ATTACK'] }
         },
@@ -120,7 +152,7 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
         bestiary: {
             subtype: 'sprinter',
             name: 'Sprinter',
-            stats: { hp: 81, maxHp: 81, range: 1, damage: 2, type: 'melee', cost: 2, actionCooldown: 1, weightClass: 'Light', speed: 2 },
+            stats: { cost: 2, weightClass: 'Light' },
             trinity: { body: 6, mind: 3, instinct: 14 },
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK'], passive: [] }
         },
@@ -143,7 +175,7 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
         bestiary: {
             subtype: 'raider',
             name: 'Raider',
-            stats: { hp: 91, maxHp: 91, range: 2, damage: 3, type: 'melee', cost: 3, actionCooldown: 1, weightClass: 'Light', speed: 2 },
+            stats: { cost: 3, weightClass: 'Light' },
             trinity: { body: 8, mind: 4, instinct: 13 },
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'DASH'], passive: [] }
         },
@@ -166,7 +198,7 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
         bestiary: {
             subtype: 'pouncer',
             name: 'Pouncer',
-            stats: { hp: 92, maxHp: 92, range: 2, damage: 2, type: 'melee', cost: 3, actionCooldown: 1, weightClass: 'Light', speed: 2 },
+            stats: { cost: 3, weightClass: 'Light' },
             trinity: { body: 7, mind: 5, instinct: 15 },
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'GRAPPLE_HOOK'], passive: [] }
         },
@@ -189,7 +221,7 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
         bestiary: {
             subtype: 'shieldBearer',
             name: 'Shield Bearer',
-            stats: { hp: 115, maxHp: 115, range: 1, damage: 2, type: 'melee', cost: 4, actionCooldown: 2, weightClass: 'Heavy', speed: 1 },
+            stats: { cost: 4, weightClass: 'Heavy' },
             trinity: { body: 16, mind: 4, instinct: 5 },
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'SHIELD_BASH'], passive: [] }
         },
@@ -212,7 +244,7 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
         bestiary: {
             subtype: 'archer',
             name: 'Archer',
-            stats: { hp: 83, maxHp: 83, range: 4, damage: 3, type: 'ranged', cost: 3, actionCooldown: 2, weightClass: 'Light', speed: 1 },
+            stats: { cost: 3, weightClass: 'Light' },
             trinity: { body: 6, mind: 5, instinct: 14 },
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'ARCHER_SHOT'], passive: [] }
         },
@@ -235,7 +267,7 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
         bestiary: {
             subtype: 'bomber',
             name: 'Bomber',
-            stats: { hp: 60, maxHp: 60, range: 3, damage: 1, type: 'ranged', cost: 3, actionCooldown: 3, weightClass: 'Light', speed: 1 },
+            stats: { cost: 3, weightClass: 'Light' },
             trinity: { body: 4, mind: 6, instinct: 10 },
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'BOMB_TOSS'], passive: [] }
         },
@@ -264,7 +296,7 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
         bestiary: {
             subtype: 'warlock',
             name: 'Warlock',
-            stats: { hp: 62, maxHp: 62, range: 4, damage: 3, type: 'ranged', cost: 4, actionCooldown: 3, weightClass: 'Light', speed: 1 },
+            stats: { cost: 4, weightClass: 'Light' },
             trinity: { body: 4, mind: 14, instinct: 8 },
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'FIREBALL'], passive: [] }
         },
@@ -282,12 +314,35 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
             }
         }
     },
+    butcher: {
+        packUnitId: 'ENEMY_BUTCHER_V1',
+        bestiary: {
+            subtype: 'butcher',
+            name: 'Butcher',
+            stats: { cost: 20, weightClass: 'Light' },
+            trinity: { body: 20, mind: 0, instinct: 29 },
+            skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK'], passive: [] }
+        },
+        runtimeSkills: { base: ['BASIC_MOVE', 'BASIC_ATTACK'], passive: [] },
+        contract: {
+            combatRole: 'boss_anchor',
+            balanceTags: ['frontline', 'boss'],
+            metabolicProfile: {
+                armorBurdenTier: 'Light',
+                targetBaseBfiBand: [7, 7],
+                targetEffectiveBfiBand: [9, 9]
+            },
+            spawnProfile: {
+                spawnRoleWeights: { boss: 5 }
+            }
+        }
+    },
     sentinel: {
         packUnitId: 'ENEMY_SENTINEL_V1',
         bestiary: {
             subtype: 'sentinel',
             name: 'Sentinel',
-            stats: { hp: 152, maxHp: 152, range: 4, damage: 4, type: 'boss', cost: 20, actionCooldown: 1, weightClass: 'Heavy', speed: 1 },
+            stats: { cost: 20, weightClass: 'Heavy' },
             trinity: { body: 18, mind: 14, instinct: 10 },
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'SENTINEL_BLAST'], passive: [] }
         },
@@ -305,7 +360,7 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = {
             }
         }
     }
-};
+});
 
 export const getMvpEnemyContentEntry = (subtype: string): MvpEnemyContentEntry | undefined =>
     (MVP_ENEMY_CONTENT as Record<string, MvpEnemyContentEntry | undefined>)[subtype];

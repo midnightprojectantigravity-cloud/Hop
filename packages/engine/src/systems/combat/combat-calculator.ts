@@ -11,8 +11,6 @@ import {
     COMBAT_COEFFICIENTS_VERSION,
     resolveDefenseProjectionCoefficients,
     resolveHitQualityCoefficients,
-    resolveMagicalProjectionCoefficients,
-    resolvePhysicalProjectionCoefficients,
     type ProjectionCoefficientSet
 } from './combat-coefficients';
 import { calculateBaseMagicalDamage } from './base-magical-damage';
@@ -23,6 +21,7 @@ import { calculateStatusOutcome } from './status-outcome';
 import { calculateInitiativeScore } from './initiative-formula';
 import { resolveCombatRuleset } from './combat-ruleset';
 import type { CombatRulesetVersion } from '../../types';
+import { resolveCombatTuning } from '../../data/combat-tuning-ledger';
 export type { TrinityStats } from './trinity-resolver';
 
 export type CombatAttribute = 'body' | 'mind' | 'instinct';
@@ -44,10 +43,16 @@ export interface CombatIntent {
     basePower: number;
     basePowerPhys?: number;
     basePowerMag?: number;
+    skillDamageMultiplier?: number;
     trinity: TrinityStats;
-    scaling: CombatScalingTerm[];
     statusMultipliers: CombatStatusMultiplier[];
-    damageClass?: 'physical' | 'magical';
+    damageClass?: 'physical' | 'magical' | 'true';
+    combat?: {
+        damageClass: 'physical' | 'magical' | 'true';
+        attackProfile: 'melee' | 'projectile' | 'spell' | 'status';
+        trackingSignature: TrackingSignature;
+        weights: Partial<Record<CombatAttribute, number>>;
+    };
     targetTrinity?: TrinityStats;
     interactionModel?: 'legacy' | 'triangle';
     inDangerPreviewHex?: boolean;
@@ -66,6 +71,8 @@ export interface CombatIntent {
     statusProfile?: { procBase: number; potencyBase: number; durationBase: number };
     canMultiCrit?: boolean;
     critTierCap?: number;
+    /** Legacy compatibility for older tests and helper callers; ignored by the live layered path. */
+    scaling?: Array<{ attribute: CombatAttribute; coefficient: number }>;
     engagementContext?: { distance: number; losOpen?: boolean };
     projectionCoefficients?: {
         physicalAttack?: Partial<ProjectionCoefficientSet>;
@@ -189,27 +196,48 @@ const mergeProjectionCoefficients = (
 });
 
 
+const resolveCombatWeights = (
+    intent: CombatIntent
+): { body: number; mind: number; instinct: number } => {
+    const weights = intent.combat?.weights;
+    if (weights) {
+        return {
+            body: Number(weights.body ?? 0),
+            mind: Number(weights.mind ?? 0),
+            instinct: Number(weights.instinct ?? 0)
+        };
+    }
+    if ((intent.attackProfile || intent.combat?.attackProfile) === 'projectile') {
+        return { body: 0, mind: 0, instinct: 1 };
+    }
+    if ((intent.attackProfile || intent.combat?.attackProfile) === 'spell') {
+        return { body: 0, mind: 1, instinct: 0 };
+    }
+    return { body: 1, mind: 0, instinct: 0 };
+};
+
 const computeTrinityContributions = (
     intent: CombatIntent,
     attackProjection: number,
     defenseProjection: number,
-    criticalMultiplier: number
+    criticalMultiplier: number,
+    effectiveBasePower: number,
+    perPointMultipliers: {
+        body: number;
+        mind: number;
+        instinct: number;
+    }
 ): { body: number; mind: number; instinct: number } => {
-    const bodyScaling = intent.scaling
-        .filter(term => term.attribute === 'body')
-        .reduce((acc, term) => acc + (intent.trinity.body || 0) * term.coefficient, 0);
-    const mindScaling = intent.scaling
-        .filter(term => term.attribute === 'mind')
-        .reduce((acc, term) => acc + (intent.trinity.mind || 0) * term.coefficient, 0);
-    const instinctScaling = intent.scaling
-        .filter(term => term.attribute === 'instinct')
-        .reduce((acc, term) => acc + (intent.trinity.instinct || 0) * term.coefficient, 0);
+    const weights = resolveCombatWeights(intent);
+    const bodyScaling = (intent.trinity.body || 0) * perPointMultipliers.body * weights.body;
+    const mindScaling = (intent.trinity.mind || 0) * perPointMultipliers.mind * weights.mind;
+    const instinctScaling = (intent.trinity.instinct || 0) * perPointMultipliers.instinct * weights.instinct;
 
     const bodyPrimary = intent.damageClass === 'physical'
-        ? Math.max(0, attackProjection - intent.basePower)
+        ? Math.max(0, attackProjection - effectiveBasePower)
         : Math.max(0, defenseProjection);
     const mindPrimary = intent.damageClass === 'magical'
-        ? Math.max(0, attackProjection - intent.basePower)
+        ? Math.max(0, attackProjection - effectiveBasePower)
         : 0;
     const instinctCritLift = Math.max(0, (criticalMultiplier - 1) * attackProjection);
 
@@ -240,26 +268,32 @@ export const computeSparkCost = (moveIndex: number, trinity: TrinityStats): numb
 
 export const calculateCombat = (intent: CombatIntent): CombatCalculationResult => {
     const rulesetVersion = intent.combatRulesetVersion || resolveCombatRuleset(undefined);
-    const damageClass = intent.damageClass || 'physical';
+    const damageClass = intent.damageClass || intent.combat?.damageClass || 'physical';
+    const effectiveDamageClass: 'physical' | 'magical' = damageClass === 'magical' ? 'magical' : 'physical';
     const defender = intent.targetTrinity || { body: 0, mind: 0, instinct: 0 };
+    const tuning = resolveCombatTuning(intent.skillId);
     const trackingSignature: TrackingSignature = intent.trackingSignature
+        || intent.combat?.trackingSignature
         || (intent.attackProfile === 'projectile' ? 'projectile'
             : intent.attackProfile === 'spell' ? 'magic'
                 : damageClass === 'magical' ? 'magic'
                     : 'melee');
-    const scalingPower = intent.scaling.reduce((acc, term) => {
-        const stat = intent.trinity[term.attribute] || 0;
-        return acc + (stat * term.coefficient);
-    }, 0);
-    const attackCoefficients = damageClass === 'magical'
-        ? mergeProjectionCoefficients(
-            resolveMagicalProjectionCoefficients(intent.scaling),
-            intent.projectionCoefficients?.magicalAttack
-        )
-        : mergeProjectionCoefficients(
-            resolvePhysicalProjectionCoefficients(intent.scaling),
-            intent.projectionCoefficients?.physicalAttack
-        );
+    const rawBasePower = damageClass === 'magical'
+        ? (intent.basePowerMag ?? intent.basePower)
+        : (intent.basePowerPhys ?? intent.basePower);
+    const basePowerProjection = rawBasePower * tuning.trinityLevers.basePowerMultiplier;
+    const skillDamageMultiplier = Number.isFinite(intent.skillDamageMultiplier)
+        ? Number(intent.skillDamageMultiplier)
+        : 1;
+    const weights = resolveCombatWeights(intent);
+    const effectiveBodyMultiplier = tuning.trinityLevers.bodyDamageMultiplierPerPoint * skillDamageMultiplier * weights.body;
+    const effectiveMindMultiplier = tuning.trinityLevers.mindDamageMultiplierPerPoint * skillDamageMultiplier * weights.mind;
+    const effectiveInstinctMultiplier = tuning.trinityLevers.instinctDamageMultiplierPerPoint * skillDamageMultiplier * weights.instinct;
+    const scalingPower = (
+        (Math.max(0, intent.trinity.body || 0) * effectiveBodyMultiplier)
+        + (Math.max(0, intent.trinity.mind || 0) * effectiveMindMultiplier)
+        + (Math.max(0, intent.trinity.instinct || 0) * effectiveInstinctMultiplier)
+    );
     const defenseCoefficients = damageClass === 'magical'
         ? mergeProjectionCoefficients(
             resolveDefenseProjectionCoefficients('magical'),
@@ -269,12 +303,9 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
             resolveDefenseProjectionCoefficients('physical'),
             intent.projectionCoefficients?.physicalDefense
         );
-    const basePowerProjection = damageClass === 'magical'
-        ? (intent.basePowerMag ?? intent.basePower)
-        : (intent.basePowerPhys ?? intent.basePower);
-    const projectedAttack = basePowerProjection + projectTrinityValue(intent.trinity, attackCoefficients);
+    const projectedAttack = basePowerProjection + scalingPower;
     const projectedDefense = projectTrinityValue(defender, defenseCoefficients);
-    const baseDamage = damageClass === 'magical'
+    const baseDamage = effectiveDamageClass === 'magical'
         ? calculateBaseMagicalDamage({
             attackProjection: projectedAttack,
             defenseProjection: projectedDefense
@@ -334,7 +365,13 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
         intent,
         projectedAttack,
         projectedDefense,
-        crit.damageMultiplier
+        crit.damageMultiplier,
+        basePowerProjection,
+        {
+            body: effectiveBodyMultiplier,
+            mind: effectiveMindMultiplier,
+            instinct: effectiveInstinctMultiplier
+        }
     );
     const contribTotal = Math.max(1e-6, rawContrib.body + rawContrib.mind + rawContrib.instinct);
     const bodyContribution = round3(rawContrib.body / contribTotal);
@@ -357,8 +394,8 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
             finalPower,
             finalDamageBeforeFloor: round3(rawDamage),
             finalDamageAfterMinimum: finalPower,
-            basePhysicalDamage: damageClass === 'physical' ? round3(baseDamage) : undefined,
-            baseMagicalDamage: damageClass === 'magical' ? round3(baseDamage) : undefined,
+            basePhysicalDamage: effectiveDamageClass === 'physical' ? round3(baseDamage) : undefined,
+            baseMagicalDamage: effectiveDamageClass === 'magical' ? round3(baseDamage) : undefined,
             hitQualityScore: round3(hitQuality.effectiveRatio),
             hitQualityTier: hitQuality.tier,
             critChance: round3(crit.critChance),
@@ -382,7 +419,7 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
                 finalPower,
                 efficiency: round3(efficiency),
                 riskBonusApplied: false,
-                damageClass,
+                damageClass: effectiveDamageClass,
                 hitPressure: round3(hitQuality.rawRatio),
                 mitigationPressure: round3(damageClass === 'magical' ? defender.mind * 0.5 : defender.body * 0.2),
                 rangePressure: round3((intent.engagementContext?.distance ?? intent.engagementRange ?? 0)),

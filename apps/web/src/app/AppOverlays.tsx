@@ -149,7 +149,7 @@ export const RunWonOverlay = ({
   return (
     <div className={`fixed inset-0 bg-[color:var(--overlay-victory)] backdrop-blur-xl flex flex-col items-center justify-center z-[200] ${resolveTransitionClasses(motionMode, 'overlay')}`}>
       <h2 className="text-4xl sm:text-6xl font-black text-[var(--text-primary)] mb-2 tracking-tighter uppercase font-[var(--font-heading)]">Arcade Cleared</h2>
-      <p className="text-[var(--text-muted)] mb-2 text-base sm:text-xl font-medium tracking-widest uppercase">The Sentinel has fallen</p>
+      <p className="text-[var(--text-muted)] mb-2 text-base sm:text-xl font-medium tracking-widest uppercase">The Butcher has fallen</p>
       <p className="text-[var(--text-muted)] mb-12 text-sm font-bold uppercase tracking-[0.3em]">Score: {score}</p>
       <button
         onClick={onExitToHub}

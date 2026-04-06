@@ -38,10 +38,15 @@ export const renderEntityIcon = (
   const { icon, shape, color, borderColor, size: sizeMult = 1.0 } = visual;
   const usesBestiaryPortrait = assetHref?.includes('/assets/bestiary/') ?? false;
   const usesRasterPortrait = /\.(?:webp|avif|png|jpe?g)(?:$|[?#])/i.test(assetHref || '');
-  const finalSize = size * sizeMult * (usesBestiaryPortrait ? BESTIARY_UNIT_SCALE_MULTIPLIER : 1);
-  const rasterVerticalOffset = usesRasterPortrait
-    ? finalSize * (isPlayer ? PLAYER_RASTER_UNIT_VERTICAL_OFFSET_RATIO : ENEMY_RASTER_UNIT_VERTICAL_OFFSET_RATIO)
+  const portraitScaleMultiplier = usesBestiaryPortrait ? BESTIARY_UNIT_SCALE_MULTIPLIER : 1;
+  const basePortraitSize = size * portraitScaleMultiplier;
+  const finalSize = basePortraitSize * sizeMult;
+  const rasterGroundAnchorY = usesRasterPortrait
+    ? basePortraitSize * (1 - (isPlayer ? PLAYER_RASTER_UNIT_VERTICAL_OFFSET_RATIO : ENEMY_RASTER_UNIT_VERTICAL_OFFSET_RATIO))
     : 0;
+  const assetY = usesRasterPortrait
+    ? rasterGroundAnchorY - (finalSize * 2)
+    : -finalSize;
   const bombFuse = entity.statusEffects?.find(s => s.type === 'time_bomb');
   const bombTimer = bombFuse ? Math.max(0, bombFuse.duration) : (entity.actionCooldown ?? 0);
   const contrastFilter = `contrast(${contrastBoost.toFixed(2)}) brightness(${(contrastBoost > 1 ? 1.12 : 1.04).toFixed(2)})`;
@@ -56,7 +61,7 @@ export const renderEntityIcon = (
         <image
           href={assetHref}
           x={-finalSize}
-          y={-finalSize - rasterVerticalOffset}
+          y={assetY}
           width={finalSize * 2}
           height={finalSize * 2}
           preserveAspectRatio="xMidYMid meet"

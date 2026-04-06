@@ -65,6 +65,10 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
         return index;
     };
 
+    const hasLivingArenaAlphaActors = (state: GameState): boolean =>
+        (state.player.hp || 0) > 0
+        || Boolean((state.companions || []).some(companion => companion.factionId === 'player' && (companion.hp || 0) > 0));
+
     const updateActorInState = (state: GameState, actor: Entity): GameState => {
         if (actor.id === state.player.id) {
             return { ...state, player: actor };
@@ -99,7 +103,10 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
         while (iterations < MAX_ITERATIONS) {
             iterations++;
 
-            if (curState.player.hp <= 0 && curState.pendingStatus?.status !== 'lost') {
+            const playerSideDefeated = curState.simulationMode === 'arena_symmetric'
+                ? !hasLivingArenaAlphaActors(curState)
+                : curState.player.hp <= 0;
+            if (playerSideDefeated && curState.pendingStatus?.status !== 'lost') {
                 const completedRun = buildRunSummary(curState);
                 return deps.withPendingFrame(
                     {
@@ -159,7 +166,11 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
             }
 
             if (!continuingTurn) {
-                if (actorId === 'player' && curState.upgrades?.includes('RELIC_STEADY_PLATES')) {
+                if (
+                    actorId === 'player'
+                    && curState.simulationMode !== 'arena_symmetric'
+                    && curState.upgrades?.includes('RELIC_STEADY_PLATES')
+                ) {
                     const boostedArmor = Math.min(2, (curState.player.temporaryArmor || 0) + 1);
                     if (boostedArmor !== (curState.player.temporaryArmor || 0)) {
                         curState = {
@@ -177,7 +188,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 curState = sotResult.state;
                 messages.push(...sotResult.messages);
 
-                if (actorId === 'player') {
+                if (actorId === 'player' && curState.simulationMode !== 'arena_symmetric') {
                     const shieldSkill = curState.player.activeSkills?.find(s => s.id === 'SHIELD_BASH');
                     const hasPassiveProtection = !!shieldSkill?.activeUpgrades?.includes('PASSIVE_PROTECTION');
                     if (hasPassiveProtection && (shieldSkill?.currentCooldown || 0) === 0) {
@@ -227,6 +238,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                             visibleOpponentCount: 1,
                             attackOpportunityAvailable: true,
                             threatOpportunityAvailable: false,
+                            objectiveOpportunityAvailable: false,
                             engagementMode: 'engage',
                             coherenceTargetKind: 'hostile',
                             sameTurnRetreatRejectedCount: 0,
@@ -294,11 +306,13 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 if (traceContext) {
                     (globalThis as any).__HOP_ENEMY_AI_RUNTIME_DECISION_CONTEXT__ = traceContext;
                 }
+                (globalThis as any).__HOP_GENERIC_AI_RUNTIME_TRACE_LIVE_ONLY__ = true;
 
                 let intentOrPromise: Intent | Promise<Intent>;
                 try {
                     intentOrPromise = strategy.getIntent(curState, actorForIntent);
                 } finally {
+                    delete (globalThis as any).__HOP_GENERIC_AI_RUNTIME_TRACE_LIVE_ONLY__;
                     if (traceContext) {
                         delete (globalThis as any).__HOP_ENEMY_AI_RUNTIME_DECISION_CONTEXT__;
                     }
@@ -355,7 +369,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                     ...stateBeforeEffects,
                     message: appendTaggedMessages(curState.message, tacticalMessages, 'INFO', 'COMBAT')
                 };
-                if (actorId === 'player') {
+                if (actorId === 'player' && curState.simulationMode !== 'arena_symmetric') {
                     const withVisibility = recomputeVisibility(curState);
                     return {
                         ...withVisibility,
@@ -368,7 +382,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                     ...stateBeforeEffects,
                     message: appendTaggedMessages(curState.message, tacticalMessages, 'INFO', 'COMBAT')
                 };
-                if (actorId === 'player') {
+                if (actorId === 'player' && curState.simulationMode !== 'arena_symmetric') {
                     const withVisibility = recomputeVisibility(curState);
                     return {
                         ...withVisibility,
@@ -402,25 +416,29 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
             const postActionActor = actorIndex.get(actorId);
             if (!postActionActor || postActionActor.hp <= 0) {
                 if (actorId === 'player') {
-                    const completedRun = buildRunSummary(curState);
-                    return deps.withPendingFrame(
-                        {
-                            ...curState,
-                            message: appendTaggedMessage(
-                                appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
-                                'You have fallen...',
-                                'CRITICAL',
-                                'COMBAT'
-                            )
-                        },
-                        { status: 'lost', completedRun },
-                        'RUN_LOST',
-                        { reason: 'SELF_ACTION_DEATH' }
-                    );
+                    const survivingArenaAlphaActors = hasLivingArenaAlphaActors(curState);
+                    if (curState.simulationMode !== 'arena_symmetric' || !survivingArenaAlphaActors) {
+                        const completedRun = buildRunSummary(curState);
+                        return deps.withPendingFrame(
+                            {
+                                ...curState,
+                                message: appendTaggedMessage(
+                                    appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM'),
+                                    'You have fallen...',
+                                    'CRITICAL',
+                                    'COMBAT'
+                                )
+                            },
+                            { status: 'lost', completedRun },
+                            'RUN_LOST',
+                            { reason: 'SELF_ACTION_DEATH' }
+                        );
+                    }
                 }
                 curState = {
                     ...curState,
                     enemies: curState.enemies.filter(e => e.id !== actorId),
+                    companions: curState.companions?.filter(companion => companion.id !== actorId),
                     initiativeQueue: removeFromQueue(curState.initiativeQueue!, actorId),
                     message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM')
                 };
@@ -428,7 +446,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
             }
 
             if (turnOutcome === 'continue') {
-                if (actorId === 'player') {
+                if (actorId === 'player' && curState.simulationMode !== 'arena_symmetric') {
                     const withVisibility = recomputeVisibility({
                         ...curState,
                         message: appendTaggedMessages(curState.message, messages, 'INFO', 'SYSTEM')
@@ -529,7 +547,7 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                 };
             }
 
-            if (actorId === 'player') {
+            if (actorId === 'player' && curState.simulationMode !== 'arena_symmetric') {
                 const playerTurnRules = deps.applyPlayerEndOfTurnRules(curState, actorStepId, { withPendingFrame: deps.withPendingFrame });
                 curState = playerTurnRules.state;
                 if (playerTurnRules.haltTurnLoop) {
@@ -540,6 +558,17 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
                     };
                 }
                 messages.push(...playerTurnRules.messages);
+            }
+
+            if (curState.simulationMode === 'arena_symmetric') {
+                const withVisibility = recomputeVisibility(curState);
+                const intentPreview = buildIntentPreview(withVisibility);
+                return {
+                    ...withVisibility,
+                    intentPreview,
+                    message: appendTaggedMessages(withVisibility.message, messages, 'INFO', 'SYSTEM'),
+                    dyingEntities: [...(withVisibility.dyingEntities || []), ...dyingEntities]
+                };
             }
         }
 

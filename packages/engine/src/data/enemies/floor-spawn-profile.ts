@@ -81,9 +81,9 @@ const FLOOR_SPAWN_PROFILES: Record<number, Omit<FloorSpawnProfile, 'floor'>> = {
     },
     10: {
         role: 'boss',
-        budget: 0,
-        allowedSubtypes: [],
-        composition: { frontlineMin: 0, frontlineMax: 0, rangedMax: 0, hazardSetterMax: 0, flankerMax: 0, supportMax: 0, bossAnchorMax: 0 }
+        budget: 20,
+        allowedSubtypes: ['butcher'],
+        composition: { frontlineMin: 1, frontlineMax: 1, rangedMax: 1, hazardSetterMax: 0, flankerMax: 0, supportMax: 0, bossAnchorMax: 1 }
     },
 };
 

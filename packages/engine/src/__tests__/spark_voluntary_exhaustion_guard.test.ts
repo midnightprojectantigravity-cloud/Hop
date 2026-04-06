@@ -28,6 +28,22 @@ const makeAssessment = (overrides: Partial<AiSparkAssessment> = {}): AiSparkAsse
 });
 
 describe('spark doctrine exhaustion guard', () => {
+    it('blocks non-lethal big-payoff crash spending into exhausted', () => {
+        const result = evaluateSparkDoctrine({
+            actionType: 'USE_SKILL',
+            payoff: 'big_payoff',
+            decisivePayoff: false,
+            assessment: makeAssessment(),
+            restedOpportunityMode: 'battery_only',
+            hasStandardOrBetterNonExhaustingAlternative: false
+        });
+
+        expect(result.allowed).toBe(false);
+        expect(result.gateReason).toBe('blocked_exhaustion_entry');
+        expect(result.override).toBe('none');
+        expect(result.voluntaryExhaustionAllowed).toBe(false);
+    });
+
     it('blocks crash-spending into exhausted for low or standard payoff when an alternative exists', () => {
         const result = evaluateSparkDoctrine({
             actionType: 'USE_SKILL',
@@ -54,6 +70,21 @@ describe('spark doctrine exhaustion guard', () => {
 
         expect(result.allowed).toBe(true);
         expect(result.override).toBe('surge_only_option');
+        expect(result.voluntaryExhaustionAllowed).toBe(true);
+    });
+
+    it('still allows decisive kill windows to override exhaustion entry', () => {
+        const result = evaluateSparkDoctrine({
+            actionType: 'USE_SKILL',
+            payoff: 'big_payoff',
+            decisivePayoff: true,
+            assessment: makeAssessment(),
+            restedOpportunityMode: 'battery_only',
+            hasStandardOrBetterNonExhaustingAlternative: false
+        });
+
+        expect(result.allowed).toBe(true);
+        expect(result.override).toBe('big_payoff');
         expect(result.voluntaryExhaustionAllowed).toBe(true);
     });
 });

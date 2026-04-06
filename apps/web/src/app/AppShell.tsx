@@ -26,6 +26,7 @@ import { useTutorialSession } from './use-tutorial-session';
 import { useWorldgenSession } from './use-worldgen-session';
 import { useRunController } from './use-run-controller';
 import { useRoutePrefetch } from './use-route-prefetch';
+import { useDevRunRescueBridge } from './use-dev-run-rescue-bridge';
 import { UtilityRouteShell } from './UtilityRouteShell';
 import { HubRouteShell } from './HubRouteShell';
 import { RunRouteShell } from './RunRouteShell';
@@ -87,6 +88,7 @@ export function AppShell() {
     hubPath,
     biomesPath,
     themeLabPath,
+    dungeonLabPath,
     settingsPath,
     leaderboardPath,
     tutorialsPath,
@@ -94,6 +96,7 @@ export function AppShell() {
     isArcadeRoute,
     isBiomesRoute,
     isThemeLabRoute,
+    isDungeonLabRoute,
     isSettingsRoute,
     isLeaderboardRoute,
     isTutorialsRoute,
@@ -211,6 +214,7 @@ export function AppShell() {
     gameState,
     appendTurnTrace
   });
+  useDevRunRescueBridge({ gameState, dispatchWithTrace });
 
   const floorIntro = useFloorIntro(gameState);
   useRunRecording(gameState, isReplayMode);
@@ -368,6 +372,7 @@ export function AppShell() {
     isArcadeRoute,
     isBiomesRoute,
     isThemeLabRoute,
+    isDungeonLabRoute,
     isLeaderboardRoute,
     isSettingsRoute,
     isTutorialsRoute
@@ -384,6 +389,7 @@ export function AppShell() {
       || isArcadeRoute
       || isBiomesRoute
       || isThemeLabRoute
+      || isDungeonLabRoute
       || (dedicatedHubRoutesEnabled && isSettingsRoute)
       || (dedicatedHubRoutesEnabled && isLeaderboardRoute)
       || (dedicatedHubRoutesEnabled && isTutorialsRoute);
@@ -397,6 +403,7 @@ export function AppShell() {
     isHubRoute,
     isArcadeRoute,
     isBiomesRoute,
+    isDungeonLabRoute,
     isLeaderboardRoute,
     isSettingsRoute,
     isThemeLabRoute,
@@ -488,7 +495,7 @@ export function AppShell() {
     }
   });
 
-  if (isBiomesRoute || isThemeLabRoute) {
+  if (isBiomesRoute || isThemeLabRoute || isDungeonLabRoute) {
     return (
       <>
         {bootOverlay}
@@ -497,9 +504,12 @@ export function AppShell() {
           uiPreferences={uiPreferences}
           isBiomesRoute={isBiomesRoute}
           isThemeLabRoute={isThemeLabRoute}
+          isDungeonLabRoute={isDungeonLabRoute}
           hubPath={hubPath}
+          homePath={homePath}
           navigateTo={navigateTo}
           patchUiPreferences={patchUiPreferences}
+          onStartReplay={handleHubReplayStart}
         />
       </>
     );
@@ -520,6 +530,7 @@ export function AppShell() {
           hubPath={hubPath}
           biomesPath={biomesPath}
           themeLabPath={themeLabPath}
+          dungeonLabPath={dungeonLabPath}
           settingsPath={settingsPath}
           leaderboardPath={leaderboardPath}
           tutorialsPath={tutorialsPath}

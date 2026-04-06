@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import {
   prefetchBiomeSandbox,
+  prefetchDungeonLabScreen,
   prefetchGameScreen,
   prefetchHubScreen,
   prefetchLeaderboardScreen,
@@ -15,6 +16,7 @@ export const useRoutePrefetch = ({
   isArcadeRoute,
   isBiomesRoute,
   isThemeLabRoute,
+  isDungeonLabRoute,
   isLeaderboardRoute,
   isSettingsRoute,
   isTutorialsRoute
@@ -24,6 +26,7 @@ export const useRoutePrefetch = ({
   isArcadeRoute: boolean;
   isBiomesRoute: boolean;
   isThemeLabRoute: boolean;
+  isDungeonLabRoute: boolean;
   isLeaderboardRoute: boolean;
   isSettingsRoute: boolean;
   isTutorialsRoute: boolean;
@@ -51,6 +54,20 @@ export const useRoutePrefetch = ({
         void prefetchHubScreen();
         void prefetchGameScreen();
         void prefetchBiomeSandbox();
+        void prefetchDungeonLabScreen();
+        if (dedicatedHubRoutesEnabled) {
+          void prefetchSettingsScreen();
+          void prefetchLeaderboardScreen();
+          void prefetchTutorialReplayScreen();
+        }
+        return;
+      }
+
+      if (isDungeonLabRoute) {
+        void prefetchHubScreen();
+        void prefetchGameScreen();
+        void prefetchBiomeSandbox();
+        void prefetchThemeManagerScreen();
         if (dedicatedHubRoutesEnabled) {
           void prefetchSettingsScreen();
           void prefetchLeaderboardScreen();
@@ -83,6 +100,7 @@ export const useRoutePrefetch = ({
       if (gameStatus === 'hub') {
         void prefetchGameScreen();
         void prefetchThemeManagerScreen();
+        void prefetchDungeonLabScreen();
         if (!isArcadeRoute) {
           void prefetchBiomeSandbox();
         }
@@ -101,6 +119,7 @@ export const useRoutePrefetch = ({
         void prefetchTutorialReplayScreen();
       }
       void prefetchThemeManagerScreen();
+      void prefetchDungeonLabScreen();
       if (!isArcadeRoute && gameStatus !== 'lost') {
         void prefetchBiomeSandbox();
       }
@@ -132,6 +151,7 @@ export const useRoutePrefetch = ({
     isArcadeRoute,
     isBiomesRoute,
     isThemeLabRoute,
+    isDungeonLabRoute,
     isLeaderboardRoute,
     isSettingsRoute,
     isTutorialsRoute

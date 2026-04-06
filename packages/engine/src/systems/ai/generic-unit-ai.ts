@@ -1,7 +1,9 @@
-import { hexDistance, hexEquals, pointToKey } from '../../hex';
+import { getHexLine, getNeighbors, hexDistance, hexEquals, pointToKey } from '../../hex';
+import { getActorAt } from '../../helpers';
 import type {
     Actor,
     AiCandidatePayoff,
+    GenericAiGoal,
     AiSparkAssessment,
     AiSparkBand,
     AiSparkDoctrineResult,
@@ -17,6 +19,7 @@ import { previewActionOutcome } from '../action-preview';
 import { resolveCombatPressureMode } from '../free-move';
 import { resolveWaitPreview } from '../ires';
 import { getTurnStartPosition } from '../initiative';
+import { SpatialSystem } from '../spatial-system';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
 import { recomputeVisibility } from '../visibility';
 import { seededChoiceSource } from './core/tiebreak';
@@ -28,7 +31,6 @@ import {
     classifyRestedOpportunityMode,
     evaluateSparkDoctrine
 } from './spark-doctrine';
-import type { StrategicIntent } from './strategic-policy';
 
 export type GenericUnitAiSide = 'player' | 'enemy' | 'companion';
 
@@ -52,10 +54,12 @@ export type GenericUnitAiEngagementMode = 'search' | 'approach' | 'engage' | 're
 export type GenericUnitAiCoherenceTargetKind = 'hostile' | 'anchor_actor' | 'anchor_point' | 'objective' | 'memory' | 'none';
 
 export interface GenericUnitAiSelectionSummary {
+    goal?: GenericAiGoal;
     visibleOpponentIds: string[];
     visibleOpponentCount: number;
     attackOpportunityAvailable: boolean;
     threatOpportunityAvailable: boolean;
+    objectiveOpportunityAvailable: boolean;
     engagementMode: GenericUnitAiEngagementMode;
     coherenceTargetKind: GenericUnitAiCoherenceTargetKind;
     sameTurnRetreatRejectedCount: number;
@@ -93,6 +97,30 @@ export interface GenericUnitAiCandidate {
     payoff?: AiCandidatePayoff;
     sparkAssessment?: AiSparkAssessment;
     sparkDoctrine?: AiSparkDoctrineResult;
+    movePriority?: GenericUnitAiMovePriority;
+}
+
+interface GenericUnitAiMovePriority {
+    pathDistanceToCoherenceTarget?: number;
+    exposureDelta: number;
+    desiredRangeScore: number;
+    mobilityFreedom: number;
+    boxInRisk: number;
+    followsCanonicalChaseStep: boolean;
+    pointKey: string;
+}
+
+interface GenericUnitAiMovePriorityInput {
+    pathDistanceToCoherenceTarget?: number;
+    canDamageNow?: boolean;
+    createsThreatNextDecision?: boolean;
+    exposureDelta?: number;
+    desiredRangeScore?: number;
+    mobilityFreedom?: number;
+    boxInRisk?: number;
+    followsCanonicalChaseStep?: boolean;
+    score?: number;
+    pointKey: string;
 }
 
 export interface GenericUnitAiContext {
@@ -101,7 +129,7 @@ export interface GenericUnitAiContext {
     side: GenericUnitAiSide;
     simSeed: string;
     decisionCounter: number;
-    strategicIntent?: StrategicIntent;
+    goal?: GenericAiGoal;
 }
 
 const ZERO_FACTS: GenericUnitAiCandidateFacts = {
@@ -114,6 +142,9 @@ const ZERO_FACTS: GenericUnitAiCandidateFacts = {
     isLowValueMobility: false,
     isHazardSelfTrap: false
 };
+
+const resolveContextGoal = (context: GenericUnitAiContext): GenericAiGoal =>
+    context.goal || context.actor.behaviorState?.goal || 'engage';
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
@@ -137,11 +168,16 @@ const getReadySkillDefinitions = (actor: Actor) =>
         }))
         .filter((entry): entry is { skill: Actor['activeSkills'][number]; definition: NonNullable<ReturnType<typeof SkillRegistry.get>> } => !!entry.definition);
 
+const isProactiveTurnSkill = (
+    skillId: string,
+    definition: NonNullable<ReturnType<typeof SkillRegistry.get>>
+): boolean => skillId === 'BASIC_ATTACK' || definition.slot !== 'passive';
+
 const resolveMaxReadySkillRange = (actor: Actor): number =>
     Math.max(
         1,
         ...getReadySkillDefinitions(actor)
-            .filter(entry => entry.definition.slot !== 'passive')
+            .filter(entry => isProactiveTurnSkill(String(entry.skill.id), entry.definition))
             .map(entry => Math.max(0, Number(entry.definition.baseVariables.range || 0)))
     );
 
@@ -161,6 +197,9 @@ const getVisibleOpposingActors = (
     localHorizon: number
 ): Actor[] => {
     const hostiles = getOpposingActors(state, actor);
+    if (state.simulationMode === 'arena_symmetric') {
+        return hostiles.filter(hostile => hexDistance(actor.position, hostile.position) <= localHorizon);
+    }
     if (side === 'player' || side === 'companion') {
         const visibleIds = getPlayerVisibleActorIds(state);
         return hostiles.filter(hostile =>
@@ -185,11 +224,87 @@ const resolveEnemyMemoryTarget = (state: GameState, actor: Actor): Point | undef
     return awareness.lastKnownPlayerPosition;
 };
 
+const computeTraversalDistance = (
+    state: GameState,
+    from: Point,
+    to: Point
+): number => {
+    if (hexEquals(from, to)) return 0;
+
+    const queue: Array<{ point: Point; distance: number }> = [{ point: from, distance: 0 }];
+    const visited = new Set<string>([pointToKey(from)]);
+
+    while (queue.length > 0) {
+        const current = queue.shift()!;
+        for (const next of getNeighbors(current.point)) {
+            const key = pointToKey(next);
+            if (visited.has(key)) continue;
+            visited.add(key);
+            if (!SpatialSystem.isWithinBounds(state, next)) continue;
+            // Route scoring should mirror real ground pursuit, so hazardous tiles
+            // cannot count as free pathing shortcuts around boss arenas.
+            if (!UnifiedTileService.isPassable(state, next) && !hexEquals(next, to)) continue;
+            if (hexEquals(next, to)) return current.distance + 1;
+            queue.push({ point: next, distance: current.distance + 1 });
+        }
+    }
+
+    return hexDistance(from, to) + 12;
+};
+
+const compareDescendingNumber = (left: number | undefined, right: number | undefined): number =>
+    (Number(right) || 0) - (Number(left) || 0);
+
+const compareMovePriority = (
+    left: GenericUnitAiMovePriorityInput,
+    right: GenericUnitAiMovePriorityInput
+): number => {
+    const canDamageCompare = Number(!!right.canDamageNow) - Number(!!left.canDamageNow);
+    if (canDamageCompare !== 0) return canDamageCompare;
+
+    const createsThreatCompare = Number(!!right.createsThreatNextDecision) - Number(!!left.createsThreatNextDecision);
+    if (createsThreatCompare !== 0) return createsThreatCompare;
+
+    const rangeCompare = compareDescendingNumber(left.desiredRangeScore, right.desiredRangeScore);
+    if (rangeCompare !== 0) return rangeCompare;
+
+    const mobilityCompare = compareDescendingNumber(left.mobilityFreedom, right.mobilityFreedom);
+    if (mobilityCompare !== 0) return mobilityCompare;
+
+    const leftBoxInRisk = Number(left.boxInRisk) || 0;
+    const rightBoxInRisk = Number(right.boxInRisk) || 0;
+    if (leftBoxInRisk !== rightBoxInRisk) {
+        return leftBoxInRisk - rightBoxInRisk;
+    }
+
+    const exposureCompare = compareDescendingNumber(left.exposureDelta, right.exposureDelta);
+    if (exposureCompare !== 0) return exposureCompare;
+
+    const leftPathDistance = Number.isFinite(left.pathDistanceToCoherenceTarget)
+        ? Number(left.pathDistanceToCoherenceTarget)
+        : Number.POSITIVE_INFINITY;
+    const rightPathDistance = Number.isFinite(right.pathDistanceToCoherenceTarget)
+        ? Number(right.pathDistanceToCoherenceTarget)
+        : Number.POSITIVE_INFINITY;
+    if (leftPathDistance !== rightPathDistance) {
+        return leftPathDistance - rightPathDistance;
+    }
+
+    const canonicalCompare = Number(!!right.followsCanonicalChaseStep) - Number(!!left.followsCanonicalChaseStep);
+    if (canonicalCompare !== 0) return canonicalCompare;
+
+    const scoreCompare = compareDescendingNumber(left.score, right.score);
+    if (scoreCompare !== 0) return scoreCompare;
+
+    return left.pointKey.localeCompare(right.pointKey);
+};
+
 const resolveCoherenceTarget = (
     context: GenericUnitAiContext,
     visibleHostiles: Actor[],
     _behaviorProfile: ResolvedAiBehaviorProfile
 ): { point?: Point; kind: GenericUnitAiCoherenceTargetKind } => {
+    const goal = resolveContextGoal(context);
     const anchor = resolveBehaviorAnchorTarget(context.state, context.actor);
     if (anchor.kind === 'anchor_actor' || anchor.kind === 'anchor_point') {
         return {
@@ -208,6 +323,19 @@ const resolveCoherenceTarget = (
         };
     }
 
+    if (context.state.simulationMode === 'arena_symmetric') {
+        const nearestArenaHostile = [...getOpposingActors(context.state, context.actor)]
+            .sort((left, right) =>
+                hexDistance(context.actor.position, left.position) - hexDistance(context.actor.position, right.position)
+            )[0];
+        return nearestArenaHostile
+            ? {
+                point: nearestArenaHostile.position,
+                kind: 'hostile'
+            }
+            : { kind: 'none' };
+    }
+
     if (context.side === 'enemy') {
         const memoryTarget = resolveEnemyMemoryTarget(context.state, context.actor);
         if (memoryTarget) {
@@ -219,16 +347,38 @@ const resolveCoherenceTarget = (
     }
 
     const hpRatio = Number(context.actor.hp || 0) / Math.max(1, Number(context.actor.maxHp || 1));
-    if (hpRatio < 0.55 && context.state.shrinePosition) {
-        return {
-            point: context.state.shrinePosition,
-            kind: 'objective'
-        };
+    if (goal === 'recover') {
+        if (context.state.shrinePosition) {
+            return {
+                point: context.state.shrinePosition,
+                kind: 'objective'
+            };
+        }
+        if (context.state.stairsPosition) {
+            return {
+                point: context.state.stairsPosition,
+                kind: 'objective'
+            };
+        }
+        return { kind: 'none' };
     }
-    return {
-        point: context.state.stairsPosition,
-        kind: 'objective'
-    };
+
+    if (goal === 'explore') {
+        if (hpRatio < 0.55 && context.state.shrinePosition) {
+            return {
+                point: context.state.shrinePosition,
+                kind: 'objective'
+            };
+        }
+        if (context.state.stairsPosition) {
+            return {
+                point: context.state.stairsPosition,
+                kind: 'objective'
+            };
+        }
+    }
+
+    return { kind: 'none' };
 };
 
 const nearestHostileDistance = (origin: Point, hostiles: Actor[]): number => {
@@ -242,7 +392,7 @@ const computeExposure = (origin: Point, hostiles: Actor[]): number => {
         const hostileRange = Math.max(
             1,
             ...getReadySkillDefinitions(hostile)
-                .filter(entry => entry.definition.slot !== 'passive')
+                .filter(entry => isProactiveTurnSkill(String(entry.skill.id), entry.definition))
                 .map(entry => Math.max(1, Number(entry.definition.baseVariables.range || 1)))
         );
         const dist = hexDistance(origin, hostile.position);
@@ -253,21 +403,174 @@ const computeExposure = (origin: Point, hostiles: Actor[]): number => {
     }, 0);
 };
 
+const resolveDesiredRangeBounds = (
+    behaviorProfile?: ResolvedAiBehaviorProfile
+): { min: number; max: number } | undefined => {
+    const desired = behaviorProfile?.desiredRange;
+    if (desired === undefined) return undefined;
+    if (Array.isArray(desired)) {
+        return {
+            min: Math.min(desired[0], desired[1]),
+            max: Math.max(desired[0], desired[1])
+        };
+    }
+    return {
+        min: desired,
+        max: desired
+    };
+};
+
+const isLongRangePosture = (behaviorProfile?: ResolvedAiBehaviorProfile): boolean => {
+    const bounds = resolveDesiredRangeBounds(behaviorProfile);
+    return !!bounds && bounds.min >= 2;
+};
+
+const computeDesiredRangeAffinity = (
+    distance: number,
+    behaviorProfile?: ResolvedAiBehaviorProfile
+): number => {
+    const bounds = resolveDesiredRangeBounds(behaviorProfile);
+    if (!bounds) return 0;
+    const longRangePosture = isLongRangePosture(behaviorProfile);
+
+    if (distance < bounds.min) {
+        return -((bounds.min - distance) * (longRangePosture ? 3.5 : 2.5));
+    }
+    if (distance > bounds.max) {
+        return -((distance - bounds.max) * (longRangePosture ? 1.75 : 1.5));
+    }
+    if (bounds.max === bounds.min) {
+        return 5;
+    }
+
+    const span = Math.max(1, bounds.max - bounds.min);
+    const progress = clamp((distance - bounds.min) / span, 0, 1);
+    if (longRangePosture) {
+        // Kiting profiles should strongly prefer the far edge of a legal band.
+        return 5 + (progress * 4);
+    }
+
+    const centerBias = 1 - Math.abs((progress * 2) - 1);
+    return 5 + (centerBias * 1.5);
+};
+
+const resolveRangeAnchorPoint = (
+    origin: Point,
+    visibleHostiles: Actor[],
+    fallback?: Point
+): Point | undefined => {
+    if (visibleHostiles.length === 0) return fallback;
+    return [...visibleHostiles]
+        .sort((left, right) => hexDistance(origin, left.position) - hexDistance(origin, right.position))
+        [0]?.position;
+};
+
+const isTraversalOpenForActor = (
+    state: GameState,
+    actorId: string,
+    point: Point
+): boolean => {
+    if (!SpatialSystem.isWithinBounds(state, point)) return false;
+    if (!UnifiedTileService.isPassable(state, point)) return false;
+    const occupant = getActorAt(state, point);
+    return !occupant || occupant.id === actorId;
+};
+
+const computeLocalMobilityFreedom = (
+    state: GameState,
+    actorId: string,
+    origin: Point
+): number =>
+    getNeighbors(origin).reduce((sum, next) =>
+        sum + (isTraversalOpenForActor(state, actorId, next) ? 1 : 0), 0);
+
+const computeImmediateEscapeLanes = (
+    state: GameState,
+    actorId: string,
+    origin: Point,
+    rangeAnchor: Point | undefined,
+    behaviorProfile?: ResolvedAiBehaviorProfile
+): number => {
+    if (!rangeAnchor) {
+        return computeLocalMobilityFreedom(state, actorId, origin);
+    }
+
+    const originDistance = hexDistance(origin, rangeAnchor);
+    const originAffinity = computeDesiredRangeAffinity(originDistance, behaviorProfile);
+    const longRangePosture = isLongRangePosture(behaviorProfile);
+
+    return getNeighbors(origin).reduce((sum, next) => {
+        if (!isTraversalOpenForActor(state, actorId, next)) return sum;
+        const nextDistance = hexDistance(next, rangeAnchor);
+        const nextAffinity = computeDesiredRangeAffinity(nextDistance, behaviorProfile);
+        const preservesEscapeWindow = longRangePosture
+            ? nextDistance >= originDistance && nextAffinity >= originAffinity
+            : nextAffinity >= originAffinity;
+        return sum + (preservesEscapeWindow ? 1 : 0);
+    }, 0);
+};
+
+const computeBoxInRisk = (
+    mobilityFreedom: number,
+    escapeLanes: number,
+    behaviorProfile?: ResolvedAiBehaviorProfile
+): number => {
+    const longRangePosture = isLongRangePosture(behaviorProfile);
+    const desiredFreedom = longRangePosture ? 4 : 3;
+    const desiredEscapeLanes = longRangePosture ? 2 : 1;
+    return Math.max(0, desiredFreedom - mobilityFreedom)
+        + (Math.max(0, desiredEscapeLanes - escapeLanes) * (longRangePosture ? 1.5 : 1));
+};
+
+const resolveMovementBehaviorProfile = (
+    actor: Actor,
+    behaviorProfile: ResolvedAiBehaviorProfile
+): ResolvedAiBehaviorProfile => {
+    const hasReadyDamagingSkill = getReadySkillDefinitions(actor).some(entry =>
+        isProactiveTurnSkill(String(entry.skill.id), entry.definition)
+        && !!entry.definition.intentProfile?.intentTags.includes('damage')
+    );
+    if (hasReadyDamagingSkill) {
+        return behaviorProfile;
+    }
+
+    let fallbackBounds: { min: number; max: number } | undefined;
+    for (const skill of actor.activeSkills || []) {
+        const desired = SkillRegistry.get(String(skill.id))?.intentProfile?.ai?.desiredRange;
+        if (desired === undefined) continue;
+        const bounds = Array.isArray(desired)
+            ? { min: Math.min(desired[0], desired[1]), max: Math.max(desired[0], desired[1]) }
+            : { min: desired, max: desired };
+        if (bounds.min < 2) continue;
+        if (!fallbackBounds || bounds.max > fallbackBounds.max || (bounds.max === fallbackBounds.max && bounds.min > fallbackBounds.min)) {
+            fallbackBounds = bounds;
+        }
+    }
+
+    if (!fallbackBounds) {
+        return behaviorProfile;
+    }
+
+    const currentBounds = resolveDesiredRangeBounds(behaviorProfile);
+    if (currentBounds && currentBounds.max >= fallbackBounds.max && currentBounds.min >= fallbackBounds.min) {
+        return behaviorProfile;
+    }
+
+    return {
+        ...behaviorProfile,
+        desiredRange: fallbackBounds.min === fallbackBounds.max
+            ? fallbackBounds.min
+            : [fallbackBounds.min, fallbackBounds.max]
+    };
+};
+
 const computeDesiredRangeScore = (
     actorPosition: Point,
     targetPoint: Point | undefined,
     behaviorProfile?: ResolvedAiBehaviorProfile
 ): number => {
-    const desired = behaviorProfile?.desiredRange;
-    if (!desired) return 0;
     if (!targetPoint) return 0;
-    const dist = hexDistance(actorPosition, targetPoint);
-    if (Array.isArray(desired)) {
-        if (dist < desired[0]) return -((desired[0] - dist) * 2.5);
-        if (dist > desired[1]) return -((dist - desired[1]) * 1.5);
-        return 5;
-    }
-    return Math.max(-6, 4 - Math.abs(dist - desired) * 2);
+    return computeDesiredRangeAffinity(hexDistance(actorPosition, targetPoint), behaviorProfile);
 };
 const isCloseRangePosture = (behaviorProfile?: ResolvedAiBehaviorProfile): boolean => {
     const desired = behaviorProfile?.desiredRange;
@@ -338,7 +641,7 @@ const computeEstimatedIntentValue = (
     visibleHostiles: Actor[],
     objectiveTarget: Point | undefined,
     profile: SkillIntentProfile | undefined,
-    intentBias: ReturnType<typeof resolveIntentBias>
+    goalBias: ReturnType<typeof resolveGoalBias>
 ): number => {
     if (!profile || action.type === 'MOVE') return 0;
     const aoeRadius = Math.max(0, Number(profile.target.aoeRadius || 0));
@@ -359,11 +662,11 @@ const computeEstimatedIntentValue = (
 
     const estimates = profile.estimates;
     return (
-        Number(estimates.damage || 0) * 1.5 * intentBias.offense
-        + Number(estimates.control || 0) * 1.2 * intentBias.control
-        + Number(estimates.healing || 0) * 1.25 * intentBias.defense
-        + Number(estimates.shielding || 0) * 0.9 * intentBias.defense
-        + Number(estimates.summon || 0) * 1.15 * intentBias.control
+        Number(estimates.damage || 0) * 1.5 * goalBias.offense
+        + Number(estimates.control || 0) * 1.2 * goalBias.control
+        + Number(estimates.healing || 0) * 1.25 * goalBias.defense
+        + Number(estimates.shielding || 0) * 0.9 * goalBias.defense
+        + Number(estimates.summon || 0) * 1.15 * goalBias.control
     ) * tacticalFactor;
 };
 
@@ -374,20 +677,67 @@ const rankMoveTargets = (
     coherenceTarget: Point | undefined,
     behaviorProfile: ResolvedAiBehaviorProfile
 ): Point[] => {
-    const exposureWeight = isCloseRangePosture(behaviorProfile) ? 1.5 : 4;
+    const movementBehaviorProfile = resolveMovementBehaviorProfile(context.actor, behaviorProfile);
+    const exposureWeight = isCloseRangePosture(movementBehaviorProfile) ? 1.5 : 4;
+    const exposureBefore = computeExposure(context.actor.position, visibleHostiles);
+    const longRangePosture = isLongRangePosture(movementBehaviorProfile);
+    const currentRouteDistance = coherenceTarget
+        ? computeTraversalDistance(context.state, context.actor.position, coherenceTarget)
+        : 0;
+    const canonicalChaseStep = resolveCanonicalChaseStep(context.actor.position, coherenceTarget);
+
     return [...targets]
-        .sort((left, right) => {
-            const leftScore =
-                Math.max(0, (coherenceTarget ? hexDistance(context.actor.position, coherenceTarget) - hexDistance(left, coherenceTarget) : 0)) * 3
-                + Math.max(0, computeExposure(context.actor.position, visibleHostiles) - computeExposure(left, visibleHostiles)) * exposureWeight
-                + computeDesiredRangeScore(left, coherenceTarget, behaviorProfile);
-            const rightScore =
-                Math.max(0, (coherenceTarget ? hexDistance(context.actor.position, coherenceTarget) - hexDistance(right, coherenceTarget) : 0)) * 3
-                + Math.max(0, computeExposure(context.actor.position, visibleHostiles) - computeExposure(right, visibleHostiles)) * exposureWeight
-                + computeDesiredRangeScore(right, coherenceTarget, behaviorProfile);
-            return rightScore - leftScore || pointToKey(left).localeCompare(pointToKey(right));
+        .map(target => {
+            const routeProgress = coherenceTarget
+                ? Math.max(0, currentRouteDistance - computeTraversalDistance(context.state, target, coherenceTarget))
+                : 0;
+            const directProgress = coherenceTarget
+                ? Math.max(0, hexDistance(context.actor.position, coherenceTarget) - hexDistance(target, coherenceTarget))
+                : 0;
+            const exposureDelta = exposureBefore - computeExposure(target, visibleHostiles);
+            const rangeAnchor = resolveRangeAnchorPoint(target, visibleHostiles, coherenceTarget);
+            const desiredRangeScore = computeDesiredRangeScore(target, rangeAnchor, movementBehaviorProfile);
+            const mobilityFreedom = computeLocalMobilityFreedom(context.state, context.actor.id, target);
+            const escapeLanes = computeImmediateEscapeLanes(
+                context.state,
+                context.actor.id,
+                target,
+                rangeAnchor,
+                movementBehaviorProfile
+            );
+            const boxInRisk = computeBoxInRisk(mobilityFreedom, escapeLanes, movementBehaviorProfile);
+            return {
+                target,
+                pathDistanceToCoherenceTarget: coherenceTarget
+                    ? computeTraversalDistance(context.state, target, coherenceTarget)
+                    : undefined,
+                exposureDelta,
+                desiredRangeScore,
+                mobilityFreedom,
+                boxInRisk,
+                followsCanonicalChaseStep: !!canonicalChaseStep && hexEquals(target, canonicalChaseStep),
+                pointKey: pointToKey(target),
+                score:
+                    (routeProgress * 4)
+                    + (directProgress * 3)
+                    + Math.max(0, exposureDelta) * exposureWeight
+                    + (mobilityFreedom * (longRangePosture ? 2.4 : 0.8))
+                    + (escapeLanes * (longRangePosture ? 2.6 : 0.8))
+                    - (boxInRisk * (longRangePosture ? 4.5 : 1.25))
+                    + desiredRangeScore
+            };
         })
+        .sort(compareMovePriority)
+        .map(entry => entry.target)
         .slice(0, 6);
+};
+
+const resolveCanonicalChaseStep = (
+    actorPosition: Point,
+    coherenceTarget: Point | undefined
+): Point | undefined => {
+    if (!coherenceTarget || hexEquals(actorPosition, coherenceTarget)) return undefined;
+    return getHexLine(actorPosition, coherenceTarget)[1];
 };
 
 const rankSkillTargets = (
@@ -429,7 +779,7 @@ const buildActionCandidates = (
     for (const entry of readySkills) {
         const skillId = String(entry.skill.id);
         if (skillId === 'AUTO_ATTACK' || skillId === 'BASIC_MOVE') continue;
-        if (entry.definition.slot === 'passive') continue;
+        if (!isProactiveTurnSkill(skillId, entry.definition)) continue;
         if (entry.definition.intentProfile?.economy?.consumesTurn === false) continue;
 
         let targets = entry.definition.getValidTargets?.(context.state, context.actor.position) || [];
@@ -467,15 +817,13 @@ const buildActionCandidates = (
     return candidates;
 };
 
-const resolveIntentBias = (strategicIntent: StrategicIntent | undefined) => {
-    switch (strategicIntent) {
-        case 'defense':
+const resolveGoalBias = (goal: GenericAiGoal) => {
+    switch (goal) {
+        case 'recover':
             return { offense: 0.7, defense: 1.35, control: 1, objective: 0.8 };
-        case 'control':
-            return { offense: 0.95, defense: 1, control: 1.35, objective: 0.9 };
-        case 'positioning':
-            return { offense: 0.85, defense: 1.1, control: 1, objective: 1.25 };
-        case 'offense':
+        case 'explore':
+            return { offense: 0.85, defense: 1.05, control: 1, objective: 1.35 };
+        case 'engage':
         default:
             return { offense: 1.25, defense: 0.85, control: 0.95, objective: 0.9 };
     }
@@ -512,7 +860,7 @@ const hasImmediateDamageOption = (
     for (const entry of readySkills) {
         const skillId = String(entry.skill.id);
         if (skillId === 'AUTO_ATTACK' || skillId === 'BASIC_MOVE') continue;
-        if (entry.definition.slot === 'passive') continue;
+        if (!isProactiveTurnSkill(skillId, entry.definition)) continue;
         if (entry.definition.intentProfile?.economy?.consumesTurn === false) continue;
 
         let targets = entry.definition.getValidTargets?.(state, actor.position) || [];
@@ -591,14 +939,21 @@ const applyTacticalPass = (
     const safetyBias = Math.max(0.25, behavior?.selfPreservationBias || 0.45);
     const isCloseRangeAction = candidate.skillId === 'BASIC_MOVE' || candidate.skillId === 'BASIC_ATTACK';
     const preservesBandByWaiting = candidate.action.type === 'WAIT' && !!candidate.sparkDoctrine?.waitForBandPreservation;
+    const reentersRestedByWaiting = candidate.action.type === 'WAIT' && (
+        candidate.sparkDoctrine?.restedDecision === 'reenter'
+        || candidate.sparkDoctrine?.restedDecision === 'true_rest'
+    );
+    const threatWindowCadenceMultiplier = resolveThreatWindowCadenceMultiplier(candidate);
 
     if (facts.canKillNow) breakdown.kill_now_bonus = 28 * offenseBias;
     if (facts.canDamageNow) breakdown.damage_now_bonus = 16 * offenseBias;
     if (facts.canDamageNow && behavior?.preferDamageOverPositioning) {
         breakdown.damage_over_positioning_bonus = 8 * offenseBias;
     }
-    if (facts.createsThreatNextDecision) breakdown.threaten_next_bonus = 14 * commitBias;
-    if (!facts.canDamageNow && facts.createsThreatNextDecision) breakdown.follow_through_bonus = 8 * followThroughBias;
+    if (facts.createsThreatNextDecision) breakdown.threaten_next_bonus = 14 * commitBias * threatWindowCadenceMultiplier;
+    if (!facts.canDamageNow && facts.createsThreatNextDecision) {
+        breakdown.follow_through_bonus = 8 * followThroughBias * threatWindowCadenceMultiplier;
+    }
     if (facts.backtracks) breakdown.backtrack_penalty = -18 * commitBias;
     if (facts.isLowValueMobility) breakdown.low_value_mobility_penalty = -18;
     if (facts.isHazardSelfTrap) breakdown.hazard_self_trap_penalty = -18 * safetyBias;
@@ -615,13 +970,23 @@ const applyTacticalPass = (
             breakdown.idle_visible_hostile_penalty = (
                 healthyEnoughToPush && !preservesBandByWaiting
                     ? (summary.attackOpportunityAvailable ? -32 : -20)
+                    : reentersRestedByWaiting
+                        ? -2
                     : -4
             ) * offenseBias;
         }
     } else if (summary.engagementMode === 'approach') {
-        if (facts.createsThreatNextDecision) breakdown.approach_window_bonus = 10 * commitBias;
+        if (facts.createsThreatNextDecision) {
+            breakdown.approach_window_bonus = 10 * commitBias * threatWindowCadenceMultiplier;
+        }
         if (candidate.action.type === 'WAIT' && summary.visibleOpponentCount > 0) {
-            breakdown.idle_visible_hostile_penalty = (healthyEnoughToPush && !preservesBandByWaiting ? -18 : -4) * offenseBias;
+            breakdown.idle_visible_hostile_penalty = (
+                healthyEnoughToPush && !preservesBandByWaiting
+                    ? -18
+                    : reentersRestedByWaiting
+                        ? -2
+                        : -4
+            ) * offenseBias;
         }
     } else if (summary.engagementMode === 'recover') {
         if (candidate.action.type === 'WAIT') {
@@ -632,6 +997,9 @@ const applyTacticalPass = (
     if (candidate.action.type === 'WAIT' && preservesBandByWaiting) {
         breakdown.spark_band_preservation_bonus = 12 * Math.max(0.75, safetyBias);
     }
+    if (reentersRestedByWaiting) {
+        breakdown.rested_reentry_priority_bonus = 12 * Math.max(0.75, safetyBias);
+    }
 
     if (
         candidate.action.type === 'WAIT'
@@ -641,6 +1009,19 @@ const applyTacticalPass = (
         && !preservesBandByWaiting
     ) {
         breakdown.premature_rest_penalty = -14 * offenseBias;
+    }
+
+    if (
+        candidate.action.type === 'WAIT'
+        && summary.objectiveOpportunityAvailable
+        && summary.coherenceTargetKind !== 'none'
+        && summary.engagementMode !== 'recover'
+    ) {
+        breakdown.wait_missed_objective_penalty = (
+            reentersRestedByWaiting
+                ? -4
+                : (preservesBandByWaiting ? -10 : -14)
+        ) * Math.max(0.75, commitBias);
     }
 
     if (
@@ -688,6 +1069,7 @@ const applySparkDoctrinePass = (
         assessment: candidate.sparkAssessment,
         restedOpportunityMode,
         hasStandardOrBetterNonExhaustingAlternative,
+        decisivePayoff: !!candidate.facts?.canKillNow,
         disciplineMultiplier: resolveSparkDisciplineModifier(behaviorProfile)
     });
 
@@ -721,6 +1103,55 @@ const resolveCandidateMobilityRole = (candidate: GenericUnitAiCandidate): SkillA
     if (!skillId || skillId === 'WAIT' || skillId === 'BASIC_MOVE') return undefined;
     return SkillRegistry.get(skillId)?.intentProfile?.ai?.mobilityRole;
 };
+
+const resolveCandidateActionKey = (candidate: GenericUnitAiCandidate): string => {
+    switch (candidate.action.type) {
+        case 'WAIT':
+            return 'WAIT';
+        case 'MOVE':
+            return `MOVE:${pointToKey(candidate.action.payload)}`;
+        case 'USE_SKILL':
+            return `USE_SKILL:${candidate.action.payload.skillId}:${candidate.action.payload.target ? pointToKey(candidate.action.payload.target) : 'self'}`;
+        default:
+            return candidate.reasoningCode;
+    }
+};
+
+const resolveCandidateMovePriority = (candidate: GenericUnitAiCandidate): GenericUnitAiMovePriorityInput | undefined => {
+    if (candidate.action.type !== 'MOVE') return undefined;
+    return {
+        pathDistanceToCoherenceTarget: candidate.movePriority?.pathDistanceToCoherenceTarget,
+        canDamageNow: candidate.facts?.canDamageNow,
+        createsThreatNextDecision: candidate.facts?.createsThreatNextDecision,
+        exposureDelta: candidate.movePriority?.exposureDelta,
+        desiredRangeScore: candidate.movePriority?.desiredRangeScore,
+        followsCanonicalChaseStep: candidate.movePriority?.followsCanonicalChaseStep,
+        score: candidate.score,
+        pointKey: candidate.movePriority?.pointKey || pointToKey(candidate.action.payload)
+    };
+};
+
+const compareCandidatePriority = (
+    left: GenericUnitAiCandidate,
+    right: GenericUnitAiCandidate
+): number => {
+    const leftMovePriority = resolveCandidateMovePriority(left);
+    const rightMovePriority = resolveCandidateMovePriority(right);
+    if (leftMovePriority && rightMovePriority) {
+        const moveCompare = compareMovePriority(leftMovePriority, rightMovePriority);
+        if (moveCompare !== 0) return moveCompare;
+    }
+
+    return right.score - left.score;
+};
+
+const compareCandidateOrder = (
+    left: GenericUnitAiCandidate,
+    right: GenericUnitAiCandidate
+): number =>
+    compareCandidatePriority(left, right)
+    || left.reasoningCode.localeCompare(right.reasoningCode)
+    || resolveCandidateActionKey(left).localeCompare(resolveCandidateActionKey(right));
 
 const applyMobilityShadowPass = (
     candidates: GenericUnitAiCandidate[]
@@ -778,13 +1209,36 @@ const isRestedBand = (band: AiSparkBand): boolean => band === 'rested_hold' || b
 const isStableOrBetterBand = (band: AiSparkBand): boolean => isRestedBand(band) || band === 'stable';
 const isCriticalOrWorseBand = (band: AiSparkBand): boolean => band === 'critical' || band === 'exhausted';
 
+const resolveThreatWindowCadenceMultiplier = (candidate: GenericUnitAiCandidate): number => {
+    const assessment = candidate.sparkAssessment;
+    if (!assessment) return 1;
+
+    let multiplier = assessment.isThirdActionOrLater
+        ? 0.35
+        : assessment.isSecondAction
+            ? 0.6
+            : 1;
+
+    if (!assessment.isFirstAction) {
+        if (assessment.wouldExitRested) {
+            multiplier *= 0.8;
+        }
+        if (assessment.wouldDropBelowStable) {
+            multiplier *= 0.75;
+        }
+    }
+
+    return clamp(multiplier, 0.25, 1);
+};
+
 const resolveSparkDisciplineModifier = (behaviorProfile: ResolvedAiBehaviorProfile): number => {
     const aggressiveScore = (behaviorProfile.offenseBias + behaviorProfile.commitBias + behaviorProfile.followThroughBias)
         - (behaviorProfile.selfPreservationBias + behaviorProfile.controlBias);
     const conservativeScore = (behaviorProfile.selfPreservationBias + behaviorProfile.controlBias)
         - (behaviorProfile.offenseBias + behaviorProfile.commitBias);
-    if (aggressiveScore >= 1.2) return 0.9;
-    if (conservativeScore >= 0.6) return 1.1;
+    if (aggressiveScore >= 1.2) return 1;
+    if (conservativeScore >= 0.9) return 1.15;
+    if (conservativeScore >= 0.4) return 1.08;
     return 1;
 };
 
@@ -884,7 +1338,7 @@ const evaluateCandidate = (
     behaviorProfile: ResolvedAiBehaviorProfile
 ): GenericUnitAiCandidate => {
     const actorBefore = resolveActorById(context.state, context.actor.id) || context.actor;
-    const intentBias = resolveIntentBias(context.strategicIntent);
+    const goalBias = resolveGoalBias(resolveContextGoal(context));
     const profile = getCandidateSkillProfile(action);
     const skillAiProfile = profile?.ai;
     const breakdown: Record<string, number> = {};
@@ -894,12 +1348,17 @@ const evaluateCandidate = (
         const signals = getAiResourceSignals(actorBefore.ires, context.state.ruleset);
         const projectedRecoveryRatio = Math.max(0, Number(preview.turnProjection.projectedSparkRecoveryIfEndedNow || 0))
             / Math.max(1, Number(actorBefore.ires?.maxSpark || 1));
-        breakdown.recovery = projectedRecoveryRatio * 14 * intentBias.defense;
-        breakdown.reserve = ((1 - signals.sparkRatio) * 8 + (1 - signals.manaRatio) * 5) * intentBias.defense;
-        breakdown.pacing = signals.postStablePressure * 12 * intentBias.defense;
+        breakdown.recovery = projectedRecoveryRatio * 14 * goalBias.defense;
+        breakdown.reserve = ((1 - signals.sparkRatio) * 8 + (1 - signals.manaRatio) * 5) * goalBias.defense;
+        breakdown.pacing = signals.postStablePressure * 12 * goalBias.defense;
         breakdown.redline = preview.sparkBurnOutcome === 'burn_now' ? -22 : 0;
-        breakdown.objective = visibleHostiles.length === 0 && coherenceTarget ? -6 * intentBias.objective : 0;
-        breakdown.idle = visibleHostiles.length > 0 ? -2 * intentBias.offense : 0;
+        breakdown.objective = visibleHostiles.length === 0 && coherenceTarget ? -6 * goalBias.objective : 0;
+        breakdown.idle = visibleHostiles.length > 0 ? -2 * goalBias.offense : 0;
+        if (visibleHostiles.length > 0) {
+            // As spark approaches full, waiting in combat should become sharply less attractive.
+            const sparkHeadroom = Math.max(0.05, 1.05 - signals.sparkRatio);
+            breakdown.engaged_spark_wait_penalty = -(3.25 / sparkHeadroom);
+        }
         breakdown.exhausted = actorBefore.ires?.currentState === 'exhausted' ? 10 : 0;
         const sparkAssessment = assessSparkCandidate(
             actorBefore,
@@ -963,11 +1422,13 @@ const evaluateCandidate = (
     const hostileByIdAfter = new Map(hostilesAfter.map(hostile => [hostile.id, hostile]));
     const visibleAfter = getVisibleOpposingActors(preview.predictedState, predictedActor, context.side, resolveLocalHorizon(predictedActor));
     const afterBehaviorProfile = resolveBehaviorProfile(preview.predictedState, predictedActor);
+    const movementBehaviorProfileAfter = resolveMovementBehaviorProfile(predictedActor, afterBehaviorProfile);
     const coherenceAfter = resolveCoherenceTarget({
         ...context,
         state: preview.predictedState,
         actor: predictedActor
     }, visibleAfter, afterBehaviorProfile);
+    const rangeAnchorAfter = resolveRangeAnchorPoint(predictedActor.position, visibleAfter, coherenceAfter.point);
 
     const directDamage = hostilesBefore.reduce((sum, hostile) => {
         const next = hostileByIdAfter.get(hostile.id);
@@ -975,9 +1436,18 @@ const evaluateCandidate = (
     }, 0);
     const killCount = hostilesBefore.filter(hostile => !hostileByIdAfter.has(hostile.id)).length;
     const selfDamage = Math.max(0, actorBefore.hp - predictedActor.hp);
-    const objectiveDelta = coherenceTarget
+    const directObjectiveDelta = coherenceTarget
         ? Math.max(0, hexDistance(actorBefore.position, coherenceTarget) - hexDistance(predictedActor.position, coherenceTarget))
         : 0;
+    const routeObjectiveDelta = coherenceTarget
+        ? Math.max(
+            0,
+            computeTraversalDistance(context.state, actorBefore.position, coherenceTarget)
+            - computeTraversalDistance(preview.predictedState, predictedActor.position, coherenceTarget)
+        )
+        : 0;
+    const objectiveDelta = Math.max(directObjectiveDelta, routeObjectiveDelta);
+    const lateralPursuitProgress = Math.max(0, routeObjectiveDelta - directObjectiveDelta);
     const exposureBefore = computeExposure(actorBefore.position, visibleHostiles);
     const exposureAfter = computeExposure(predictedActor.position, visibleAfter);
     const resourcePreview = preview.resourcePreview;
@@ -990,8 +1460,8 @@ const evaluateCandidate = (
     );
     const projectedRecovery = Math.max(0, Number(endTurnPreview.turnProjection.spark.delta || 0)) / Math.max(1, Number(actorBefore.ires?.maxSpark || 1));
     const targetRuleScore = computeTargetRuleScore(target, actorBefore, visibleHostiles, coherenceTarget, profile);
-    const intentEstimateValue = computeEstimatedIntentValue(action, target, visibleHostiles, coherenceTarget, profile, intentBias);
-    const desiredRangeScore = computeDesiredRangeScore(predictedActor.position, coherenceAfter.point, afterBehaviorProfile);
+    const intentEstimateValue = computeEstimatedIntentValue(action, target, visibleHostiles, coherenceTarget, profile, goalBias);
+    const desiredRangeScore = computeDesiredRangeScore(predictedActor.position, rangeAnchorAfter, movementBehaviorProfileAfter);
     const persistenceScore = skillAiProfile?.persistence
         ? ((skillAiProfile.persistence.turns || 0) * 3) + (skillAiProfile.persistence.radius || 0) * 2
         : 0;
@@ -1001,10 +1471,27 @@ const evaluateCandidate = (
     const standingOnHazard = UnifiedTileService.getTileAt(preview.predictedState, predictedActor.position)?.traits.has('HAZARDOUS')
         ? 1
         : 0;
-    const exposureWeight = isCloseRangePosture(behaviorProfile) ? 2.5 : 6;
+    const exposureWeight = isCloseRangePosture(movementBehaviorProfileAfter) ? 2.5 : 6;
     const exposureDelta = exposureBefore - exposureAfter;
+    const mobilityFreedomBefore = computeLocalMobilityFreedom(context.state, actorBefore.id, actorBefore.position);
+    const mobilityFreedomAfter = computeLocalMobilityFreedom(preview.predictedState, predictedActor.id, predictedActor.position);
+    const mobilityFreedomDelta = mobilityFreedomAfter - mobilityFreedomBefore;
+    const escapeLanesAfter = computeImmediateEscapeLanes(
+        preview.predictedState,
+        predictedActor.id,
+        predictedActor.position,
+        rangeAnchorAfter,
+        movementBehaviorProfileAfter
+    );
+    const boxInRisk = computeBoxInRisk(mobilityFreedomAfter, escapeLanesAfter, movementBehaviorProfileAfter);
+    const longRangePosture = isLongRangePosture(movementBehaviorProfileAfter);
     const previousPosition = actorBefore.previousPosition;
     const changedPosition = !hexEquals(predictedActor.position, actorBefore.position);
+    const canonicalChaseStep = resolveCanonicalChaseStep(actorBefore.position, coherenceTarget);
+    const followsCanonicalChaseStep = action.type === 'MOVE'
+        && !!canonicalChaseStep
+        && !!target
+        && hexEquals(target, canonicalChaseStep);
     const moveLikeAction = action.type === 'MOVE'
         || (action.type === 'USE_SKILL' && !!profile?.intentTags.includes('move'));
     const backtracks = !!previousPosition && changedPosition && hexEquals(predictedActor.position, previousPosition);
@@ -1088,26 +1575,35 @@ const evaluateCandidate = (
         breakdown.mobility_role = (improvesObjective || desiredRangeScore > 0) ? 6 : -14;
     }
 
-    breakdown.damage = directDamage * 3.4 * intentBias.offense * behaviorProfile.offenseBias;
-    breakdown.kills = killCount * 18 * intentBias.offense * behaviorProfile.offenseBias;
-    breakdown.objective = objectiveDelta * 3 * intentBias.objective * Math.max(0.75, behaviorProfile.commitBias);
+    breakdown.damage = directDamage * 3.4 * goalBias.offense * behaviorProfile.offenseBias;
+    breakdown.kills = killCount * 18 * goalBias.offense * behaviorProfile.offenseBias;
+    breakdown.objective = objectiveDelta * 3 * goalBias.objective * Math.max(0.75, behaviorProfile.commitBias);
+    breakdown.path_progress = lateralPursuitProgress * 6 * goalBias.objective * Math.max(0.75, behaviorProfile.commitBias);
     breakdown.targeting = targetRuleScore * 1.1;
     breakdown.intent = intentEstimateValue * Math.max(0.65, behaviorProfile.controlBias);
     breakdown.range = desiredRangeScore * Math.max(0.75, behaviorProfile.commitBias);
-    breakdown.persistence = persistenceScore * intentBias.control * Math.max(0.75, behaviorProfile.controlBias);
-    breakdown.exposure = (exposureBefore - exposureAfter) * exposureWeight * intentBias.defense * Math.max(0.25, behaviorProfile.selfPreservationBias);
+    breakdown.mobility_freedom = mobilityFreedomDelta * (longRangePosture ? 3.25 : 1.25);
+    breakdown.escape_lanes = escapeLanesAfter * (longRangePosture ? 1.8 : 0.5);
+    breakdown.box_in_risk = -boxInRisk * (longRangePosture ? 3.75 : 1.15);
+    breakdown.persistence = persistenceScore * goalBias.control * Math.max(0.75, behaviorProfile.controlBias);
+    breakdown.exposure = (exposureBefore - exposureAfter) * exposureWeight * goalBias.defense * Math.max(0.25, behaviorProfile.selfPreservationBias);
     breakdown.safe_after = safeAfterUse;
-        breakdown.self_damage = -selfDamage * 8 * intentBias.defense * Math.max(0.25, behaviorProfile.selfPreservationBias);
+    breakdown.self_damage = -selfDamage * 8 * goalBias.defense * Math.max(0.25, behaviorProfile.selfPreservationBias);
     breakdown.hazard = -standingOnHazard * 18 * Math.max(0.25, 1.25 - behaviorProfile.hazardTolerance);
     breakdown.spark = -sparkRatio * 10;
     breakdown.mana = -manaRatio * 8;
-    breakdown.recovery = projectedRecovery * 10 * intentBias.defense;
+    breakdown.recovery = projectedRecovery * 10 * goalBias.defense;
     breakdown.burn = resourcePreview?.sparkBurnOutcome === 'burn_now'
         ? -24
         : resourcePreview?.sparkBurnOutcome === 'travel_suppressed'
             ? 6
             : 0;
     breakdown.loop_penalty = moveWaitMoveLoop ? -10 : 0;
+    if (followsCanonicalChaseStep && directObjectiveDelta > 0 && lateralPursuitProgress === 0) {
+        // Break tied chase windows toward the canonical geodesic so open-field
+        // pursuit does not wobble sideways into triangle motion.
+        breakdown.line_discipline = 1.5;
+    }
 
     const sparkAssessment = assessSparkCandidate(
         actorBefore,
@@ -1131,6 +1627,19 @@ const evaluateCandidate = (
         hasControlIntent: !!profile?.intentTags.includes('control'),
         hasHazardIntent: !!profile?.intentTags.includes('hazard')
     });
+    const movePriority = action.type === 'MOVE'
+        ? {
+            pathDistanceToCoherenceTarget: coherenceTarget
+                ? computeTraversalDistance(preview.predictedState, predictedActor.position, coherenceTarget)
+                : undefined,
+            exposureDelta,
+            desiredRangeScore,
+            mobilityFreedom: mobilityFreedomAfter,
+            boxInRisk,
+            followsCanonicalChaseStep,
+            pointKey: pointToKey(predictedActor.position)
+        }
+        : undefined;
 
     const score = Object.values(breakdown).reduce((sum, value) => sum + value, 0);
     return {
@@ -1142,7 +1651,8 @@ const evaluateCandidate = (
         breakdown,
         facts,
         payoff,
-        sparkAssessment
+        sparkAssessment,
+        movePriority
     };
 };
 
@@ -1192,11 +1702,13 @@ export const selectGenericUnitAiAction = (
     const legalCandidates = adjustedCandidates.filter(candidate => Number.isFinite(candidate.score));
     const signals = getAiResourceSignals(actor.ires, state.ruleset);
     const summaryBase: GenericUnitAiSelectionSummary = {
+        goal: resolveContextGoal(normalizedContext),
         visibleOpponentIds: visibleHostiles.map(hostile => hostile.id),
         visibleOpponentCount: visibleHostiles.length,
         attackOpportunityAvailable: legalCandidates.some(candidate => candidate.facts?.canDamageNow),
         threatOpportunityAvailable: !legalCandidates.some(candidate => candidate.facts?.canDamageNow)
             && legalCandidates.some(candidate => candidate.facts?.createsThreatNextDecision),
+        objectiveOpportunityAvailable: legalCandidates.some(candidate => candidate.facts?.improvesObjective),
         engagementMode: resolveEngagementMode(actor, visibleHostiles, legalCandidates),
         coherenceTargetKind: coherenceTarget.kind,
         sameTurnRetreatRejectedCount: evaluated.filter(candidate => candidate.breakdown?.blocked_by_reversal_guard !== undefined).length,
@@ -1214,7 +1726,7 @@ export const selectGenericUnitAiAction = (
 
     const ranked = candidates
         .filter(candidate => Number.isFinite(candidate.score))
-        .sort((left, right) => right.score - left.score || left.reasoningCode.localeCompare(right.reasoningCode));
+        .sort(compareCandidateOrder);
 
     if (ranked.length === 0) {
         const fallback: GenericUnitAiCandidate = {
@@ -1229,10 +1741,12 @@ export const selectGenericUnitAiAction = (
             selected: fallback,
             candidates: [fallback],
             summary: {
+                goal: resolveContextGoal(normalizedContext),
                 visibleOpponentIds: [],
                 visibleOpponentCount: 0,
                 attackOpportunityAvailable: false,
                 threatOpportunityAvailable: false,
+                objectiveOpportunityAvailable: false,
                 engagementMode: 'search',
                 coherenceTargetKind: 'none',
                 sameTurnRetreatRejectedCount: 0,
@@ -1261,13 +1775,13 @@ export const selectGenericUnitAiAction = (
         };
     }
 
-    const bestScore = ranked[0].score;
-    const ties = ranked.filter(candidate => candidate.score === bestScore);
+    const topPriorityCandidate = ranked[0];
+    const ties = ranked.filter(candidate => compareCandidatePriority(candidate, topPriorityCandidate) === 0);
     const tie = seededChoiceSource.chooseIndex(ties.length, {
         seed: `${normalizedContext.simSeed}:${normalizedContext.actor.id}`,
         counter: normalizedContext.decisionCounter
     });
-    const selected = ties[tie.index] || ranked[0];
+    const selected = ties[tie.index] || topPriorityCandidate;
     return {
         selected,
         candidates: ranked,

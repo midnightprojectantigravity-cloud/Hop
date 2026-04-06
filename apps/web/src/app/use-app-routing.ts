@@ -7,6 +7,7 @@ export interface AppRoutingState {
   arcadePath: string;
   biomesPath: string;
   themeLabPath: string;
+  dungeonLabPath: string;
   settingsPath: string;
   leaderboardPath: string;
   tutorialsPath: string;
@@ -14,6 +15,7 @@ export interface AppRoutingState {
   isArcadeRoute: boolean;
   isBiomesRoute: boolean;
   isThemeLabRoute: boolean;
+  isDungeonLabRoute: boolean;
   isSettingsRoute: boolean;
   isLeaderboardRoute: boolean;
   isTutorialsRoute: boolean;
@@ -31,6 +33,7 @@ export interface DerivedAppRouting {
   arcadePath: string;
   biomesPath: string;
   themeLabPath: string;
+  dungeonLabPath: string;
   settingsPath: string;
   leaderboardPath: string;
   tutorialsPath: string;
@@ -38,6 +41,7 @@ export interface DerivedAppRouting {
   isArcadeRoute: boolean;
   isBiomesRoute: boolean;
   isThemeLabRoute: boolean;
+  isDungeonLabRoute: boolean;
   isSettingsRoute: boolean;
   isLeaderboardRoute: boolean;
   isTutorialsRoute: boolean;
@@ -50,6 +54,7 @@ export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
   const arcadePath = `${hubBase}/Arcade` || '/Arcade';
   const biomesPath = `${hubBase}/Biomes` || '/Biomes';
   const themeLabPath = `${hubBase}/ThemeLab` || '/ThemeLab';
+  const dungeonLabPath = `${hubBase}/DungeonLab` || '/DungeonLab';
   const settingsPath = `${hubBase}/Settings` || '/Settings';
   const leaderboardPath = `${hubBase}/Leaderboard` || '/Leaderboard';
   const tutorialsPath = `${hubBase}/Tutorials` || '/Tutorials';
@@ -68,6 +73,7 @@ export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
     normalizedPathname.endsWith('/themelab')
     || normalizedPathname.endsWith('/theme-manager')
     || normalizedPathname.endsWith('/style-guide');
+  const isDungeonLabRoute = normalizedPathname.endsWith('/dungeonlab');
   const isSettingsRoute = normalizedPathname.endsWith('/settings');
   const isLeaderboardRoute = normalizedPathname.endsWith('/leaderboard');
   const isTutorialsRoute = normalizedPathname.endsWith('/tutorials');
@@ -78,6 +84,7 @@ export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
     arcadePath,
     biomesPath,
     themeLabPath,
+    dungeonLabPath,
     settingsPath,
     leaderboardPath,
     tutorialsPath,
@@ -85,6 +92,7 @@ export const deriveAppRouting = (pathname: string): DerivedAppRouting => {
     isArcadeRoute,
     isBiomesRoute,
     isThemeLabRoute,
+    isDungeonLabRoute,
     isSettingsRoute,
     isLeaderboardRoute,
     isTutorialsRoute

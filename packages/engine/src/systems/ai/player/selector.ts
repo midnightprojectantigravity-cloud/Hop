@@ -4,14 +4,14 @@ import type { Action, GameState } from '../../../types';
 import { seededChoiceSource } from '../core/tiebreak';
 import type { GenericUnitAiCandidateFacts, GenericUnitAiSelectionSummary } from '../generic-unit-ai';
 import { selectGenericUnitAiAction } from '../generic-unit-ai';
-import { chooseStrategicIntent } from './policy';
-import type { StrategicIntent, StrategicPolicyProfile } from '../strategic-policy';
+import { chooseGenericAiGoal } from './policy';
+import type { GenericAiGoal, GenericAiGoalProfile } from './policy';
 
 export type HarnessBotPolicy = 'random' | 'heuristic';
 
 export interface HarnessPlayerSelection {
     action: Action;
-    strategicIntent: StrategicIntent;
+    goal: GenericAiGoal;
     selectedFacts?: GenericUnitAiCandidateFacts;
     selectionSummary?: GenericUnitAiSelectionSummary;
 }
@@ -38,8 +38,7 @@ const listRandomOptions = (state: GameState): Action[] => {
 
 export const selectByOnePlySimulation = (
     state: GameState,
-    strategicIntent: StrategicIntent,
-    _profile: StrategicPolicyProfile,
+    goal: GenericAiGoal,
     simSeed: string,
     decisionCounter: number,
     _topK = 6
@@ -50,7 +49,7 @@ export const selectByOnePlySimulation = (
         side: 'player',
         simSeed,
         decisionCounter,
-        strategicIntent
+        goal
     });
     return result.selected.action;
 };
@@ -58,18 +57,18 @@ export const selectByOnePlySimulation = (
 export const selectHarnessPlayerAction = (
     state: GameState,
     policy: HarnessBotPolicy,
-    profile: StrategicPolicyProfile,
+    profile: GenericAiGoalProfile,
     simSeed: string,
     decisionCounter: number
 ): HarnessPlayerSelection => {
-    let strategicIntent = chooseStrategicIntent(state, profile);
+    const goal = chooseGenericAiGoal(state, profile);
 
     if (policy === 'random') {
         const options = listRandomOptions(state);
         const tie = seededChoiceSource.chooseIndex(options.length, { seed: simSeed, counter: decisionCounter });
         return {
             action: options[tie.index] || { type: 'WAIT' },
-            strategicIntent
+            goal
         };
     }
 
@@ -79,14 +78,11 @@ export const selectHarnessPlayerAction = (
         side: 'player',
         simSeed,
         decisionCounter,
-        strategicIntent
+        goal
     });
-    if (selection.selected.action.type === 'WAIT' && selection.summary.selectedWaitForBandPreservation) {
-        strategicIntent = 'defense';
-    }
     return {
         action: selection.selected.action,
-        strategicIntent,
+        goal,
         selectedFacts: selection.selected.facts,
         selectionSummary: selection.summary
     };
