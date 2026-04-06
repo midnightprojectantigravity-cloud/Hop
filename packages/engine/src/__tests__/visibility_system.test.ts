@@ -40,14 +40,14 @@ describe('visibility system', () => {
         const state = generateInitialState(1, 'visibility-standard-vision-tier');
         state.player.activeSkills = [createActiveSkill('STANDARD_VISION') as any];
         withTrinity(state, state.player.id, { body: 0, mind: 0, instinct: 0 });
-        expect(computeStandardVisionRange(state.player)).toBe(5);
+        expect(computeStandardVisionRange(state.player)).toBe(4);
 
         state.player.activeSkills = state.player.activeSkills.map((skill: any) => ({
             ...skill,
             activeUpgrades: ['VISION_TIER_2', 'VISION_TIER_3']
         }));
         withTrinity(state, state.player.id, { body: 10, mind: 10, instinct: 10 });
-        expect(computeStandardVisionRange(state.player)).toBe(9);
+        expect(computeStandardVisionRange(state.player)).toBe(6);
     });
 
     it('does not lock vision to mind-only builds', () => {
@@ -87,7 +87,7 @@ describe('visibility system', () => {
             skills: ['BASIC_MOVE']
         });
         instinctEnemy.components = new Map([
-            ['trinity', { type: 'trinity', body: 0, mind: 0, instinct: 12 }]
+            ['trinity', { type: 'trinity', body: 0, mind: 0, instinct: 30 }]
         ]);
 
         expect(computeEnemyButcherFactor(instinctEnemy)).toBeGreaterThan(computeEnemyButcherFactor(bodyEnemy));
@@ -205,6 +205,40 @@ describe('visibility system', () => {
         const decayed = state.visibility?.enemyAwarenessById?.[enemy.id];
         expect(decayed?.memoryTurnsRemaining).toBe(0);
         expect(decayed?.lastKnownPlayerPosition).toBeNull();
+    });
+
+    it('keeps chasing for the minimum three-turn memory window after losing line of sight', () => {
+        let state = generateInitialState(1, 'visibility-enemy-memory-minimum');
+        const enemy = createEnemy({
+            id: 'memory-minimum-enemy',
+            subtype: 'footman',
+            position: createHex(state.player.position.q + 1, state.player.position.r),
+            hp: 3,
+            maxHp: 3,
+            speed: 1,
+            skills: ['BASIC_MOVE', 'BASIC_ATTACK']
+        });
+        state.enemies = [enemy];
+        withTrinity(state, enemy.id, { body: 0, mind: 0, instinct: 0 });
+        state = recomputeVisibility(state);
+
+        const seen = state.visibility?.enemyAwarenessById?.[enemy.id];
+        expect(seen?.memoryTurnsRemaining).toBe(3);
+        expect(seen?.lastKnownPlayerPosition).toBeTruthy();
+
+        state.player = {
+            ...state.player,
+            position: createHex(state.player.position.q + 30, state.player.position.r + 30)
+        };
+
+        for (let i = 0; i < 3; i++) {
+            state.turnNumber += 1;
+            state = recomputeVisibility(state);
+        }
+
+        const expired = state.visibility?.enemyAwarenessById?.[enemy.id];
+        expect(expired?.memoryTurnsRemaining).toBe(0);
+        expect(expired?.lastKnownPlayerPosition).toBeNull();
     });
 
     it('guarantees player core vision and enemy awareness in active runs', () => {

@@ -22,7 +22,7 @@ export const ARCHER_SHOT: SkillDefinition = {
         range: 4,
         cost: 0,
         cooldown: 0,
-        damage: 1,
+        damage: 3,
     },
     combat: {
         damageClass: 'physical',
