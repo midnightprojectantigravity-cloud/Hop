@@ -10,9 +10,10 @@ export interface EnemyContentConsistencyIssue {
         | 'PACK_UNIT_ID_MISMATCH'
         | 'WEIGHT_CLASS_MISMATCH'
         | 'SPEED_PROPENSITY_MISMATCH'
-        | 'TRINITY_PROPENSITY_MISMATCH'
-        | 'DERIVED_HP_MISMATCH'
-        | 'DERIVED_COMBAT_STATS_MISMATCH'
+    | 'TRINITY_PROPENSITY_MISMATCH'
+    | 'COMBAT_PROFILE_MISMATCH'
+    | 'DERIVED_HP_MISMATCH'
+    | 'DERIVED_COMBAT_STATS_MISMATCH'
         | 'BASE_SKILL_LOADOUT_MISMATCH'
         | 'PASSIVE_SKILL_LOADOUT_MISMATCH';
     subtype: string;
@@ -89,6 +90,14 @@ export const validateEnemyContentConsistency = (
                 code: 'TRINITY_PROPENSITY_MISMATCH',
                 subtype: catalogEntry.subtype,
                 message: `trinity propensities {body:${String(body)}, mind:${String(mind)}, instinct:${String(instinct)}} do not match bestiary {body:${catalogEntry.bestiary.trinity.body}, mind:${catalogEntry.bestiary.trinity.mind}, instinct:${catalogEntry.bestiary.trinity.instinct}}`,
+            });
+        }
+
+        if (!unit.combatProfile || JSON.stringify(unit.combatProfile) !== JSON.stringify(catalogEntry.combatProfile)) {
+            issues.push({
+                code: 'COMBAT_PROFILE_MISMATCH',
+                subtype: catalogEntry.subtype,
+                message: `combatProfile ${JSON.stringify(unit.combatProfile)} does not match content ${JSON.stringify(catalogEntry.combatProfile)}`
             });
         }
 

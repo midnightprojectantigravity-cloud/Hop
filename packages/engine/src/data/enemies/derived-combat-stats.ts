@@ -1,11 +1,4 @@
 import {
-    deriveMaxHpFromTrinity,
-    resolveTrinityLevers,
-    type TrinityStats
-} from '../../systems/combat/trinity-resolver';
-import { calculateBaseMagicalDamage } from '../../systems/combat/base-magical-damage';
-import { calculateBasePhysicalDamage } from '../../systems/combat/base-physical-damage';
-import {
     COMBAT_MOVEMENT_BURST_SKILL_IDS,
     COMBAT_TELEGRAPH_SKILL_IDS,
     COMBAT_TUNING_VARIABLES,
@@ -17,6 +10,12 @@ import type {
     bestiaryWeightClass,
     EnemyBestiaryDefinition,
 } from '../packs/mvp-enemy-content';
+
+interface TrinityStats {
+    body: number;
+    mind: number;
+    instinct: number;
+}
 
 export interface EnemyCombatSkillLoadout {
     base: string[];
@@ -39,6 +38,63 @@ interface SkillCombatSignature {
     isDamaging: boolean;
     intentTags: string[];
 }
+
+const clampNonNegative = (value: number): number => Math.max(0, Number.isFinite(value) ? value : 0);
+
+const calculateBaseDamage = (attackProjection: number, defenseProjection: number): number => {
+    const atk = clampNonNegative(attackProjection);
+    const def = clampNonNegative(defenseProjection);
+    if (atk <= 0) return 0;
+    return (atk * atk) / (atk + def);
+};
+
+const deriveMaxHpFromTrinity = (trinity: TrinityStats): number => {
+    const body = Math.max(0, trinity.body);
+    const mind = Math.max(0, trinity.mind);
+    const instinct = Math.max(0, trinity.instinct);
+    const hp = Math.floor(
+        (body * COMBAT_TUNING_VARIABLES.trinityHp.body)
+        + (mind * COMBAT_TUNING_VARIABLES.trinityHp.mind)
+        + (instinct * COMBAT_TUNING_VARIABLES.trinityHp.instinct)
+        + COMBAT_TUNING_VARIABLES.trinityHp.base
+    );
+    return Math.max(1, hp);
+};
+
+const resolveDerivedTrinityLevers = (trinity: TrinityStats) => {
+    const body = Math.max(0, trinity.body);
+    const mind = Math.max(0, trinity.mind);
+    const instinct = Math.max(0, trinity.instinct);
+
+    return {
+        basePowerMultiplier: COMBAT_TUNING_VARIABLES.trinityLevers.basePowerMultiplier,
+        bodyDamageMultiplier: COMBAT_TUNING_VARIABLES.trinityLevers.bodyDamageMultiplierPerPoint,
+        mindDamageMultiplier: COMBAT_TUNING_VARIABLES.trinityLevers.mindDamageMultiplierPerPoint,
+        instinctDamageMultiplier: COMBAT_TUNING_VARIABLES.trinityLevers.instinctDamageMultiplierPerPoint,
+        bodyMitigation: Math.max(
+            0,
+            Math.min(
+                COMBAT_TUNING_VARIABLES.trinityLevers.bodyMitigationCap,
+                body * COMBAT_TUNING_VARIABLES.trinityLevers.bodyMitigationPerPoint
+            )
+        ),
+        mindStatusDurationBonus: Math.floor(mind / COMBAT_TUNING_VARIABLES.trinityLevers.mindStatusDurationDivisor),
+        mindMagicMultiplier: 1 + (mind * COMBAT_TUNING_VARIABLES.trinityLevers.mindMagicMultiplierPerPoint),
+        instinctInitiativeBonus: instinct * COMBAT_TUNING_VARIABLES.trinityLevers.instinctInitiativeBonusPerPoint,
+        instinctCriticalMultiplier: 1 + (
+            Math.min(
+                instinct,
+                COMBAT_TUNING_VARIABLES.trinityLevers.instinctCriticalMultiplierCap
+            ) * COMBAT_TUNING_VARIABLES.trinityLevers.instinctCriticalMultiplierPerPoint
+        ),
+        instinctSparkDiscountMultiplier: 1 - (
+            Math.min(
+                instinct,
+                COMBAT_TUNING_VARIABLES.trinityLevers.instinctSparkDiscountCap
+            ) * COMBAT_TUNING_VARIABLES.trinityLevers.instinctSparkDiscountPerPoint
+        )
+    };
+};
 
 const DERIVED_SKILL_COMBAT_ROWS: Record<string, {
     basePower: number;
@@ -88,7 +144,7 @@ const toSkillCombatSignature = (
     trinity: TrinityStats
 ): SkillCombatSignature => {
     const profile = resolveCombatSkillProfile(skillId);
-    const levers = resolveTrinityLevers(trinity, undefined, skillId);
+    const levers = resolveDerivedTrinityLevers(trinity);
     const threatRange = evaluateCombatNumericFormula(profile.threatRange, trinity);
     const intentTags = profile.intentTags;
     const combatRow = DERIVED_SKILL_COMBAT_ROWS[skillId];
@@ -99,10 +155,7 @@ const toSkillCombatSignature = (
         + ((Math.max(0, trinity.body) * levers.bodyDamageMultiplier * skillDamageMultiplier * weights.body)
         + (Math.max(0, trinity.mind) * levers.mindDamageMultiplier * skillDamageMultiplier * weights.mind)
         + (Math.max(0, trinity.instinct) * levers.instinctDamageMultiplier * skillDamageMultiplier * weights.instinct));
-    const damageClass = (combatRow?.attackProfile === 'spell' ? 'magical' : profile.damageClass) || 'physical';
-    const representativeDamage = damageClass === 'magical'
-        ? calculateBaseMagicalDamage({ attackProjection, defenseProjection: 0 })
-        : calculateBasePhysicalDamage({ attackProjection, defenseProjection: 0 });
+    const representativeDamage = calculateBaseDamage(attackProjection, 0);
     const isDamaging = representativeDamage > 0 && intentTags.includes('damage');
 
     return {

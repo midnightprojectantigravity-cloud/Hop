@@ -26,11 +26,6 @@ export type { TrinityStats } from './trinity-resolver';
 
 export type CombatAttribute = 'body' | 'mind' | 'instinct';
 
-export interface CombatScalingTerm {
-    attribute: CombatAttribute;
-    coefficient: number;
-}
-
 export interface CombatStatusMultiplier {
     id: StatusID | string;
     multiplier: number;
@@ -71,8 +66,6 @@ export interface CombatIntent {
     statusProfile?: { procBase: number; potencyBase: number; durationBase: number };
     canMultiCrit?: boolean;
     critTierCap?: number;
-    /** Legacy compatibility for older tests and helper callers; ignored by the live layered path. */
-    scaling?: Array<{ attribute: CombatAttribute; coefficient: number }>;
     engagementContext?: { distance: number; losOpen?: boolean };
     projectionCoefficients?: {
         physicalAttack?: Partial<ProjectionCoefficientSet>;

@@ -20,6 +20,7 @@ const createEnemyUnit = (config: {
     trinity: { body: number; mind: number; instinct: number };
     baseSkills: string[];
     passiveSkills?: string[];
+    combatProfile: BaseUnitDefinition['combatProfile'];
 }): BaseUnitDefinition => ({
     version: '1.0.0',
     id: config.id,
@@ -66,6 +67,7 @@ const createEnemyUnit = (config: {
             formulaId: 'trinity_hp_v1'
         }
     },
+    combatProfile: config.combatProfile,
     physics: {
         collisionPolicy: 'crush_damage',
         crushModel: {
@@ -100,7 +102,8 @@ const createEnemyUnitFromBestiary = (
         speed: def.stats.speed,
         trinity: def.trinity,
         baseSkills: content.runtimeSkills.base,
-        passiveSkills: content.runtimeSkills.passive
+        passiveSkills: content.runtimeSkills.passive,
+        combatProfile: content.combatProfile
     });
 };
 

@@ -88,6 +88,12 @@ export interface BaseUnitDefinition {
         mass: PropensityDefinition;
     };
     derivedStats?: Record<string, DerivedStatDefinition>;
+    combatProfile?: {
+        outgoingPhysical: number;
+        outgoingMagical: number;
+        incomingPhysical: number;
+        incomingMagical: number;
+    };
     physics?: {
         collisionPolicy?: 'stop' | 'crush_damage';
         crushModel?: {

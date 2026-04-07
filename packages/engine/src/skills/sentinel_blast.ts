@@ -3,7 +3,7 @@ import { getNeighbors, hexDistance } from '../hex';
 import { pointToKey } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { SpatialSystem } from '../systems/spatial-system';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 
 /**
  * SENTINEL_BLAST
@@ -30,21 +30,20 @@ export const SENTINEL_BLAST: SkillDefinition = {
     },
     execute: (_state: GameState, _attacker: Actor, target?: Point) => {
         if (!target) return { effects: [], messages: [] };
-        const trinity = extractTrinityStats(_attacker);
-        const primaryCombat = calculateCombat({
-            attackerId: _attacker.id,
-            targetId: pointToKey(target),
+        const primaryTarget = { ..._attacker, id: pointToKey(target), position: target, hp: 0, maxHp: 0 } as Actor;
+        const primaryCombat = resolveSkillCombatDamage({
+            attacker: _attacker,
+            target: primaryTarget,
             skillId: 'SENTINEL_BLAST',
             basePower: SENTINEL_BLAST.baseVariables.basePower ?? 0,
             skillDamageMultiplier: SENTINEL_BLAST.baseVariables.damage ?? 1,
-            trinity,
             ...SENTINEL_BLAST.combat,
             engagementContext: { distance: hexDistance(_attacker.position, target) },
             statusMultipliers: []
         });
 
         const effects: AtomicEffect[] = [
-            { type: 'Damage', target: target, amount: primaryCombat.finalPower, scoreEvent: primaryCombat.scoreEvent },
+            createDamageEffectFromCombat(primaryCombat, target, 'sentinel_blast'),
             {
                 type: 'Juice',
                 effect: 'shake',
@@ -66,18 +65,18 @@ export const SENTINEL_BLAST: SkillDefinition = {
         // Also hit neighbors
         const neighbors = getNeighbors(target);
         neighbors.forEach(n => {
-            const combat = calculateCombat({
-                attackerId: _attacker.id,
-                targetId: pointToKey(n),
+            const neighborTarget = { ..._attacker, id: pointToKey(n), position: n, hp: 0, maxHp: 0 } as Actor;
+            const combat = resolveSkillCombatDamage({
+                attacker: _attacker,
+                target: neighborTarget,
                 skillId: 'SENTINEL_BLAST',
                 basePower: SENTINEL_BLAST.baseVariables.basePower ?? 0,
                 skillDamageMultiplier: SENTINEL_BLAST.baseVariables.damage ?? 1,
-                trinity,
                 ...SENTINEL_BLAST.combat,
                 engagementContext: { distance: hexDistance(_attacker.position, n) },
                 statusMultipliers: []
             });
-            effects.push({ type: 'Damage', target: n, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
+            effects.push(createDamageEffectFromCombat(combat, n, 'sentinel_blast'));
         });
 
         return {

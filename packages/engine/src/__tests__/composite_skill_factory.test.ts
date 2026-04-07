@@ -34,7 +34,16 @@ describe('composite skill factory', () => {
         };
 
         const execution = skill.execute(mutatedState, mutatedState.player, enemyPos);
-        expect(execution.effects.some(e => e.type === 'Damage')).toBe(true);
+        const damageEffect = execution.effects.find(e => e.type === 'Damage');
+        expect(damageEffect).toBeDefined();
+        expect(damageEffect).toMatchObject({
+            type: 'Damage',
+            scoreEvent: expect.objectContaining({
+                attackerId: mutatedState.player.id,
+                targetId: mutatedState.enemies[0]?.id || 'targetActor',
+                damageClass: 'physical'
+            })
+        });
         expect(execution.effects.some(e => e.type === 'ApplyForce')).toBe(true);
     });
 

@@ -3,7 +3,7 @@ import { hexDistance, getNeighbors, hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { pointToKey } from '../hex';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import { getActorAt } from '../helpers';
 
 const hasCorpseAt = (state: GameState, target: Point): boolean => {
@@ -64,25 +64,22 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
 
         // 2. Damage AoE through centralized combat calculator.
         const affected = [target, ...getNeighbors(target)];
-        const trinity = extractTrinityStats(attacker);
         const inDangerPreviewHex = !!state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position));
         for (const p of affected) {
             const actorAtPoint = getActorAt(state, p);
-            const combat = calculateCombat({
-                attackerId: attacker.id,
-                targetId: actorAtPoint?.id || pointToKey(p),
+            const combat = resolveSkillCombatDamage({
+                attacker,
+                target: actorAtPoint || ({ ...attacker, id: pointToKey(p), position: p, hp: 0, maxHp: 0 } as Actor),
                 skillId: 'CORPSE_EXPLOSION',
                 basePower: CORPSE_EXPLOSION.baseVariables.basePower ?? 0,
                 skillDamageMultiplier: CORPSE_EXPLOSION.baseVariables.damage ?? 1,
-                trinity,
-                targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
                 ...CORPSE_EXPLOSION.combat,
                 engagementContext: { distance: hexDistance(attacker.position, p) },
                 statusMultipliers: [],
                 inDangerPreviewHex,
                 theoreticalMaxPower: 2
             });
-            effects.push({ type: 'Damage', target: p, amount: combat.finalPower, reason: 'corpse_explosion', scoreEvent: combat.scoreEvent });
+            effects.push(createDamageEffectFromCombat(combat, p, 'corpse_explosion'));
         }
 
         effects.push({

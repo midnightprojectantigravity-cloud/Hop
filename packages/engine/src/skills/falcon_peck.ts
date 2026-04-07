@@ -2,7 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getNeighbors, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 
 const FALCON_PECK_COMBAT = {
     damageClass: 'physical' as const,
@@ -66,25 +66,17 @@ export const FALCON_PECK: SkillDefinition = {
         }
 
         for (const victim of targetActors) {
-            const combat = calculateCombat({
-                attackerId: attacker.id,
-                targetId: victim.id,
+            const combat = resolveSkillCombatDamage({
+                attacker,
+                target: victim,
                 skillId: 'FALCON_PECK',
                 basePower: 0,
                 skillDamageMultiplier: FALCON_PECK.baseVariables.damage ?? 1,
-                trinity: extractTrinityStats(attacker),
-                targetTrinity: extractTrinityStats(victim),
                 ...FALCON_PECK_COMBAT,
                 statusMultipliers: []
             });
 
-            effects.push({
-                type: 'Damage',
-                target: victim.id,
-                amount: combat.finalPower,
-                reason: 'falcon_peck',
-                scoreEvent: combat.scoreEvent
-            });
+            effects.push(createDamageEffectFromCombat(combat, victim.id, 'falcon_peck'));
         }
 
         effects.push({

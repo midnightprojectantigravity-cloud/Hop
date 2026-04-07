@@ -4,7 +4,7 @@ import { getActorAt, getEnemyAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange, validateAxialDirection, hasClearLineToActor } from '../systems/validation';
 import { SKILL_JUICE_SIGNATURES } from '../systems/visual/juice-manifest';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 
 const SPEAR_THROW_COMBAT = {
     damageClass: 'physical' as const,
@@ -35,8 +35,6 @@ export const SPEAR_THROW: SkillDefinition = {
     execute: (state: GameState, shooter: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
-        const trinity = extractTrinityStats(shooter);
-
         // 1. Upgrade Detection
         const hasRange = activeUpgrades.includes('SPEAR_RANGE');
         const hasRecall = activeUpgrades.includes('RECALL');
@@ -57,14 +55,12 @@ export const SPEAR_THROW: SkillDefinition = {
             if (hasLunge && hexDistance(shooter.position, target) === 2) {
                 const enemy = getActorAt(state, target);
                 if (enemy && enemy.id !== shooter.id) {
-                    const lungeCombat = calculateCombat({
-                        attackerId: shooter.id,
-                        targetId: enemy.id,
+                    const lungeCombat = resolveSkillCombatDamage({
+                        attacker: shooter,
+                        target: enemy,
                         skillId: 'SPEAR_THROW',
                         basePower: 99,
                         skillDamageMultiplier: SPEAR_THROW.baseVariables.damage ?? 1,
-                        trinity,
-                        targetTrinity: extractTrinityStats(enemy),
                         combat: {
                             damageClass: 'physical',
                             attackProfile: 'melee',
@@ -75,7 +71,7 @@ export const SPEAR_THROW: SkillDefinition = {
                         statusMultipliers: []
                     });
                     effects.push({ type: 'Displacement', target: 'self', destination: target, simulatePath: true });
-                    effects.push({ type: 'Damage', target: enemy.id, amount: lungeCombat.finalPower, scoreEvent: lungeCombat.scoreEvent });
+                    effects.push(createDamageEffectFromCombat(lungeCombat, enemy.id, 'spear_throw'));
                     effects.push({ type: 'ApplyAilment', target: enemy.id, ailment: 'bleed', skillMultiplier: 12, baseDeposit: 1 });
                     messages.push(`Lunged and killed ${enemy.subtype || 'enemy'} !`);
 
@@ -83,14 +79,12 @@ export const SPEAR_THROW: SkillDefinition = {
                         getNeighbors(target).forEach((n: Point) => {
                             const e = getActorAt(state, n);
                             if (e && e.id !== shooter.id && e.id !== enemy.id) {
-                                const arcCombat = calculateCombat({
-                                    attackerId: shooter.id,
-                                    targetId: e.id,
+                                const arcCombat = resolveSkillCombatDamage({
+                                    attacker: shooter,
+                                    target: e,
                                     skillId: 'SPEAR_THROW',
                                     basePower: 1,
                                     skillDamageMultiplier: SPEAR_THROW.baseVariables.damage ?? 1,
-                                    trinity,
-                                    targetTrinity: extractTrinityStats(e),
                                     combat: {
                                         damageClass: 'physical',
                                         attackProfile: 'melee',
@@ -100,7 +94,7 @@ export const SPEAR_THROW: SkillDefinition = {
                                     engagementContext: { distance: hexDistance(target, n) },
                                     statusMultipliers: []
                                 });
-                                effects.push({ type: 'Damage', target: e.id, amount: arcCombat.finalPower, scoreEvent: arcCombat.scoreEvent });
+                                effects.push(createDamageEffectFromCombat(arcCombat, e.id, 'spear_throw'));
                                 effects.push({ type: 'ApplyAilment', target: e.id, ailment: 'bleed', skillMultiplier: 8, baseDeposit: 1 });
                             }
                         });
@@ -145,20 +139,18 @@ export const SPEAR_THROW: SkillDefinition = {
             effects.push(...SKILL_JUICE_SIGNATURES.SPEAR_THROW.execution(getHexLine(shooter.position, hitPos)));
 
             if (hitEnemy) {
-                const throwCombat = calculateCombat({
-                    attackerId: shooter.id,
-                    targetId: hitEnemy.id,
+                const throwCombat = resolveSkillCombatDamage({
+                    attacker: shooter,
+                    target: hitEnemy,
                     skillId: 'SPEAR_THROW',
                     basePower: 99,
                     skillDamageMultiplier: SPEAR_THROW.baseVariables.damage ?? 1,
-                    trinity,
-                    targetTrinity: extractTrinityStats(hitEnemy),
                     combat: SPEAR_THROW_COMBAT,
                     engagementContext: { distance: hexDistance(shooter.position, hitPos) },
                     statusMultipliers: []
                 });
                 effects.push(...SKILL_JUICE_SIGNATURES.SPEAR_THROW.impact(hitPos, true));
-                effects.push({ type: 'Damage', target: hitEnemy.id, amount: throwCombat.finalPower, scoreEvent: throwCombat.scoreEvent });
+                effects.push(createDamageEffectFromCombat(throwCombat, hitEnemy.id, 'spear_throw'));
                 effects.push({ type: 'ApplyAilment', target: hitEnemy.id, ailment: 'bleed', skillMultiplier: 14, baseDeposit: 2 });
                 messages.push(`Spear killed ${hitEnemy.subtype || 'enemy'} !`);
                 if (hasDeepBreath) {
@@ -191,14 +183,12 @@ export const SPEAR_THROW: SkillDefinition = {
                 returnLine.forEach(p => {
                     const enemy = getEnemyAt(state.enemies, p);
                     if (enemy) {
-                        const recallCombat = calculateCombat({
-                            attackerId: shooter.id,
-                            targetId: enemy.id,
+                        const recallCombat = resolveSkillCombatDamage({
+                            attacker: shooter,
+                            target: enemy,
                             skillId: 'SPEAR_THROW',
                             basePower: 1,
                             skillDamageMultiplier: SPEAR_THROW.baseVariables.damage ?? 1,
-                            trinity,
-                            targetTrinity: extractTrinityStats(enemy),
                             combat: {
                                 damageClass: 'physical',
                                 attackProfile: 'projectile',
@@ -208,7 +198,7 @@ export const SPEAR_THROW: SkillDefinition = {
                             engagementContext: { distance: hexDistance(shooter.position, p) },
                             statusMultipliers: []
                         });
-                        effects.push({ type: 'Damage', target: enemy.id, amount: recallCombat.finalPower, scoreEvent: recallCombat.scoreEvent });
+                        effects.push(createDamageEffectFromCombat(recallCombat, enemy.id, 'spear_throw'));
                         effects.push({ type: 'ApplyAilment', target: enemy.id, ailment: 'bleed', skillMultiplier: 8, baseDeposit: 1 });
                         messages.push(`Spear recall hit ${enemy.subtype || 'enemy'} !`);
                     }
@@ -222,14 +212,12 @@ export const SPEAR_THROW: SkillDefinition = {
                 for (const n of getNeighbors(spearPos)) {
                     const enemy = getEnemyAt(state.enemies, n);
                     if (!enemy) continue;
-                    const cleaveCombat = calculateCombat({
-                        attackerId: shooter.id,
-                        targetId: enemy.id,
+                    const cleaveCombat = resolveSkillCombatDamage({
+                        attacker: shooter,
+                        target: enemy,
                         skillId: 'SPEAR_THROW',
                         basePower: 1,
                         skillDamageMultiplier: SPEAR_THROW.baseVariables.damage ?? 1,
-                        trinity,
-                        targetTrinity: extractTrinityStats(enemy),
                         combat: {
                             damageClass: 'physical',
                             attackProfile: 'melee',
@@ -239,7 +227,7 @@ export const SPEAR_THROW: SkillDefinition = {
                         engagementContext: { distance: hexDistance(spearPos, n) },
                         statusMultipliers: []
                     });
-                    effects.push({ type: 'Damage', target: enemy.id, amount: cleaveCombat.finalPower, scoreEvent: cleaveCombat.scoreEvent });
+                    effects.push(createDamageEffectFromCombat(cleaveCombat, enemy.id, 'spear_throw'));
                     effects.push({ type: 'ApplyAilment', target: enemy.id, ailment: 'bleed', skillMultiplier: 6, baseDeposit: 1 });
                 }
                 messages.push('Cleave triggered on pickup.');

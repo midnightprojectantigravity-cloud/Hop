@@ -16,7 +16,6 @@ const runCombat = (
         damageClass: 'physical' | 'magical';
         attackProfile: 'melee' | 'projectile' | 'spell';
         trackingSignature: 'melee' | 'projectile' | 'magic';
-        scaling: Array<{ attribute: 'body' | 'mind' | 'instinct'; coefficient: number }>;
         distance?: number;
     }
 ) => calculateCombat({
@@ -31,7 +30,6 @@ const runCombat = (
     attackProfile: options.attackProfile,
     trackingSignature: options.trackingSignature,
     engagementContext: options.distance === undefined ? undefined : { distance: options.distance },
-    scaling: options.scaling,
     statusMultipliers: []
 });
 
@@ -46,7 +44,6 @@ describe('trinity_ratio_v2 matchup triangle', () => {
             damageClass: 'magical',
             attackProfile: 'spell',
             trackingSignature: 'magic',
-            scaling: [{ attribute: 'mind', coefficient: 0.35 }],
             distance: 5
         });
         const bruteIntoMage = runCombat(brute, mage, {
@@ -55,7 +52,6 @@ describe('trinity_ratio_v2 matchup triangle', () => {
             damageClass: 'physical',
             attackProfile: 'melee',
             trackingSignature: 'melee',
-            scaling: [{ attribute: 'body', coefficient: 0.3 }],
             distance: 1
         });
 
@@ -74,7 +70,6 @@ describe('trinity_ratio_v2 matchup triangle', () => {
             damageClass: 'physical',
             attackProfile: 'projectile',
             trackingSignature: 'projectile',
-            scaling: [{ attribute: 'instinct', coefficient: 0.3 }],
             distance: 5
         });
         const mageIntoScout = runCombat(mage, scout, {
@@ -83,7 +78,6 @@ describe('trinity_ratio_v2 matchup triangle', () => {
             damageClass: 'magical',
             attackProfile: 'spell',
             trackingSignature: 'magic',
-            scaling: [{ attribute: 'mind', coefficient: 0.35 }],
             distance: 5
         });
 
@@ -104,7 +98,6 @@ describe('trinity_ratio_v2 matchup triangle', () => {
             damageClass: 'physical',
             attackProfile: 'melee',
             trackingSignature: 'melee',
-            scaling: [{ attribute: 'body', coefficient: 0.3 }],
             distance: 1
         });
         const scoutIntoBrute = runCombat(scout, brute, {
@@ -113,7 +106,6 @@ describe('trinity_ratio_v2 matchup triangle', () => {
             damageClass: 'physical',
             attackProfile: 'melee',
             trackingSignature: 'melee',
-            scaling: [{ attribute: 'instinct', coefficient: 0.3 }],
             distance: 1
         });
 

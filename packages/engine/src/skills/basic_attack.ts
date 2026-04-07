@@ -3,7 +3,8 @@ import { getDirectionFromTo, getNeighbors, hexDirection, hexEquals } from '../he
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
+import { extractTrinityStats } from '../systems/combat/combat-calculator';
 import { isStunned } from '../systems/status';
 
 /**
@@ -87,20 +88,19 @@ export const BASIC_ATTACK: SkillDefinition = {
             .filter(upgrade => !upgrade.requiresStationary || heldPosition)
             .reduce((sum, upgrade) => sum + (upgrade.modifyDamage ?? 0), 0);
         const skillDamageMultiplier = baseDamage + upgradeDamageBonus;
-        const combat = calculateCombat({
-            attackerId: attacker.id,
-            targetId: targetActor.id,
+        const trinity = extractTrinityStats(attacker);
+        const combat = resolveSkillCombatDamage({
+            attacker,
+            target: targetActor,
             skillId: 'BASIC_ATTACK',
             basePower: 0,
             skillDamageMultiplier,
-            trinity: extractTrinityStats(attacker),
-            targetTrinity: extractTrinityStats(targetActor),
             damageClass: 'physical',
             attackProfile: 'melee',
             trackingSignature: 'melee',
             statusMultipliers: [],
             inDangerPreviewHex: !!state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position)),
-            theoreticalMaxPower: skillDamageMultiplier * Math.max(0, extractTrinityStats(attacker).body || 0)
+            theoreticalMaxPower: skillDamageMultiplier * Math.max(0, trinity.body || 0)
         });
         const damage = combat.finalPower;
 
@@ -194,7 +194,7 @@ export const BASIC_ATTACK: SkillDefinition = {
             }
         });
         // Apply damage
-        effects.push({ type: 'Damage', target: 'targetActor', amount: damage, reason: 'basic_attack', scoreEvent: combat.scoreEvent });
+        effects.push(createDamageEffectFromCombat(combat, 'targetActor', 'basic_attack'));
         if (isSpearFamilyAttack) {
             effects.push({
                 type: 'ApplyAilment',

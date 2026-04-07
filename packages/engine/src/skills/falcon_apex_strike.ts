@@ -1,7 +1,7 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 
 const FALCON_APEX_STRIKE_COMBAT = {
     damageClass: 'physical' as const,
@@ -49,25 +49,17 @@ export const FALCON_APEX_STRIKE: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
-        const combat = calculateCombat({
-            attackerId: attacker.id,
-            targetId: targetActor.id,
+        const combat = resolveSkillCombatDamage({
+            attacker,
+            target: targetActor,
             skillId: 'FALCON_APEX_STRIKE',
             basePower: 0,
             skillDamageMultiplier: FALCON_APEX_STRIKE.baseVariables.damage ?? 1,
-            trinity: extractTrinityStats(attacker),
-            targetTrinity: extractTrinityStats(targetActor),
             ...FALCON_APEX_STRIKE_COMBAT,
             statusMultipliers: []
         });
 
-        effects.push({
-            type: 'Damage',
-            target: targetActor.id,
-            amount: combat.finalPower,
-            reason: 'apex_strike',
-            scoreEvent: combat.scoreEvent
-        });
+        effects.push(createDamageEffectFromCombat(combat, targetActor.id, 'apex_strike'));
 
         effects.push({
             type: 'Juice',

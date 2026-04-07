@@ -1,6 +1,8 @@
 import type { Actor } from '../../types';
 import type { CombatProfileComponent } from '../components';
 import { getComponent } from '../components';
+import { getEnemyCatalogEntry } from '../../data/enemies';
+import { getCompanionBalanceEntry } from '../../data/companions/content';
 export const COMBAT_PROFILE_SET_VERSION = 'mvp-v1';
 
 export interface CombatProfile {
@@ -17,33 +19,6 @@ const DEFAULT_PROFILE: CombatProfile = {
     incomingMagical: 1,
 };
 
-const PLAYER_ARCHETYPE_PROFILES: Record<string, CombatProfile> = {
-    VANGUARD: DEFAULT_PROFILE,
-    SKIRMISHER: DEFAULT_PROFILE,
-    FIREMAGE: DEFAULT_PROFILE,
-    NECROMANCER: DEFAULT_PROFILE,
-    HUNTER: DEFAULT_PROFILE,
-    ASSASSIN: DEFAULT_PROFILE,
-};
-
-const ENEMY_SUBTYPE_PROFILES: Record<string, CombatProfile> = {
-    footman: { outgoingPhysical: 3.0, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-    sprinter: { outgoingPhysical: 2.8, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-    raider: { outgoingPhysical: 3.2, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-    pouncer: { outgoingPhysical: 3.2, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-    shieldBearer: { outgoingPhysical: 3.5, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-    archer: { outgoingPhysical: 2.6, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-    bomber: { outgoingPhysical: 2.8, outgoingMagical: 3.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-    warlock: { outgoingPhysical: 1.5, outgoingMagical: 3.5, incomingPhysical: 1.0, incomingMagical: 1.0 },
-    butcher: { outgoingPhysical: 4.0, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-    sentinel: { outgoingPhysical: 4.0, outgoingMagical: 4.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-};
-
-const COMPANION_SUBTYPE_PROFILES: Record<string, CombatProfile> = {
-    falcon: { outgoingPhysical: 1.2, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-    skeleton: { outgoingPhysical: 1.1, outgoingMagical: 1.0, incomingPhysical: 1.0, incomingMagical: 1.0 },
-};
-
 const cloneProfile = (profile: CombatProfile): CombatProfile => ({
     outgoingPhysical: profile.outgoingPhysical,
     outgoingMagical: profile.outgoingMagical,
@@ -58,17 +33,19 @@ export const resolveDefaultCombatProfile = (actorLike: {
     companionOf?: string;
 }): CombatProfile => {
     if (actorLike.type === 'player') {
-        return cloneProfile(
-            PLAYER_ARCHETYPE_PROFILES[(actorLike.archetype || 'VANGUARD').toUpperCase()] || DEFAULT_PROFILE
-        );
+        return cloneProfile(DEFAULT_PROFILE);
     }
 
     if (actorLike.companionOf && actorLike.subtype) {
-        return cloneProfile(COMPANION_SUBTYPE_PROFILES[actorLike.subtype] || DEFAULT_PROFILE);
+        const companion = getCompanionBalanceEntry(actorLike.subtype);
+        if (companion?.combatProfile) return cloneProfile(companion.combatProfile);
+        return cloneProfile(DEFAULT_PROFILE);
     }
 
     if (actorLike.subtype) {
-        return cloneProfile(ENEMY_SUBTYPE_PROFILES[actorLike.subtype] || DEFAULT_PROFILE);
+        const enemy = getEnemyCatalogEntry(actorLike.subtype);
+        if (enemy?.combatProfile) return cloneProfile(enemy.combatProfile);
+        return cloneProfile(DEFAULT_PROFILE);
     }
 
     return cloneProfile(DEFAULT_PROFILE);

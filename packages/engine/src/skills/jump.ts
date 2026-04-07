@@ -4,7 +4,7 @@ import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import {
     resolveSkillMovementPolicy,
     validateMovementDestination
@@ -90,18 +90,16 @@ export const JUMP: SkillDefinition = {
 
         // 4. Execution: Displacement & Impact
         if (obstacle && hasMeteor) {
-            const combat = calculateCombat({
-                attackerId: attacker.id,
-                targetId: obstacle.id,
+            const combat = resolveSkillCombatDamage({
+                attacker,
+                target: obstacle,
                 skillId: 'JUMP',
                 basePower: JUMP.baseVariables.basePower ?? 0,
                 skillDamageMultiplier: JUMP.baseVariables.damage ?? 1,
-                trinity: extractTrinityStats(attacker),
-                targetTrinity: extractTrinityStats(obstacle),
                 ...JUMP.combat,
                 statusMultipliers: []
             });
-            effects.push({ type: 'Damage', target: obstacle.id, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
+            effects.push(createDamageEffectFromCombat(combat, obstacle.id));
             messages.push(`Meteor Impact killed ${obstacle.subtype || 'enemy'}!`);
         }
 

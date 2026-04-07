@@ -3,7 +3,7 @@ import { getNeighbors, hexDistance, hexEquals } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import { getActorAt } from '../helpers';
 import { pointToKey } from '../hex';
 import { getSurfaceStatus, getSurfaceSkillPowerMultiplier } from '../systems/tiles/surface-status';
@@ -49,20 +49,17 @@ export const FIREBALL: SkillDefinition = {
 
         // Damage target and neighbors through centralized combat calculator.
         const affected = [target, ...getNeighbors(target)];
-        const trinity = extractTrinityStats(attacker);
         const inDangerPreviewHex = !!_state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position));
         for (const p of affected) {
             const actorAtPoint = getActorAt(_state, p);
             const surfaceStatus = getSurfaceStatus(_state, p);
             const surfaceMultiplier = getSurfaceSkillPowerMultiplier('FIREBALL', surfaceStatus);
-            const combat = calculateCombat({
-                attackerId: attacker.id,
-                targetId: actorAtPoint?.id || pointToKey(p),
+            const combat = resolveSkillCombatDamage({
+                attacker,
+                target: actorAtPoint || { ...attacker, id: pointToKey(p), position: p, hp: 0, maxHp: 0 } as Actor,
                 skillId: 'FIREBALL',
                 basePower: FIREBALL.baseVariables.basePower ?? 0,
                 skillDamageMultiplier: FIREBALL.baseVariables.damage ?? 1,
-                trinity,
-                targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
                 ...FIREBALL.combat,
                 engagementContext: { distance: hexDistance(attacker.position, p) },
                 statusMultipliers: surfaceMultiplier === 1
@@ -71,7 +68,7 @@ export const FIREBALL: SkillDefinition = {
                 inDangerPreviewHex,
                 theoreticalMaxPower: 1
             });
-            effects.push({ type: 'Damage', target: p, amount: combat.finalPower, reason: 'fireball', scoreEvent: combat.scoreEvent });
+            effects.push(createDamageEffectFromCombat(combat, p, 'fireball'));
             effects.push({ type: 'PlaceFire', position: p, duration: 3 });
         }
 

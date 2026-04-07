@@ -1,4 +1,5 @@
 import type { ArmorBurdenTier } from '../../types';
+import type { CombatProfile } from '../../systems/combat/combat-traits';
 import { deriveEnemyBestiaryStats } from '../enemies/derived-combat-stats';
 
 export type bestiaryWeightClass = 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
@@ -90,6 +91,7 @@ export interface MvpEnemyContentEntry {
         base: string[];
         passive: string[];
     };
+    combatProfile: CombatProfile;
     contract: EnemyBalanceContract;
 }
 
@@ -134,6 +136,12 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = w
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK'], passive: ['AUTO_ATTACK'] }
         },
         runtimeSkills: { base: ['BASIC_MOVE', 'BASIC_ATTACK'], passive: [] },
+        combatProfile: {
+            outgoingPhysical: 3,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         contract: {
             combatRole: 'bruiser',
             balanceTags: ['frontline'],
@@ -157,6 +165,12 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = w
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK'], passive: [] }
         },
         runtimeSkills: { base: ['BASIC_MOVE', 'BASIC_ATTACK'], passive: [] },
+        combatProfile: {
+            outgoingPhysical: 2.8,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         contract: {
             combatRole: 'skirmisher',
             balanceTags: ['flanker'],
@@ -180,6 +194,12 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = w
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'DASH'], passive: [] }
         },
         runtimeSkills: { base: ['DASH'], passive: [] },
+        combatProfile: {
+            outgoingPhysical: 3.2,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         contract: {
             combatRole: 'skirmisher',
             balanceTags: ['flanker'],
@@ -203,6 +223,12 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = w
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'GRAPPLE_HOOK'], passive: [] }
         },
         runtimeSkills: { base: ['BASIC_MOVE', 'GRAPPLE_HOOK'], passive: [] },
+        combatProfile: {
+            outgoingPhysical: 3.2,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         contract: {
             combatRole: 'controller',
             balanceTags: ['flanker', 'support'],
@@ -226,6 +252,12 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = w
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'SHIELD_BASH'], passive: [] }
         },
         runtimeSkills: { base: ['BASIC_MOVE', 'SHIELD_BASH'], passive: [] },
+        combatProfile: {
+            outgoingPhysical: 3.5,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         contract: {
             combatRole: 'bruiser',
             balanceTags: ['frontline'],
@@ -249,6 +281,12 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = w
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'ARCHER_SHOT'], passive: [] }
         },
         runtimeSkills: { base: ['BASIC_MOVE', 'ARCHER_SHOT'], passive: [] },
+        combatProfile: {
+            outgoingPhysical: 2.6,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         contract: {
             combatRole: 'shooter',
             balanceTags: ['siege'],
@@ -272,6 +310,12 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = w
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'BOMB_TOSS'], passive: [] }
         },
         runtimeSkills: { base: ['BASIC_MOVE', 'BOMB_TOSS'], passive: [] },
+        combatProfile: {
+            outgoingPhysical: 2.8,
+            outgoingMagical: 3,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         contract: {
             combatRole: 'hazard_setter',
             balanceTags: ['hazard', 'siege'],
@@ -301,6 +345,12 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = w
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'FIREBALL'], passive: [] }
         },
         runtimeSkills: { base: ['BASIC_MOVE', 'FIREBALL'], passive: [] },
+        combatProfile: {
+            outgoingPhysical: 1.5,
+            outgoingMagical: 3.5,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         contract: {
             combatRole: 'caster',
             balanceTags: ['support', 'siege'],
@@ -324,6 +374,12 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = w
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK'], passive: [] }
         },
         runtimeSkills: { base: ['BASIC_MOVE', 'BASIC_ATTACK'], passive: [] },
+        combatProfile: {
+            outgoingPhysical: 4,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         contract: {
             combatRole: 'boss_anchor',
             balanceTags: ['frontline', 'boss'],
@@ -347,6 +403,12 @@ export const MVP_ENEMY_CONTENT: Record<EnemySubtypeId, MvpEnemyContentEntry> = w
             skills: { base: ['BASIC_MOVE', 'BASIC_ATTACK', 'SENTINEL_BLAST'], passive: [] }
         },
         runtimeSkills: { base: ['BASIC_MOVE', 'SENTINEL_TELEGRAPH', 'SENTINEL_BLAST'], passive: [] },
+        combatProfile: {
+            outgoingPhysical: 4,
+            outgoingMagical: 4,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         contract: {
             combatRole: 'boss_anchor',
             balanceTags: ['frontline', 'boss', 'siege'],

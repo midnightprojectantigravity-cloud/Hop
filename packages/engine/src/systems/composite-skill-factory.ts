@@ -19,6 +19,7 @@ import { createHex, hexDistance, isHexInRectangularGrid } from '../hex';
 import { getActorAt } from '../helpers';
 import { validateLineOfSight } from './validation';
 import { extractTrinityStats } from './combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from './combat/combat-effect';
 import { resolveForce } from './combat/force';
 import { resolveActorForceScalars } from './combat/force-scalars';
 
@@ -132,7 +133,8 @@ const convertEffect = (
     attacker: Actor,
     target: Point | undefined,
     effect: CompositeAtomicEffectDefinition,
-    scalarCtx: RuntimeScalarContext
+    scalarCtx: RuntimeScalarContext,
+    skillId: string
 ): AtomicEffect[] => {
     if (effect.kind === 'MESSAGE') {
         return [{ type: 'Message', text: effect.text }];
@@ -140,10 +142,30 @@ const convertEffect = (
     if (effect.kind === 'DEAL_DAMAGE') {
         const amount = Math.max(0, Math.floor(evalScalar(effect.amount, scalarCtx)));
         const targetActorId = resolveTargetActorId(state, target);
+        const targetActor = targetActorId ? getActorAt(state, target || attacker.position) : undefined;
+        const effectiveDamageClass = effect.damageClass === 'magical' ? 'magical' : 'physical';
         const effectTarget = effect.target.selector === 'targetActor'
             ? (targetActorId || 'targetActor')
             : (effect.target.selector === 'self' ? attacker.id : (target || 'targetActor'));
-        return [{ type: 'Damage', target: effectTarget as any, amount, reason: effect.reason }];
+        const combat = resolveSkillCombatDamage({
+            attacker,
+            target: effect.target.selector === 'self' ? attacker : targetActor,
+            targetId: targetActorId || (effect.target.selector === 'self' ? attacker.id : 'targetActor'),
+            skillId: effect.reason || skillId,
+            basePower: amount,
+            skillDamageMultiplier: 0,
+            damageClass: effectiveDamageClass,
+            combat: {
+                damageClass: effectiveDamageClass,
+                attackProfile: effectiveDamageClass === 'magical' ? 'spell' : 'melee',
+                trackingSignature: effectiveDamageClass === 'magical' ? 'magic' : 'melee',
+                weights: effectiveDamageClass === 'magical'
+                    ? { body: 0, mind: 1, instinct: 0 }
+                    : { body: 1, mind: 0, instinct: 0 }
+            },
+            theoreticalMaxPower: Math.max(1, amount)
+        });
+        return [createDamageEffectFromCombat(combat, effectTarget as any, effect.reason || skillId)];
     }
     if (effect.kind === 'APPLY_STATUS') {
         const targetActorId = resolveTargetActorId(state, target);
@@ -255,7 +277,7 @@ export const materializeCompositeSkill = (def: CompositeSkillDefinition): SkillD
             const effectStream = [...declareReactions, ...materialized.effects];
             const effects: AtomicEffect[] = [];
             for (const effect of effectStream) {
-                effects.push(...convertEffect(state, attacker, target, effect, scalarCtx));
+                effects.push(...convertEffect(state, attacker, target, effect, scalarCtx, def.id));
             }
             const baseEffectRefs = new Set<AtomicEffect>(effects);
 
@@ -271,7 +293,7 @@ export const materializeCompositeSkill = (def: CompositeSkillDefinition): SkillD
                     .filter(reaction => reaction.trigger === trigger)
                     .flatMap(reaction =>
                         reaction.effects.flatMap(rEffect =>
-                            convertEffect(hookState, attacker, target, rEffect, scalarCtx).map(item => ({
+                            convertEffect(hookState, attacker, target, rEffect, scalarCtx, def.id).map(item => ({
                                 item,
                                 enqueuePosition: reaction.enqueuePosition
                             }))

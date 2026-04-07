@@ -3,7 +3,7 @@ import { getNeighbors, hexDistance, hexDirection, hexAdd, getDirectionFromTo } f
 import { getSkillScenarios } from '../scenarios';
 import { SpatialSystem } from '../systems/spatial-system';
 import { getActorAt } from '../helpers';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import {
     resolveSkillMovementPolicy,
     type ResolvedSkillMovementPolicy,
@@ -125,21 +125,19 @@ export const WITHDRAWAL: SkillDefinition = {
             return { effects, messages: ['Cannot target allies!'], consumesTurn: false };
         }
 
-        const combat = calculateCombat({
-            attackerId: attacker.id,
-            targetId: targetActor.id,
+        const combat = resolveSkillCombatDamage({
+            attacker,
+            target: targetActor,
             skillId: 'WITHDRAWAL',
             basePower: (WITHDRAWAL.baseVariables.basePower ?? 0) + (hasPartingShot ? 1 : 0),
             skillDamageMultiplier: WITHDRAWAL.baseVariables.damage ?? 1,
-            trinity: extractTrinityStats(attacker),
-            targetTrinity: extractTrinityStats(targetActor),
             ...WITHDRAWAL.combat,
             engagementContext: { distance: dist },
             statusMultipliers: []
         });
 
         // 1. Quick shot
-        effects.push({ type: 'Damage', target: targetActor.id, amount: combat.finalPower, scoreEvent: combat.scoreEvent });
+        effects.push(createDamageEffectFromCombat(combat, targetActor.id, 'withdrawal'));
         effects.push({
             type: 'Juice',
             effect: 'impact',

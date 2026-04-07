@@ -1,5 +1,6 @@
 import type { ArmorBurdenTier, WeightClass } from '../../types';
 import type { TrinityStats } from '../../systems/combat/trinity-resolver';
+import type { CombatProfile } from '../../systems/combat/combat-traits';
 
 export type CompanionSubtypeId = 'falcon' | 'skeleton';
 export type CompanionRole = 'utility_predator' | 'attrition_body';
@@ -16,6 +17,7 @@ export interface CompanionBalanceEntry {
     hp: number;
     maxHp: number;
     skills: string[];
+    combatProfile: CombatProfile;
     evaluationExcludedFromEnemyBudget: boolean;
 }
 
@@ -31,6 +33,12 @@ export const COMPANION_BALANCE_CONTENT: Record<CompanionSubtypeId, CompanionBala
         hp: 84,
         maxHp: 84,
         skills: ['BASIC_MOVE', 'FALCON_PECK', 'FALCON_APEX_STRIKE', 'FALCON_HEAL', 'FALCON_SCOUT', 'FALCON_AUTO_ROOST'],
+        combatProfile: {
+            outgoingPhysical: 1.2,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         evaluationExcludedFromEnemyBudget: true
     },
     skeleton: {
@@ -44,6 +52,12 @@ export const COMPANION_BALANCE_CONTENT: Record<CompanionSubtypeId, CompanionBala
         hp: 86,
         maxHp: 86,
         skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'],
+        combatProfile: {
+            outgoingPhysical: 1.1,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        },
         evaluationExcludedFromEnemyBudget: true
     }
 };

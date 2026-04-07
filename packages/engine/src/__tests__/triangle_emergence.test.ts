@@ -12,7 +12,6 @@ describe('triangle emergence (formula-driven)', () => {
             targetTrinity: { body: 2, instinct: 10, mind: 1 },
             damageClass: 'physical',
             interactionModel: 'triangle',
-            scaling: [{ attribute: 'body', coefficient: 0.25 }],
             statusMultipliers: []
         });
 
@@ -25,7 +24,6 @@ describe('triangle emergence (formula-driven)', () => {
             targetTrinity: { body: 10, instinct: 2, mind: 1 },
             damageClass: 'physical',
             interactionModel: 'triangle',
-            scaling: [{ attribute: 'instinct', coefficient: 0.25 }],
             statusMultipliers: []
         });
 
@@ -42,7 +40,6 @@ describe('triangle emergence (formula-driven)', () => {
             targetTrinity: { body: 1, instinct: 1, mind: 12 },
             damageClass: 'physical',
             interactionModel: 'triangle',
-            scaling: [{ attribute: 'instinct', coefficient: 0.2 }],
             statusMultipliers: []
         });
 
@@ -55,7 +52,6 @@ describe('triangle emergence (formula-driven)', () => {
             targetTrinity: { body: 4, instinct: 12, mind: 1 },
             damageClass: 'magical',
             interactionModel: 'triangle',
-            scaling: [{ attribute: 'mind', coefficient: 0.2 }],
             statusMultipliers: []
         });
 
@@ -72,7 +68,6 @@ describe('triangle emergence (formula-driven)', () => {
             targetTrinity: { body: 8, instinct: 2, mind: 1 },
             damageClass: 'magical',
             interactionModel: 'triangle',
-            scaling: [{ attribute: 'mind', coefficient: 0.25 }],
             statusMultipliers: []
         });
 
@@ -85,7 +80,6 @@ describe('triangle emergence (formula-driven)', () => {
             targetTrinity: { body: 1, instinct: 2, mind: 12 },
             damageClass: 'physical',
             interactionModel: 'triangle',
-            scaling: [{ attribute: 'body', coefficient: 0.25 }],
             statusMultipliers: []
         });
 
@@ -102,7 +96,6 @@ describe('triangle emergence (formula-driven)', () => {
             targetTrinity: { body: 5, instinct: 5, mind: 5 },
             damageClass: 'physical',
             interactionModel: 'triangle',
-            scaling: [{ attribute: 'body', coefficient: 0.2 }, { attribute: 'instinct', coefficient: 0.1 }],
             statusMultipliers: []
         });
         const right = calculateCombat({
@@ -114,7 +107,6 @@ describe('triangle emergence (formula-driven)', () => {
             targetTrinity: { body: 5, instinct: 5, mind: 5 },
             damageClass: 'physical',
             interactionModel: 'triangle',
-            scaling: [{ attribute: 'body', coefficient: 0.2 }, { attribute: 'instinct', coefficient: 0.1 }],
             statusMultipliers: []
         });
 

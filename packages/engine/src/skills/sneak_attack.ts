@@ -3,7 +3,7 @@ import { getNeighbors } from '../hex';
 import { getEnemyAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 
 const SNEAK_ATTACK_COMBAT = {
     damageClass: 'physical' as const,
@@ -42,26 +42,17 @@ export const SNEAK_ATTACK: SkillDefinition = {
 
         // Damage Calculation
         const isStealthed = (attacker.stealthCounter || 0) > 0;
-        const combat = calculateCombat({
-            attackerId: attacker.id,
-            targetId: enemy.id,
+        const combat = resolveSkillCombatDamage({
+            attacker,
+            target: enemy,
             skillId: 'SNEAK_ATTACK',
             basePower: 0,
             skillDamageMultiplier: (SNEAK_ATTACK.baseVariables.damage ?? 1) + (isStealthed ? 2 : 0),
-            trinity: extractTrinityStats(attacker),
-            targetTrinity: extractTrinityStats(enemy),
             ...SNEAK_ATTACK_COMBAT,
             statusMultipliers: []
         });
 
-        effects.push({
-            type: 'Damage',
-            target: enemy.id,
-            amount: combat.finalPower,
-            reason: 'sneak_attack',
-            source: attacker.position,
-            scoreEvent: combat.scoreEvent
-        });
+        effects.push(createDamageEffectFromCombat(combat, enemy.id, 'sneak_attack'));
 
         if (isStealthed) {
             effects.push({

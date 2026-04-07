@@ -283,6 +283,7 @@ export function createPlayer(config: {
     archetype?: string;
     trinity?: TrinityStats;
     armorBurdenTier?: ArmorBurdenTier;
+    combatProfile?: CombatProfile;
 }): Actor {
     return createEntity({
         id: 'player',
@@ -297,6 +298,7 @@ export function createPlayer(config: {
         armorBurdenTier: config.armorBurdenTier,
         archetype: config.archetype || 'VANGUARD',
         trinity: config.trinity,
+        combatProfile: config.combatProfile,
     });
 }
 
@@ -315,6 +317,7 @@ export function createEnemy(config: {
     armorBurdenTier?: ArmorBurdenTier;
     enemyType?: 'melee' | 'ranged' | 'boss';
     trinity?: TrinityStats;
+    combatProfile?: CombatProfile;
 }): Actor {
     const entity = createEntity({
         id: config.id,
@@ -329,6 +332,7 @@ export function createEnemy(config: {
         weightClass: config.weightClass || 'Standard',
         armorBurdenTier: config.armorBurdenTier,
         trinity: config.trinity,
+        combatProfile: config.combatProfile,
     });
 
     // Add enemy-specific fields
@@ -372,7 +376,8 @@ export function createEnemyFromBestiary(config: {
         weightClass: config.weightClass ?? (bestiary.stats.weightClass as WeightClass),
         armorBurdenTier: config.armorBurdenTier ?? catalogEntry.contract.metabolicProfile.armorBurdenTier,
         enemyType: config.enemyType ?? bestiary.stats.type,
-        trinity: resolvedTrinity
+        trinity: resolvedTrinity,
+        combatProfile: catalogEntry.combatProfile
     });
 
     if (config.actionCooldown !== undefined || bestiary.stats.actionCooldown !== undefined) {
@@ -413,6 +418,7 @@ export function createCompanion(config: {
             isFlying: true,
             companionOf: config.ownerId,
             trinity: config.trinity ?? contract?.trinity,
+            combatProfile: contract?.combatProfile,
         });
 
         // Initialize companion state
@@ -452,6 +458,7 @@ export function createCompanion(config: {
             weightClass: contract?.weightClass ?? 'Standard',
             armorBurdenTier: config.armorBurdenTier ?? contract?.armorBurdenTier,
             trinity: config.trinity ?? contract?.trinity,
+            combatProfile: contract?.combatProfile,
         });
         if (config.initialBehaviorOverlay || config.initialAnchorActorId || config.initialAnchorPoint) {
             entity.behaviorState = {
@@ -477,6 +484,12 @@ export function createCompanion(config: {
         weightClass: 'Standard',
         armorBurdenTier: config.armorBurdenTier,
         trinity: config.trinity,
+        combatProfile: {
+            outgoingPhysical: 1,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        }
     });
 }
 

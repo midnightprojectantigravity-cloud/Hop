@@ -5,7 +5,7 @@ import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 
 const MULTI_SHOOT_COMBAT = {
     damageClass: 'physical' as const,
@@ -51,22 +51,19 @@ export const MULTI_SHOOT: SkillDefinition = {
 
         // Damage target and neighbors
         const affected = [target, ...getNeighbors(target)];
-        const trinity = extractTrinityStats(attacker);
         for (const p of affected) {
             const actorAtPoint = getActorAt(_state, p);
-            const combat = calculateCombat({
-                attackerId: attacker.id,
-                targetId: actorAtPoint?.id || pointToKey(p),
+            const combat = resolveSkillCombatDamage({
+                attacker,
+                target: actorAtPoint || ({ ...attacker, id: pointToKey(p), position: p, hp: 0, maxHp: 0 } as Actor),
                 skillId: 'MULTI_SHOOT',
                 basePower: 0,
                 skillDamageMultiplier: MULTI_SHOOT.baseVariables.damage ?? 1,
-                trinity,
-                targetTrinity: actorAtPoint ? extractTrinityStats(actorAtPoint) : undefined,
                 engagementContext: { distance: hexDistance(attacker.position, p) },
                 ...MULTI_SHOOT_COMBAT,
                 statusMultipliers: []
             });
-            effects.push({ type: 'Damage', target: p, amount: combat.finalPower, reason: 'multi_shoot', scoreEvent: combat.scoreEvent });
+            effects.push(createDamageEffectFromCombat(combat, p, 'multi_shoot'));
         }
 
         effects.push({

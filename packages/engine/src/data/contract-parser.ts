@@ -159,6 +159,16 @@ export const validateBaseUnitDefinition = (input: unknown): ValidationIssue[] =>
         });
         Object.entries(propensities).forEach(([key, val]) => checkPropensity(val, issues, `$.propensities.${key}`));
     }
+    if (input.combatProfile !== undefined) {
+        const combatProfile = isRecord(input.combatProfile) ? input.combatProfile : undefined;
+        if (!combatProfile) {
+            push(issues, '$.combatProfile', 'Expected object');
+        } else {
+            ['outgoingPhysical', 'outgoingMagical', 'incomingPhysical', 'incomingMagical'].forEach(field => {
+                if (!isNum(combatProfile[field])) push(issues, `$.combatProfile.${field}`, 'Expected number');
+            });
+        }
+    }
     if (!isRecord(input.skillLoadout)) {
         push(issues, '$.skillLoadout', 'Expected object');
     } else {

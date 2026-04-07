@@ -1,7 +1,6 @@
 import { randomFromSeed } from '../rng';
 import {
     calculateCombat,
-    type CombatAttribute,
     type TrinityStats
 } from '../combat/combat-calculator';
 import { deriveMaxHpFromTrinity } from '../combat/trinity-resolver';
@@ -558,22 +557,6 @@ const createBiomeRepresentative = (biome: RgbBiome): EcosystemUnit => {
     };
 };
 
-const buildScaling = (damageClass: DamageClass, trinity: TrinityStats) => {
-    if (damageClass === 'magical') {
-        return [
-            { attribute: 'mind' as CombatAttribute, coefficient: 0.26 },
-            { attribute: 'instinct' as CombatAttribute, coefficient: 0.06 }
-        ];
-    }
-
-    const primary: CombatAttribute = trinity.body >= trinity.instinct ? 'body' : 'instinct';
-    const secondary: CombatAttribute = primary === 'body' ? 'instinct' : 'body';
-    return [
-        { attribute: primary, coefficient: 0.24 },
-        { attribute: secondary, coefficient: 0.08 }
-    ];
-};
-
 const runPredationArc = (): PredationArcReport[] => {
     const red = createBiomeRepresentative('red');
     const blue = createBiomeRepresentative('blue');
@@ -599,7 +582,6 @@ const runPredationArc = (): PredationArcReport[] => {
             damageClass: predator.damageClass,
             interactionModel: 'triangle',
             statusMultipliers: [],
-            scaling: buildScaling(predator.damageClass, predator.trinity),
             engagementRange: arc.engagementRange,
             optimalRangeMin: predator.preferredRange.min,
             optimalRangeMax: predator.preferredRange.max,
@@ -616,7 +598,6 @@ const runPredationArc = (): PredationArcReport[] => {
             damageClass: prey.damageClass,
             interactionModel: 'triangle',
             statusMultipliers: [],
-            scaling: buildScaling(prey.damageClass, prey.trinity),
             engagementRange: arc.engagementRange,
             optimalRangeMin: prey.preferredRange.min,
             optimalRangeMax: prey.preferredRange.max,

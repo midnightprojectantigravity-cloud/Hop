@@ -28,7 +28,6 @@ describe('combat-calculator', () => {
             damageClass: 'physical',
             attackProfile: 'melee',
             trackingSignature: 'melee',
-            scaling: [{ attribute: 'body', coefficient: 1 }],
             statusMultipliers: [],
             engagementContext: { distance: 1 },
             theoreticalMaxPower: 50
@@ -48,7 +47,6 @@ describe('combat-calculator', () => {
             skillId: 'TEST',
             basePower: 0,
             trinity: { body: 0, mind: 0, instinct: 0 },
-            scaling: [],
             statusMultipliers: [{ id: 'SHIELD', multiplier: -5 }]
         });
 
@@ -96,7 +94,6 @@ describe('combat-calculator', () => {
             attackProfile: 'projectile',
             trackingSignature: 'projectile',
             engagementContext: { distance: 4 },
-            scaling: [{ attribute: 'instinct', coefficient: 1 }],
             statusMultipliers: [],
             theoreticalMaxPower: 20
         });
@@ -112,7 +109,6 @@ describe('combat-calculator', () => {
             attackProfile: 'spell',
             trackingSignature: 'magic',
             engagementContext: { distance: 4 },
-            scaling: [{ attribute: 'mind', coefficient: 1 }],
             statusMultipliers: [],
             theoreticalMaxPower: 20
         });

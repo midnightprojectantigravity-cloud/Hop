@@ -2,7 +2,7 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getDirectionFromTo, hexDirection, hexEquals, getNeighbors } from '../hex';
 import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import { isStunned } from '../systems/status';
 
 import { getSkillScenarios } from '../scenarios';
@@ -222,19 +222,17 @@ export const AUTO_ATTACK: SkillDefinition = {
 
             if (isPersistent) {
                 // HIT!
-                const combat = calculateCombat({
-                    attackerId: attacker.id,
-                    targetId: targetActor.id,
+                const combat = resolveSkillCombatDamage({
+                    attacker,
+                    target: targetActor,
                     skillId: 'AUTO_ATTACK',
                     basePower: 0,
                     skillDamageMultiplier: damage,
-                    trinity: extractTrinityStats(attacker),
-                    targetTrinity: extractTrinityStats(targetActor),
                     ...AUTO_ATTACK.combat,
                     statusMultipliers: []
                 });
                 pushAutoAttackStrikeJuice(targetActor, neighborPos, combat.finalPower);
-                effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, reason: 'auto_attack', scoreEvent: combat.scoreEvent });
+                effects.push(createDamageEffectFromCombat(combat, neighborPos, 'auto_attack'));
 
                 const attackerName = attacker.factionId === 'player'
                     ? 'You'
@@ -268,19 +266,17 @@ export const AUTO_ATTACK: SkillDefinition = {
                 const isEnemy = attacker.factionId !== targetActor.factionId;
                 if (!isEnemy) continue;
 
-                const combat = calculateCombat({
-                    attackerId: attacker.id,
-                    targetId: targetActor.id,
+                const combat = resolveSkillCombatDamage({
+                    attacker,
+                    target: targetActor,
                     skillId: 'AUTO_ATTACK',
                     basePower: 0,
                     skillDamageMultiplier: damage,
-                    trinity: extractTrinityStats(attacker),
-                    targetTrinity: extractTrinityStats(targetActor),
                     ...AUTO_ATTACK.combat,
                     statusMultipliers: []
                 });
                 pushAutoAttackStrikeJuice(targetActor, neighborPos, combat.finalPower);
-                effects.push({ type: 'Damage', target: neighborPos, amount: combat.finalPower, reason: 'auto_attack', scoreEvent: combat.scoreEvent });
+                effects.push(createDamageEffectFromCombat(combat, neighborPos, 'auto_attack'));
 
                 const attackerName = attacker.factionId === 'player'
                     ? 'You'

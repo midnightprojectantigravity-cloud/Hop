@@ -4,7 +4,7 @@ import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, isBlockedByWall } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import { getSurfaceStatus, getSurfaceSkillPowerMultiplier } from '../systems/tiles/surface-status';
 
 /**
@@ -68,21 +68,19 @@ export const FIREWALL: SkillDefinition = {
                 if (actor) {
                     const surfaceStatus = getSurfaceStatus(state, p);
                     const surfaceMultiplier = getSurfaceSkillPowerMultiplier('FIREWALL', surfaceStatus);
-                    const combat = calculateCombat({
-                        attackerId: attacker.id,
-                        targetId: actor.id,
+                    const combat = resolveSkillCombatDamage({
+                        attacker,
+                        target: actor,
                         skillId: 'FIREWALL',
                         basePower: FIREWALL.baseVariables.basePower ?? 0,
                         skillDamageMultiplier: FIREWALL.baseVariables.damage ?? 1,
-                        trinity: extractTrinityStats(attacker),
-                        targetTrinity: extractTrinityStats(actor),
                         ...FIREWALL.combat,
                         engagementContext: { distance: hexDistance(attacker.position, p) },
                         statusMultipliers: surfaceMultiplier === 1
                             ? []
                             : [{ id: `surface_${surfaceStatus}`, multiplier: surfaceMultiplier }]
                     });
-                    effects.push({ type: 'Damage', target: actor.id, amount: combat.finalPower, reason: 'firewall_impact', scoreEvent: combat.scoreEvent });
+                    effects.push(createDamageEffectFromCombat(combat, actor.id, 'firewall_impact'));
                 }
             }
         }

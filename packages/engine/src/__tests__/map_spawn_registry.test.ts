@@ -91,6 +91,13 @@ describe('map spawn registry', () => {
         expect(archer.speed).toBe(1); // baseline preserved
         expect(archer.armorBurdenTier).toBe('Light');
         expect(archer.activeSkills.map(s => s.id)).toContain('ARCHER_SHOT');
+        expect(archer.components?.get('combat_profile')).toMatchObject({
+            type: 'combat_profile',
+            outgoingPhysical: 2.6,
+            outgoingMagical: 1,
+            incomingPhysical: 1,
+            incomingMagical: 1
+        });
     });
 
     it('derives baseline hp from trinity when callers override bestiary trinity', () => {

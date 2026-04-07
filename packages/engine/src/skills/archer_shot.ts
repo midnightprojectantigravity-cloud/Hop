@@ -3,7 +3,7 @@ import { getHexLine, hexDistance, hexEquals, hexDirection } from '../hex';
 import { getActorAt } from '../helpers';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange, validateAxialDirection, hasClearLineToActor } from '../systems/validation';
-import { calculateCombat, extractTrinityStats } from '../systems/combat/combat-calculator';
+import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 
 const ARCHER_MIN_RANGE = 2;
 const ARCHER_MAX_RANGE = 4;
@@ -61,15 +61,12 @@ export const ARCHER_SHOT: SkillDefinition = {
             return { effects, messages: ['No clear line of sight.'], consumesTurn: false };
         }
 
-        const trinity = extractTrinityStats(shooter);
-        const combat = calculateCombat({
-            attackerId: shooter.id,
-            targetId: targetActor.id,
+        const combat = resolveSkillCombatDamage({
+            attacker: shooter,
+            target: targetActor,
             skillId: 'ARCHER_SHOT',
             basePower: 0,
             skillDamageMultiplier: ARCHER_SHOT.baseVariables.damage ?? 1,
-            trinity,
-            targetTrinity: extractTrinityStats(targetActor),
             damageClass: 'physical',
             attackProfile: 'projectile',
             trackingSignature: 'projectile',
@@ -148,13 +145,7 @@ export const ARCHER_SHOT: SkillDefinition = {
             }
         });
 
-        effects.push({
-            type: 'Damage',
-            target: targetActor.id,
-            amount: combat.finalPower,
-            reason: 'archer_shot',
-            scoreEvent: combat.scoreEvent
-        });
+        effects.push(createDamageEffectFromCombat(combat, targetActor.id, 'archer_shot'));
 
         messages.push('Archer shot!');
         return { effects, messages, consumesTurn: true };

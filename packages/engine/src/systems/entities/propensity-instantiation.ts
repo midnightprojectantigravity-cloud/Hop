@@ -213,7 +213,8 @@ export const instantiateActorFromBlueprintWithCursor = (
         factionId: options.factionId || def.factionId,
         weightClass: def.weightClass,
         skills: [...blueprint.skillIds, ...blueprint.passiveSkillIds],
-        trinity
+        trinity,
+        combatProfile: def.combatProfile
     });
 
     let actor: Actor = applyStartCooldowns(actorBase, def.skillLoadout.startCooldowns);
