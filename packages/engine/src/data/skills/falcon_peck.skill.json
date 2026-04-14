@@ -1,0 +1,131 @@
+{
+  "id": "FALCON_PECK",
+  "name": "Peck",
+  "description": "The falcon pecks an adjacent enemy for 1 damage.",
+  "slot": "offensive",
+  "icon": "\ud83e\udd85",
+  "keywords": [
+    "COMPANION",
+    "PHYSICAL"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 0,
+    "cooldown": 0,
+    "damage": 1
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 1,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "OCCUPANCY",
+        "occupied": true
+      },
+      {
+        "type": "FACTION_RELATION",
+        "relation": "enemy"
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "falcon_peck_01_primary",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "target_actor",
+      "resolution": "combat",
+      "reason": "falcon_peck",
+      "basePower": 0,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "instinct": 1
+      }
+    },
+    {
+      "id": "falcon_peck_02_twin_talons",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "resolution": "combat",
+      "reason": "falcon_peck",
+      "basePower": 0,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "instinct": 1
+      },
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 1,
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          },
+          {
+            "type": "NOT",
+            "predicate": {
+              "type": "DISTANCE",
+              "from": "selected_hex",
+              "op": "eq",
+              "value": 0
+            }
+          }
+        ],
+        "selection": {
+          "mode": "first_n",
+          "count": 1
+        }
+      },
+      "combatPointTargetMode": "actor_only",
+      "conditions": [
+        {
+          "type": "COMPANION_FLAG",
+          "target": "caster",
+          "flag": "twinTalons"
+        }
+      ]
+    },
+    {
+      "id": "falcon_peck_03_text",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "combat_text",
+      "target": "selected_hex",
+      "text": "Peck!",
+      "intensity": "low",
+      "metadata": {
+        "signature": "UI.TEXT.PHYSICAL.FALCON_PECK",
+        "family": "ui",
+        "primitive": "text",
+        "phase": "instant",
+        "element": "physical",
+        "variant": "falcon_peck",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "FALCON_PECK",
+        "textTone": "damage"
+      }
+    },
+    {
+      "id": "falcon_peck_04_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Falcon pecked enemy!"
+    }
+  ],
+  "upgrades": {}
+}

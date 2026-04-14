@@ -1,0 +1,305 @@
+{
+  "id": "BASIC_ATTACK",
+  "name": "Basic Attack",
+  "description": "Strike an adjacent enemy for 1 damage.",
+  "slot": "passive",
+  "icon": "\u2694\ufe0f",
+  "keywords": [
+    "PHYSICAL",
+    "MELEE",
+    "BASELINE"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 0,
+    "cooldown": 0,
+    "damage": 1
+  },
+  "combat": {
+    "damageClass": "physical",
+    "damageSubClass": "melee",
+    "damageElement": "neutral",
+    "attackProfile": "melee",
+    "trackingSignature": "melee",
+    "weights": {
+      "body": 1
+    },
+    "leechRatio": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 1,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "OCCUPANCY",
+        "occupied": true
+      },
+      {
+        "type": "FACTION_RELATION",
+        "relation": "enemy"
+      }
+    ]
+  },
+  "validationMessages": {
+    "missingTarget": "Select a target!",
+    "outOfRange": "Target out of range!",
+    "noTargetActor": "No enemy at target!",
+    "friendlyTarget": "Cannot attack friendlies!",
+    "invalidTarget": "Invalid target."
+  },
+  "preconditions": [
+    {
+      "kind": "stunned",
+      "message": "Cannot attack while stunned!",
+      "consumesTurn": true
+    }
+  ],
+  "combatScript": [
+    {
+      "id": "basic_attack_01_anticipation",
+      "kind": "EMIT_JUICE",
+      "phase": "declare",
+      "effect": "lightImpact",
+      "targetActor": "target_actor",
+      "intensity": "low",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.BASIC_ATTACK",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "anticipation",
+        "element": "physical",
+        "variant": "basic_attack",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "skillId": "BASIC_ATTACK",
+        "timing": {
+          "delayMs": 0,
+          "durationMs": 110,
+          "ttlMs": 140
+        }
+      }
+    },
+    {
+      "id": "basic_attack_02_travel",
+      "kind": "EMIT_JUICE",
+      "phase": "movement",
+      "effect": "dashBlur",
+      "targetActor": "target_actor",
+      "pathRef": "caster_to_selected",
+      "intensity": "medium",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.BASIC_ATTACK",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "travel",
+        "element": "physical",
+        "variant": "basic_attack",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "skillId": "BASIC_ATTACK",
+        "timing": {
+          "delayMs": 110,
+          "durationMs": 70,
+          "ttlMs": 100
+        }
+      }
+    },
+    {
+      "id": "basic_attack_03_impact",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "heavyImpact",
+      "targetActor": "target_actor",
+      "intensity": "medium",
+      "directionPathRef": "caster_to_selected",
+      "contactHexRef": "selected_hex",
+      "contactToRef": "selected_hex",
+      "contactFromRef": "caster_hex",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.BASIC_ATTACK",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "impact",
+        "element": "physical",
+        "variant": "basic_attack",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "contactRef": {
+          "kind": "contact_world"
+        },
+        "skillId": "BASIC_ATTACK",
+        "camera": {
+          "kick": "light",
+          "freezeMs": 55
+        },
+        "timing": {
+          "delayMs": 180,
+          "durationMs": 90,
+          "ttlMs": 150
+        }
+      }
+    },
+    {
+      "id": "basic_attack_04_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "target_actor",
+      "resolution": "combat",
+      "reason": "basic_attack",
+      "basePower": 0,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "damageSubClass": "melee",
+      "damageElement": "neutral",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "body": 1
+      },
+      "includeDangerPreviewHex": true
+    },
+    {
+      "id": "basic_attack_05_spear_bleed_enemy",
+      "kind": "APPLY_AILMENT",
+      "phase": "resolution",
+      "target": "target_actor",
+      "ailment": "bleed",
+      "skillMultiplier": 100,
+      "baseDeposit": 1,
+      "conditions": [
+        {
+          "type": "HAS_SKILL",
+          "target": "caster",
+          "skillId": "SPEAR_THROW"
+        },
+        {
+          "type": "ACTOR_TYPE",
+          "target": "caster",
+          "actorType": "enemy"
+        }
+      ]
+    },
+    {
+      "id": "basic_attack_06_spear_bleed_player",
+      "kind": "APPLY_AILMENT",
+      "phase": "resolution",
+      "target": "target_actor",
+      "ailment": "bleed",
+      "skillMultiplier": 100,
+      "baseDeposit": 1,
+      "conditions": [
+        {
+          "type": "HAS_SKILL",
+          "target": "caster",
+          "skillId": "SPEAR_THROW"
+        },
+        {
+          "type": "ACTOR_TYPE",
+          "target": "caster",
+          "actorType": "player"
+        },
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear"
+        }
+      ]
+    },
+    {
+      "id": "basic_attack_07_aftermath",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "lightImpact",
+      "targetActor": "target_actor",
+      "intensity": "low",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.BASIC_ATTACK",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "aftermath",
+        "element": "physical",
+        "variant": "basic_attack",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "skillId": "BASIC_ATTACK",
+        "timing": {
+          "delayMs": 280,
+          "durationMs": 130,
+          "ttlMs": 170
+        }
+      }
+    },
+    {
+      "id": "basic_attack_08_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "format": "attack_summary",
+      "actor": "self",
+      "targetActor": "target_actor",
+      "actionVerb": "attacked",
+      "text": ""
+    }
+  ],
+  "upgrades": {
+    "EXTENDED_REACH": {
+      "id": "EXTENDED_REACH",
+      "name": "Disciplined Stance",
+      "description": "+1 damage when attacking without moving first.",
+      "when": [
+        {
+          "type": "TURN_STATE",
+          "kind": "held_position"
+        }
+      ],
+      "instructionPatches": [
+        {
+          "instructionId": "basic_attack_04_damage",
+          "path": "skillDamageMultiplier",
+          "op": "add",
+          "value": 1
+        }
+      ]
+    },
+    "POWER_STRIKE": {
+      "id": "POWER_STRIKE",
+      "name": "Power Strike",
+      "description": "Damage +2",
+      "instructionPatches": [
+        {
+          "instructionId": "basic_attack_04_damage",
+          "path": "skillDamageMultiplier",
+          "op": "add",
+          "value": 2
+        }
+      ]
+    },
+    "VAMPIRIC": {
+      "id": "VAMPIRIC",
+      "name": "Vampiric",
+      "description": "Leech life from damage dealt",
+      "modifyNumbers": [
+        {
+          "path": "combat.leechRatio",
+          "op": "set",
+          "value": 1
+        }
+      ]
+    }
+  }
+}

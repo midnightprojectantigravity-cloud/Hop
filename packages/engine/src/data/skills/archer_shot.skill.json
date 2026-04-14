@@ -1,0 +1,180 @@
+{
+  "id": "ARCHER_SHOT",
+  "name": "Archer Shot",
+  "description": "Fire an arrow in a straight line at a hostile target.",
+  "slot": "offensive",
+  "icon": "\ud83c\udff9",
+  "keywords": [
+    "PROJECTILE",
+    "RANGED",
+    "PHYSICAL"
+  ],
+  "baseVariables": {
+    "range": 4,
+    "cost": 0,
+    "cooldown": 0,
+    "damage": 3
+  },
+  "combat": {
+    "damageClass": "physical",
+    "damageSubClass": "shot",
+    "damageElement": "neutral",
+    "attackProfile": "projectile",
+    "trackingSignature": "projectile",
+    "weights": {
+      "instinct": 1
+    }
+  },
+  "targeting": {
+    "generator": "axial_ray",
+    "range": 4,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "DISTANCE",
+        "op": "gte",
+        "value": 2
+      },
+      {
+        "type": "OCCUPANCY",
+        "occupied": true
+      },
+      {
+        "type": "FACTION_RELATION",
+        "relation": "enemy"
+      },
+      {
+        "type": "LINE_OF_SIGHT",
+        "value": true
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "archer_shot_01_trace",
+      "kind": "TRACE_PROJECTILE",
+      "phase": "declare",
+      "target": "selected_hex",
+      "mode": "target_actor",
+      "stopAtWalls": true,
+      "stopAtActors": true
+    },
+    {
+      "id": "archer_shot_02_aim",
+      "kind": "EMIT_JUICE",
+      "phase": "declare",
+      "effect": "aimingLaser",
+      "target": "selected_hex",
+      "pathRef": "caster_to_impact",
+      "intensity": "low",
+      "metadata": {
+        "signature": "ATK.SHOOT.PHYSICAL.ARROW",
+        "family": "attack",
+        "primitive": "shoot",
+        "phase": "anticipation",
+        "element": "physical",
+        "variant": "arrow",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "skillId": "ARCHER_SHOT",
+        "timing": {
+          "durationMs": 70,
+          "ttlMs": 90
+        }
+      }
+    },
+    {
+      "id": "archer_shot_03_trail",
+      "kind": "EMIT_JUICE",
+      "phase": "movement",
+      "effect": "spearTrail",
+      "pathRef": "caster_to_impact",
+      "target": "selected_hex",
+      "intensity": "high",
+      "metadata": {
+        "signature": "ATK.SHOOT.PHYSICAL.ARROW",
+        "family": "attack",
+        "primitive": "shoot",
+        "phase": "travel",
+        "element": "physical",
+        "variant": "arrow",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "skillId": "ARCHER_SHOT",
+        "timing": {
+          "delayMs": 50,
+          "durationMs": 80,
+          "ttlMs": 110
+        }
+      }
+    },
+    {
+      "id": "archer_shot_04_impact",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "lightImpact",
+      "targetActor": "impact_actor",
+      "intensity": "high",
+      "directionPathRef": "caster_to_impact",
+      "contactHexRef": "impact_hex",
+      "contactToRef": "impact_hex",
+      "contactFromRef": "caster_hex",
+      "metadata": {
+        "signature": "ATK.SHOOT.PHYSICAL.ARROW",
+        "family": "attack",
+        "primitive": "shoot",
+        "phase": "impact",
+        "element": "physical",
+        "variant": "arrow",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "contactRef": {
+          "kind": "contact_world"
+        },
+        "skillId": "ARCHER_SHOT",
+        "timing": {
+          "delayMs": 95,
+          "durationMs": 60,
+          "ttlMs": 110
+        }
+      }
+    },
+    {
+      "id": "archer_shot_05_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "impact_actor",
+      "resolution": "combat",
+      "reason": "archer_shot",
+      "basePower": 0,
+      "skillDamageMultiplier": 3,
+      "damageClass": "physical",
+      "damageSubClass": "shot",
+      "damageElement": "neutral",
+      "attackProfile": "projectile",
+      "trackingSignature": "projectile",
+      "weights": {
+        "instinct": 1
+      }
+    },
+    {
+      "id": "archer_shot_06_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Archer shot!"
+    }
+  ],
+  "upgrades": {}
+}

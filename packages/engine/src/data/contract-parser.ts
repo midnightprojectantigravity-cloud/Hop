@@ -7,7 +7,7 @@ import type {
     CompositeSkillUpgradeDefinition,
     TacticalDataPack
 } from './contracts';
-
+import { SCALED_IDENTITY } from '../constants';
 export interface ValidationIssue {
     path: string;
     message: string;
@@ -27,6 +27,16 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 const isInt = (v: unknown): v is number => Number.isInteger(v);
 const isStr = (v: unknown): v is string => typeof v === 'string';
 const push = (issues: ValidationIssue[], path: string, message: string) => issues.push({ path, message });
+
+export const validateFixedPointInteger = (value: unknown, issues: ValidationIssue[], path: string): void => {
+    if (!isInt(value)) {
+        push(issues, path, `Expected scaled integer (scale=${SCALED_IDENTITY})`);
+        return;
+    }
+    if (!Number.isSafeInteger(value)) {
+        push(issues, path, 'Expected safe integer');
+    }
+};
 
 const parseJsonLike = (input: unknown): unknown => {
     if (!isStr(input)) return input;
@@ -48,6 +58,16 @@ const checkStringArray = (value: unknown, issues: ValidationIssue[], path: strin
             seen.add(x);
         }
     });
+};
+
+const checkUpgradeRequirement = (value: unknown, issues: ValidationIssue[], path: string) => {
+    if (isStr(value)) return;
+    if (!isRecord(value)) {
+        push(issues, path, 'Expected string or object');
+        return;
+    }
+    if (!isStr(value.upgradeId) || value.upgradeId.length === 0) push(issues, `${path}.upgradeId`, 'Expected non-empty string');
+    if (value.minRank !== undefined && (!isInt(value.minRank) || value.minRank < 0)) push(issues, `${path}.minRank`, 'Expected integer >= 0');
 };
 
 const checkScalarExpr = (value: unknown, issues: ValidationIssue[], path: string) => {
@@ -98,6 +118,41 @@ const checkEffect = (value: unknown, issues: ValidationIssue[], path: string): v
     }
     push(issues, `${path}.kind`, 'Unknown kind');
     return false;
+};
+
+const SKILL_UPGRADE_PATCH_FIELDS = new Set([
+    'range',
+    'cooldown',
+    'damage',
+    'basePower',
+    'momentum',
+    'leechRatio',
+    'damageClass',
+    'damageSubClass',
+    'damageElement',
+    'attackProfile',
+    'trackingSignature'
+]);
+
+const checkSkillUpgradePatch = (value: unknown, issues: ValidationIssue[], path: string) => {
+    if (!isRecord(value)) {
+        push(issues, path, 'Expected object');
+        return;
+    }
+    if (!isStr(value.field) || !SKILL_UPGRADE_PATCH_FIELDS.has(value.field)) push(issues, `${path}.field`, 'Invalid patch field');
+    if (!isStr(value.op) || !new Set(['set', 'add', 'multiply']).has(value.op)) push(issues, `${path}.op`, 'Invalid patch op');
+    if (value.coefficientScale !== undefined && (!isInt(value.coefficientScale) || value.coefficientScale <= 0)) push(issues, `${path}.coefficientScale`, 'Expected positive integer');
+    if (value.rankMode !== undefined && (!isStr(value.rankMode) || !new Set(['single', 'linear']).has(value.rankMode))) push(issues, `${path}.rankMode`, 'Invalid rank mode');
+    if (value.scaledValue !== undefined) {
+        validateFixedPointInteger(value.scaledValue, issues, `${path}.scaledValue`);
+    }
+    if (value.value !== undefined) {
+        if (['damageClass', 'damageSubClass', 'damageElement', 'attackProfile', 'trackingSignature'].includes(String(value.field))) {
+            if (!isStr(value.value) || value.value.length === 0) push(issues, `${path}.value`, 'Expected non-empty string');
+        } else if (!isNum(value.value)) {
+            push(issues, `${path}.value`, 'Expected number');
+        }
+    }
 };
 
 const checkPropensity = (value: unknown, issues: ValidationIssue[], path: string) => {
@@ -216,6 +271,25 @@ export const validateCompositeSkillDefinition = (input: unknown): ValidationIssu
         if (!isStr(u.id) || !/^[A-Z0-9_]+$/.test(u.id)) push(issues, `$.upgrades[${i}].id`, 'Expected uppercase id');
         if (!isStr(u.name) || u.name.length === 0) push(issues, `$.upgrades[${i}].name`, 'Expected non-empty string');
         if (!Array.isArray(u.modifiers)) push(issues, `$.upgrades[${i}].modifiers`, 'Expected array');
+        if (u.maxRanks !== undefined && (!isInt(u.maxRanks) || u.maxRanks < 1)) push(issues, `$.upgrades[${i}].maxRanks`, 'Expected integer >= 1');
+        if (u.currentRank !== undefined && (!isInt(u.currentRank) || u.currentRank < 0)) push(issues, `$.upgrades[${i}].currentRank`, 'Expected integer >= 0');
+        if (u.tier !== undefined && !isInt(u.tier)) push(issues, `$.upgrades[${i}].tier`, 'Expected integer');
+        if (u.priority !== undefined && !isNum(u.priority)) push(issues, `$.upgrades[${i}].priority`, 'Expected number');
+        if (u.groupId !== undefined && !isStr(u.groupId)) push(issues, `$.upgrades[${i}].groupId`, 'Expected string');
+        if (u.exclusiveGroup !== undefined && !isStr(u.exclusiveGroup)) push(issues, `$.upgrades[${i}].exclusiveGroup`, 'Expected string');
+        if (u.requires !== undefined) {
+            if (!Array.isArray(u.requires)) push(issues, `$.upgrades[${i}].requires`, 'Expected array');
+            else u.requires.forEach((req, reqIdx) => checkUpgradeRequirement(req, issues, `$.upgrades[${i}].requires[${reqIdx}]`));
+        }
+        if (u.requiredUpgrades !== undefined) checkStringArray(u.requiredUpgrades, issues, `$.upgrades[${i}].requiredUpgrades`, { unique: true });
+        if (u.requiresPointsInSkill !== undefined && (!isInt(u.requiresPointsInSkill) || u.requiresPointsInSkill < 0)) push(issues, `$.upgrades[${i}].requiresPointsInSkill`, 'Expected integer >= 0');
+        if (u.compatibilityTags !== undefined) checkStringArray(u.compatibilityTags, issues, `$.upgrades[${i}].compatibilityTags`, { unique: true });
+        if (u.incompatibleWith !== undefined) checkStringArray(u.incompatibleWith, issues, `$.upgrades[${i}].incompatibleWith`, { unique: true });
+        if (u.requiresStationary !== undefined && typeof u.requiresStationary !== 'boolean') push(issues, `$.upgrades[${i}].requiresStationary`, 'Expected boolean');
+        if (u.patches !== undefined) {
+            if (!Array.isArray(u.patches)) push(issues, `$.upgrades[${i}].patches`, 'Expected array');
+            else u.patches.forEach((patch, patchIdx) => checkSkillUpgradePatch(patch, issues, `$.upgrades[${i}].patches[${patchIdx}]`));
+        }
     });
     return issues;
 };

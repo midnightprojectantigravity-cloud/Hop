@@ -1,0 +1,228 @@
+{
+  "fixture": {
+    "id": "hunter_floor3_loss",
+    "version": 1,
+    "seed": "hunter-23",
+    "loadoutId": "HUNTER",
+    "floorsTarget": 1,
+    "maxTurnsPerFloor": 20,
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "expected": {
+      "outcome": "lost",
+      "finalFloor": [
+        1,
+        4
+      ],
+      "totalKills": [
+        0,
+        1
+      ],
+      "totalTurns": [
+        12,
+        14
+      ],
+      "playerHp": [
+        0,
+        0
+      ],
+      "fingerprint": "ddeb0a892cbbfdb6"
+    }
+  },
+  "maxTurns": 20,
+  "strictMode": false,
+  "run": {
+    "seed": "hunter-23",
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "loadoutId": "HUNTER",
+    "result": "lost",
+    "turnsSpent": 4,
+    "floor": 1,
+    "kills": 0,
+    "hazardBreaches": 0,
+    "score": 668,
+    "finalPlayerHp": 0,
+    "finalPlayerMaxHp": 55,
+    "finalPlayerHpRatio": 0,
+    "finalSpark": 20,
+    "finalMana": 21,
+    "finalSparkState": "exhausted",
+    "finalSparkRatio": 0.12738853503184713,
+    "finalExhaustion": 87,
+    "peakExhaustion": 100,
+    "restTurns": 1,
+    "redlineActions": 0,
+    "sparkBurnDamage": 0,
+    "avgActionsPerPlayerTurn": 0.75,
+    "directorRedlineBand": 0,
+    "directorResourceStressBand": 0,
+    "playerActionCounts": {
+      "MOVE": 2,
+      "WAIT": 4,
+      "USE_SKILL": 1
+    },
+    "playerSkillUsage": {
+      "BASIC_ATTACK": 1
+    },
+    "goalCounts": {
+      "engage": 0,
+      "explore": 7,
+      "recover": 0
+    },
+    "totalPlayerSkillCasts": 1,
+    "playerSkillTelemetry": {
+      "BASIC_ATTACK": {
+        "casts": 1,
+        "enemyDamage": 1,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 0,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      }
+    },
+    "autoAttackTriggersByActionType": {},
+    "triangleSignal": {
+      "samples": 1,
+      "avgHitPressure": 8.167,
+      "avgMitigationPressure": 2.4,
+      "avgCritPressure": 0.439,
+      "avgResistancePressure": 0.6
+    },
+    "trinityContribution": {
+      "samples": 1,
+      "bodyContribution": 0.69,
+      "mindContribution": 0,
+      "instinctContribution": 0.31
+    },
+    "combatProfileSignal": {
+      "samples": 1,
+      "avgOutgoingMultiplier": 1,
+      "avgIncomingMultiplier": 1,
+      "avgTotalMultiplier": 1
+    },
+    "enemyAiTelemetry": {
+      "actionCounts": {
+        "WAIT": 3
+      },
+      "skillUsage": {
+        "BASIC_ATTACK": 2
+      },
+      "offensiveSkillCasts": 2,
+      "damageToPlayer": 72,
+      "visiblePlayerTurns": 3,
+      "idleWithVisiblePlayer": 3,
+      "attackOpportunityTurns": 2,
+      "attackConversionTurns": 2,
+      "threatOpportunityTurns": 0,
+      "threatConversionTurns": 0,
+      "backtrackMoves": 0,
+      "loopMoves": 3,
+      "preservedRestedTurns": 0,
+      "restedBatterySpendSelections": 0,
+      "restedReentryTurns": 0,
+      "trueRestRestedBonusArmedTurns": 0,
+      "voluntaryExhaustionAttempts": 11,
+      "voluntaryExhaustionAllowed": 0,
+      "voluntaryExhaustionBlocked": 11,
+      "turnsEndedRested": 2,
+      "turnsEndedStableOrBetter": 3,
+      "turnsEndedCriticalOrExhausted": 0,
+      "secondActionAttempts": 3,
+      "secondActionAllowed": 0,
+      "thirdActionAttempts": 0,
+      "thirdActionAllowed": 0,
+      "waitForBandPreservationSelections": 3
+    },
+    "pacingSignal": {
+      "samples": 7,
+      "avgSparkRatio": 0.4713375796178344,
+      "avgManaRatio": 1,
+      "avgReservePressure": 0.5286624203821656,
+      "avgFatiguePressure": 0.3672884440400364,
+      "avgRecoveryPressure": 0.32908098271155595,
+      "avgTurnEndSparkRatio": 0.3726114649681529,
+      "visibleHostileSelections": 5,
+      "idleWithVisibleHostile": 2,
+      "attackOpportunityCount": 1,
+      "attackConversionCount": 1,
+      "threatenNextTurnOpportunityCount": 0,
+      "threatenNextTurnConversionCount": 0,
+      "backtrackMoveCount": 0,
+      "loopMoveCount": 0,
+      "lowValueMobilitySelections": 0,
+      "restSelections": 1,
+      "endTurnSelections": 3,
+      "continuedActionSelections": 3,
+      "preservedRestedTurns": 1,
+      "restedBatterySpendSelections": 0,
+      "restedReentryTurns": 0,
+      "trueRestRestedBonusArmedTurns": 0,
+      "voluntaryExhaustionAttempts": 21,
+      "voluntaryExhaustionAllowed": 1,
+      "voluntaryExhaustionBlocked": 20,
+      "turnsEndedRested": 1,
+      "turnsEndedStableOrBetter": 1,
+      "turnsEndedCriticalOrExhausted": 2,
+      "secondActionAttempts": 3,
+      "secondActionAllowed": 0,
+      "thirdActionAttempts": 0,
+      "thirdActionAllowed": 0,
+      "waitForBandPreservationSelections": 1,
+      "firstContactTurn": 1,
+      "firstDamageTurn": 3
+    }
+  },
+  "diagnostics": {
+    "actionCount": 8,
+    "stateFingerprint": "{\"player\":{\"hp\":0,\"maxHp\":55,\"position\":{\"q\":4,\"r\":8,\"s\":-12},\"upgrades\":[]},\"enemies\":[{\"id\":\"enemy_0_2pztj2\",\"subtype\":\"footman\",\"hp\":92,\"position\":{\"q\":4,\"r\":7,\"s\":-11}}],\"floor\":1,\"gridWidth\":9,\"gridHeight\":11,\"mapShape\":\"diamond\",\"turnNumber\":5,\"kills\":0,\"rngCounter\":0}"
+  },
+  "strictFingerprint": "21a3c1697f71e4c4",
+  "actions": [
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 9,
+        "s": -13
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 8,
+        "s": -12
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    }
+  ]
+}

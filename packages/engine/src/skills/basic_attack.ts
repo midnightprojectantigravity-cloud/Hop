@@ -6,6 +6,7 @@ import { validateRange } from '../systems/validation';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import { extractTrinityStats } from '../systems/combat/combat-calculator';
 import { isStunned } from '../systems/status';
+import { resolveVirtualSkillDefinition } from '../systems/skill-upgrade-resolution';
 
 /**
  * Basic Attack - A targeted melee attack skill.
@@ -27,6 +28,8 @@ export const BASIC_ATTACK: SkillDefinition = {
     },
     combat: {
         damageClass: 'physical',
+        damageSubClass: 'melee',
+        damageElement: 'neutral',
         attackProfile: 'melee',
         trackingSignature: 'melee',
         weights: { body: 1 }
@@ -80,29 +83,29 @@ export const BASIC_ATTACK: SkillDefinition = {
             return { effects, messages, consumesTurn: false };
         }
 
-        // Calculate damage through the centralized combat calculator.
-        const baseDamage = BASIC_ATTACK.baseVariables.damage ?? 1;
         const heldPosition = hexEquals(attacker.previousPosition || attacker.position, attacker.position);
-        const upgradeDamageBonus = Object.values(BASIC_ATTACK.upgrades)
-            .filter(upgrade => activeUpgrades.includes(upgrade.id))
-            .filter(upgrade => !upgrade.requiresStationary || heldPosition)
-            .reduce((sum, upgrade) => sum + (upgrade.modifyDamage ?? 0), 0);
-        const skillDamageMultiplier = baseDamage + upgradeDamageBonus;
+        const resolvedSkill = resolveVirtualSkillDefinition(BASIC_ATTACK, activeUpgrades, { heldPosition });
+        const baseDamage = resolvedSkill.skill.baseVariables.damage ?? 1;
+        const combat = resolvedSkill.skill.combat;
+        const skillDamageMultiplier = baseDamage;
         const trinity = extractTrinityStats(attacker);
-        const combat = resolveSkillCombatDamage({
+        const resolvedCombat = resolveSkillCombatDamage({
             attacker,
             target: targetActor,
             skillId: 'BASIC_ATTACK',
             basePower: 0,
             skillDamageMultiplier,
-            damageClass: 'physical',
-            attackProfile: 'melee',
-            trackingSignature: 'melee',
+            damageClass: combat?.damageClass,
+            combat,
+            attackProfile: combat?.attackProfile,
+            damageSubClass: combat?.damageSubClass,
+            damageElement: combat?.damageElement,
+            trackingSignature: combat?.trackingSignature,
             statusMultipliers: [],
             inDangerPreviewHex: !!state.intentPreview?.dangerTiles?.some(p => hexEquals(p, attacker.position)),
             theoreticalMaxPower: skillDamageMultiplier * Math.max(0, trinity.body || 0)
         });
-        const damage = combat.finalPower;
+        const damage = resolvedCombat.finalPower;
 
         const netDamage = Math.max(0, damage - (targetActor.temporaryArmor || 0));
         const predictedLethal = (targetActor.hp - netDamage) <= 0;
@@ -194,7 +197,7 @@ export const BASIC_ATTACK: SkillDefinition = {
             }
         });
         // Apply damage
-        effects.push(createDamageEffectFromCombat(combat, 'targetActor', 'basic_attack'));
+        effects.push(createDamageEffectFromCombat(resolvedCombat, 'targetActor', 'basic_attack'));
         if (isSpearFamilyAttack) {
             effects.push({
                 type: 'ApplyAilment',
@@ -231,15 +234,6 @@ export const BASIC_ATTACK: SkillDefinition = {
             : `${targetActor.subtype || 'enemy'}#${targetActor.id}`;
         messages.push(`${attackerName} attacked ${targetName}!`);
 
-        // Vampiric upgrade: heal on kill (TODO: Add Heal effect type when implemented)
-        if (activeUpgrades.includes('VAMPIRIC')) {
-            if ((targetActor.hp - netDamage) <= 0) {
-                const vampiricHeal = 1;
-                effects.push({ type: 'Heal', target: attacker.id, amount: vampiricHeal });
-                messages.push('Vampiric heal!');
-            }
-        }
-
         return { effects, messages, consumesTurn: true };
     },
     getValidTargets: (state: GameState, origin: Point) => {
@@ -259,19 +253,38 @@ export const BASIC_ATTACK: SkillDefinition = {
             id: 'EXTENDED_REACH',
             name: 'Disciplined Stance',
             description: '+1 damage when attacking without moving first.',
-            modifyDamage: 1,
-            requiresStationary: true
+            requiresStationary: true,
+            patches: [
+                {
+                    field: 'damage',
+                    op: 'add',
+                    value: 1
+                }
+            ]
         },
         POWER_STRIKE: {
             id: 'POWER_STRIKE',
             name: 'Power Strike',
             description: 'Damage +2',
-            modifyDamage: 2
+            patches: [
+                {
+                    field: 'damage',
+                    op: 'add',
+                    value: 2
+                }
+            ]
         },
         VAMPIRIC: {
             id: 'VAMPIRIC',
             name: 'Vampiric',
-            description: 'Heal 1 HP on kill'
+            description: 'Leech life from damage dealt',
+            patches: [
+                {
+                    field: 'leechRatio',
+                    op: 'set',
+                    scaledValue: 10000
+                }
+            ]
         },
     },
     scenarios: getSkillScenarios('BASIC_ATTACK')

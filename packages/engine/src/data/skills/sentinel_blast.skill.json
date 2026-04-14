@@ -1,0 +1,74 @@
+{
+  "id": "SENTINEL_BLAST",
+  "name": "Sentinel Blast",
+  "description": "A massive energy surge from the Sentinel.",
+  "slot": "offensive",
+  "icon": "\ud83d\udca5",
+  "keywords": [
+    "ARCANE",
+    "BLAST",
+    "AOE"
+  ],
+  "baseVariables": {
+    "range": 3,
+    "cost": 0,
+    "cooldown": 0,
+    "basePower": 2,
+    "damage": 1
+  },
+  "combat": {
+    "damageClass": "magical",
+    "attackProfile": "spell",
+    "trackingSignature": "magic",
+    "weights": {
+      "mind": 1
+    }
+  },
+  "targeting": {
+    "generator": "radius",
+    "range": 3,
+    "radius": 3,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [
+    {
+      "id": "sentinel_blast_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "targetFanOut": "selected_hex_plus_neighbors",
+      "resolution": "combat",
+      "combatPointTargetMode": "proxy_actor",
+      "reason": "sentinel_blast"
+    },
+    {
+      "id": "sentinel_blast_shake",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "shake",
+      "intensity": "high",
+      "metadata": {
+        "signature": "ATK.BLAST.ARCANE.SENTINEL_BLAST",
+        "family": "attack",
+        "primitive": "blast",
+        "phase": "impact",
+        "element": "arcane",
+        "variant": "sentinel_blast",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "SENTINEL_BLAST",
+        "camera": {
+          "shake": "high"
+        }
+      }
+    },
+    {
+      "id": "sentinel_blast_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "The Sentinel unleashed a massive blast!"
+    }
+  ],
+  "upgrades": {}
+}

@@ -41,7 +41,9 @@ describe('composite skill factory', () => {
             scoreEvent: expect.objectContaining({
                 attackerId: mutatedState.player.id,
                 targetId: mutatedState.enemies[0]?.id || 'targetActor',
-                damageClass: 'physical'
+                damageClass: 'physical',
+                damageSubClass: 'strike',
+                damageElement: 'neutral'
             })
         });
         expect(execution.effects.some(e => e.type === 'ApplyForce')).toBe(true);

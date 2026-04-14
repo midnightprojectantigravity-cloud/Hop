@@ -135,29 +135,18 @@ export const useRunController = ({
     setSynapseMode(!isSynapseMode);
   }, [isSynapseMode, setSynapseMode]);
 
+  const isKeyboardTextInputTarget = (target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) return false;
+    if (target.isContentEditable) return true;
+    const tagName = target.tagName.toUpperCase();
+    return tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT';
+  };
+
   useEffect(() => {
     if (gameState.gameStatus !== 'playing' && isSynapseMode) {
       setSynapseMode(false);
     }
   }, [gameState.gameStatus, isSynapseMode, setSynapseMode]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (gameState.gameStatus !== 'playing') return;
-      if (event.code === 'KeyI') {
-        event.preventDefault();
-        toggleSynapseMode();
-        return;
-      }
-      if (event.code === 'Escape' && isSynapseMode) {
-        event.preventDefault();
-        setSynapseMode(false);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [gameState.gameStatus, isSynapseMode, setSynapseMode, toggleSynapseMode]);
 
   const trackFirstActionMetric = useCallback((actionType: 'MOVE' | 'USE_SKILL' | 'WAIT') => {
     if (isReplayMode) return;
@@ -339,6 +328,40 @@ export const useRunController = ({
     setSynapseSelection,
     trackFirstActionMetric
   ]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (gameState.gameStatus !== 'playing') return;
+      if (isKeyboardTextInputTarget(event.target)) return;
+      if (event.code === 'KeyI') {
+        event.preventDefault();
+        toggleSynapseMode();
+        return;
+      }
+      if (event.code === 'KeyS') {
+        event.preventDefault();
+        handleWait();
+        return;
+      }
+      if (event.code === 'KeyR') {
+        event.preventDefault();
+        handleReset();
+        return;
+      }
+      if (event.code === 'KeyH') {
+        event.preventDefault();
+        handleExitToHub();
+        return;
+      }
+      if (event.code === 'Escape' && isSynapseMode) {
+        event.preventDefault();
+        setSynapseMode(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [gameState.gameStatus, handleExitToHub, handleReset, handleWait, isSynapseMode, setSynapseMode, toggleSynapseMode]);
 
   const stopReplay = useCallback(() => {
     dispatchSensory({ id: 'ui-parchment-slide', intensity: 1.0, priority: 'low', context: 'run' });

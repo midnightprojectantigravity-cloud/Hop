@@ -1,7 +1,7 @@
 import type { GameState, Point, AtomicEffect } from '../../types';
 import { hexDistance, hexEquals, getHexLine, getDirectionFromTo, hexDirection, hexAdd, pointToKey } from '../../hex';
 import { getEnemyAt, isOccupied } from '../../helpers';
-import { COMPOSITIONAL_SKILLS } from '../../skillRegistry';
+import { getSkillDefinition } from '../../skillRegistry';
 import { applyEffects, applyAtomicEffect } from '../effect-engine';
 import { prepareKineticSimulation, translate1DToHex } from './hex-bridge';
 import { resolveKineticDash, resolveKineticPulse } from './kinetic-kernel';
@@ -119,7 +119,7 @@ export const resolveMove = (state: GameState, actorId: string, target: Point): G
     if (isOccupied(target, state)) {
         const targetEnemy = getEnemyAt(state.enemies, target);
         if (targetEnemy && dist === 1 && actorId === 'player') {
-            const basicAttackDef = COMPOSITIONAL_SKILLS['BASIC_ATTACK'];
+            const basicAttackDef = getSkillDefinition('BASIC_ATTACK');
             const basicAttackSkill = state.player.activeSkills?.find(ss => ss.id === 'BASIC_ATTACK');
 
             if (basicAttackDef && basicAttackSkill) {

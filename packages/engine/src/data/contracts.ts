@@ -1,3 +1,9 @@
+import type {
+    CombatDamageClass,
+    CombatDamageElement,
+    CombatDamageSubClass
+} from '../systems/combat/damage-taxonomy';
+import type { SkillUpgradePatchDefinition, SkillUpgradeRequirement } from '../types';
 export type RoundMode = 'none' | 'floor' | 'round' | 'ceil';
 
 export interface ClampRange {
@@ -48,12 +54,15 @@ export type PropensityDefinition =
 export interface DerivedLinearTerm {
     stat: string;
     coefficient: number;
+    scaledCoefficient?: number;
 }
 
 export interface DerivedStatDefinition {
     formulaId?: 'trinity_hp_v1' | 'linear' | string;
     formula?: 'trinity_hp_v1' | 'linear' | string;
     base?: number;
+    scaledBase?: number;
+    coefficientScale?: number;
     terms?: DerivedLinearTerm[];
     round?: RoundMode;
     clamp?: ClampRange;
@@ -125,10 +134,13 @@ export interface BaseUnitDefinition {
 export interface ScalarTerm {
     stat: 'body' | 'mind' | 'instinct' | 'mass' | 'speed' | 'momentum';
     coefficient: number;
+    scaledCoefficient?: number;
 }
 
 export interface ScalarExpression {
     base: number;
+    scaledBase?: number;
+    coefficientScale?: number;
     scaling?: ScalarTerm[];
     min?: number;
     max?: number;
@@ -146,7 +158,9 @@ export interface DealDamageEffectDef extends BaseEffectDef {
     kind: 'DEAL_DAMAGE';
     target: { selector: TargetSelector };
     amount: ScalarExpression;
-    damageClass?: 'physical' | 'magical' | 'true';
+    damageClass?: CombatDamageClass;
+    damageSubClass?: CombatDamageSubClass;
+    damageElement?: CombatDamageElement;
     reason?: string;
 }
 
@@ -203,6 +217,19 @@ export interface CompositeSkillUpgradeDefinition {
     name: string;
     description?: string;
     tags?: string[];
+    maxRanks?: number;
+    currentRank?: number;
+    tier?: number;
+    priority?: number;
+    groupId?: string;
+    exclusiveGroup?: string;
+    requires?: SkillUpgradeRequirement[];
+    requiredUpgrades?: string[];
+    requiresPointsInSkill?: number;
+    compatibilityTags?: string[];
+    incompatibleWith?: string[];
+    requiresStationary?: boolean;
+    patches?: SkillUpgradePatchDefinition[];
     modifiers: UpgradeModifier[];
 }
 

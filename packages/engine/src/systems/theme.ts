@@ -79,7 +79,10 @@ export const voidInterceptor = (
     const damageEffect: AtomicEffect = {
         type: 'Damage',
         target: 'targetActor', // context will handle targetId
-        amount: 1
+        amount: 1,
+        damageClass: 'true',
+        damageSubClass: 'status',
+        damageElement: 'void'
     };
 
     const messageEffect: AtomicEffect = {

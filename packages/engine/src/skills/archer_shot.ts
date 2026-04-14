@@ -26,6 +26,8 @@ export const ARCHER_SHOT: SkillDefinition = {
     },
     combat: {
         damageClass: 'physical',
+        damageSubClass: 'shot',
+        damageElement: 'neutral',
         attackProfile: 'projectile',
         trackingSignature: 'projectile',
         weights: { instinct: 1 }

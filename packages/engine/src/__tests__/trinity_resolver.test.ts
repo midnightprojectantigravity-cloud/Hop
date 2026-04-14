@@ -6,7 +6,7 @@ describe('trinity-resolver', () => {
         const trinity = { body: 20, mind: 30, instinct: 8 };
         const levers = resolveTrinityLevers(trinity);
 
-        expect(levers.bodyDamageMultiplier).toBe(2);
+        expect(levers.bodyDamageMultiplier).toBe(0.5);
         expect(levers.bodyMitigation).toBe(0.2);
         expect(levers.mindStatusDurationBonus).toBe(2);
         expect(levers.mindMagicMultiplier).toBe(2.5);

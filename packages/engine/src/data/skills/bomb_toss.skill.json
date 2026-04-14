@@ -1,0 +1,53 @@
+{
+  "id": "BOMB_TOSS",
+  "name": "Bomb Toss",
+  "description": "Throw a bomb to a nearby tile.",
+  "slot": "offensive",
+  "icon": "\ud83d\udca3",
+  "keywords": [
+    "FIRE",
+    "BOMB",
+    "SPAWN"
+  ],
+  "baseVariables": {
+    "range": 3,
+    "cost": 0,
+    "cooldown": 2
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 3,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "HEX_TRAIT",
+        "trait": "WALKABLE",
+        "value": true
+      },
+      {
+        "type": "OCCUPANCY",
+        "occupied": false
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "bomb_toss_01_spawn",
+      "kind": "SPAWN_ACTOR",
+      "phase": "resolution",
+      "spawnType": "ephemeral_actor",
+      "ephemeralActorType": "bomb",
+      "owner": "self",
+      "factionSource": "self",
+      "position": "selected_hex",
+      "actorIdStrategy": "bomb_toss_v1"
+    },
+    {
+      "id": "bomb_toss_02_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Bomb tossed!"
+    }
+  ],
+  "upgrades": {}
+}

@@ -2,6 +2,7 @@ import type { Intent } from '../types/intent';
 import type { GameState, Actor, AtomicEffect, Point, AtomicStackReactionHooks, ActionResourcePreview } from '../types';
 import { SkillRegistry } from '../skillRegistry';
 import { getActorAt } from '../helpers';
+import { hexEquals } from '../hex';
 import { isFreeMoveMode, resolveCombatPressureMode } from './free-move';
 import { applyEffects } from './effect-engine';
 import { recomputeVisibility } from './visibility';
@@ -14,11 +15,13 @@ import {
     resolveRuntimeSkillResourceProfile,
     resolveWaitPreview
 } from './ires';
+import { resolveVirtualSkillDefinition } from './skill-upgrade-resolution';
 
 type TacticalResolution = {
     effects: AtomicEffect[];
     messages: string[];
     consumesTurn?: boolean;
+    rngConsumption?: number;
     targetId?: string;
     kills?: number;
     stackReactions?: AtomicStackReactionHooks;
@@ -358,6 +361,7 @@ export class TacticalEngine {
                 effects: execution.effects,
                 messages: [...messages, ...execution.messages],
                 consumesTurn: execution.consumesTurn ?? false,
+                rngConsumption: execution.rngConsumption || 0,
                 targetId: finalTargetId,
                 kills: execution.kills || 0,
                 stackReactions: execution.stackReactions,
@@ -407,20 +411,18 @@ export class TacticalEngine {
                 type: 'Damage',
                 target: actor.id,
                 amount: resourcePreview.sparkBurnHpDelta,
-                reason: 'spark_burn'
+                reason: 'spark_burn',
+                damageClass: 'true',
+                damageSubClass: 'status',
+                damageElement: 'neutral'
             });
         }
         executionEffects.push(...execution.effects);
 
         if (execution.consumesTurn !== false && !cooldownsBypassed) {
-            const baseCooldown = skillDef!.baseVariables.cooldown || 0;
-            let cooldown = baseCooldown;
-            for (const upId of upgrades) {
-                const mod = skillDef!.upgrades?.[upId];
-                if (typeof mod?.modifyCooldown === 'number') {
-                    cooldown += mod.modifyCooldown;
-                }
-            }
+            const heldPosition = !!(actor.previousPosition && hexEquals(actor.previousPosition, actor.position));
+            const resolvedSkill = resolveVirtualSkillDefinition(skillDef!, upgrades, { heldPosition });
+            let cooldown = resolvedSkill.skill.baseVariables.cooldown || 0;
             cooldown = Math.max(0, cooldown);
             if (cooldown > 0) {
                 executionEffects.push({
@@ -437,6 +439,7 @@ export class TacticalEngine {
             effects: executionEffects,
             messages: [...messages, ...execution.messages],
             consumesTurn: execution.consumesTurn ?? true,
+            rngConsumption: execution.rngConsumption || 0,
             targetId: finalTargetId,
             kills: execution.kills || 0,
             stackReactions: execution.stackReactions,

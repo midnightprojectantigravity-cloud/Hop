@@ -218,7 +218,7 @@ describe('synapse threat preview', () => {
         expect(highTile).toBeDefined();
     });
 
-    it('marks stacked high pressure as deadly', () => {
+    it('marks stacked high pressure as contested high when armored sources stay elevated', () => {
         const state = generateInitialState(1, 'synapse-stacked-high-seed');
         const baseline = buildSynapseThreatPreview({
             ...state,
@@ -251,10 +251,10 @@ describe('synapse threat preview', () => {
             companions: []
         });
         const centerTile = preview.tiles.find(tile => pointToKey(tile.tile) === pointToKey(center));
-        expect(centerTile?.heat).toBe(5);
-        expect(centerTile?.band).toBe('deadly');
-        const deadlyTile = preview.tiles.find(tile => tile.band === 'deadly' && tile.heat === 5);
-        expect(deadlyTile).toBeDefined();
+        expect(centerTile?.heat).toBe(3);
+        expect(centerTile?.band).toBe('contested_high');
+        const highTile = preview.tiles.find(tile => tile.band === 'contested_high' && tile.heat === 3);
+        expect(highTile).toBeDefined();
     });
 
     it('keeps non-player occupied tiles out of synapse heatmap overlay and includes player tile', () => {

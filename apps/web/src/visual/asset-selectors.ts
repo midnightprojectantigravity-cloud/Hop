@@ -114,6 +114,9 @@ const UNIT_FALLBACK_SVG_BY_ID: Record<string, string> = {
 };
 
 export const resolveUnitFallbackAssetHref = (actor: Actor): string | undefined => {
+  if (actor.subtype === 'skeleton') {
+    return '/Hop/assets/bestiary/unit.skeleton.basic.01.webp';
+  }
   const id = resolveUnitAssetId(actor);
   const fallback = UNIT_FALLBACK_SVG_BY_ID[id];
   return fallback ? toRuntimeAssetPath(fallback) : undefined;
@@ -131,4 +134,11 @@ export const resolveFxAssetId = (
 
 export const resolveCombatTextFrameAssetId = (): string => 'ui.core.hp_frame.01';
 
-export const resolveDeathDecalAssetId = (): string => 'decal.combat.blood.01';
+const BONE_DEATH_DECAL_ASSET_ID = 'unit.skeleton.bones.01';
+const BLOOD_DEATH_DECAL_ASSET_ID = 'decal.combat.blood.01';
+
+const hasBoneDeathDecalSkill = (actor?: Pick<Actor, 'activeSkills'>): boolean =>
+  !!actor?.activeSkills?.some(skill => skill.deathDecalVariant === 'bones');
+
+export const resolveDeathDecalAssetId = (actor?: Pick<Actor, 'activeSkills'>): string =>
+  hasBoneDeathDecalSkill(actor) ? BONE_DEATH_DECAL_ASSET_ID : BLOOD_DEATH_DECAL_ASSET_ID;

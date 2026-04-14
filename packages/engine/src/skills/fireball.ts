@@ -27,10 +27,12 @@ export const FIREBALL: SkillDefinition = {
         cost: 1,
         cooldown: 2,
         basePower: 10,
-        damage: 1,
+        damage: 10,
     },
     combat: {
         damageClass: 'magical',
+        damageSubClass: 'blast',
+        damageElement: 'fire',
         attackProfile: 'spell',
         trackingSignature: 'magic',
         weights: { mind: 1 }

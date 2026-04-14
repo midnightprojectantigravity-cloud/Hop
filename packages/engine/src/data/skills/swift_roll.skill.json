@@ -1,0 +1,67 @@
+{
+  "id": "SWIFT_ROLL",
+  "name": "Swift Roll",
+  "description": "Quickly dodge 2 tiles.",
+  "slot": "utility",
+  "icon": "SR",
+  "keywords": [
+    "ACTIVE",
+    "MOVEMENT"
+  ],
+  "baseVariables": {
+    "range": 2,
+    "cost": 0,
+    "cooldown": 2
+  },
+  "targeting": {
+    "generator": "movement_reachable",
+    "range": 2,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "movementPolicy": {
+    "rangeSource": "authored",
+    "validateDestination": {
+      "occupancy": "none",
+      "enforceBounds": true,
+      "requireWalkable": true,
+      "ignoreHazards": true
+    }
+  },
+  "combatScript": [
+    {
+      "id": "swift_roll_juice",
+      "phase": "resolution",
+      "kind": "EMIT_JUICE",
+      "effect": "dashBlur",
+      "target": "selected_hex",
+      "pathRef": "caster_to_selected",
+      "metadata": {
+        "signature": "MOVE.DASH.NEUTRAL.SWIFT_ROLL",
+        "family": "movement",
+        "primitive": "dash",
+        "phase": "travel",
+        "element": "neutral",
+        "variant": "swift_roll",
+        "sourceRef": { "kind": "source_actor" },
+        "targetRef": { "kind": "target_hex" },
+        "skillId": "SWIFT_ROLL"
+      }
+    },
+    {
+      "id": "swift_roll_move",
+      "phase": "movement",
+      "kind": "MOVE_ACTOR",
+      "actor": "self",
+      "destination": "selected_hex",
+      "suppressPresentation": true
+    },
+    {
+      "id": "swift_roll_message",
+      "phase": "resolution",
+      "kind": "MESSAGE",
+      "text": "Swift roll!"
+    }
+  ],
+  "capabilities": {},
+  "upgrades": {}
+}

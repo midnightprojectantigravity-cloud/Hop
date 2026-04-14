@@ -1,0 +1,975 @@
+{
+  "generatedAt": "2026-04-13T15:59:34.048Z",
+  "totalSkills": 45,
+  "handlerBackedSkillCount": 0,
+  "executionHandlerCount": 0,
+  "capabilityHandlerCount": 0,
+  "targetingHandlerCount": 0,
+  "presentationHandlerCount": 0,
+  "handlerRatio": 0,
+  "handlerBudgetRatio": 0.3,
+  "handlerBudgetExceeded": false,
+  "skills": [
+    {
+      "id": "ABSORB_FIRE",
+      "name": "Absorb Fire",
+      "sourcePath": "src/data/skills/absorb_fire.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "FIRE",
+        "PASSIVE",
+        "HEALING"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "ARCHER_SHOT",
+      "name": "Archer Shot",
+      "sourcePath": "src/data/skills/archer_shot.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "PROJECTILE",
+        "RANGED",
+        "PHYSICAL"
+      ],
+      "targetGenerator": "axial_ray",
+      "phases": [
+        "declare",
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "TRACE_PROJECTILE",
+        "EMIT_JUICE",
+        "DEAL_DAMAGE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "AUTO_ATTACK",
+      "name": "Auto Attack",
+      "sourcePath": "src/data/skills/auto_attack.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PHYSICAL",
+        "MELEE",
+        "PASSIVE"
+      ],
+      "targetGenerator": "self",
+      "phases": [
+        "declare",
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "EMIT_JUICE",
+        "DEAL_DAMAGE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "BASIC_ATTACK",
+      "name": "Basic Attack",
+      "sourcePath": "src/data/skills/basic_attack.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PHYSICAL",
+        "MELEE",
+        "BASELINE"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "declare",
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "EMIT_JUICE",
+        "DEAL_DAMAGE",
+        "APPLY_AILMENT",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "BASIC_AWARENESS",
+      "name": "Basic Awareness",
+      "sourcePath": "src/data/skills/basic_awareness.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "AWARENESS",
+        "REVEAL"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "BASIC_MOVE",
+      "name": "Walk",
+      "sourcePath": "src/data/skills/basic_move.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "MOVEMENT",
+        "TRAVEL"
+      ],
+      "targetGenerator": "movement_reachable",
+      "phases": [
+        "movement",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "MOVE_ACTOR",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "BLIND_FIGHTING",
+      "name": "Blind Fighting",
+      "sourcePath": "src/data/skills/blind_fighting.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "COMBAT",
+        "STEALTH"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "BOMB_TOSS",
+      "name": "Bomb Toss",
+      "sourcePath": "src/data/skills/bomb_toss.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "FIRE",
+        "BOMB",
+        "SPAWN"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "SPAWN_ACTOR",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "BURROW",
+      "name": "Burrow",
+      "sourcePath": "src/data/skills/burrow.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "MOVEMENT",
+        "TUNNEL"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "COMBAT_ANALYSIS",
+      "name": "Combat Analysis",
+      "sourcePath": "src/data/skills/combat_analysis.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "AWARENESS",
+        "ANALYSIS"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "CORPSE_EXPLOSION",
+      "name": "Corpse Explosion",
+      "sourcePath": "src/data/skills/corpse_explosion.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "VOID",
+        "CORPSE",
+        "AOE"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "REMOVE_CORPSE",
+        "DEAL_DAMAGE",
+        "MESSAGE",
+        "EMIT_JUICE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "DEATH_TOUCH",
+      "name": "Death Touch",
+      "sourcePath": "src/data/skills/death_touch.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "DEATH",
+        "TOUCH",
+        "MAGICAL"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "DEAL_DAMAGE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "ENEMY_AWARENESS",
+      "name": "Enemy Awareness",
+      "sourcePath": "src/data/skills/enemy_awareness.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "SENSE",
+        "DETECTION"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "FALCON_APEX_STRIKE",
+      "name": "Apex Strike",
+      "sourcePath": "src/data/skills/falcon_apex_strike.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "COMPANION",
+        "PHYSICAL"
+      ],
+      "targetGenerator": "radius",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "DEAL_DAMAGE",
+        "EMIT_JUICE",
+        "UPDATE_COMPANION_STATE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "FALCON_AUTO_ROOST",
+      "name": "Auto Roost",
+      "sourcePath": "src/data/skills/falcon_auto_roost.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "COMPANION",
+        "UTILITY"
+      ],
+      "targetGenerator": "self",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "UPDATE_COMPANION_STATE",
+        "UPDATE_BEHAVIOR_STATE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "FALCON_COMMAND",
+      "name": "Summon Falcon",
+      "sourcePath": "src/data/skills/falcon_command.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "COMPANION",
+        "COMMAND"
+      ],
+      "targetGenerator": "radius",
+      "phases": [
+        "declare",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "SPAWN_ACTOR",
+        "EMIT_JUICE",
+        "UPDATE_COMPANION_STATE",
+        "UPDATE_BEHAVIOR_STATE",
+        "APPLY_STATUS",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "FALCON_HEAL",
+      "name": "Roost Heal",
+      "sourcePath": "src/data/skills/falcon_heal.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "COMPANION",
+        "HEAL"
+      ],
+      "targetGenerator": "owner_hex",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "HEAL",
+        "EMIT_JUICE",
+        "UPDATE_COMPANION_STATE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "FALCON_PECK",
+      "name": "Peck",
+      "sourcePath": "src/data/skills/falcon_peck.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "COMPANION",
+        "PHYSICAL"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "DEAL_DAMAGE",
+        "EMIT_JUICE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "FALCON_SCOUT",
+      "name": "Scout Orbit",
+      "sourcePath": "src/data/skills/falcon_scout.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "COMPANION",
+        "MOVEMENT"
+      ],
+      "targetGenerator": "anchor_point",
+      "phases": [
+        "movement"
+      ],
+      "instructionKinds": [
+        "MOVE_ACTOR"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "FIREBALL",
+      "name": "Fireball",
+      "sourcePath": "src/data/skills/fireball.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "FIRE",
+        "AXIAL",
+        "AOE"
+      ],
+      "targetGenerator": "axial_ray",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "DEAL_DAMAGE",
+        "PLACE_SURFACE",
+        "EMIT_JUICE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "FIREWALK",
+      "name": "Firewalk",
+      "sourcePath": "src/data/skills/firewalk.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "FIRE",
+        "TELEPORT",
+        "MOVEMENT"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "TELEPORT_ACTOR",
+        "APPLY_STATUS",
+        "EMIT_JUICE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "FIREWALL",
+      "name": "Firewall",
+      "sourcePath": "src/data/skills/firewall.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "FIRE",
+        "WALL",
+        "AREA_DENIAL"
+      ],
+      "targetGenerator": "axial_ray",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "DEAL_DAMAGE",
+        "PLACE_SURFACE",
+        "EMIT_JUICE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "FLIGHT",
+      "name": "Flight",
+      "sourcePath": "src/data/skills/flight.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "MOVEMENT",
+        "AIRBORNE"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "KINETIC_TRI_TRAP",
+      "name": "Kinetic Tri-Trap",
+      "sourcePath": "src/data/skills/kinetic_tri_trap.skill.json",
+      "slot": "defensive",
+      "keywords": [
+        "TRAP",
+        "KINETIC",
+        "DEPLOY"
+      ],
+      "targetGenerator": "self",
+      "phases": [
+        "declare",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "REMOVE_TRAP",
+        "PLACE_TRAP",
+        "EMIT_JUICE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "METEOR_IMPACT",
+      "name": "Meteor Impact",
+      "sourcePath": "src/data/skills/meteor_impact.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "KINETIC",
+        "LEAP",
+        "PULSE"
+      ],
+      "targetGenerator": "axial_ray",
+      "phases": [
+        "movement",
+        "collision",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "MOVE_ACTOR",
+        "RESOLVE_COLLISION",
+        "EMIT_PULSE",
+        "DEAL_DAMAGE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": true,
+      "handlerRefs": {}
+    },
+    {
+      "id": "MULTI_SHOOT",
+      "name": "Multi-Shoot",
+      "sourcePath": "src/data/skills/multi_shoot.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "PROJECTILE",
+        "PHYSICAL",
+        "AREA"
+      ],
+      "targetGenerator": "axial_ray",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "DEAL_DAMAGE",
+        "EMIT_JUICE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "ORACLE_SIGHT",
+      "name": "Oracle's Sight",
+      "sourcePath": "src/data/skills/oracle_sight.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "REVEAL",
+        "INTEL"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "PHASE_STEP",
+      "name": "Phase Step",
+      "sourcePath": "src/data/skills/phase_step.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "MOVEMENT",
+        "PHASE"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "RAISE_DEAD",
+      "name": "Raise Dead",
+      "sourcePath": "src/data/skills/raise_dead.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "VOID",
+        "CORPSE",
+        "SUMMON"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "REMOVE_CORPSE",
+        "SPAWN_ACTOR",
+        "EMIT_JUICE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SENTINEL_BLAST",
+      "name": "Sentinel Blast",
+      "sourcePath": "src/data/skills/sentinel_blast.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "ARCANE",
+        "BLAST",
+        "AOE"
+      ],
+      "targetGenerator": "radius",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "DEAL_DAMAGE",
+        "MESSAGE",
+        "EMIT_JUICE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SENTINEL_TELEGRAPH",
+      "name": "Sentinel Telegraph",
+      "sourcePath": "src/data/skills/sentinel_telegraph.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "TELEGRAPH",
+        "ARCANE",
+        "AOE"
+      ],
+      "targetGenerator": "radius",
+      "phases": [
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "MESSAGE",
+        "EMIT_JUICE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SET_TRAP",
+      "name": "Set Trap",
+      "sourcePath": "src/data/skills/set_trap.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "TRAP",
+        "CONTROL",
+        "UTILITY"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "PLACE_TRAP",
+        "EMIT_JUICE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SHADOW_STEP",
+      "name": "Shadow Step",
+      "sourcePath": "src/data/skills/shadow_step.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT",
+        "STEALTH"
+      ],
+      "targetGenerator": "movement_reachable",
+      "phases": [
+        "movement",
+        "resolution"
+      ],
+      "instructionKinds": [
+        "TELEPORT_ACTOR",
+        "EMIT_JUICE",
+        "MESSAGE",
+        "SET_STEALTH"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SHIELD_THROW",
+      "name": "Shield Throw",
+      "sourcePath": "src/data/skills/shield_throw.skill.json",
+      "slot": "defensive",
+      "keywords": [
+        "PROJECTILE",
+        "KINETIC",
+        "SHIELD"
+      ],
+      "targetGenerator": "axial_ray",
+      "phases": [
+        "declare",
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "EMIT_JUICE",
+        "TRACE_PROJECTILE",
+        "APPLY_STATUS",
+        "EMIT_PULSE",
+        "SPAWN_ITEM",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": true,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SMOKE_SCREEN",
+      "name": "Smoke Screen",
+      "sourcePath": "src/data/skills/smoke_screen.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "STEALTH",
+        "UTILITY"
+      ],
+      "targetGenerator": "self",
+      "phases": [
+        "resolution"
+      ],
+      "instructionKinds": [
+        "APPLY_STATUS",
+        "EMIT_JUICE",
+        "MESSAGE",
+        "SET_STEALTH"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SNEAK_ATTACK",
+      "name": "Sneak Attack",
+      "sourcePath": "src/data/skills/sneak_attack.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "ACTIVE",
+        "ATTACK",
+        "STEALTH"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "resolution"
+      ],
+      "instructionKinds": [
+        "DEAL_DAMAGE",
+        "MESSAGE",
+        "EMIT_JUICE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SPEAR_THROW",
+      "name": "Spear Throw",
+      "sourcePath": "src/data/skills/spear_throw.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "PROJECTILE",
+        "PHYSICAL",
+        "ITEM"
+      ],
+      "targetGenerator": "axial_ray",
+      "phases": [
+        "declare",
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "EMIT_JUICE",
+        "TRACE_PROJECTILE",
+        "MOVE_ACTOR",
+        "DEAL_DAMAGE",
+        "APPLY_AILMENT",
+        "PICKUP_ITEM",
+        "SPAWN_ITEM",
+        "MODIFY_COOLDOWN",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "STANDARD_VISION",
+      "name": "Standard Vision",
+      "sourcePath": "src/data/skills/standard_vision.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "VISION",
+        "REVEAL"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SWIFT_ROLL",
+      "name": "Swift Roll",
+      "sourcePath": "src/data/skills/swift_roll.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT"
+      ],
+      "targetGenerator": "movement_reachable",
+      "phases": [
+        "movement",
+        "resolution"
+      ],
+      "instructionKinds": [
+        "MOVE_ACTOR",
+        "EMIT_JUICE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "TACTICAL_INSIGHT",
+      "name": "Tactical Insight",
+      "sourcePath": "src/data/skills/tactical_insight.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "AWARENESS",
+        "INTENT"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "THEME_HAZARDS",
+      "name": "Theme Hazards",
+      "sourcePath": "src/data/skills/theme_hazards.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "INTERNAL",
+        "HAZARD",
+        "TEST"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "TIME_BOMB",
+      "name": "Time Bomb",
+      "sourcePath": "src/data/skills/time_bomb.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "FIRE",
+        "BLAST",
+        "DELAYED"
+      ],
+      "targetGenerator": "self",
+      "phases": [
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "DEAL_DAMAGE",
+        "EMIT_JUICE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "TORNADO_KICK",
+      "name": "Tornado Kick",
+      "sourcePath": "src/data/skills/tornado_kick.skill.json",
+      "slot": "offensive",
+      "keywords": [
+        "KINETIC",
+        "PULL",
+        "PUSH"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "collision",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "APPLY_FORCE",
+        "DEAL_DAMAGE",
+        "MESSAGE"
+      ],
+      "hasPhysicsPlan": true,
+      "handlerRefs": {}
+    },
+    {
+      "id": "VIBRATION_SENSE",
+      "name": "Vibration Sense",
+      "sourcePath": "src/data/skills/vibration_sense.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "PASSIVE",
+        "SENSE",
+        "MOTION"
+      ],
+      "targetGenerator": "single",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "VOLATILE_PAYLOAD",
+      "name": "Volatile Payload",
+      "sourcePath": "src/data/skills/volatile_payload.skill.json",
+      "slot": "passive",
+      "keywords": [
+        "FIRE",
+        "BOMB",
+        "PASSIVE"
+      ],
+      "targetGenerator": "self",
+      "phases": [],
+      "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    }
+  ]
+}

@@ -173,6 +173,8 @@ const SHIELD_BASH_V1: CompositeSkillDefinition = {
                     round: 'floor'
                 },
                 damageClass: 'physical',
+                damageSubClass: 'strike',
+                damageElement: 'neutral',
                 reason: 'shield_bash_v1'
             }
         ]

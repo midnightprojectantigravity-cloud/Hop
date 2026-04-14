@@ -1,0 +1,41 @@
+{
+  "id": "COMBAT_ANALYSIS",
+  "name": "Combat Analysis",
+  "description": "Reveal enemy trinity stats with sufficient Mind.",
+  "slot": "passive",
+  "icon": "CA",
+  "keywords": [
+    "PASSIVE",
+    "AWARENESS",
+    "ANALYSIS"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "information": [
+      {
+        "domain": "information",
+        "providerId": "combat_analysis.stats",
+        "priority": 20,
+        "kind": "combat_analysis_v1",
+        "reveal": {
+          "trinityStats": true
+        },
+        "minViewerStat": {
+          "stat": "mind",
+          "minimum": 10
+        }
+      }
+    ]
+  },
+  "upgrades": {}
+}

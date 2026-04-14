@@ -12,6 +12,7 @@ import { gainAilmentResilienceXp, getAilmentBaseResistancePct, getAilmentSpecifi
 import { computeAilmentTick } from './tick';
 import type { AilmentCountersComponent, AilmentProfileComponent, AilmentResilienceComponent } from '../components';
 import type { AtomicEffectContext } from '../effects/types';
+import { resolveAbsorbFireHealAmount } from '../effects/fire-absorb';
 
 type AilmentSource = 'skill' | 'tile' | 'system';
 
@@ -513,7 +514,7 @@ const applyAilmentTickDamage = (
     }
 
     if (hasAbsorbFire) {
-        const healAmount = effectiveAmount + (hasCinderOrb ? 1 : 0);
+        const healAmount = resolveAbsorbFireHealAmount(effectiveAmount, hasCinderOrb ? 1 : 0);
         const healed = applyHeal(actor, healAmount);
         if (hasCinderOrb) {
             nextState.message = appendTaggedMessage(nextState.message, 'Cinder Orb amplifies the absorption.', 'INFO', 'COMBAT');

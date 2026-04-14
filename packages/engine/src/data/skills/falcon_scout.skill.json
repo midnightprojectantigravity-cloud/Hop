@@ -1,0 +1,35 @@
+{
+  "id": "FALCON_SCOUT",
+  "name": "Scout Orbit",
+  "description": "The falcon orbits its marked patrol point.",
+  "slot": "utility",
+  "icon": "\ud83d\udc41\ufe0f",
+  "keywords": [
+    "COMPANION",
+    "MOVEMENT"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "anchor_point",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": []
+  },
+  "combatScript": [
+    {
+      "id": "falcon_scout_01_move",
+      "kind": "MOVE_ACTOR",
+      "phase": "movement",
+      "actor": "self",
+      "destination": "scout_orbit_destination",
+      "effectTargetMode": "actor_id",
+      "suppressPresentation": true,
+      "simulatePath": true
+    }
+  ],
+  "upgrades": {}
+}

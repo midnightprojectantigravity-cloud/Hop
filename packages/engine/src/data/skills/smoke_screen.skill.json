@@ -1,0 +1,94 @@
+{
+  "id": "SMOKE_SCREEN",
+  "name": "Smoke Screen",
+  "description": "Vanish into a cloud of smoke. Adds stealth and can blind nearby foes when upgraded.",
+  "slot": "utility",
+  "icon": "SS",
+  "keywords": [
+    "ACTIVE",
+    "STEALTH",
+    "UTILITY"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 2
+  },
+  "targeting": {
+    "generator": "self",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [
+    {
+      "id": "smoke_screen_stealth",
+      "phase": "resolution",
+      "kind": "SET_STEALTH",
+      "target": "self",
+      "amount": 2
+    },
+    {
+      "id": "smoke_screen_blind",
+      "phase": "resolution",
+      "kind": "APPLY_STATUS",
+      "target": "selected_hex",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 1,
+        "predicates": [
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy",
+            "value": true
+          }
+        ]
+      },
+      "status": "blinded",
+      "duration": 1,
+      "conditions": [
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "BLINDING_SMOKE",
+          "value": true
+        }
+      ]
+      ,
+      "message": "Blinding smoke obscures nearby foes!"
+    },
+    {
+      "id": "smoke_screen_juice",
+      "phase": "resolution",
+      "kind": "EMIT_JUICE",
+      "effect": "hiddenFade",
+      "target": "caster_hex",
+      "metadata": {
+        "signature": "STATE.FADE.SHADOW.SMOKE_SCREEN",
+        "family": "status",
+        "primitive": "state_fade",
+        "phase": "instant",
+        "element": "shadow",
+        "variant": "smoke_screen",
+        "targetRef": { "kind": "target_hex" },
+        "skillId": "SMOKE_SCREEN"
+      }
+    },
+    {
+      "id": "smoke_screen_message",
+      "phase": "resolution",
+      "kind": "MESSAGE",
+      "text": "Smoke Screen!"
+    }
+  ],
+  "capabilities": {},
+  "upgrades": {
+    "BLINDING_SMOKE": {
+      "id": "BLINDING_SMOKE",
+      "name": "Blinding Smoke",
+      "description": "Adjacent hostile units are blinded for 1 turn.",
+      "addKeywords": [
+        "BLINDING_SMOKE"
+      ]
+    }
+  }
+}

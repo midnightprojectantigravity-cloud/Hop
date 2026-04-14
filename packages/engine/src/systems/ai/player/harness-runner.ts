@@ -129,7 +129,8 @@ export const runHarnessPlayerLoop = ({
             state = gameReducer(state, action);
             state = resolvePending(state);
             trackPeakPlayerExhaustion();
-            if ((state.turnsSpent || 0) === prevTurnsSpent) {
+            const progressedTurn = (state.turnsSpent || 0) > prevTurnsSpent;
+            if (!progressedTurn) {
                 stagnantPlayerActions += 1;
             } else {
                 stagnantPlayerActions = 0;
@@ -144,7 +145,7 @@ export const runHarnessPlayerLoop = ({
             const aliveHostiles = state.enemies.filter(
                 e => e.hp > 0 && e.factionId === 'enemy' && e.subtype !== 'bomb'
             ).length;
-            if (aliveHostiles === 0 && state.gameStatus === 'playing' && state.floor === prev.floor) {
+            if (aliveHostiles === 0 && state.gameStatus === 'playing' && state.floor === prev.floor && progressedTurn) {
                 noHostileNoProgressTurns += 1;
                 if (noHostileNoProgressTurns >= 20) {
                     terminalOverride = 'lost';

@@ -1,4 +1,5 @@
 import type { AtomicEffect, GameState, Point, SkillDefinition } from '../types';
+import { getSkillScenarios } from '../scenarios';
 import { buildBombDetonationEffects } from '../systems/effects/bomb-runtime';
 
 /**
@@ -34,4 +35,5 @@ export const TIME_BOMB: SkillDefinition = {
     },
     getValidTargets: (_state: GameState, origin: Point) => [origin],
     upgrades: {},
+    scenarios: getSkillScenarios('TIME_BOMB')
 };

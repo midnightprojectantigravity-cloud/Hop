@@ -8,8 +8,10 @@ import {
     listMappedActiveRosterSkillIds,
     resolveLegacySkillResourceProfile,
     resolveSkillMetabolicBandProfile,
+    resolveRuntimeSkillResourceProfile,
     resolveSkillResourceProfile
 } from '../systems/ires/skill-catalog';
+import { getSkillDefinition } from '../skillRegistry';
 
 describe('IRES skill band catalog', () => {
     it('covers all 49 known skills while preserving the 27-skill active roster subset', () => {
@@ -64,6 +66,18 @@ describe('IRES skill band catalog', () => {
         expect(sentinelBlast.metabolicBandId).toBe('redline');
         expect(sentinelBlast.primaryCost).toBe(DEFAULT_IRES_METABOLIC_CONFIG.actionBands.redline.manaCost - 8);
         expect(sentinelBlast.baseStrain).toBe(DEFAULT_IRES_METABOLIC_CONFIG.actionBands.redline.baseExhaustion + 2);
+    });
+
+    it('resolves DEATH_TOUCH from the same band-derived mana profile as RAISE_DEAD', () => {
+        const deathTouch = resolveRuntimeSkillResourceProfile('DEATH_TOUCH', getSkillDefinition('DEATH_TOUCH'));
+        const raiseDead = resolveRuntimeSkillResourceProfile('RAISE_DEAD', getSkillDefinition('RAISE_DEAD'));
+
+        expect(deathTouch.primaryResource).toBe('mana');
+        expect(deathTouch.primaryCost).toBe(raiseDead.primaryCost);
+        expect(deathTouch.manaCost).toBe(raiseDead.manaCost);
+        expect(deathTouch.baseStrain).toBe(raiseDead.baseStrain);
+        expect(deathTouch.countsAsAction).toBe(true);
+        expect(deathTouch.profileSource).toBe('band_derived');
     });
 
     it('resolves GRAPPLE_HOOK and FIREWALK with the expected movement semantics', () => {

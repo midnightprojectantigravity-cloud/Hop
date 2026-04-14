@@ -1,0 +1,25 @@
+{
+  "id": "VOLATILE_PAYLOAD",
+  "name": "Volatile Payload",
+  "description": "Any positive damage detonates the bomb immediately.",
+  "slot": "passive",
+  "icon": "\ud83d\udca5",
+  "keywords": [
+    "FIRE",
+    "BOMB",
+    "PASSIVE"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0,
+    "damage": 0
+  },
+  "targeting": {
+    "generator": "self",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "upgrades": {}
+}

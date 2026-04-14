@@ -1,6 +1,10 @@
 import type { Actor, AtomicEffect, Point } from '../../types';
 import type { CombatCalculationResult, CombatIntent, CombatStatusMultiplier } from './combat-calculator';
 import { calculateCombat, extractTrinityStats } from './combat-calculator';
+import type {
+    CombatDamageElement,
+    CombatDamageSubClass
+} from './damage-taxonomy';
 
 export interface ResolveSkillCombatDamageInput {
     attacker: Actor;
@@ -15,7 +19,15 @@ export interface ResolveSkillCombatDamageInput {
     statusMultipliers?: CombatStatusMultiplier[];
     damageClass?: CombatIntent['damageClass'];
     combat?: CombatIntent['combat'];
+    leechRatio?: number;
     attackProfile?: CombatIntent['attackProfile'];
+    weights?: CombatIntent['combat'] extends infer T
+        ? T extends { weights: infer W }
+            ? W
+            : never
+        : never;
+    damageSubClass?: CombatDamageSubClass;
+    damageElement?: CombatDamageElement;
     trackingSignature?: CombatIntent['trackingSignature'];
     engagementContext?: CombatIntent['engagementContext'];
     engagementRange?: number;
@@ -27,7 +39,8 @@ export interface ResolveSkillCombatDamageInput {
 }
 
 export const resolveSkillCombatDamage = (input: ResolveSkillCombatDamageInput): CombatCalculationResult =>
-    calculateCombat({
+    ({
+        ...calculateCombat({
         attackerId: input.attacker.id,
         targetId: input.targetId ?? input.target?.id ?? 'targetActor',
         skillId: input.skillId,
@@ -39,7 +52,18 @@ export const resolveSkillCombatDamage = (input: ResolveSkillCombatDamageInput): 
         targetTrinity: input.targetTrinity ?? (input.target ? extractTrinityStats(input.target) : undefined),
         statusMultipliers: input.statusMultipliers ?? [],
         damageClass: input.damageClass,
-        combat: input.combat,
+        damageSubClass: input.damageSubClass,
+        damageElement: input.damageElement,
+        combat: input.combat
+            ? (
+                input.weights
+                    ? {
+                        ...input.combat,
+                        weights: input.weights
+                    }
+                    : input.combat
+            )
+            : undefined,
         attackProfile: input.attackProfile,
         trackingSignature: input.trackingSignature,
         engagementContext: input.engagementContext,
@@ -48,6 +72,8 @@ export const resolveSkillCombatDamage = (input: ResolveSkillCombatDamageInput): 
         attackPowerMultiplier: input.attackPowerMultiplier,
         inDangerPreviewHex: input.inDangerPreviewHex,
         theoreticalMaxPower: input.theoreticalMaxPower
+    }),
+        leechRatio: input.leechRatio ?? input.combat?.leechRatio ?? 0
     });
 
 export const createDamageEffectFromCombat = (
@@ -59,5 +85,9 @@ export const createDamageEffectFromCombat = (
     target: target as any,
     amount: combat.finalPower,
     reason,
-    scoreEvent: combat.scoreEvent
+    scoreEvent: combat.scoreEvent,
+    damageClass: combat.damageClass,
+    damageSubClass: combat.damageSubClass,
+    damageElement: combat.damageElement,
+    leechRatio: combat.leechRatio
 });

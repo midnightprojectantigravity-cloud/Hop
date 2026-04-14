@@ -470,6 +470,52 @@ describe('generic unit ai coherence', () => {
         expect(result.summary.threatOpportunityAvailable).toBe(true);
     });
 
+    it('treats falcon setup as a real next-decision threat when the summon arms follow-up pressure', () => {
+        const seed = 'coherence-falcon-threat';
+        const base = generateInitialState(1, seed, seed, undefined, DEFAULT_LOADOUTS.HUNTER);
+        const enemy = createEnemy({
+            id: 'coherence-falcon-prey',
+            subtype: 'footman',
+            position: createHex(4, 1),
+            hp: 20,
+            maxHp: 20,
+            speed: 1,
+            skills: ['BASIC_MOVE', 'BASIC_ATTACK']
+        });
+        const seeded = {
+            ...base,
+            player: {
+                ...base.player,
+                position: createHex(4, 4),
+                previousPosition: createHex(4, 4)
+            },
+            enemies: [enemy],
+            companions: []
+        };
+        const state = recomputeVisibilityFromScratch({
+            ...seeded,
+            initiativeQueue: buildInitiativeQueue(seeded),
+            occupancyMask: SpatialSystem.refreshOccupancyMask(seeded)
+        });
+
+        const result = selectGenericUnitAiAction({
+            state,
+            actor: state.player,
+            side: 'player',
+            simSeed: seed,
+            decisionCounter: 0,
+            goal: 'engage'
+        });
+
+        const falconCandidate = result.candidates.find(candidate =>
+            candidate.skillId === 'FALCON_COMMAND'
+            && candidate.facts?.createsThreatNextDecision
+        );
+
+        expect(falconCandidate).toBeTruthy();
+        expect(result.summary.threatOpportunityAvailable).toBe(true);
+    });
+
     it('prefers the canonical straight chase step over an equal sideways tie', () => {
         const enemy = createEnemy({
             id: 'coherence-straight-line',
@@ -882,6 +928,71 @@ describe('generic unit ai coherence', () => {
         expect(result.summary.objectiveOpportunityAvailable).toBe(true);
         expect(result.selected.action.type).toBe('MOVE');
         expect(result.selected.facts?.improvesObjective).toBe(true);
+    });
+
+    it('treats an exhausting first move into melee contact as a next-decision threat window', () => {
+        const enemy = createEnemy({
+            id: 'coherence-contact-window-enemy',
+            subtype: 'footman',
+            position: createHex(4, 6),
+            hp: 20,
+            maxHp: 20,
+            speed: 1,
+            skills: ['BASIC_MOVE', 'BASIC_ATTACK']
+        });
+        const base = buildState({
+            seed: 'coherence-contact-window',
+            playerPos: createHex(4, 8),
+            enemies: [enemy]
+        });
+        const player = {
+            ...base.player,
+            position: createHex(4, 8),
+            previousPosition: createHex(4, 8),
+            activeSkills: (base.player.activeSkills || []).filter(skill =>
+                skill.id === 'BASIC_MOVE' || skill.id === 'BASIC_ATTACK'
+            ),
+            ires: base.player.ires
+                ? {
+                    ...base.player.ires,
+                    spark: 78,
+                    currentState: 'base' as const,
+                    isExhausted: false,
+                    actionCountThisTurn: 0,
+                    actedThisTurn: false,
+                    movedThisTurn: false
+                }
+                : base.player.ires
+        };
+        const state = recomputeVisibilityFromScratch({
+            ...base,
+            player,
+            initiativeQueue: buildInitiativeQueue({
+                ...base,
+                player
+            }),
+            occupancyMask: SpatialSystem.refreshOccupancyMask({
+                ...base,
+                player
+            })
+        });
+
+        const result = selectGenericUnitAiAction({
+            state,
+            actor: state.player,
+            side: 'player',
+            simSeed: 'coherence-contact-window',
+            decisionCounter: 0,
+            goal: 'engage'
+        });
+
+        expect(result.selected.action).toEqual({
+            type: 'MOVE',
+            payload: createHex(4, 7)
+        });
+        expect(result.selected.facts?.createsThreatNextDecision).toBe(true);
+        expect(result.summary.threatOpportunityAvailable).toBe(true);
+        expect(result.summary.selectedOverride).toBe('pressure_only_option');
     });
 
     it('uses recover goal to prefer pacing over low-value extra actions in combat', () => {

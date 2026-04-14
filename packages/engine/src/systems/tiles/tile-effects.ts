@@ -97,7 +97,15 @@ export class TileResolver {
                 if (tile.baseId === 'LAVA' || traits.has('LAVA')) {
                     this.mergeResults(combinedResult, {
                         effects: [
-                            { type: 'Damage', target: actor.id, amount: damage, reason: 'lava_sink' },
+                            {
+                                type: 'Damage',
+                                target: actor.id,
+                                amount: damage,
+                                reason: 'lava_sink',
+                                damageClass: 'magical',
+                                damageSubClass: 'blast',
+                                damageElement: 'fire'
+                            },
                             { type: 'Juice', effect: 'lavaSink', target: actor.position }
                         ],
                         messages: [`Lava Sink! You were engulfed by lava!`],
@@ -106,7 +114,15 @@ export class TileResolver {
                 } else if (tile.baseId === 'VOID' || traits.has('VOID')) {
                     this.mergeResults(combinedResult, {
                         effects: [
-                            { type: 'Damage', target: actor.id, amount: damage, reason: 'void_sink' },
+                            {
+                                type: 'Damage',
+                                target: actor.id,
+                                amount: damage,
+                                reason: 'void_sink',
+                                damageClass: 'true',
+                                damageSubClass: 'status',
+                                damageElement: 'void'
+                            },
                             { type: 'Juice', effect: 'lavaSink', target: actor.position } // Visual reuse
                         ],
                         messages: [`Void consumes your soul!`],
@@ -218,7 +234,15 @@ export class TileResolver {
                 // Preserve absorb-fire contract: fire still applies its payload, but never interrupts movement.
                 this.mergeResults(combinedResult, {
                     effects: [
-                        { type: 'Damage', target: actor.id, amount: 99, reason: 'hazard_intercept' }
+                        {
+                            type: 'Damage',
+                            target: actor.id,
+                            amount: 99,
+                            reason: 'hazard_intercept',
+                            damageClass: 'magical',
+                            damageSubClass: 'blast',
+                            damageElement: 'fire'
+                        }
                     ],
                     messages: ['Flames surge through you.'],
                     interrupt: false
@@ -229,7 +253,15 @@ export class TileResolver {
 
                 this.mergeResults(combinedResult, {
                     effects: [
-                        { type: 'Damage', target: actor.id, amount: damage, reason: 'hazard_intercept' },
+                        {
+                            type: 'Damage',
+                            target: actor.id,
+                            amount: damage,
+                            reason: 'hazard_intercept',
+                            damageClass: 'physical',
+                            damageSubClass: 'strike',
+                            damageElement: 'kinetic'
+                        },
                         { type: 'Juice', effect: 'lavaSink', target: tile.position }
                     ],
                     messages: [(tile.baseId === 'LAVA' || traits.has('LAVA')) ? 'Sunk in Lava!' : 'Consumed by Void!'],
@@ -322,7 +354,15 @@ export class TileResolver {
 
                 if (trapAtPos.volatileCore) {
                     this.mergeResults(combinedResult, {
-                        effects: [{ type: 'Damage', target: actor.id, amount: 1, reason: 'trap_volatile_core' }],
+                        effects: [{
+                            type: 'Damage',
+                            target: actor.id,
+                            amount: 1,
+                            reason: 'trap_volatile_core',
+                            damageClass: 'physical',
+                            damageSubClass: 'strike',
+                            damageElement: 'kinetic'
+                        }],
                         messages: ['Volatile core detonates!']
                     });
                 }
@@ -347,7 +387,15 @@ export class TileResolver {
                         });
                         if (chained.volatileCore) {
                             this.mergeResults(combinedResult, {
-                                effects: [{ type: 'Damage', target: actor.id, amount: 1, reason: 'trap_chain_volatile' }],
+                                effects: [{
+                                    type: 'Damage',
+                                    target: actor.id,
+                                    amount: 1,
+                                    reason: 'trap_chain_volatile',
+                                    damageClass: 'physical',
+                                    damageSubClass: 'strike',
+                                    damageElement: 'kinetic'
+                                }],
                                 messages: ['Chain blast!']
                             });
                         }

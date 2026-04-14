@@ -1,0 +1,131 @@
+{
+  "id": "RAISE_DEAD",
+  "name": "Raise Dead",
+  "description": "Reanimate a target corpse into an owner-aligned Skeleton minion.",
+  "slot": "utility",
+  "icon": "\ud83d\udc80\u2728",
+  "keywords": [
+    "VOID",
+    "CORPSE",
+    "SUMMON"
+  ],
+  "baseVariables": {
+    "range": 4,
+    "cost": 1,
+    "cooldown": 3
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 4,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "CORPSE_PRESENT"
+      }
+    ]
+  },
+  "summon": {
+    "companionType": "skeleton",
+    "visualAssetRef": "/Hop/assets/bestiary/unit.skeleton.basic.01.webp",
+    "trinity": {
+      "body": 12,
+      "mind": 2,
+      "instinct": 4
+    },
+    "skills": [
+      "BASIC_MOVE",
+      "BASIC_ATTACK",
+      "AUTO_ATTACK"
+    ],
+    "behavior": {
+      "controller": "generic_ai",
+      "anchorActorId": "owner",
+      "overlays": [
+        {
+          "id": "raise_dead_skeleton",
+          "source": "summon",
+          "sourceId": "raise_dead",
+          "desiredRange": 1,
+          "offenseBias": 0.1,
+          "commitBias": 0.15,
+          "followThroughBias": 0.1
+        }
+      ]
+    }
+  },
+  "combatScript": [
+    {
+      "id": "raise_dead_01_remove_corpse",
+      "kind": "REMOVE_CORPSE",
+      "phase": "resolution",
+      "position": "selected_hex"
+    },
+    {
+      "id": "raise_dead_02_spawn",
+      "kind": "SPAWN_ACTOR",
+      "phase": "resolution",
+      "spawnType": "companion",
+      "companionType": "skeleton",
+      "owner": "self",
+      "position": "selected_hex",
+      "placementPolicy": "push_friendly",
+      "actorIdStrategy": "raise_dead_skeleton_v1",
+      "summon": {
+        "companionType": "skeleton",
+        "visualAssetRef": "/Hop/assets/bestiary/unit.skeleton.basic.01.webp",
+        "trinity": {
+          "body": 12,
+          "mind": 2,
+          "instinct": 4
+        },
+        "skills": [
+          "BASIC_MOVE",
+          "BASIC_ATTACK",
+          "AUTO_ATTACK"
+        ],
+        "behavior": {
+          "controller": "generic_ai",
+          "anchorActorId": "owner",
+          "overlays": [
+            {
+              "id": "raise_dead_skeleton",
+              "source": "summon",
+              "sourceId": "raise_dead",
+              "desiredRange": 1,
+              "offenseBias": 0.1,
+              "commitBias": 0.15,
+              "followThroughBias": 0.1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "raise_dead_03_flash",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "flash",
+      "target": "selected_hex",
+      "color": "#aaaaaa",
+      "metadata": {
+        "signature": "STATE.SPAWN.VOID.RAISE_DEAD",
+        "family": "status",
+        "primitive": "spawn",
+        "phase": "impact",
+        "element": "void",
+        "variant": "raise_dead",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "RAISE_DEAD"
+      }
+    },
+    {
+      "id": "raise_dead_04_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Skeleton raised!"
+    }
+  ],
+  "upgrades": {}
+}

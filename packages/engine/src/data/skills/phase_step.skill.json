@@ -1,0 +1,42 @@
+{
+  "id": "PHASE_STEP",
+  "name": "Phase Step",
+  "description": "Replace movement with short-range phasing teleports.",
+  "slot": "passive",
+  "icon": "PS",
+  "keywords": [
+    "PASSIVE",
+    "MOVEMENT",
+    "PHASE"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "movement": [
+      {
+        "domain": "movement",
+        "providerId": "phase_step.movement",
+        "priority": 35,
+        "kind": "phase_step_replace_v1",
+        "resolutionMode": "REPLACE",
+        "model": {
+          "pathing": "teleport",
+          "ignoreGroundHazards": true,
+          "ignoreWalls": true,
+          "allowPassThroughActors": true,
+          "rangeModifier": -1
+        }
+      }
+    ]
+  },
+  "upgrades": {}
+}

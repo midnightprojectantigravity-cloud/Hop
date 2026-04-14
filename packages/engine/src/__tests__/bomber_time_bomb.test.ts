@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createHex } from '../hex';
 import { gameReducer, generateInitialState } from '../logic';
-import { BOMB_TOSS } from '../skills/bomb_toss';
-import { TIME_BOMB } from '../skills/time_bomb';
 import { selectGenericUnitAiAction } from '../systems/ai/generic-unit-ai';
 import { createEnemy } from '../systems/entities/entity-factory';
 import { applyEffects } from '../systems/effect-engine';
@@ -25,8 +23,9 @@ describe('bomber summon contract', () => {
             skills: ['BOMB_TOSS'],
         });
         const target = { q: 4, r: 4, s: -8 };
+        const bombToss = getSkillDefinition('BOMB_TOSS')!;
 
-        const result = BOMB_TOSS.execute(state, attacker, target);
+        const result = bombToss.execute(state, attacker, target);
         expect(result.consumesTurn).toBe(true);
 
         const spawn = result.effects.find(e => e.type === 'SpawnActor');
@@ -53,7 +52,8 @@ describe('bomber summon contract', () => {
             skills: ['TIME_BOMB'],
         });
         bombTicking.statusEffects = [{ id: 'TIME_BOMB', type: 'time_bomb' as const, duration: 2, tickWindow: 'END_OF_TURN' as const }];
-        const idleResult = TIME_BOMB.execute(state, bombTicking, bombTicking.position);
+        const timeBomb = getSkillDefinition('TIME_BOMB')!;
+        const idleResult = timeBomb.execute(state, bombTicking, bombTicking.position);
         expect(idleResult.effects).toHaveLength(0);
         expect(idleResult.consumesTurn).toBe(true);
 
@@ -61,7 +61,7 @@ describe('bomber summon contract', () => {
             ...bombTicking,
             statusEffects: [{ id: 'TIME_BOMB', type: 'time_bomb' as const, duration: 1, tickWindow: 'END_OF_TURN' as const }]
         };
-        const explodeResult = TIME_BOMB.execute(state, bombReady, bombReady.position);
+        const explodeResult = timeBomb.execute(state, bombReady, bombReady.position);
         expect(explodeResult.effects.filter(e => e.type === 'Damage')).toHaveLength(7);
         expect(explodeResult.messages.some(m => m.includes('exploded'))).toBe(true);
     });
@@ -84,8 +84,9 @@ describe('bomber summon contract', () => {
         });
         bomb.statusEffects = [{ id: 'TIME_BOMB', type: 'time_bomb' as const, duration: 1, tickWindow: 'END_OF_TURN' as const }];
         state.enemies = [bomb];
+        const timeBomb = getSkillDefinition('TIME_BOMB')!;
 
-        const detonation = TIME_BOMB.execute(state, bomb, bomb.position);
+        const detonation = timeBomb.execute(state, bomb, bomb.position);
         const nextState = applyEffects(state, detonation.effects, { sourceId: bomb.id });
 
         expect(nextState.player.hp).toBe(4);

@@ -1,0 +1,45 @@
+{
+  "id": "ENEMY_AWARENESS",
+  "name": "Enemy Awareness",
+  "description": "Hostile perception package for detection, chase memory, and butcher pressure.",
+  "slot": "passive",
+  "icon": "EA",
+  "keywords": [
+    "PASSIVE",
+    "SENSE",
+    "DETECTION"
+  ],
+  "baseVariables": {
+    "range": 4,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "senses": [
+      {
+        "domain": "senses",
+        "providerId": "enemy_awareness.los",
+        "priority": 10,
+        "kind": "enemy_awareness_los_v1",
+        "channelId": "enemy_awareness",
+        "range": {
+          "base": 3,
+          "minimum": 4,
+          "maximum": 9,
+          "stat": "instinct",
+          "divisor": 1.5
+        },
+        "requireEnemyObserver": true,
+        "hardBlockWhenBlind": true,
+        "useLegacyLineOfSight": true
+      }
+    ]
+  },
+  "upgrades": {}
+}

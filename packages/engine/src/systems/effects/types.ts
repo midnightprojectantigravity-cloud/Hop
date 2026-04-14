@@ -1,4 +1,5 @@
 import type { Actor, AtomicEffect, AtomicStackReactionHooks, GameState, Point, SimulationEvent, TimelinePhase } from '../../types';
+import type { CombatDamageClass } from '../combat/damage-taxonomy';
 
 export interface AtomicEffectContext {
     targetId?: string;
@@ -21,7 +22,7 @@ export interface AtomicEffectHandlerApi {
         rawAmount: number,
         sourceId: string | undefined,
         target: Actor | undefined,
-        damageClass: 'physical' | 'magical',
+        damageClass: CombatDamageClass,
         reason?: string
     ) => { amount: number; outgoing: number; incoming: number; total: number };
     appendSimulationEvent: (state: GameState, event: SimulationEventDraft) => GameState;

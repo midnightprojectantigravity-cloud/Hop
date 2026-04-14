@@ -1,0 +1,351 @@
+{
+  "id": "SHIELD_THROW",
+  "name": "Shield Throw",
+  "description": "Throw your shield to strike and push enemies. Triggers a kinetic pulse on impact.",
+  "slot": "defensive",
+  "icon": "\ud83d\udee1",
+  "keywords": [
+    "PROJECTILE",
+    "KINETIC",
+    "SHIELD"
+  ],
+  "baseVariables": {
+    "range": 5,
+    "cost": 0,
+    "cooldown": 2,
+    "momentum": 4
+  },
+  "targeting": {
+    "generator": "axial_ray",
+    "range": 4,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "physicsPlan": {
+    "kernel": "kinetic_pulse_v1",
+    "baseMomentum": 4
+  },
+  "combatScript": [
+    {
+      "id": "shield_throw_01_anticipation",
+      "kind": "EMIT_JUICE",
+      "phase": "declare",
+      "effect": "trajectory",
+      "target": "caster_hex",
+      "pathRef": "caster_to_selected",
+      "intensity": "medium",
+      "color": "#4169e1"
+    },
+    {
+      "id": "shield_throw_02_trace",
+      "kind": "TRACE_PROJECTILE",
+      "phase": "declare",
+      "target": "selected_hex",
+      "mode": "point_or_wall",
+      "stopAtWalls": true,
+      "stopAtActors": true
+    },
+    {
+      "id": "shield_throw_03_arc",
+      "kind": "EMIT_JUICE",
+      "phase": "movement",
+      "effect": "shieldArc",
+      "pathRef": "caster_to_impact",
+      "intensity": "high",
+      "duration": 300,
+      "metadata": {
+        "rotation": 720
+      },
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_04_spin",
+      "kind": "EMIT_JUICE",
+      "phase": "movement",
+      "effect": "shieldSpin",
+      "pathRef": "caster_to_impact",
+      "intensity": "medium",
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_05_stun",
+      "kind": "APPLY_STATUS",
+      "phase": "resolution",
+      "target": "impact_actor",
+      "status": "stunned",
+      "duration": 1,
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_06_impact",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "heavyImpact",
+      "target": "impact_hex",
+      "intensity": "extreme",
+      "directionPathRef": "caster_to_impact",
+      "contactHexRef": "impact_hex",
+      "contactToRef": "impact_hex",
+      "contactFromPathRef": "caster_to_impact",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.HEAVY",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "impact",
+        "element": "physical",
+        "variant": "heavy_impact",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "contactRef": {
+          "kind": "contact_world"
+        }
+      },
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_07_shake",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "shake",
+      "intensity": "high",
+      "directionPathRef": "caster_to_impact",
+      "metadata": {
+        "signature": "UI.SHAKE.NEUTRAL.CAMERA",
+        "family": "ui",
+        "primitive": "shake",
+        "phase": "instant",
+        "element": "neutral",
+        "variant": "camera_shake",
+        "camera": {
+          "shake": "high",
+          "kick": "medium"
+        }
+      },
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_08_freeze",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "freeze",
+      "duration": 120,
+      "metadata": {
+        "signature": "UI.FREEZE.NEUTRAL.HITSTOP",
+        "family": "ui",
+        "primitive": "freeze",
+        "phase": "instant",
+        "element": "neutral",
+        "variant": "hitstop",
+        "camera": {
+          "freezeMs": 120
+        },
+        "timing": {
+          "durationMs": 120,
+          "ttlMs": 120
+        }
+      },
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_09_text",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "combat_text",
+      "target": "impact_hex",
+      "text": "IMPACT!",
+      "color": "#ff4444",
+      "metadata": {
+        "signature": "UI.TEXT.NEUTRAL.POPUP",
+        "family": "ui",
+        "primitive": "text",
+        "phase": "instant",
+        "element": "neutral",
+        "variant": "combat_text",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "textTone": "system"
+      },
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_10_pulse",
+      "kind": "EMIT_PULSE",
+      "phase": "resolution",
+      "origin": "impact_hex",
+      "direction": "source_to_target",
+      "magnitude": 4,
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_11_resolution_wave",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "kineticWave",
+      "target": "impact_hex",
+      "directionRef": "target_actor_hex",
+      "intensity": "high",
+      "metadata": {
+        "signature": "ATK.PULSE.KINETIC.WAVE",
+        "family": "attack",
+        "primitive": "pulse",
+        "phase": "impact",
+        "element": "kinetic",
+        "variant": "kinetic_wave",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "sourceRef": {
+          "kind": "source_hex"
+        }
+      },
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_12_resolution_trail",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "momentumTrail",
+      "pathRef": "impact_to_target_actor",
+      "intensity": "high",
+      "metadata": {
+        "signature": "MOVE.DASH.KINETIC.MOMENTUM_TRAIL",
+        "family": "movement",
+        "primitive": "dash",
+        "phase": "travel",
+        "element": "kinetic",
+        "variant": "momentum_trail"
+      },
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_13_spawn_on_actor",
+      "kind": "SPAWN_ITEM",
+      "phase": "cleanup",
+      "itemType": "shield",
+      "position": "target_actor_hex",
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_14_message_actor",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Direct hit! Shield triggered kinetic pulse.",
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "actor"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_15_spawn_on_wall",
+      "kind": "SPAWN_ITEM",
+      "phase": "cleanup",
+      "itemType": "shield",
+      "position": "impact_hex",
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "wall"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_16_message_wall",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Shield hit a wall mid-flight!",
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "wall"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_17_spawn_on_empty",
+      "kind": "SPAWN_ITEM",
+      "phase": "cleanup",
+      "itemType": "shield",
+      "position": "selected_hex",
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "empty"
+        }
+      ]
+    },
+    {
+      "id": "shield_throw_18_message_empty",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Shield missed: No target at location.",
+      "conditions": [
+        {
+          "type": "PROJECTILE_IMPACT",
+          "kind": "empty"
+        }
+      ]
+    }
+  ],
+  "upgrades": {}
+}

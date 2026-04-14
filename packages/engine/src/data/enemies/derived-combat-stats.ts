@@ -1,15 +1,16 @@
 import {
     COMBAT_MOVEMENT_BURST_SKILL_IDS,
     COMBAT_TELEGRAPH_SKILL_IDS,
-    COMBAT_TUNING_VARIABLES,
     evaluateCombatNumericFormula,
-    resolveCombatSkillProfile
+    resolveCombatSkillProfile,
+    resolveCombatTuning
 } from '../combat-tuning-ledger';
 import type {
     bestiaryEnemyType,
     bestiaryWeightClass,
     EnemyBestiaryDefinition,
 } from '../packs/mvp-enemy-content';
+import { deriveMaxHpFromTrinity, resolveTrinityLevers } from '../../systems/combat/trinity-resolver';
 
 interface TrinityStats {
     body: number;
@@ -46,54 +47,6 @@ const calculateBaseDamage = (attackProjection: number, defenseProjection: number
     const def = clampNonNegative(defenseProjection);
     if (atk <= 0) return 0;
     return (atk * atk) / (atk + def);
-};
-
-const deriveMaxHpFromTrinity = (trinity: TrinityStats): number => {
-    const body = Math.max(0, trinity.body);
-    const mind = Math.max(0, trinity.mind);
-    const instinct = Math.max(0, trinity.instinct);
-    const hp = Math.floor(
-        (body * COMBAT_TUNING_VARIABLES.trinityHp.body)
-        + (mind * COMBAT_TUNING_VARIABLES.trinityHp.mind)
-        + (instinct * COMBAT_TUNING_VARIABLES.trinityHp.instinct)
-        + COMBAT_TUNING_VARIABLES.trinityHp.base
-    );
-    return Math.max(1, hp);
-};
-
-const resolveDerivedTrinityLevers = (trinity: TrinityStats) => {
-    const body = Math.max(0, trinity.body);
-    const mind = Math.max(0, trinity.mind);
-    const instinct = Math.max(0, trinity.instinct);
-
-    return {
-        basePowerMultiplier: COMBAT_TUNING_VARIABLES.trinityLevers.basePowerMultiplier,
-        bodyDamageMultiplier: COMBAT_TUNING_VARIABLES.trinityLevers.bodyDamageMultiplierPerPoint,
-        mindDamageMultiplier: COMBAT_TUNING_VARIABLES.trinityLevers.mindDamageMultiplierPerPoint,
-        instinctDamageMultiplier: COMBAT_TUNING_VARIABLES.trinityLevers.instinctDamageMultiplierPerPoint,
-        bodyMitigation: Math.max(
-            0,
-            Math.min(
-                COMBAT_TUNING_VARIABLES.trinityLevers.bodyMitigationCap,
-                body * COMBAT_TUNING_VARIABLES.trinityLevers.bodyMitigationPerPoint
-            )
-        ),
-        mindStatusDurationBonus: Math.floor(mind / COMBAT_TUNING_VARIABLES.trinityLevers.mindStatusDurationDivisor),
-        mindMagicMultiplier: 1 + (mind * COMBAT_TUNING_VARIABLES.trinityLevers.mindMagicMultiplierPerPoint),
-        instinctInitiativeBonus: instinct * COMBAT_TUNING_VARIABLES.trinityLevers.instinctInitiativeBonusPerPoint,
-        instinctCriticalMultiplier: 1 + (
-            Math.min(
-                instinct,
-                COMBAT_TUNING_VARIABLES.trinityLevers.instinctCriticalMultiplierCap
-            ) * COMBAT_TUNING_VARIABLES.trinityLevers.instinctCriticalMultiplierPerPoint
-        ),
-        instinctSparkDiscountMultiplier: 1 - (
-            Math.min(
-                instinct,
-                COMBAT_TUNING_VARIABLES.trinityLevers.instinctSparkDiscountCap
-            ) * COMBAT_TUNING_VARIABLES.trinityLevers.instinctSparkDiscountPerPoint
-        )
-    };
 };
 
 const DERIVED_SKILL_COMBAT_ROWS: Record<string, {
@@ -144,7 +97,7 @@ const toSkillCombatSignature = (
     trinity: TrinityStats
 ): SkillCombatSignature => {
     const profile = resolveCombatSkillProfile(skillId);
-    const levers = resolveDerivedTrinityLevers(trinity);
+    const levers = resolveTrinityLevers(trinity);
     const threatRange = evaluateCombatNumericFormula(profile.threatRange, trinity);
     const intentTags = profile.intentTags;
     const combatRow = DERIVED_SKILL_COMBAT_ROWS[skillId];
@@ -172,8 +125,9 @@ const resolveEnemyTypeFromSignatures = (
     trinity: TrinityStats,
     signatures: SkillCombatSignature[]
 ): bestiaryEnemyType => {
+    const tuning = resolveCombatTuning();
     const trinityTotal = trinity.body + trinity.mind + trinity.instinct;
-    if (trinityTotal >= COMBAT_TUNING_VARIABLES.enemyCombat.bossTrinityTotalThreshold) {
+    if (trinityTotal >= tuning.enemyCombat.bossTrinityTotalThreshold) {
         return 'boss';
     }
     const hasNonContactRangedPressure = signatures.some(signature =>
@@ -185,6 +139,7 @@ const resolveEnemyTypeFromSignatures = (
 export const deriveEnemyBestiaryStats = (
     input: EnemyBestiaryStatDerivationInput
 ): EnemyBestiaryDefinition['stats'] => {
+    const tuning = resolveCombatTuning();
     const skillIds = uniqueSkillIds(input.bestiarySkills, input.runtimeSkills);
     const signatures = skillIds.map(skillId => toSkillCombatSignature(skillId, input.trinity));
     const derivedHp = deriveMaxHpFromTrinity(input.trinity);
@@ -200,20 +155,20 @@ export const deriveEnemyBestiaryStats = (
             .map(signature => signature.threatRange)
     );
     const damage = Math.max(1, ...signatures.filter(signature => signature.isDamaging).map(signature => signature.representativeDamage));
-    const highInstinct = input.trinity.instinct >= COMBAT_TUNING_VARIABLES.enemyCombat.highInstinctThreshold;
+    const highInstinct = input.trinity.instinct >= tuning.enemyCombat.highInstinctThreshold;
     const hasMobilityBurstSkill = skillIds.some(skillId => COMBAT_MOVEMENT_BURST_SKILL_IDS.has(skillId));
     const speed = highInstinct && (hasMobilityBurstSkill || (type !== 'boss' && range <= 1))
-        ? COMBAT_TUNING_VARIABLES.enemyCombat.boostedSpeed
-        : COMBAT_TUNING_VARIABLES.enemyCombat.baseSpeed;
+        ? tuning.enemyCombat.boostedSpeed
+        : tuning.enemyCombat.baseSpeed;
     const hasHazardPressure = signatures.some(signature => signature.intentTags.includes('hazard'));
     const hasTelegraphPlaylist = skillIds.some(skillId => COMBAT_TELEGRAPH_SKILL_IDS.has(skillId))
         && skillIds.includes('SENTINEL_TELEGRAPH')
         && skillIds.includes('SENTINEL_BLAST');
     const actionCooldown = (type === 'boss' || hasTelegraphPlaylist)
-        ? COMBAT_TUNING_VARIABLES.enemyCombat.bossActionCooldown
-        : speed >= COMBAT_TUNING_VARIABLES.enemyCombat.boostedSpeed
+        ? tuning.enemyCombat.bossActionCooldown
+        : speed >= tuning.enemyCombat.boostedSpeed
             ? 1
-            : (hasHazardPressure && range >= 3 ? COMBAT_TUNING_VARIABLES.enemyCombat.hazardActionCooldown : COMBAT_TUNING_VARIABLES.enemyCombat.baseActionCooldown);
+            : (hasHazardPressure && range >= 3 ? tuning.enemyCombat.hazardActionCooldown : tuning.enemyCombat.baseActionCooldown);
 
     return {
         hp: derivedHp,

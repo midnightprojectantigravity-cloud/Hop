@@ -1,0 +1,108 @@
+{
+  "id": "FIREBALL",
+  "name": "Fireball",
+  "description": "Launch a sphere of flame. Range 3, Axial. Deals damage and leaves fire.",
+  "slot": "offensive",
+  "icon": "\ud83d\udd25",
+  "keywords": [
+    "FIRE",
+    "AXIAL",
+    "AOE"
+  ],
+  "baseVariables": {
+    "range": 3,
+    "cost": 1,
+    "cooldown": 2,
+    "basePower": 10,
+    "damage": 10
+  },
+  "combat": {
+    "damageClass": "magical",
+    "damageSubClass": "blast",
+    "damageElement": "fire",
+    "attackProfile": "spell",
+    "trackingSignature": "magic",
+    "weights": {
+      "mind": 1
+    }
+  },
+  "targeting": {
+    "generator": "axial_ray",
+    "range": 3,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [
+    {
+      "id": "fireball_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "targetFanOut": "selected_hex_plus_neighbors",
+      "resolution": "combat",
+      "reason": "fireball",
+      "includeDangerPreviewHex": true,
+      "theoreticalMaxPower": 1,
+      "statusMultiplierSources": [
+        {
+          "type": "surface_skill_power",
+          "skillId": "FIREBALL"
+        }
+      ]
+    },
+    {
+      "id": "fireball_surface",
+      "kind": "PLACE_SURFACE",
+      "phase": "resolution",
+      "surface": "fire",
+      "target": "selected_hex",
+      "targetFanOut": "selected_hex_plus_neighbors",
+      "duration": 3
+    },
+    {
+      "id": "fireball_flash",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "flash",
+      "target": "selected_hex",
+      "color": "#ff4400",
+      "metadata": {
+        "signature": "ATK.BLAST.FIRE.FIREBALL_IMPACT",
+        "family": "attack",
+        "primitive": "blast",
+        "phase": "impact",
+        "element": "fire",
+        "variant": "fireball",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "FIREBALL"
+      }
+    },
+    {
+      "id": "fireball_shake",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "shake",
+      "intensity": "medium",
+      "metadata": {
+        "signature": "UI.SHAKE.FIRE.FIREBALL",
+        "family": "ui",
+        "primitive": "shake",
+        "phase": "impact",
+        "element": "fire",
+        "variant": "fireball_shake",
+        "skillId": "FIREBALL",
+        "camera": {
+          "shake": "medium"
+        }
+      }
+    },
+    {
+      "id": "fireball_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Fireball!"
+    }
+  ],
+  "upgrades": {}
+}

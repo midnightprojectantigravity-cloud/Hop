@@ -16,9 +16,9 @@ describe('entity-factory trinity defaults', () => {
 
         expect(readTrinity(player.components)).toEqual({
             type: 'trinity',
-            body: 2,
-            mind: 9,
-            instinct: 4,
+            body: 5,
+            mind: 30,
+            instinct: 15,
         });
     });
 
@@ -63,7 +63,7 @@ describe('entity-factory trinity defaults', () => {
             type: 'trinity',
             body: 12,
             mind: 2,
-            instinct: 4,
+            instinct: 6,
         });
         expect(skeleton.hp).toBe(86);
         expect(skeleton.maxHp).toBe(86);
@@ -71,7 +71,48 @@ describe('entity-factory trinity defaults', () => {
         const skeletonSkills = new Set((skeleton.activeSkills || []).map(s => s.id));
         expect(skeletonSkills.has('BASIC_MOVE')).toBe(true);
         expect(skeletonSkills.has('BASIC_ATTACK')).toBe(true);
-        expect(skeletonSkills.has('AUTO_ATTACK')).toBe(true);
+        expect(skeletonSkills.has('ENEMY_AWARENESS')).toBe(true);
+        expect(skeleton.behaviorState?.controller).toBe('generic_ai');
+    });
+
+    it('applies summon overrides on top of the default skeleton baseline', () => {
+        const skeleton = createCompanion({
+            companionType: 'skeleton',
+            ownerId: 'necromancer',
+            ownerFactionId: 'enemy',
+            position: { q: 1, r: 1, s: -2 },
+            summon: {
+                companionType: 'skeleton',
+                visualAssetRef: '/Hop/assets/bestiary/unit.skeleton.basic.01.webp',
+                trinity: { body: 20, mind: 6, instinct: 3 },
+                skills: ['BASIC_MOVE', 'DEATH_TOUCH'],
+                behavior: {
+                    controller: 'manual',
+                    anchorActorId: 'owner',
+                    overlays: [{
+                        id: 'skeleton_guard',
+                        source: 'summon',
+                        sourceId: 'raise_dead',
+                        desiredRange: 1
+                    }]
+                }
+            }
+        });
+
+        expect(readTrinity(skeleton.components)).toEqual({
+            type: 'trinity',
+            body: 20,
+            mind: 6,
+            instinct: 3,
+        });
+        expect(skeleton.factionId).toBe('enemy');
+        expect(skeleton.visualAssetRef).toBe('/Hop/assets/bestiary/unit.skeleton.basic.01.webp');
+        expect(skeleton.behaviorState?.controller).toBe('manual');
+        expect(skeleton.behaviorState?.anchorActorId).toBe('necromancer');
+        expect(skeleton.behaviorState?.overlays[0]?.sourceId).toBe('raise_dead');
+        const skeletonSkills = new Set((skeleton.activeSkills || []).map(s => s.id));
+        expect(skeletonSkills.has('BASIC_MOVE')).toBe(true);
+        expect(skeletonSkills.has('DEATH_TOUCH')).toBe(true);
     });
 
     it('preserves explicit trinity override when provided', () => {

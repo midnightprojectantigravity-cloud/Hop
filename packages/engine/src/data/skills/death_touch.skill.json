@@ -1,0 +1,73 @@
+{
+  "id": "DEATH_TOUCH",
+  "name": "Death Touch",
+  "description": "Touch a target and deal death elemental damage. Range 1.",
+  "slot": "offensive",
+  "icon": "\u2620\ufe0f",
+  "keywords": [
+    "DEATH",
+    "TOUCH",
+    "MAGICAL"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 1,
+    "cooldown": 1,
+    "basePower": 20,
+    "damage": 40
+  },
+  "combat": {
+    "damageClass": "magical",
+    "damageSubClass": "touch",
+    "damageElement": "death",
+    "attackProfile": "spell",
+    "trackingSignature": "melee",
+    "weights": {
+      "mind": 1
+    }
+  },
+  "metabolicBandProfile": {
+    "bandId": "heavy",
+    "resourceMode": "mana_only",
+    "countsAsMovement": false,
+    "countsAsAction": true,
+    "travelEligible": false,
+    "manaCostOffset": -1,
+    "baseStrainOffset": -3,
+    "scopeTags": [
+      "player_default"
+    ]
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 1,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "OCCUPANCY",
+        "occupied": true
+      },
+      {
+        "type": "FACTION_RELATION",
+        "relation": "enemy"
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "death_touch_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "target_actor",
+      "resolution": "combat",
+      "reason": "death_touch"
+    },
+    {
+      "id": "death_touch_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Death Touch!"
+    }
+  ],
+  "upgrades": {}
+}

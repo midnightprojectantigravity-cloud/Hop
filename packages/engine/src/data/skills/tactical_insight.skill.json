@@ -1,0 +1,41 @@
+{
+  "id": "TACTICAL_INSIGHT",
+  "name": "Tactical Insight",
+  "description": "Reveal enemy intent badge with sufficient Instinct.",
+  "slot": "passive",
+  "icon": "TI",
+  "keywords": [
+    "PASSIVE",
+    "AWARENESS",
+    "INTENT"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "information": [
+      {
+        "domain": "information",
+        "providerId": "tactical_insight.intent",
+        "priority": 20,
+        "kind": "tactical_insight_v1",
+        "reveal": {
+          "intentBadge": true
+        },
+        "minViewerStat": {
+          "stat": "instinct",
+          "minimum": 10
+        }
+      }
+    ]
+  },
+  "upgrades": {}
+}

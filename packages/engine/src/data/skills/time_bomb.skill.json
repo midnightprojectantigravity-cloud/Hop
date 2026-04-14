@@ -1,0 +1,111 @@
+{
+  "id": "TIME_BOMB",
+  "name": "Time Bomb",
+  "description": "Detonates when the fuse reaches zero.",
+  "slot": "passive",
+  "icon": "\ud83d\udca5",
+  "keywords": [
+    "FIRE",
+    "BLAST",
+    "DELAYED"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0,
+    "damage": 1
+  },
+  "targeting": {
+    "generator": "self",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [
+    {
+      "id": "time_bomb_01_neighbors",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "targetFanOut": "selected_neighbors_only",
+      "amount": 1,
+      "reason": "bomb_explosion",
+      "damageClass": "magical",
+      "damageSubClass": "blast",
+      "damageElement": "fire",
+      "conditions": [
+        {
+          "type": "STATUS_DURATION",
+          "target": "caster",
+          "statusId": "time_bomb",
+          "op": "lte",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "time_bomb_02_self",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "self",
+      "amount": 999,
+      "reason": "bomb_explosion",
+      "damageClass": "magical",
+      "damageSubClass": "blast",
+      "damageElement": "fire",
+      "conditions": [
+        {
+          "type": "STATUS_DURATION",
+          "target": "caster",
+          "statusId": "time_bomb",
+          "op": "lte",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "time_bomb_03_ring",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "explosion_ring",
+      "target": "selected_hex",
+      "intensity": "high",
+      "metadata": {
+        "signature": "ATK.BLAST.FIRE.TIME_BOMB",
+        "family": "attack",
+        "primitive": "blast",
+        "phase": "impact",
+        "element": "fire",
+        "variant": "time_bomb",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "TIME_BOMB"
+      },
+      "conditions": [
+        {
+          "type": "STATUS_DURATION",
+          "target": "caster",
+          "statusId": "time_bomb",
+          "op": "lte",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "time_bomb_04_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "A bomb exploded!",
+      "conditions": [
+        {
+          "type": "STATUS_DURATION",
+          "target": "caster",
+          "statusId": "time_bomb",
+          "op": "lte",
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "upgrades": {}
+}

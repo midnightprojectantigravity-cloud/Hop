@@ -1,0 +1,83 @@
+{
+  "id": "FALCON_HEAL",
+  "name": "Roost Heal",
+  "description": "The falcon roosts and restores health to its companion.",
+  "slot": "utility",
+  "icon": "\u2728",
+  "keywords": [
+    "COMPANION",
+    "HEAL"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 0,
+    "cooldown": 1
+  },
+  "targeting": {
+    "generator": "owner_hex",
+    "range": 1,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": []
+  },
+  "targetingVariants": [
+    {
+      "when": [
+        {
+          "type": "COMPANION_STATE_NUMBER",
+          "target": "caster",
+          "field": "healCooldown",
+          "op": "gte",
+          "value": 1
+        }
+      ],
+      "targeting": {
+        "generator": "self",
+        "range": 0,
+        "predicates": []
+      }
+    }
+  ],
+  "combatScript": [
+    {
+      "id": "falcon_heal_01_heal",
+      "kind": "HEAL",
+      "phase": "resolution",
+      "target": "owner",
+      "amount": 1
+    },
+    {
+      "id": "falcon_heal_02_flash",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "flash",
+      "targetActor": "owner",
+      "color": "#00ff88",
+      "metadata": {
+        "signature": "STATE.APPLY.HOLY.FALCON_HEAL",
+        "family": "status",
+        "primitive": "status_apply",
+        "phase": "impact",
+        "element": "holy",
+        "variant": "falcon_heal",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "FALCON_HEAL"
+      }
+    },
+    {
+      "id": "falcon_heal_03_cooldown",
+      "kind": "UPDATE_COMPANION_STATE",
+      "phase": "cleanup",
+      "target": "self",
+      "healCooldown": 1
+    },
+    {
+      "id": "falcon_heal_04_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Falcon roosts. You feel restored."
+    }
+  ],
+  "upgrades": {}
+}

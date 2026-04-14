@@ -1170,12 +1170,13 @@ const createAuthoredActor = ({
     const resolvedGoal = goal || scenario.simulation.goalBySide?.[side] || (side === 'player' ? 'explore' : 'engage');
     const actorType = compiledActorId === 'player' ? 'player' : 'enemy';
     const inferredArchetype = actorType === 'player' ? resolvePlayerArchetypeId(entityDefinition) : undefined;
-    const actor = createEntity({
-        id: compiledActorId,
-        type: actorType,
-        subtype: subtypeRef,
-        position: point,
-        hp: derived.hp,
+      const actor = createEntity({
+          id: compiledActorId,
+          type: actorType,
+          subtype: subtypeRef,
+          visualAssetRef: entityDefinition.visualAssetRef,
+          position: point,
+          hp: derived.hp,
         maxHp: derived.maxHp,
         speed: derived.speed,
         factionId: side === 'enemy' ? 'enemy' : 'player',

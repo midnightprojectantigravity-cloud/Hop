@@ -1,0 +1,38 @@
+{
+  "id": "ORACLE_SIGHT",
+  "name": "Oracle's Sight",
+  "description": "Reveal top enemy action utilities when provided by caller context.",
+  "slot": "passive",
+  "icon": "OS",
+  "keywords": [
+    "PASSIVE",
+    "REVEAL",
+    "INTEL"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "information": [
+      {
+        "domain": "information",
+        "providerId": "oracle_sight.utilities",
+        "priority": 30,
+        "kind": "oracle_sight_v1",
+        "reveal": {
+          "topActionUtilities": true
+        },
+        "requireTopActionUtilities": true
+      }
+    ]
+  },
+  "upgrades": {}
+}

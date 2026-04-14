@@ -5,6 +5,8 @@
  * ALWAYS use these literal union types instead of 'string'.
  */
 
+import type { GeneratedRuntimeSkillID } from '../generated/skill-runtime.generated';
+
 /** All known Tile IDs */
 export type TileID =
     | 'GRASS'
@@ -59,6 +61,7 @@ export type SkillID =
     | 'SENTINEL_TELEGRAPH'
     | 'SENTINEL_BLAST'
     | 'FIREBALL'
+    | 'DEATH_TOUCH'
     | 'SPEAR_THROW'
     | 'ARCHER_SHOT'
     | 'CORPSE_EXPLOSION'
@@ -84,7 +87,8 @@ export type SkillID =
     | 'FALCON_AUTO_ROOST'
     | 'KINETIC_TRI_TRAP'
     | 'WITHDRAWAL'
-    | 'ABSORB_FIRE';
+    | 'ABSORB_FIRE'
+    | GeneratedRuntimeSkillID;
 
 /** All known Status Effect Types */
 export type StatusID =

@@ -22,6 +22,8 @@ import { extractTrinityStats } from './combat/combat-calculator';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from './combat/combat-effect';
 import { resolveForce } from './combat/force';
 import { resolveActorForceScalars } from './combat/force-scalars';
+import { normalizeCombatDamageTaxonomy } from './combat/damage-taxonomy';
+import type { UpgradeModifier } from '../data/contracts';
 
 interface RuntimeScalarContext {
     body: number;
@@ -42,8 +44,16 @@ const applyRoundMode = (value: number, round: ScalarExpression['round']): number
 };
 
 const evalScalar = (expr: ScalarExpression, ctx: RuntimeScalarContext): number => {
-    let value = expr.base;
-    for (const term of expr.scaling || []) value += (ctx[term.stat] ?? 0) * term.coefficient;
+    const scale = Number.isFinite(expr.coefficientScale) && Number(expr.coefficientScale || 0) > 0
+        ? Number(expr.coefficientScale)
+        : 1;
+    let value = Number.isFinite(expr.scaledBase) ? Number(expr.scaledBase) / scale : Number(expr.base || 0);
+    for (const term of expr.scaling || []) {
+        const coefficient = Number.isFinite(term.scaledCoefficient)
+            ? Number(term.scaledCoefficient) / scale
+            : Number(term.coefficient || 0);
+        value += (ctx[term.stat] ?? 0) * coefficient;
+    }
     value = applyRoundMode(value, expr.round);
     if (expr.min !== undefined) value = Math.max(expr.min, value);
     if (expr.max !== undefined) value = Math.min(expr.max, value);
@@ -122,6 +132,13 @@ const buildScalarContext = (attacker: Actor, context?: Record<string, unknown>):
     };
 };
 
+const resolveAttackProfileFromSubClass = (damageSubClass: string | undefined): 'melee' | 'projectile' | 'spell' | 'status' => {
+    if (damageSubClass === 'shot' || damageSubClass === 'piercing') return 'projectile';
+    if (damageSubClass === 'blast' || damageSubClass === 'spell') return 'spell';
+    if (damageSubClass === 'status') return 'status';
+    return 'melee';
+};
+
 const resolveTargetActorId = (state: GameState, target?: Point): string | undefined => {
     if (!target) return undefined;
     const actor = getActorAt(state, target);
@@ -143,7 +160,12 @@ const convertEffect = (
         const amount = Math.max(0, Math.floor(evalScalar(effect.amount, scalarCtx)));
         const targetActorId = resolveTargetActorId(state, target);
         const targetActor = targetActorId ? getActorAt(state, target || attacker.position) : undefined;
-        const effectiveDamageClass = effect.damageClass === 'magical' ? 'magical' : 'physical';
+        const taxonomy = normalizeCombatDamageTaxonomy({
+            damageClass: effect.damageClass,
+            damageSubClass: effect.damageSubClass,
+            damageElement: effect.damageElement,
+            attackProfile: resolveAttackProfileFromSubClass(effect.damageSubClass)
+        });
         const effectTarget = effect.target.selector === 'targetActor'
             ? (targetActorId || 'targetActor')
             : (effect.target.selector === 'self' ? attacker.id : (target || 'targetActor'));
@@ -154,12 +176,16 @@ const convertEffect = (
             skillId: effect.reason || skillId,
             basePower: amount,
             skillDamageMultiplier: 0,
-            damageClass: effectiveDamageClass,
+            damageClass: taxonomy.damageClass,
+            damageSubClass: taxonomy.damageSubClass,
+            damageElement: taxonomy.damageElement,
             combat: {
-                damageClass: effectiveDamageClass,
-                attackProfile: effectiveDamageClass === 'magical' ? 'spell' : 'melee',
-                trackingSignature: effectiveDamageClass === 'magical' ? 'magic' : 'melee',
-                weights: effectiveDamageClass === 'magical'
+                damageClass: taxonomy.damageClass,
+                damageSubClass: taxonomy.damageSubClass,
+                damageElement: taxonomy.damageElement,
+                attackProfile: taxonomy.damageClass === 'magical' ? 'spell' : 'melee',
+                trackingSignature: taxonomy.damageClass === 'magical' ? 'magic' : 'melee',
+                weights: taxonomy.damageClass === 'magical'
                     ? { body: 0, mind: 1, instinct: 0 }
                     : { body: 1, mind: 0, instinct: 0 }
             },
@@ -245,12 +271,41 @@ const getSortedTargets = (state: GameState, origin: Point, range: number, sortMo
 export const materializeCompositeSkill = (def: CompositeSkillDefinition): SkillDefinition => {
     const damageBase = def.baseAction.effects.find(e => e.kind === 'DEAL_DAMAGE') as any;
     const momentumBase = def.baseAction.effects.find(e => e.kind === 'APPLY_FORCE') as any;
+    const damageScale = Number.isFinite(damageBase?.amount?.coefficientScale) && Number(damageBase.amount.coefficientScale || 0) > 0
+        ? Number(damageBase.amount.coefficientScale)
+        : 1;
+    const momentumScale = Number.isFinite(momentumBase?.force?.magnitude?.coefficientScale) && Number(momentumBase.force.magnitude.coefficientScale || 0) > 0
+        ? Number(momentumBase.force.magnitude.coefficientScale)
+        : 1;
     const upgrades: Record<string, SkillModifier> = {};
     def.upgrades.forEach(upgrade => {
+        const numericModifiers = upgrade.modifiers.filter(
+            (mod): mod is Extract<UpgradeModifier, { op: 'modify_number' }> => mod.op === 'modify_number'
+        );
         upgrades[upgrade.id] = {
             id: upgrade.id,
             name: upgrade.name,
-            description: upgrade.description || upgrade.name
+            description: upgrade.description || upgrade.name,
+            tier: upgrade.tier,
+            priority: upgrade.priority,
+            groupId: upgrade.groupId,
+            exclusiveGroup: upgrade.exclusiveGroup,
+            requires: [...(upgrade.requires || [])],
+            requiredUpgrades: [...(upgrade.requiredUpgrades || [])],
+            compatibilityTags: [...(upgrade.compatibilityTags || [])],
+            incompatibleWith: [...(upgrade.incompatibleWith || [])],
+            modifyRange: numericModifiers
+                .filter(mod => mod.field === 'baseAction.range')
+                .reduce((sum, mod) => sum + (Number(mod.value) || 0), 0),
+            modifyCooldown: numericModifiers
+                .filter(mod => mod.field === 'baseAction.costs.cooldown')
+                .reduce((sum, mod) => sum + (Number(mod.value) || 0), 0),
+            modifyDamage: numericModifiers
+                .filter(mod => mod.field === 'baseVariables.damage')
+                .reduce((sum, mod) => sum + (Number(mod.value) || 0), 0),
+            requiresStationary: upgrade.requiresStationary,
+            patches: upgrade.patches?.map(patch => ({ ...patch })),
+            extraEffects: []
         };
     });
 
@@ -264,8 +319,16 @@ export const materializeCompositeSkill = (def: CompositeSkillDefinition): SkillD
             range: def.targeting.range,
             cost: def.baseAction.costs.energy,
             cooldown: def.baseAction.costs.cooldown,
-            damage: damageBase?.amount?.base,
-            momentum: momentumBase?.force?.magnitude?.base
+            damage: damageBase
+                ? (Number.isFinite(damageBase.amount?.scaledBase)
+                    ? Number(damageBase.amount.scaledBase) / damageScale
+                    : Number(damageBase.amount?.base || 0))
+                : undefined,
+            momentum: momentumBase
+                ? (Number.isFinite(momentumBase.force?.magnitude?.scaledBase)
+                    ? Number(momentumBase.force.magnitude.scaledBase) / momentumScale
+                    : Number(momentumBase.force?.magnitude?.base || 0))
+                : undefined
         },
         execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = [], context: Record<string, unknown> = {}) => {
             const inhibitTags = new Set<string>((context.inhibitTags as string[] | undefined) || []);

@@ -2,6 +2,7 @@ import { hexEquals } from '../../hex';
 import type { Actor, Point } from '../../types';
 import { appendTaggedMessage } from '../engine-messages';
 import { appendJuiceSignature, buildJuiceSequenceId, getHexEdgeContactWorld, getLegacyJuiceSignatureTemplate } from '../visual/juice-signature';
+import { addDyingEntityOnce, shouldLeaveCorpse } from './corpse-utils';
 import type { AtomicEffectHandlerMap } from './types';
 
 export const juiceEffectHandlers: AtomicEffectHandlerMap = {
@@ -142,12 +143,14 @@ export const juiceEffectHandlers: AtomicEffectHandlerMap = {
             if (targetPos) {
                 const dying = nextState.enemies.find((e: Actor) => hexEquals(e.position, targetPos));
                 if (dying) {
-                    nextState.dyingEntities = [...(nextState.dyingEntities || []), dying];
+                    nextState = addDyingEntityOnce(nextState, dying);
                     nextState.enemies = nextState.enemies.filter((e: Actor) => !hexEquals(e.position, targetPos));
                     if (nextState.companions) {
                         nextState.companions = nextState.companions.filter((e: Actor) => !hexEquals(e.position, targetPos));
                     }
-                    nextState = api.addCorpseTraitAt(nextState, targetPos);
+                    if (shouldLeaveCorpse(dying)) {
+                        nextState = api.addCorpseTraitAt(nextState, targetPos);
+                    }
                     nextState.visualEvents = [...(nextState.visualEvents || []), { type: 'vfx', payload: { type: 'vaporize', position: targetPos } }];
                 }
             }

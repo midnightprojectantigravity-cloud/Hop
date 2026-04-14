@@ -1,0 +1,41 @@
+{
+  "id": "BURROW",
+  "name": "Burrow",
+  "description": "Extend movement to tunnel through walls and hazards.",
+  "slot": "passive",
+  "icon": "BU",
+  "keywords": [
+    "PASSIVE",
+    "MOVEMENT",
+    "TUNNEL"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "movement": [
+      {
+        "domain": "movement",
+        "providerId": "burrow.movement",
+        "priority": 20,
+        "kind": "burrow_extend_v1",
+        "resolutionMode": "EXTEND",
+        "model": {
+          "ignoreGroundHazards": true,
+          "ignoreWalls": true,
+          "allowPassThroughActors": false,
+          "rangeModifier": 0
+        }
+      }
+    ]
+  },
+  "upgrades": {}
+}

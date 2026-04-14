@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
-import { hexToPixel, TILE_SIZE, type GameState, type Point, type SimulationEvent } from '@hop/engine';
+import { hexEquals, hexToPixel, TILE_SIZE, type Actor, type GameState, type Point, type SimulationEvent } from '@hop/engine';
 import type { BoardEventDigest } from './board-event-digest';
 import type { EntityPoseEffect } from './board-juice-presentation-types';
 
@@ -31,8 +31,20 @@ export const useBoardEventEffects = ({
     const processedSimulationEventCountRef = useRef(0);
     const processedSimulationPoseCountRef = useRef(0);
 
+    const resolveDeathDecalHrefForPosition = useCallback((position: Point): string | undefined => {
+        if (!deathDecalHref) return undefined;
+        const deadActor: Actor | undefined = gameState.dyingEntities?.find(actor => hexEquals(actor.position, position))
+            || (hexEquals(gameState.player.position, position) && gameState.player.hp <= 0 ? gameState.player : undefined)
+            || gameState.companions?.find(actor => hexEquals(actor.position, position))
+            || gameState.enemies?.find(actor => hexEquals(actor.position, position));
+
+        if (deadActor?.subtype === 'skeleton' && deadActor.companionOf) {
+            return undefined;
+        }
+        return deathDecalHref;
+    }, [deathDecalHref, gameState.companions, gameState.dyingEntities, gameState.enemies, gameState.player]);
+
     useEffect(() => {
-        if (!deathDecalHref) return;
         const timelineEvents = boardEventDigest.timelineDeathEvents;
         const visualEvents = boardEventDigest.deathDecalVisualEvents;
         if (timelineEvents.length < processedTimelineDecalCountRef.current) {
@@ -51,19 +63,23 @@ export const useBoardEventEffects = ({
         const now = Date.now();
 
         for (const ev of newTimeline) {
+            const href = resolveDeathDecalHrefForPosition(ev.position);
+            if (!href) continue;
             additions.push({
                 id: `decal-tl-${ev.id}-${now}-${additions.length}`,
                 position: ev.position,
-                href: deathDecalHref,
+                href,
                 createdAt: now
             });
         }
 
         for (const ev of newVisual) {
+            const href = resolveDeathDecalHrefForPosition(ev.position);
+            if (!href) continue;
             additions.push({
                 id: `decal-vx-${ev.id}-${now}-${additions.length}`,
                 position: ev.position,
-                href: deathDecalHref,
+                href,
                 createdAt: now
             });
         }
@@ -71,7 +87,7 @@ export const useBoardEventEffects = ({
         if (additions.length > 0) {
             setDecals(prev => [...prev, ...additions].slice(-80));
         }
-    }, [boardEventDigest.deathDecalVisualEvents, boardEventDigest.timelineDeathEvents, deathDecalHref, setDecals]);
+    }, [boardEventDigest.deathDecalVisualEvents, boardEventDigest.timelineDeathEvents, resolveDeathDecalHrefForPosition, setDecals]);
 
     useEffect(() => {
         const events = boardEventDigest.simulationEventsRef;

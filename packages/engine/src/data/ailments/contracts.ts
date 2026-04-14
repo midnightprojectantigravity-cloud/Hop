@@ -13,10 +13,13 @@ export type AilmentVariableRef =
 export interface AilmentFormulaTerm {
     variable: AilmentVariableRef;
     coefficient: number;
+    scaledCoefficient?: number;
 }
 
 export interface AilmentFormulaExpression {
     base: number;
+    scaledBase?: number;
+    coefficientScale?: number;
     terms?: AilmentFormulaTerm[];
     min?: number;
     max?: number;
@@ -82,4 +85,3 @@ export interface AilmentCatalog {
     version: string;
     ailments: AilmentDefinition[];
 }
-

@@ -12,6 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const engineRoot = path.resolve(__dirname, '..');
 const skillsDir = path.join(engineRoot, 'src', 'skills');
+const runtimeSkillsDir = path.join(engineRoot, 'src', 'data', 'skills');
 const generatedDir = path.join(engineRoot, 'src', 'generated');
 const generatedFile = path.join(generatedDir, 'skill-registry.generated.ts');
 const manualRegistryFile = path.join(engineRoot, 'src', 'skillRegistry.ts');
@@ -61,6 +62,19 @@ const loadPreferredOrder = async (): Promise<string[]> => {
 };
 
 const collectSkillExports = async (): Promise<SkillExportRef[]> => {
+    const runtimeSkillIds = new Set<string>();
+    try {
+        const runtimeEntries = await fs.readdir(runtimeSkillsDir, { withFileTypes: true });
+        for (const entry of runtimeEntries) {
+            if (!entry.isFile() || !entry.name.endsWith('.skill.json')) continue;
+            const source = await fs.readFile(path.join(runtimeSkillsDir, entry.name), 'utf8');
+            const idMatch = source.match(/"id"\s*:\s*"([A-Z0-9_]+)"/);
+            if (idMatch?.[1]) runtimeSkillIds.add(idMatch[1]);
+        }
+    } catch {
+        // Runtime skills are optional during bootstrap.
+    }
+
     const dirEntries = await fs.readdir(skillsDir, { withFileTypes: true });
     const files = dirEntries
         .filter(entry => entry.isFile() && entry.name.endsWith('.ts') && !entry.name.endsWith('.d.ts'))
@@ -79,6 +93,9 @@ const collectSkillExports = async (): Promise<SkillExportRef[]> => {
         if (exports.length === 0) continue;
 
         for (const { exportName, skillId } of exports) {
+            if (skillId && runtimeSkillIds.has(skillId)) {
+                continue;
+            }
             if (seenExportNames.has(exportName)) {
                 throw new Error(`Duplicate skill export name detected: ${exportName}`);
             }

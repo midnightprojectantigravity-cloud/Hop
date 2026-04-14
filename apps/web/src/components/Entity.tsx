@@ -28,7 +28,7 @@ const EntityBase: React.FC<EntityProps> = ({
     synapsePulseToken,
     registerActorNodes,
 }) => {
-    const isPlayer = entity.type === 'player';
+    const isPlayer = entity.factionId === 'player';
     const {
         resolvedAssetHref,
         handleAssetError,
@@ -122,4 +122,3 @@ const EntityBase: React.FC<EntityProps> = ({
 };
 
 export const Entity = React.memo(EntityBase, areEntityPropsEqual);
-

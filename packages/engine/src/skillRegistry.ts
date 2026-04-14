@@ -7,9 +7,13 @@ import type { SkillDefinition } from './types';
 import type { SkillID } from './types/registry';
 import { hydrateSkillIntentProfiles } from './systems/skill-intent-profile';
 import { getCompositeSkillRuntimeRegistry } from './systems/composite-skill-bridge';
+import { getRuntimeSkillDefinition, getRuntimeSkillLegacyRegistry } from './systems/skill-runtime/bridge';
+import { resolveSkillRuntime } from './systems/skill-runtime/resolve';
 import { GENERATED_COMPOSITIONAL_SKILLS } from './generated/skill-registry.generated';
 import { registerCapabilitySkillDefinitionResolver } from './systems/capabilities/cache';
 import { resolveSkillMetabolicBandProfile, resolveSkillResourceProfile } from './systems/ires';
+import { resolveVirtualSkillDefinition } from './systems/skill-upgrade-resolution';
+import { hexEquals } from './hex';
 
 /**
  * A registry of all skills using the new Compositional Skill Framework.
@@ -19,9 +23,15 @@ export const COMPOSITIONAL_SKILLS = GENERATED_COMPOSITIONAL_SKILLS;
 let skillIntentCoverageValidated = false;
 let capabilityResolverRegistered = false;
 
-const ensureSkillIntentCoverageValidated = (): void => {
+const getBaseRegistry = (): Record<string, SkillDefinition> => ({
+    ...(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>),
+    ...getCompositeSkillRuntimeRegistry(),
+    ...getRuntimeSkillLegacyRegistry()
+});
+
+const ensureSkillIntentCoverageValidated = (registry: Record<string, SkillDefinition>): void => {
     if (skillIntentCoverageValidated) return;
-    const skillIntentCoverage = hydrateSkillIntentProfiles(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>);
+    const skillIntentCoverage = hydrateSkillIntentProfiles(registry);
     if (skillIntentCoverage.missing.length > 0 || skillIntentCoverage.invalid.length > 0) {
         const missing = skillIntentCoverage.missing.join(', ');
         const invalid = skillIntentCoverage.invalid.map(x => `${x.skillId}: ${x.errors.join('; ')}`).join(' | ');
@@ -31,15 +41,12 @@ const ensureSkillIntentCoverageValidated = (): void => {
 };
 
 const getMergedRegistry = (): Record<string, SkillDefinition> => {
-    ensureSkillIntentCoverageValidated();
+    const registry = getBaseRegistry();
+    ensureSkillIntentCoverageValidated(registry);
     if (!capabilityResolverRegistered) {
         registerCapabilitySkillDefinitionResolver((skillId: string) => SkillRegistry.get(skillId));
         capabilityResolverRegistered = true;
     }
-    const registry = {
-        ...(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>),
-        ...getCompositeSkillRuntimeRegistry()
-    };
     return Object.fromEntries(
         Object.entries(registry).map(([skillId, def]) => {
             const metabolicBandProfile = def.metabolicBandProfile || resolveSkillMetabolicBandProfile(skillId);
@@ -74,6 +81,7 @@ export function createActiveSkill(id: SkillID | string): any {
         range: def.baseVariables.range || 0,
         upgrades: Object.keys(def.upgrades || {}),
         activeUpgrades: [],
+        deathDecalVariant: def.deathDecalVariant,
         energyCost: def.baseVariables.cost,
     };
 }
@@ -94,7 +102,7 @@ export function createDefaultSkills(): any[] {
 
 // Export as SkillRegistry for convenience
 const SkillRegistryBase = {
-    ...COMPOSITIONAL_SKILLS,
+    ...getBaseRegistry(),
 
     /**
      * Find a skill definition by ID.
@@ -143,15 +151,14 @@ const SkillRegistryBase = {
         const skill = (actor.activeSkills || []).find((s: any) => s.id === skillId);
         const def = getMergedRegistry()[skillId];
         if (!def) return skill?.range || 0;
-
-        let range = def.baseVariables.range;
-        if (skill?.activeUpgrades) {
-            skill.activeUpgrades.forEach((upId: string) => {
-                const mod = def.upgrades[upId];
-                if (mod?.modifyRange) range += mod.modifyRange;
-            });
+        const runtimeDef = getRuntimeSkillDefinition(skillId);
+        if (runtimeDef) {
+            const resolved = resolveSkillRuntime(runtimeDef, skill?.activeUpgrades || [], 'none');
+            return resolved.runtime.baseVariables.range;
         }
-        return range;
+        const heldPosition = !!(actor?.position && actor?.previousPosition && hexEquals(actor.previousPosition, actor.position));
+        const resolved = resolveVirtualSkillDefinition(def, skill?.activeUpgrades || [], { heldPosition });
+        return resolved.skill.baseVariables.range;
     }
 };
 

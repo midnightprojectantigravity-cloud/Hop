@@ -1,0 +1,1095 @@
+{
+  "id": "SPEAR_THROW",
+  "name": "Spear Throw",
+  "description": "Throw your spear to instantly kill an enemy.",
+  "slot": "offensive",
+  "icon": "\ud83d\udd31",
+  "keywords": [
+    "PROJECTILE",
+    "PHYSICAL",
+    "ITEM"
+  ],
+  "baseVariables": {
+    "range": 3,
+    "cost": 0,
+    "cooldown": 0,
+    "damage": 1
+  },
+  "combat": {
+    "damageClass": "physical",
+    "attackProfile": "projectile",
+    "trackingSignature": "projectile",
+    "weights": {
+      "body": 1,
+      "instinct": 1
+    }
+  },
+  "targeting": {
+    "generator": "axial_ray",
+    "range": 3,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "OCCUPANCY",
+        "occupied": true
+      },
+      {
+        "type": "FACTION_RELATION",
+        "relation": "enemy"
+      },
+      {
+        "type": "LINE_OF_SIGHT",
+        "value": true
+      }
+    ]
+  },
+  "targetingVariants": [
+    {
+      "when": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": false
+        }
+      ],
+      "targeting": {
+        "generator": "self",
+        "range": 0,
+        "predicates": []
+      }
+    }
+  ],
+  "presentationVariants": [
+    {
+      "when": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": false
+        }
+      ],
+      "name": "Recall Spear",
+      "description": "Recall your spear, damaging enemies in its path."
+    }
+  ],
+  "combatScript": [
+    {
+      "id": "spear_throw_01_throw_aim",
+      "kind": "EMIT_JUICE",
+      "phase": "declare",
+      "effect": "aimingLaser",
+      "target": "selected_hex",
+      "pathRef": "caster_to_selected",
+      "intensity": "low",
+      "color": "#ff6b6b",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_02_throw_trace",
+      "kind": "TRACE_PROJECTILE",
+      "phase": "declare",
+      "target": "selected_hex",
+      "mode": "target_actor",
+      "stopAtWalls": true,
+      "stopAtActors": true,
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_03_lunge_move",
+      "kind": "MOVE_ACTOR",
+      "phase": "movement",
+      "actor": "self",
+      "destination": "selected_hex",
+      "mode": "STEP",
+      "simulatePath": true,
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "LUNGE"
+        },
+        {
+          "type": "DISTANCE",
+          "op": "eq",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_04_throw_trail",
+      "kind": "EMIT_JUICE",
+      "phase": "movement",
+      "effect": "spearTrail",
+      "pathRef": "caster_to_impact",
+      "intensity": "high",
+      "duration": 150,
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_05_throw_whistle",
+      "kind": "EMIT_JUICE",
+      "phase": "movement",
+      "effect": "spearWhistle",
+      "pathRef": "caster_to_impact",
+      "intensity": "medium",
+      "metadata": {
+        "pitch": "rising"
+      },
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_06_lunge_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "target_actor",
+      "resolution": "combat",
+      "reason": "spear_throw",
+      "basePower": 99,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "body": 1,
+        "instinct": 1
+      },
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "LUNGE"
+        },
+        {
+          "type": "DISTANCE",
+          "op": "eq",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_07_lunge_bleed",
+      "kind": "APPLY_AILMENT",
+      "phase": "resolution",
+      "target": "target_actor",
+      "ailment": "bleed",
+      "skillMultiplier": 12,
+      "baseDeposit": 1,
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "LUNGE"
+        },
+        {
+          "type": "DISTANCE",
+          "op": "eq",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_08_lunge_arc_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "targetFanOut": "selected_neighbors_only",
+      "resolution": "combat",
+      "reason": "spear_throw",
+      "basePower": 1,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "body": 1
+      },
+      "combatPointTargetMode": "actor_only",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "LUNGE"
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "LUNGE_ARC"
+        },
+        {
+          "type": "DISTANCE",
+          "op": "eq",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_09_lunge_arc_bleed",
+      "kind": "APPLY_AILMENT",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "targetFanOut": "selected_neighbors_only",
+      "ailment": "bleed",
+      "skillMultiplier": 8,
+      "baseDeposit": 1,
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "LUNGE"
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "LUNGE_ARC"
+        },
+        {
+          "type": "DISTANCE",
+          "op": "eq",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_10_throw_impact",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "heavyImpact",
+      "target": "impact_hex",
+      "intensity": "extreme",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.HEAVY",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "impact",
+        "element": "physical",
+        "variant": "heavy_impact",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_hex"
+        }
+      },
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_11_throw_shake",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "shake",
+      "intensity": "medium",
+      "metadata": {
+        "signature": "UI.SHAKE.NEUTRAL.CAMERA",
+        "family": "ui",
+        "primitive": "shake",
+        "phase": "instant",
+        "element": "neutral",
+        "variant": "camera_shake",
+        "camera": {
+          "shake": "medium"
+        }
+      },
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_12_throw_freeze",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "freeze",
+      "duration": 60,
+      "metadata": {
+        "signature": "UI.FREEZE.NEUTRAL.HITSTOP",
+        "family": "ui",
+        "primitive": "freeze",
+        "phase": "instant",
+        "element": "neutral",
+        "variant": "hitstop",
+        "camera": {
+          "freezeMs": 60
+        },
+        "timing": {
+          "durationMs": 60,
+          "ttlMs": 60
+        }
+      },
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_13_throw_text",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "combat_text",
+      "target": "impact_hex",
+      "text": "LETHAL",
+      "color": "#ff0000",
+      "metadata": {
+        "signature": "UI.TEXT.NEUTRAL.POPUP",
+        "family": "ui",
+        "primitive": "text",
+        "phase": "instant",
+        "element": "neutral",
+        "variant": "combat_text",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "textTone": "system"
+      },
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_14_throw_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "impact_actor",
+      "resolution": "combat",
+      "reason": "spear_throw",
+      "basePower": 99,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "attackProfile": "projectile",
+      "trackingSignature": "projectile",
+      "weights": {
+        "body": 1,
+        "instinct": 1
+      },
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_15_throw_bleed",
+      "kind": "APPLY_AILMENT",
+      "phase": "resolution",
+      "target": "impact_actor",
+      "ailment": "bleed",
+      "skillMultiplier": 14,
+      "baseDeposit": 2,
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_16_recall_line_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "pointSet": {
+        "kind": "line_between",
+        "from": "spear_position",
+        "to": "caster_hex",
+        "cacheKey": "spear_recall_path"
+      },
+      "resolution": "combat",
+      "reason": "spear_throw",
+      "basePower": 1,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "attackProfile": "projectile",
+      "trackingSignature": "projectile",
+      "weights": {
+        "instinct": 1
+      },
+      "combatPointTargetMode": "actor_only",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": false
+        },
+        {
+          "type": "WORLD_STATE",
+          "key": "spear_position_present",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "RECALL_DAMAGE"
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_17_recall_line_bleed",
+      "kind": "APPLY_AILMENT",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "pointSet": {
+        "kind": "line_between",
+        "from": "spear_position",
+        "to": "caster_hex",
+        "cacheKey": "spear_recall_path"
+      },
+      "ailment": "bleed",
+      "skillMultiplier": 8,
+      "baseDeposit": 1,
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": false
+        },
+        {
+          "type": "WORLD_STATE",
+          "key": "spear_position_present",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "RECALL_DAMAGE"
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_18_recall_cleave_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "spear_position",
+        "radius": 1
+      },
+      "resolution": "combat",
+      "reason": "spear_throw",
+      "basePower": 1,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "body": 1
+      },
+      "combatPointTargetMode": "actor_only",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": false
+        },
+        {
+          "type": "WORLD_STATE",
+          "key": "spear_position_present",
+          "value": true
+        },
+        {
+          "type": "ANY",
+          "predicates": [
+            {
+              "type": "RESOLVED_KEYWORD",
+              "keyword": "SPEAR_CLEAVE"
+            },
+            {
+              "type": "RESOLVED_KEYWORD",
+              "keyword": "CLEAVE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_19_recall_cleave_bleed",
+      "kind": "APPLY_AILMENT",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "spear_position",
+        "radius": 1
+      },
+      "ailment": "bleed",
+      "skillMultiplier": 6,
+      "baseDeposit": 1,
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": false
+        },
+        {
+          "type": "WORLD_STATE",
+          "key": "spear_position_present",
+          "value": true
+        },
+        {
+          "type": "ANY",
+          "predicates": [
+            {
+              "type": "RESOLVED_KEYWORD",
+              "keyword": "SPEAR_CLEAVE"
+            },
+            {
+              "type": "RESOLVED_KEYWORD",
+              "keyword": "CLEAVE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_20_recall_pickup",
+      "kind": "PICKUP_ITEM",
+      "phase": "cleanup",
+      "itemType": "spear",
+      "position": "spear_position",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": false
+        },
+        {
+          "type": "WORLD_STATE",
+          "key": "spear_position_present",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_21_throw_spawn",
+      "kind": "SPAWN_ITEM",
+      "phase": "cleanup",
+      "itemType": "spear",
+      "position": "impact_hex",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_22_throw_pickup",
+      "kind": "PICKUP_ITEM",
+      "phase": "cleanup",
+      "itemType": "spear",
+      "position": "impact_hex",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "RECALL"
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_23_throw_breath",
+      "kind": "MODIFY_COOLDOWN",
+      "phase": "cleanup",
+      "skillId": "JUMP",
+      "amount": 0,
+      "setExact": true,
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "DEEP_BREATH"
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_24_recall_trail",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "spearTrail",
+      "pathRef": "spear_to_caster",
+      "intensity": "medium",
+      "metadata": {
+        "signature": "ATK.SHOOT.PHYSICAL.SPEAR_RETURN",
+        "family": "attack",
+        "primitive": "shoot",
+        "phase": "travel",
+        "element": "physical",
+        "variant": "spear_return",
+        "sourceRef": {
+          "kind": "source_hex"
+        },
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "SPEAR_THROW"
+      },
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": false
+        },
+        {
+          "type": "WORLD_STATE",
+          "key": "spear_position_present",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_25_message_lunge",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Lunged and killed enemy !",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "LUNGE"
+        },
+        {
+          "type": "DISTANCE",
+          "op": "eq",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_26_message_throw",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Spear killed enemy !",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_27_message_auto_retrieve",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Spear auto-retrieved.",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": true
+        },
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "RECALL"
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "RESOLVED_KEYWORD",
+                "keyword": "LUNGE"
+              },
+              {
+                "type": "DISTANCE",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_28_message_recall",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Spear recalled.",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": false
+        },
+        {
+          "type": "WORLD_STATE",
+          "key": "spear_position_present",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "spear_throw_29_message_cleave",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Cleave triggered on pickup.",
+      "conditions": [
+        {
+          "type": "WORLD_STATE",
+          "key": "has_spear",
+          "value": false
+        },
+        {
+          "type": "WORLD_STATE",
+          "key": "spear_position_present",
+          "value": true
+        },
+        {
+          "type": "ANY",
+          "predicates": [
+            {
+              "type": "RESOLVED_KEYWORD",
+              "keyword": "SPEAR_CLEAVE"
+            },
+            {
+              "type": "RESOLVED_KEYWORD",
+              "keyword": "CLEAVE"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "upgrades": {
+    "SPEAR_RANGE": {
+      "id": "SPEAR_RANGE",
+      "name": "Extended Reach",
+      "description": "Range +1",
+      "modifyNumbers": [
+        {
+          "path": "baseVariables.range",
+          "op": "add",
+          "value": 1
+        },
+        {
+          "path": "targeting.range",
+          "op": "add",
+          "value": 1
+        }
+      ]
+    },
+    "RECALL": {
+      "id": "RECALL",
+      "name": "Recall",
+      "description": "Spear automatically returns after a throw."
+    },
+    "RECALL_DAMAGE": {
+      "id": "RECALL_DAMAGE",
+      "name": "Returning Edge",
+      "description": "Damage enemies in path when recalling spear."
+    },
+    "LUNGE": {
+      "id": "LUNGE",
+      "name": "Lunge",
+      "description": "If an enemy is exactly 2 hexes away, move to them and strike."
+    },
+    "LUNGE_ARC": {
+      "id": "LUNGE_ARC",
+      "name": "Lunge Sweeping",
+      "description": "Lunge hits neighbors of the target."
+    },
+    "DEEP_BREATH": {
+      "id": "DEEP_BREATH",
+      "name": "Deep Breath",
+      "description": "Reset Jump cooldown on spear hit."
+    },
+    "SPEAR_CLEAVE": {
+      "id": "SPEAR_CLEAVE",
+      "name": "Cleave",
+      "description": "Damage all neighbors when picking up spear."
+    }
+  }
+}

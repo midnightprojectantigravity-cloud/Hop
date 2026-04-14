@@ -1,0 +1,85 @@
+{
+  "id": "SHADOW_STEP",
+  "name": "Shadow Step",
+  "description": "Teleport through the shadows. Only works while stealthed. Extends stealth.",
+  "slot": "utility",
+  "icon": "SH",
+  "keywords": [
+    "ACTIVE",
+    "MOVEMENT",
+    "STEALTH"
+  ],
+  "baseVariables": {
+    "range": 2,
+    "cost": 0,
+    "cooldown": 2
+  },
+  "targeting": {
+    "generator": "movement_reachable",
+    "range": 2,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "STEALTH_COUNTER",
+        "target": "caster",
+        "op": "gte",
+        "value": 1
+      }
+    ]
+  },
+  "movementPolicy": {
+    "basePathing": "teleport",
+    "rangeSource": "authored",
+    "baseIgnoreWalls": true,
+    "baseIgnoreGroundHazards": true,
+    "validateDestination": {
+      "occupancy": "none",
+      "enforceBounds": true,
+      "requireWalkable": false,
+      "ignoreHazards": true
+    }
+  },
+  "combatScript": [
+    {
+      "id": "shadow_step_teleport",
+      "phase": "movement",
+      "kind": "TELEPORT_ACTOR",
+      "actor": "self",
+      "destination": "selected_hex",
+      "ignoreWalls": true,
+      "ignoreGroundHazards": true
+    },
+    {
+      "id": "shadow_step_stealth",
+      "phase": "resolution",
+      "kind": "SET_STEALTH",
+      "target": "self",
+      "amount": 2
+    },
+    {
+      "id": "shadow_step_juice",
+      "phase": "resolution",
+      "kind": "EMIT_JUICE",
+      "effect": "hiddenFade",
+      "target": "selected_hex",
+      "metadata": {
+        "signature": "MOVE.BLINK.SHADOW.SHADOW_STEP",
+        "family": "movement",
+        "primitive": "blink",
+        "phase": "instant",
+        "element": "shadow",
+        "variant": "shadow_step_arrival",
+        "targetRef": { "kind": "target_hex" },
+        "skillId": "SHADOW_STEP"
+      }
+    },
+    {
+      "id": "shadow_step_message",
+      "phase": "resolution",
+      "kind": "MESSAGE",
+      "text": "Shadow stepped!"
+    }
+  ],
+  "capabilities": {},
+  "upgrades": {}
+}

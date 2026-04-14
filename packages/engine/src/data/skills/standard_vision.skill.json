@@ -1,0 +1,59 @@
+{
+  "id": "STANDARD_VISION",
+  "name": "Standard Vision",
+  "description": "Visual line-of-sight for fog reveal. Range scales by vision tier and total core stats.",
+  "slot": "passive",
+  "icon": "SV",
+  "keywords": [
+    "PASSIVE",
+    "VISION",
+    "REVEAL"
+  ],
+  "baseVariables": {
+    "range": 3,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "senses": [
+      {
+        "domain": "senses",
+        "providerId": "standard_vision.los",
+        "priority": 10,
+        "kind": "standard_vision_los_v1",
+        "channelId": "standard_vision",
+        "range": {
+          "base": 3,
+          "minimum": 3,
+          "maximum": 11,
+          "addVisionTier": true
+        },
+        "hardBlockWhenBlind": true,
+        "useLegacyLineOfSight": true
+      }
+    ]
+  },
+  "upgrades": {
+    "VISION_TIER_2": {
+      "id": "VISION_TIER_2",
+      "name": "Vision Tier II",
+      "description": "Increase visual tier by 1."
+    },
+    "VISION_TIER_3": {
+      "id": "VISION_TIER_3",
+      "name": "Vision Tier III",
+      "description": "Increase visual tier by 1."
+    },
+    "VISION_TIER_4": {
+      "id": "VISION_TIER_4",
+      "name": "Vision Tier IV",
+      "description": "Increase visual tier by 1."
+    }
+  }
+}

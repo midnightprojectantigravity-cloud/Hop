@@ -347,7 +347,16 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
 
             intent = processIntent(intent, curState, actorForIntent);
 
-            const { effects, messages: tacticalMessages, consumesTurn, targetId, kills, stackReactions, turnOutcome } = TacticalEngine.execute(intent, actorForIntent, curState);
+            const {
+                effects,
+                messages: tacticalMessages,
+                consumesTurn,
+                targetId,
+                kills,
+                stackReactions,
+                turnOutcome,
+                rngConsumption
+            } = TacticalEngine.execute(intent, actorForIntent, curState);
             if (deps.engineDebug) {
                 console.log(`[ENGINE] ${actorId} intends ${intent.type} (${intent.skillId}) onto ${targetId || (intent.targetHex ? JSON.stringify(intent.targetHex) : 'self')}`);
             }
@@ -355,6 +364,13 @@ export const createProcessNextTurn = (deps: ProcessNextTurnFactoryDeps) => {
             if (deps.engineWarn && effects.length === 0 && intent.type !== 'WAIT') {
                 const warnMsg = `[ENGINE] WARNING: Intent ${intent.type} (${intent.skillId}) for actor ${actorId} produced ZERO effects!`;
                 console.warn(warnMsg);
+            }
+
+            if (rngConsumption) {
+                curState = {
+                    ...curState,
+                    rngCounter: (curState.rngCounter || 0) + rngConsumption
+                };
             }
 
             const stateBeforeEffects = curState;

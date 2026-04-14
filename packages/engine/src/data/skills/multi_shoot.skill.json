@@ -1,0 +1,70 @@
+{
+  "id": "MULTI_SHOOT",
+  "name": "Multi-Shoot",
+  "description": "A spread of arrows. Axial range 4. Deals damage to target and neighbors.",
+  "slot": "offensive",
+  "icon": "\ud83c\udff9",
+  "keywords": [
+    "PROJECTILE",
+    "PHYSICAL",
+    "AREA"
+  ],
+  "baseVariables": {
+    "range": 4,
+    "cost": 1,
+    "cooldown": 1,
+    "damage": 1
+  },
+  "targeting": {
+    "generator": "axial_ray",
+    "range": 4,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [
+    {
+      "id": "multi_shoot_01_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "resolution": "combat",
+      "pointPattern": "selected_hex_plus_neighbors",
+      "reason": "multi_shoot",
+      "basePower": 0,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "attackProfile": "projectile",
+      "trackingSignature": "projectile",
+      "weights": {
+        "instinct": 1,
+        "mind": 1
+      }
+    },
+    {
+      "id": "multi_shoot_02_flash",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "flash",
+      "target": "selected_hex",
+      "color": "#ffff00",
+      "metadata": {
+        "signature": "ATK.SHOOT.PHYSICAL.MULTI_SHOOT",
+        "family": "attack",
+        "primitive": "shoot",
+        "phase": "impact",
+        "element": "physical",
+        "variant": "multi_shoot",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "MULTI_SHOOT"
+      }
+    },
+    {
+      "id": "multi_shoot_03_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Multi-Shoot!"
+    }
+  ],
+  "upgrades": {}
+}

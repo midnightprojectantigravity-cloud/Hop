@@ -4,6 +4,7 @@ import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import { isStunned } from '../systems/status';
+import { getRuntimeSkillLegacyDefinition } from '../systems/skill-runtime/bridge';
 
 import { getSkillScenarios } from '../scenarios';
 
@@ -347,7 +348,9 @@ export const applyAutoAttack = (
         }
     }
 
-    const result = AUTO_ATTACK.execute(state, entity, undefined, activeUpgrades, {
+    const runtimeBackedAutoAttack = getRuntimeSkillLegacyDefinition('AUTO_ATTACK');
+    const executeSkill = runtimeBackedAutoAttack || AUTO_ATTACK;
+    const result = executeSkill.execute(state, entity, undefined, activeUpgrades, {
         previousNeighbors,
         attackerTurnStartPosition,
         allActorsTurnStartPositions,
@@ -361,9 +364,18 @@ export const applyAutoAttack = (
         stepId
     });
 
+    const computedKills = (result.effects || []).reduce((count, effect) => {
+        if (effect.type !== 'Damage') return count;
+        const targetActor = typeof effect.target === 'string'
+            ? [...state.enemies, ...(state.companions || []), state.player].find(actor => actor.id === effect.target)
+            : getActorAt(state, effect.target);
+        if (!targetActor || targetActor.id === entity.id) return count;
+        return count + (targetActor.hp <= effect.amount ? 1 : 0);
+    }, 0);
+
     return {
         state: newState,
-        kills: result.kills || 0,
+        kills: result.kills || computedKills,
         messages: result.messages
     };
 };

@@ -18,9 +18,11 @@
   },
   "scripts": {
     "generate-skill-registry": "npx tsx ./scripts/generateSkillRegistry.ts",
+    "generate-skill-runtime": "npx tsx ./scripts/generateSkillRuntime.ts",
+    "migrate-combat-ledger": "npx tsx ./scripts/hopMigrateData.ts",
     "generate-enemy-ai-parity-fixture": "npx tsx ./scripts/generateEnemyAiParityFixture.ts",
     "check-enemy-ai-parity-fixture": "npx tsx ./scripts/generateEnemyAiParityFixture.ts --check",
-    "prebuild": "npm run generate-skill-registry",
+    "prebuild": "npm run generate-skill-registry && npm run generate-skill-runtime",
     "build": "tsc",
     "test": "npm run test:smoke",
     "test:full": "vitest run --exclude \"src/__tests__/{balance_harness.test.ts,harness_ai_convergence_regression.test.ts,pvp_harness.test.ts,golden-runs/golden_run.test.ts}\"",

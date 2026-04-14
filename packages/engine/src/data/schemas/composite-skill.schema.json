@@ -331,7 +331,10 @@
         "kind",
         "tags",
         "target",
-        "amount"
+        "amount",
+        "damageClass",
+        "damageSubClass",
+        "damageElement"
       ],
       "properties": {
         "id": {
@@ -355,6 +358,35 @@
             "physical",
             "magical",
             "true"
+          ]
+        },
+        "damageSubClass": {
+          "type": "string",
+          "enum": [
+            "melee",
+            "strike",
+            "slash",
+            "piercing",
+            "shot",
+            "blast",
+            "spell",
+            "status",
+            "neutral"
+          ]
+        },
+        "damageElement": {
+          "type": "string",
+          "enum": [
+            "neutral",
+            "fire",
+            "ice",
+            "void",
+            "shadow",
+            "arcane",
+            "holy",
+            "kinetic",
+            "poison",
+            "wet"
           ]
         },
         "reason": {
@@ -698,6 +730,55 @@
         }
       ]
     },
+    "upgradePatch": {
+      "type": "object",
+      "required": [
+        "field",
+        "op"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "enum": [
+            "range",
+            "cooldown",
+            "damage",
+            "basePower",
+            "momentum",
+            "leechRatio",
+            "damageClass",
+            "damageSubClass",
+            "damageElement",
+            "attackProfile",
+            "trackingSignature"
+          ]
+        },
+        "op": {
+          "type": "string",
+          "enum": [
+            "set",
+            "add",
+            "multiply"
+          ]
+        },
+        "value": {},
+        "scaledValue": {
+          "type": "integer"
+        },
+        "coefficientScale": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rankMode": {
+          "type": "string",
+          "enum": [
+            "single",
+            "linear"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "upgrade": {
       "type": "object",
       "required": [
@@ -719,6 +800,74 @@
         },
         "tags": {
           "$ref": "#/$defs/tagArray"
+        },
+        "tier": {
+          "type": "integer"
+        },
+        "priority": {
+          "type": "number"
+        },
+        "maxRanks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "currentRank": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "groupId": {
+          "type": "string"
+        },
+        "exclusiveGroup": {
+          "type": "string"
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "upgradeId"
+                ],
+                "properties": {
+                  "upgradeId": {
+                    "type": "string"
+                  },
+                  "minRank": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "requiredUpgrades": {
+          "$ref": "#/$defs/tagArray"
+        },
+        "requiresPointsInSkill": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "compatibilityTags": {
+          "$ref": "#/$defs/tagArray"
+        },
+        "incompatibleWith": {
+          "$ref": "#/$defs/tagArray"
+        },
+        "requiresStationary": {
+          "type": "boolean"
+        },
+        "patches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/upgradePatch"
+          }
         },
         "modifiers": {
           "type": "array",

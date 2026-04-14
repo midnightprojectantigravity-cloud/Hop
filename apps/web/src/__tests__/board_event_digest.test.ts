@@ -70,4 +70,25 @@ describe('board event digest', () => {
     });
     expect(digest.cameraCuePlan.shakeDurationMs).toBeGreaterThan(0);
   });
+
+  it('keeps stable signatures for equivalent cloned batches', () => {
+    const batch = [
+      { type: 'juice_signature', payload: { protocol: 'juice-signature/v1', signature: 'A', phase: 'impact', primitive: 'p' } },
+      { type: 'vfx', payload: { type: 'flash', position: { q: 1, r: 0, s: -1 } } },
+    ] as any;
+    const digestA = buildBoardEventDigest({
+      visualEvents: batch,
+      timelineEvents: [{ id: 't1', phase: 'DEATH_RESOLVE', payload: { position: { q: 1, r: 0, s: -1 } } }] as any,
+      simulationEvents: [{ type: 'DamageTaken', position: { q: 1, r: 0, s: -1 }, targetId: 'p', payload: { amount: 1 } }] as any,
+    });
+    const digestB = buildBoardEventDigest({
+      visualEvents: batch.map((entry: any) => ({ ...entry, payload: { ...entry.payload } })) as any,
+      timelineEvents: [{ id: 't1', phase: 'DEATH_RESOLVE', payload: { position: { q: 1, r: 0, s: -1 } } }] as any,
+      simulationEvents: [{ type: 'DamageTaken', position: { q: 1, r: 0, s: -1 }, targetId: 'p', payload: { amount: 1 } }] as any,
+    });
+
+    expect(digestA.visualEventsSignature).toBe(digestB.visualEventsSignature);
+    expect(digestA.timelineEventsSignature).toBe(digestB.timelineEventsSignature);
+    expect(digestA.simulationEventsSignature).toBe(digestB.simulationEventsSignature);
+  });
 });

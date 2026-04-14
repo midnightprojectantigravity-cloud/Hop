@@ -1,0 +1,42 @@
+{
+  "id": "VIBRATION_SENSE",
+  "name": "Vibration Sense",
+  "description": "Sense moving units through walls using Instinct.",
+  "slot": "passive",
+  "icon": "VS",
+  "keywords": [
+    "PASSIVE",
+    "SENSE",
+    "MOTION"
+  ],
+  "baseVariables": {
+    "range": 4,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "senses": [
+      {
+        "domain": "senses",
+        "providerId": "vibration_sense.motion",
+        "priority": 25,
+        "kind": "vibration_sense_motion_v1",
+        "channelId": "vibration_sense",
+        "range": {
+          "base": 4,
+          "minimum": 4,
+          "maximum": 6,
+          "stat": "instinct",
+          "divisor": 8
+        }
+      }
+    ]
+  },
+  "upgrades": {}
+}

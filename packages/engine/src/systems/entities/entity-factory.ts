@@ -1,10 +1,18 @@
-import type { Actor, AiBehaviorOverlayInstance, ArmorBurdenTier, Point, Skill, WeightClass } from '../../types';
+import type {
+    Actor,
+    AiBehaviorOverlayInstance,
+    ArmorBurdenTier,
+    Point,
+    Skill,
+    SkillSummonDefinition,
+    WeightClass
+} from '../../types';
 import type { GameComponent } from '../components';
 import { deriveMaxHpFromTrinity, type TrinityStats } from '../combat/trinity-resolver';
 import { getTrinityProfile } from '../combat/trinity-profiles';
 import { resolveDefaultCombatProfile, type CombatProfile } from '../combat/combat-traits';
 import { getEnemyBestiaryEntry, getEnemyBestiarySkillLoadout } from '../../data/bestiary';
-import { getCompanionBalanceEntry } from '../../data/companions/content';
+import { getCompanionBalanceEntry, getCompanionModeDefinition } from '../../data/companions/content';
 import { getEnemyCatalogEntry } from '../../data/enemies';
 import { ensureActorIres } from '../ires';
 
@@ -39,6 +47,7 @@ export interface BaseEntityConfig {
     // Special traits
     isFlying?: boolean;
     companionOf?: string;
+    visualAssetRef?: string;
 
     // Components
     components?: Map<string, GameComponent>;
@@ -58,6 +67,41 @@ const cloneTrinity = (trinity: TrinityStats): TrinityStats => ({
     mind: trinity.mind,
     instinct: trinity.instinct,
 });
+
+const cloneBehaviorOverlay = (overlay: AiBehaviorOverlayInstance): AiBehaviorOverlayInstance => ({
+    ...overlay
+});
+
+const normalizeComponentMap = (components?: Map<string, GameComponent> | Record<string, GameComponent> | [string, GameComponent][] | null): Map<string, GameComponent> => {
+    if (!components) return new Map();
+    if (components instanceof Map) return new Map(components);
+    if (Array.isArray(components)) return new Map(components);
+    return new Map(Object.entries(components));
+};
+
+const resolveOwnerAnchorId = (anchorActorId: string | undefined, ownerId: string): string | undefined => {
+    if (!anchorActorId || anchorActorId === 'owner') return ownerId;
+    return anchorActorId;
+};
+
+const buildSkeletonBehaviorState = (
+    ownerId: string,
+    summon?: SkillSummonDefinition,
+    legacyOverlay?: AiBehaviorOverlayInstance,
+    legacyAnchorActorId?: string,
+    legacyAnchorPoint?: Point
+): NonNullable<Actor['behaviorState']> => {
+    const summonBehavior = summon?.behavior;
+    return {
+        overlays: [
+            ...(summonBehavior?.overlays || []).map(cloneBehaviorOverlay),
+            ...(legacyOverlay ? [cloneBehaviorOverlay(legacyOverlay)] : [])
+        ],
+        anchorActorId: resolveOwnerAnchorId(legacyAnchorActorId ?? summonBehavior?.anchorActorId, ownerId),
+        anchorPoint: legacyAnchorPoint ?? summonBehavior?.anchorPoint,
+        controller: summonBehavior?.controller ?? 'generic_ai'
+    };
+};
 
 const resolveDefaultTrinity = (config: BaseEntityConfig): TrinityStats => {
     if (config.trinity) return cloneTrinity(config.trinity);
@@ -88,7 +132,7 @@ export const ensureActorTrinity = (actor: Actor): Actor => {
         ? ensureEnemyAwarenessSkill(actor.activeSkills || [])
         : (actor.activeSkills || []);
 
-    const components = new Map(actor.components || []);
+    const components = normalizeComponentMap(actor.components as unknown as Map<string, GameComponent> | Record<string, GameComponent> | [string, GameComponent][] | null | undefined);
     const hasTrinity = components.has('trinity');
     const hasCombatProfile = components.has('combat_profile');
     const hasAilmentProfile = components.has('ailment_profile');
@@ -200,7 +244,7 @@ export function createEntity(config: BaseEntityConfig): Actor {
     }
 
     // Build components map
-    const components = new Map(config.components || []);
+    const components = normalizeComponentMap(config.components as unknown as Map<string, GameComponent> | Record<string, GameComponent> | [string, GameComponent][] | null | undefined);
 
     const resolvedTrinity = resolveDefaultTrinity(config);
     const resolvedCombatProfile = config.combatProfile || resolveDefaultCombatProfile(config);
@@ -265,6 +309,7 @@ export function createEntity(config: BaseEntityConfig): Actor {
         components,
         isFlying: config.isFlying,
         companionOf: config.companionOf,
+        visualAssetRef: config.visualAssetRef,
         isVisible: true,
     };
 
@@ -393,23 +438,26 @@ export function createEnemyFromBestiary(config: {
 export function createCompanion(config: {
     companionType: CompanionType;
     ownerId: string;
+    ownerFactionId?: string;
     position: Point;
     id?: string;
     trinity?: TrinityStats;
     armorBurdenTier?: ArmorBurdenTier;
+    summon?: SkillSummonDefinition;
     initialBehaviorOverlay?: AiBehaviorOverlayInstance;
     initialAnchorActorId?: string;
     initialAnchorPoint?: Point;
 }): Actor {
     if (config.companionType === 'falcon') {
         const contract = getCompanionBalanceEntry('falcon');
+        const roostMode = getCompanionModeDefinition('falcon', 'roost');
         const entity = createEntity({
             id: config.id || `falcon-${config.ownerId}`,
             type: 'enemy', // Type is 'enemy' but factionId is 'player'
             subtype: 'falcon',
             position: config.position,
             speed: contract?.speed ?? 95,
-            factionId: 'player',
+            factionId: config.ownerFactionId || 'player',
             hp: contract?.hp,
             maxHp: contract?.maxHp,
             skills: contract?.skills ?? ['BASIC_MOVE', 'FALCON_PECK', 'FALCON_APEX_STRIKE', 'FALCON_HEAL', 'FALCON_SCOUT', 'FALCON_AUTO_ROOST'],
@@ -427,7 +475,7 @@ export function createCompanion(config: {
             orbitStep: 0,
         };
         entity.behaviorState = {
-            overlays: [{
+            overlays: roostMode ? [{ ...roostMode.overlay, source: 'summon' }] : [{
                 id: 'falcon_roost',
                 source: 'summon',
                 sourceId: 'falcon_roost',
@@ -444,6 +492,7 @@ export function createCompanion(config: {
 
     if (config.companionType === 'skeleton') {
         const contract = getCompanionBalanceEntry('skeleton');
+        const summon = config.summon;
         const entity = createEntity({
             id: config.id || `${config.companionType}-${config.ownerId}`,
             type: 'enemy',
@@ -452,23 +501,22 @@ export function createCompanion(config: {
             hp: contract?.hp ?? 2,
             maxHp: contract?.maxHp ?? 2,
             speed: contract?.speed ?? 50,
-            factionId: 'player',
-            skills: contract?.skills ?? ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'],
+            factionId: config.ownerFactionId || 'player',
+            skills: summon?.skills ?? contract?.skills ?? ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'],
             companionOf: config.ownerId,
             weightClass: contract?.weightClass ?? 'Standard',
             armorBurdenTier: config.armorBurdenTier ?? contract?.armorBurdenTier,
-            trinity: config.trinity ?? contract?.trinity,
+            trinity: summon?.trinity ?? config.trinity ?? contract?.trinity,
             combatProfile: contract?.combatProfile,
+            visualAssetRef: summon?.visualAssetRef,
         });
-        if (config.initialBehaviorOverlay || config.initialAnchorActorId || config.initialAnchorPoint) {
-            entity.behaviorState = {
-                overlays: config.initialBehaviorOverlay
-                    ? [{ ...config.initialBehaviorOverlay }]
-                    : [],
-                anchorActorId: config.initialAnchorActorId,
-                anchorPoint: config.initialAnchorPoint
-            };
-        }
+        entity.behaviorState = buildSkeletonBehaviorState(
+            config.ownerId,
+            summon,
+            config.initialBehaviorOverlay,
+            config.initialAnchorActorId,
+            config.initialAnchorPoint
+        );
         return entity;
     }
 
@@ -478,7 +526,7 @@ export function createCompanion(config: {
         subtype: config.companionType,
         position: config.position,
         speed: 80,
-        factionId: 'player',
+        factionId: config.ownerFactionId || 'player',
         skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
         companionOf: config.ownerId,
         weightClass: 'Standard',

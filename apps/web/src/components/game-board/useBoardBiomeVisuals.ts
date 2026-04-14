@@ -77,7 +77,7 @@ export const useBoardBiomeVisuals = ({
         return map;
     }, [assetManifest]);
 
-    const deathDecalHref = useMemo(() => assetById.get(resolveDeathDecalAssetId())?.path, [assetById]);
+    const deathDecalHref = useMemo(() => assetById.get(resolveDeathDecalAssetId(gameState.player))?.path, [assetById, gameState.player]);
     const manifestTileUnitPx = useMemo(() => Math.max(1, assetManifest?.tileUnitPx || 256), [assetManifest?.tileUnitPx]);
     const manifestUnitToBoardScale = useMemo(() => (TILE_SIZE * 2) / manifestTileUnitPx, [manifestTileUnitPx]);
 

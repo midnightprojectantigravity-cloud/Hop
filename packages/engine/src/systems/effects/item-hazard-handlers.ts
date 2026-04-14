@@ -3,6 +3,7 @@ import type { Actor } from '../../types';
 import { applyDamage } from '../entities/actor';
 import { stableIdFromSeed } from '../rng';
 import { createBombActor } from './bomb-runtime';
+import { addDyingEntityOnce, shouldLeaveCorpse } from './corpse-utils';
 import type { AtomicEffectHandlerMap } from './types';
 
 export const itemHazardEffectHandlers: AtomicEffectHandlerMap = {
@@ -97,8 +98,10 @@ export const itemHazardEffectHandlers: AtomicEffectHandlerMap = {
                 nextState.player = applyDamage(nextState.player, 99);
             } else {
                 nextState.enemies = nextState.enemies.filter(e => e.id !== targetId);
-                nextState.dyingEntities = [...(nextState.dyingEntities || []), actor];
-                nextState = api.addCorpseTraitAt(nextState, actor.position);
+                nextState = addDyingEntityOnce(nextState, actor);
+                if (shouldLeaveCorpse(actor)) {
+                    nextState = api.addCorpseTraitAt(nextState, actor.position);
+                }
             }
             nextState.visualEvents = [...(nextState.visualEvents || []),
             { type: 'vfx', payload: { type: 'vaporize', position: actor.position } }

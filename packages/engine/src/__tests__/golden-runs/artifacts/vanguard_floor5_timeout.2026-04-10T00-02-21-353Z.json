@@ -1,0 +1,279 @@
+{
+  "fixture": {
+    "id": "vanguard_floor5_timeout",
+    "version": 1,
+    "seed": "vanguard-17",
+    "loadoutId": "VANGUARD",
+    "floorsTarget": 5,
+    "maxTurnsPerFloor": 20,
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "expected": {
+      "outcome": "timeout",
+      "finalFloor": [
+        5,
+        5
+      ],
+      "totalKills": [
+        0,
+        0
+      ],
+      "totalTurns": [
+        100,
+        100
+      ],
+      "playerHp": [
+        1,
+        5
+      ],
+      "fingerprint": "dbe83ef7657d2322"
+    }
+  },
+  "maxTurns": 100,
+  "strictMode": false,
+  "run": {
+    "seed": "vanguard-17",
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "loadoutId": "VANGUARD",
+    "result": "lost",
+    "turnsSpent": 19,
+    "floor": 1,
+    "kills": 0,
+    "hazardBreaches": 0,
+    "score": 23548,
+    "finalPlayerHp": 230,
+    "finalPlayerMaxHp": 230,
+    "finalPlayerHpRatio": 1,
+    "finalSpark": 240,
+    "finalMana": 23,
+    "finalSparkState": "rested",
+    "finalSparkRatio": 1,
+    "finalExhaustion": 0,
+    "peakExhaustion": 79,
+    "restTurns": 17,
+    "redlineActions": 0,
+    "sparkBurnDamage": 0,
+    "avgActionsPerPlayerTurn": 0.21052631578947367,
+    "directorRedlineBand": 0,
+    "directorResourceStressBand": 0,
+    "playerActionCounts": {
+      "MOVE": 3,
+      "WAIT": 19,
+      "USE_SKILL": 1
+    },
+    "playerSkillUsage": {
+      "SPEAR_THROW": 1
+    },
+    "goalCounts": {
+      "engage": 0,
+      "explore": 23,
+      "recover": 0
+    },
+    "totalPlayerSkillCasts": 1,
+    "playerSkillTelemetry": {
+      "SPEAR_THROW": {
+        "casts": 1,
+        "enemyDamage": 93,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 0,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      }
+    },
+    "autoAttackTriggersByActionType": {},
+    "triangleSignal": {
+      "samples": 1,
+      "avgHitPressure": 2.527,
+      "avgMitigationPressure": 2.4,
+      "avgCritPressure": 0.542,
+      "avgResistancePressure": 0.6
+    },
+    "trinityContribution": {
+      "samples": 1,
+      "bodyContribution": 0.243,
+      "mindContribution": 0,
+      "instinctContribution": 0.757
+    },
+    "combatProfileSignal": {
+      "samples": 1,
+      "avgOutgoingMultiplier": 1,
+      "avgIncomingMultiplier": 1,
+      "avgTotalMultiplier": 1
+    },
+    "enemyAiTelemetry": {
+      "actionCounts": {
+        "WAIT": 1
+      },
+      "skillUsage": {},
+      "offensiveSkillCasts": 0,
+      "damageToPlayer": 0,
+      "visiblePlayerTurns": 1,
+      "idleWithVisiblePlayer": 1,
+      "attackOpportunityTurns": 0,
+      "attackConversionTurns": 0,
+      "threatOpportunityTurns": 0,
+      "threatConversionTurns": 0,
+      "backtrackMoves": 0,
+      "loopMoves": 1,
+      "preservedRestedTurns": 0,
+      "restedBatterySpendSelections": 0,
+      "restedReentryTurns": 0,
+      "trueRestRestedBonusArmedTurns": 0,
+      "voluntaryExhaustionAttempts": 4,
+      "voluntaryExhaustionAllowed": 0,
+      "voluntaryExhaustionBlocked": 4,
+      "turnsEndedRested": 1,
+      "turnsEndedStableOrBetter": 1,
+      "turnsEndedCriticalOrExhausted": 0,
+      "secondActionAttempts": 1,
+      "secondActionAllowed": 0,
+      "thirdActionAttempts": 0,
+      "thirdActionAllowed": 0,
+      "waitForBandPreservationSelections": 1
+    },
+    "pacingSignal": {
+      "samples": 23,
+      "avgSparkRatio": 0.8594202898550725,
+      "avgManaRatio": 1,
+      "avgReservePressure": 0.14057971014492754,
+      "avgFatiguePressure": 0.05565217391304349,
+      "avgRecoveryPressure": 0.07769565217391304,
+      "avgTurnEndSparkRatio": 0.9254385964912281,
+      "visibleHostileSelections": 3,
+      "idleWithVisibleHostile": 1,
+      "attackOpportunityCount": 1,
+      "attackConversionCount": 1,
+      "threatenNextTurnOpportunityCount": 1,
+      "threatenNextTurnConversionCount": 1,
+      "backtrackMoveCount": 0,
+      "loopMoveCount": 0,
+      "lowValueMobilitySelections": 0,
+      "restSelections": 17,
+      "endTurnSelections": 2,
+      "continuedActionSelections": 4,
+      "preservedRestedTurns": 2,
+      "restedBatterySpendSelections": 0,
+      "restedReentryTurns": 0,
+      "trueRestRestedBonusArmedTurns": 15,
+      "voluntaryExhaustionAttempts": 2,
+      "voluntaryExhaustionAllowed": 0,
+      "voluntaryExhaustionBlocked": 2,
+      "turnsEndedRested": 16,
+      "turnsEndedStableOrBetter": 18,
+      "turnsEndedCriticalOrExhausted": 0,
+      "secondActionAttempts": 2,
+      "secondActionAllowed": 1,
+      "thirdActionAttempts": 1,
+      "thirdActionAllowed": 0,
+      "waitForBandPreservationSelections": 18,
+      "firstContactTurn": 1,
+      "firstDamageTurn": 2
+    }
+  },
+  "diagnostics": {
+    "actionCount": 24,
+    "stateFingerprint": "{\"player\":{\"hp\":230,\"maxHp\":230,\"position\":{\"q\":4,\"r\":1,\"s\":-5},\"upgrades\":[]},\"enemies\":[],\"floor\":1,\"gridWidth\":9,\"gridHeight\":11,\"mapShape\":\"diamond\",\"turnNumber\":20,\"kills\":0,\"rngCounter\":0}"
+  },
+  "strictFingerprint": "4be6d23f901679b8",
+  "actions": [
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 1,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 4,
+        "s": -8
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "SPEAR_THROW",
+        "target": {
+          "q": 6,
+          "r": 2,
+          "s": -8
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 1,
+        "s": -5
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    }
+  ]
+}

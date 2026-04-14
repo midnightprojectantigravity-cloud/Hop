@@ -1,0 +1,136 @@
+{
+  "id": "METEOR_IMPACT",
+  "name": "Meteor Impact",
+  "description": "Leap down an axial lane and slam the landing hex with a kinetic pulse.",
+  "slot": "offensive",
+  "icon": "meteor_impact",
+  "keywords": [
+    "KINETIC",
+    "LEAP",
+    "PULSE"
+  ],
+  "baseVariables": {
+    "range": 3,
+    "cost": 0,
+    "cooldown": 2,
+    "damage": 5,
+    "momentum": 4
+  },
+  "targeting": {
+    "generator": "axial_ray",
+    "range": 3,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "OCCUPANCY",
+        "occupied": true
+      },
+      {
+        "type": "LINE_OF_SIGHT",
+        "value": true
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "meteor_leap",
+      "kind": "MOVE_ACTOR",
+      "phase": "movement",
+      "actor": "self",
+      "destination": "selected_hex",
+      "mode": "LEAP",
+      "ignoreGroundHazards": true,
+      "simulatePath": true
+    },
+    {
+      "id": "meteor_collision_policy",
+      "kind": "RESOLVE_COLLISION",
+      "phase": "collision",
+      "collision": {
+        "onBlocked": "crush_damage",
+        "crushDamage": 2,
+        "damageReason": "meteor_impact",
+        "compareWeightClass": true
+      }
+    },
+    {
+      "id": "meteor_pulse",
+      "kind": "EMIT_PULSE",
+      "phase": "collision",
+      "origin": "selected_hex",
+      "direction": "source_to_target",
+      "magnitude": 4
+    },
+    {
+      "id": "meteor_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "target_actor",
+      "amount": 5,
+      "reason": "meteor_impact",
+      "damageClass": "physical",
+      "damageSubClass": "strike",
+      "damageElement": "kinetic"
+    },
+    {
+      "id": "meteor_text",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Meteor Impact crashes down."
+    }
+  ],
+  "intentProfile": {
+    "id": "METEOR_IMPACT",
+    "intentTags": [
+      "damage",
+      "move",
+      "control"
+    ],
+    "target": {
+      "range": 3,
+      "pattern": "line"
+    },
+    "estimates": {
+      "damage": 5,
+      "movement": 3,
+      "control": 3
+    },
+    "economy": {
+      "cost": 0,
+      "cooldown": 2,
+      "consumesTurn": true
+    },
+    "risk": {
+      "requireEnemyContact": true,
+      "noContactPenalty": 6,
+      "noProgressCastPenalty": 10
+    },
+    "complexity": 2
+  },
+  "resourceProfile": {
+    "primaryResource": "none",
+    "primaryCost": 0,
+    "baseStrain": 0,
+    "countsAsMovement": true,
+    "countsAsAction": true
+  },
+  "physicsPlan": {
+    "kernel": "kinetic_pulse_v1",
+    "baseMomentum": 4,
+    "collision": {
+      "onBlocked": "crush_damage",
+      "crushDamage": 2,
+      "damageReason": "meteor_impact",
+      "compareWeightClass": true
+    },
+    "cascadeBehavior": "kinetic_pulse",
+    "weightClassModifierTable": {
+      "Light": 1,
+      "Standard": 0,
+      "Heavy": -1,
+      "Anchored": -2,
+      "OuterWall": -3
+    }
+  },
+  "upgrades": {}
+}

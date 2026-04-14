@@ -26,7 +26,8 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState,
             <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Turn Sequence</span>
             <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
                 {orderedActors.map((actor: Actor, idx: number) => {
-                    const isPlayer = actor.id === player.id;
+                    const isPlayer = actor.factionId === 'player';
+                    const isActualPlayer = actor.id === player.id;
                     const isCurrent = idx === initiativeQueue.currentIndex;
                     const entry = initiativeQueue.entries.find(e => e.actorId === actor.id);
                     const hasActed = entry?.hasActed;
@@ -36,7 +37,7 @@ export const InitiativeDisplay: React.FC<InitiativeDisplayProps> = ({ gameState,
                     const isEnemyHpVisible = isPlayer || Boolean(info?.reveal.hp);
                     const isEnemyNameVisible = isPlayer || Boolean(info?.reveal.name);
                     const hpPercent = isEnemyHpVisible ? (actor.hp / actor.maxHp) * 100 : 0;
-                    const label = isPlayer
+                    const label = isActualPlayer
                         ? 'You'
                         : (isEnemyNameVisible ? info?.data.name || actor.subtype || 'Enemy' : '????');
 

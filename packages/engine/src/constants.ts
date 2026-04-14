@@ -5,6 +5,8 @@ import type { GridSize, MapShape } from './types';
  * Central repository for stats, types, and grid configuration.
  * Runtime ownership for enemy stats/spawn tables lives in `data/enemies/*`.
  */
+export const SCALED_IDENTITY = 10_000;
+
 // Grid configuration for mobile portrait (9 wide × 11 tall)
 export const GRID_WIDTH = 7;   // Tiles wide
 export const GRID_HEIGHT = 9;  // Tiles tall
@@ -106,9 +108,9 @@ export const COLORS = {
     player: '#3b82f6',      // Blue
     playerBorder: '#ffffff', // White border
     enemy: '#ef4444',        // Red
-    floor: '#6b7b3c',        // Olive Green
-    wall: '#374151',         // Dark Grey
-    lava: '#991b1b',         // Dark Red
+    floor: '#6b7b3c',       // Olive Green
+    wall: '#374151',       // Dark Grey
+    lava: '#991b1b',       // Dark Red
     shrine: '#f97316',       // Orange
     portal: '#ffffff',       // White
 } as const;
@@ -126,4 +128,3 @@ export const FLOOR_THEMES: Record<number, string> = {
     9: 'inferno',
     10: 'inferno',
 };
-

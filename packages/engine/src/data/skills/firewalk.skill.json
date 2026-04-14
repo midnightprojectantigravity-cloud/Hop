@@ -1,0 +1,90 @@
+{
+  "id": "FIREWALK",
+  "name": "Firewalk",
+  "description": "Teleport to a fire or lava tile. Grants 2 turns of Fire Immunity.",
+  "slot": "utility",
+  "icon": "\ud83c\udfc3\ud83d\udd25",
+  "keywords": [
+    "FIRE",
+    "TELEPORT",
+    "MOVEMENT"
+  ],
+  "baseVariables": {
+    "range": 4,
+    "cost": 1,
+    "cooldown": 3
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 4,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "ANY",
+        "predicates": [
+          {
+            "type": "TILE_EFFECT",
+            "effectId": "FIRE",
+            "value": true
+          },
+          {
+            "type": "HEX_TRAIT",
+            "trait": "LIQUID",
+            "value": true
+          }
+        ]
+      }
+    ]
+  },
+  "movementPolicy": {
+    "basePathing": "teleport",
+    "baseIgnoreGroundHazards": true,
+    "validateDestination": {
+      "ignoreHazards": true
+    }
+  },
+  "combatScript": [
+    {
+      "id": "firewalk_01_teleport",
+      "kind": "TELEPORT_ACTOR",
+      "phase": "movement",
+      "actor": "self",
+      "destination": "selected_hex"
+    },
+    {
+      "id": "firewalk_02_immunity",
+      "kind": "APPLY_STATUS",
+      "phase": "resolution",
+      "target": "self",
+      "status": "fire_immunity",
+      "duration": 2
+    },
+    {
+      "id": "firewalk_03_flash",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "flash",
+      "target": "selected_hex",
+      "color": "#ff8800",
+      "metadata": {
+        "signature": "MOVE.BLINK.FIRE.FIREWALK",
+        "family": "movement",
+        "primitive": "blink",
+        "phase": "impact",
+        "element": "fire",
+        "variant": "firewalk",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "FIREWALK"
+      }
+    },
+    {
+      "id": "firewalk_04_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Firewalk!"
+    }
+  ],
+  "upgrades": {}
+}

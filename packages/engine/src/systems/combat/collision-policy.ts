@@ -20,7 +20,10 @@ export const resolveBlockedCollisionEffects = (
             type: 'Damage',
             target: targetId,
             amount,
-            reason: policy.damageReason || 'crush'
+            reason: policy.damageReason || 'crush',
+            damageClass: 'physical',
+            damageSubClass: 'strike',
+            damageElement: 'kinetic'
         }];
     }
 
@@ -35,4 +38,3 @@ export const resolveBlockedCollisionEffects = (
 
     return [];
 };
-

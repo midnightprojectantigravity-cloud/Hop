@@ -1,0 +1,53 @@
+{
+  "id": "SENTINEL_TELEGRAPH",
+  "name": "Sentinel Telegraph",
+  "description": "The Sentinel marks an impact zone for a delayed blast.",
+  "slot": "offensive",
+  "icon": "\u26a0",
+  "keywords": [
+    "TELEGRAPH",
+    "ARCANE",
+    "AOE"
+  ],
+  "baseVariables": {
+    "range": 3,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "radius",
+    "range": 3,
+    "radius": 3,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [
+    {
+      "id": "sentinel_telegraph_text",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "combat_text",
+      "target": "selected_hex",
+      "text": "TELEGRAPH",
+      "metadata": {
+        "signature": "UI.TEXT.ARCANE.SENTINEL_TELEGRAPH",
+        "family": "ui",
+        "primitive": "text",
+        "phase": "telegraph",
+        "element": "arcane",
+        "variant": "sentinel_telegraph",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "SENTINEL_TELEGRAPH",
+        "textTone": "system"
+      }
+    },
+    {
+      "id": "sentinel_telegraph_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "The Sentinel marks the impact zone."
+    }
+  ],
+  "upgrades": {}
+}

@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hop.local/engine/skill-authoring.schema.json",
+  "title": "Hop Skill Authoring Definition",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "description",
+    "slot",
+    "icon",
+    "keywords",
+    "baseVariables",
+    "targeting",
+    "combatScript",
+    "upgrades"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "slot": {
+      "type": "string",
+      "enum": [
+        "offensive",
+        "defensive",
+        "utility",
+        "passive"
+      ]
+    },
+    "icon": {
+      "type": "string",
+      "minLength": 1
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "baseVariables": {
+      "type": "object",
+      "required": [
+        "range",
+        "cost",
+        "cooldown"
+      ],
+      "properties": {
+        "range": { "type": "number" },
+        "cost": { "type": "number" },
+        "cooldown": { "type": "number" },
+        "basePower": { "type": "number" },
+        "damage": { "type": "number" },
+        "momentum": { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+    "combat": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "metabolicBandProfile": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "targeting": {
+      "type": "object",
+      "required": [
+        "generator",
+        "range"
+      ],
+      "properties": {
+        "generator": {
+          "type": "string",
+          "enum": [
+            "self",
+            "single",
+            "radius",
+            "axial_ray",
+            "diagonal_landing"
+          ]
+        },
+        "range": { "type": "number" },
+        "radius": { "type": "number" },
+        "deterministicSort": {
+          "type": "string",
+          "enum": [
+            "distance_then_q_then_r",
+            "q_then_r",
+            "r_then_q"
+          ]
+        },
+        "predicates": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "combatScript": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "phase"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "MOVE_ACTOR",
+              "TELEPORT_ACTOR",
+              "APPLY_FORCE",
+              "EMIT_PULSE",
+              "RESOLVE_COLLISION",
+              "DEAL_DAMAGE",
+              "APPLY_STATUS",
+              "PLACE_SURFACE",
+              "SPAWN_ACTOR",
+              "PICKUP_ITEM",
+              "MODIFY_COOLDOWN",
+              "MODIFY_RESOURCE",
+              "REMOVE_CORPSE",
+              "UPDATE_COMPANION_STATE",
+              "UPDATE_BEHAVIOR_STATE",
+              "EMIT_JUICE",
+              "MESSAGE"
+            ]
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "declare",
+              "movement",
+              "collision",
+              "resolution",
+              "cleanup"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "upgrades": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  },
+  "additionalProperties": true
+}

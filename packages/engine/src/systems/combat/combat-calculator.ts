@@ -21,7 +21,16 @@ import { calculateStatusOutcome } from './status-outcome';
 import { calculateInitiativeScore } from './initiative-formula';
 import { resolveCombatRuleset } from './combat-ruleset';
 import type { CombatRulesetVersion } from '../../types';
-import { resolveCombatTuning } from '../../data/combat-tuning-ledger';
+import {
+    resolveCombatSkillProfile,
+    resolveCombatTuning
+} from '../../data/combat-tuning-ledger';
+import type {
+    CombatAttackProfile,
+    CombatDamageClass,
+    CombatDamageElement,
+    CombatDamageSubClass
+} from './damage-taxonomy';
 export type { TrinityStats } from './trinity-resolver';
 
 export type CombatAttribute = 'body' | 'mind' | 'instinct';
@@ -41,12 +50,17 @@ export interface CombatIntent {
     skillDamageMultiplier?: number;
     trinity: TrinityStats;
     statusMultipliers: CombatStatusMultiplier[];
-    damageClass?: 'physical' | 'magical' | 'true';
+    damageClass?: CombatDamageClass;
+    damageSubClass?: CombatDamageSubClass;
+    damageElement?: CombatDamageElement;
     combat?: {
-        damageClass: 'physical' | 'magical' | 'true';
-        attackProfile: 'melee' | 'projectile' | 'spell' | 'status';
+        damageClass?: CombatDamageClass;
+        damageSubClass?: CombatDamageSubClass;
+        damageElement?: CombatDamageElement;
+        attackProfile?: CombatAttackProfile;
         trackingSignature: TrackingSignature;
         weights: Partial<Record<CombatAttribute, number>>;
+        leechRatio?: number;
     };
     targetTrinity?: TrinityStats;
     interactionModel?: 'legacy' | 'triangle';
@@ -61,7 +75,7 @@ export interface CombatIntent {
     targetOptimalRangeMin?: number;
     targetOptimalRangeMax?: number;
     combatRulesetVersion?: CombatRulesetVersion;
-    attackProfile?: 'melee' | 'projectile' | 'spell' | 'status';
+    attackProfile?: CombatAttackProfile;
     trackingSignature?: TrackingSignature;
     statusProfile?: { procBase: number; potencyBase: number; durationBase: number };
     canMultiCrit?: boolean;
@@ -100,7 +114,9 @@ export interface CombatScoreEvent {
     finalPower?: number;
     efficiency: number;
     riskBonusApplied: boolean;
-    damageClass: 'physical' | 'magical';
+    damageClass: CombatDamageClass;
+    damageSubClass?: CombatDamageSubClass;
+    damageElement?: CombatDamageElement;
     hitPressure: number;
     mitigationPressure: number;
     rangePressure: number;
@@ -126,6 +142,10 @@ export interface CombatScoreEvent {
 }
 
 export interface CombatCalculationResult {
+    damageClass: CombatDamageClass;
+    damageSubClass: CombatDamageSubClass;
+    damageElement: CombatDamageElement;
+    leechRatio?: number;
     basePower: number;
     bodyScaledPower: number;
     scalingPower: number;
@@ -188,11 +208,36 @@ const mergeProjectionCoefficients = (
     mind: overrides?.mind ?? base.mind
 });
 
+const resolveCombatTaxonomy = (intent: CombatIntent): {
+    damageClass: CombatDamageClass;
+    damageSubClass: CombatDamageSubClass;
+    damageElement: CombatDamageElement;
+    attackProfile: CombatAttackProfile;
+} => {
+    const skillProfile = resolveCombatSkillProfile(intent.skillId);
+    const combat = intent.combat;
+    const damageSubClass = combat?.damageSubClass ?? intent.damageSubClass ?? skillProfile.damageSubClass;
+    const inferAttackProfile = (): CombatAttackProfile => {
+        if (damageSubClass === 'shot' || damageSubClass === 'piercing') return 'projectile';
+        if (damageSubClass === 'blast' || damageSubClass === 'spell') return 'spell';
+        if (damageSubClass === 'status') return 'status';
+        return 'melee';
+    };
+    return {
+        damageClass: combat?.damageClass ?? intent.damageClass ?? skillProfile.damageClass,
+        damageSubClass,
+        damageElement: combat?.damageElement ?? intent.damageElement ?? skillProfile.damageElement,
+        attackProfile: combat?.attackProfile ?? intent.attackProfile ?? skillProfile.attackProfile ?? inferAttackProfile()
+    };
+};
 
 const resolveCombatWeights = (
     intent: CombatIntent
 ): { body: number; mind: number; instinct: number } => {
     const weights = intent.combat?.weights;
+    const attackProfile = intent.combat?.attackProfile
+        || intent.attackProfile
+        || resolveCombatSkillProfile(intent.skillId).attackProfile;
     if (weights) {
         return {
             body: Number(weights.body ?? 0),
@@ -200,10 +245,10 @@ const resolveCombatWeights = (
             instinct: Number(weights.instinct ?? 0)
         };
     }
-    if ((intent.attackProfile || intent.combat?.attackProfile) === 'projectile') {
+    if (attackProfile === 'projectile') {
         return { body: 0, mind: 0, instinct: 1 };
     }
-    if ((intent.attackProfile || intent.combat?.attackProfile) === 'spell') {
+    if (attackProfile === 'spell') {
         return { body: 0, mind: 1, instinct: 0 };
     }
     return { body: 1, mind: 0, instinct: 0 };
@@ -261,15 +306,16 @@ export const computeSparkCost = (moveIndex: number, trinity: TrinityStats): numb
 
 export const calculateCombat = (intent: CombatIntent): CombatCalculationResult => {
     const rulesetVersion = intent.combatRulesetVersion || resolveCombatRuleset(undefined);
-    const damageClass = intent.damageClass || intent.combat?.damageClass || 'physical';
+    const taxonomy = resolveCombatTaxonomy(intent);
+    const damageClass = taxonomy.damageClass;
     const effectiveDamageClass: 'physical' | 'magical' = damageClass === 'magical' ? 'magical' : 'physical';
     const defender = intent.targetTrinity || { body: 0, mind: 0, instinct: 0 };
     const tuning = resolveCombatTuning(intent.skillId);
     const trackingSignature: TrackingSignature = intent.trackingSignature
         || intent.combat?.trackingSignature
-        || (intent.attackProfile === 'projectile' ? 'projectile'
-            : intent.attackProfile === 'spell' ? 'magic'
-                : damageClass === 'magical' ? 'magic'
+        || (taxonomy.attackProfile === 'projectile' ? 'projectile'
+            : taxonomy.attackProfile === 'spell' ? 'magic'
+                : taxonomy.damageClass === 'magical' ? 'magic'
                     : 'melee');
     const rawBasePower = damageClass === 'magical'
         ? (intent.basePowerMag ?? intent.basePower)
@@ -298,7 +344,9 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
         );
     const projectedAttack = basePowerProjection + scalingPower;
     const projectedDefense = projectTrinityValue(defender, defenseCoefficients);
-    const baseDamage = effectiveDamageClass === 'magical'
+    const baseDamage = damageClass === 'true'
+        ? projectedAttack
+        : effectiveDamageClass === 'magical'
         ? calculateBaseMagicalDamage({
             attackProjection: projectedAttack,
             defenseProjection: projectedDefense
@@ -343,13 +391,15 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
         })
         : undefined;
     const statusMultiplier = computeStatusMultiplier(intent.statusMultipliers);
+    const hitAndCritMultiplier = damageClass === 'true'
+        ? 1
+        : hitQuality.scalar * crit.damageMultiplier * statusMultiplier;
     const rawDamage = baseDamage
-        * hitQuality.scalar
-        * crit.damageMultiplier
-        * statusMultiplier
+        * hitAndCritMultiplier
         * (intent.attackPowerMultiplier ?? 1)
         * (intent.targetDamageTakenMultiplier ?? 1);
     const finalPower = hitQuality.tier === 'miss'
+        && damageClass !== 'true'
         ? 0
         : rawDamage > 0
             ? Math.max(1, Math.floor(rawDamage))
@@ -374,6 +424,9 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
     const efficiency = clamp(finalPower / theoreticalMax, 0, 1);
 
     return {
+            damageClass,
+            damageSubClass: taxonomy.damageSubClass,
+            damageElement: taxonomy.damageElement,
             basePower: intent.basePower,
             bodyScaledPower: round3(baseDamage),
             scalingPower: round3(scalingPower),
@@ -412,7 +465,9 @@ export const calculateCombat = (intent: CombatIntent): CombatCalculationResult =
                 finalPower,
                 efficiency: round3(efficiency),
                 riskBonusApplied: false,
-                damageClass: effectiveDamageClass,
+                damageClass,
+                damageSubClass: taxonomy.damageSubClass,
+                damageElement: taxonomy.damageElement,
                 hitPressure: round3(hitQuality.rawRatio),
                 mitigationPressure: round3(damageClass === 'magical' ? defender.mind * 0.5 : defender.body * 0.2),
                 rangePressure: round3((intent.engagementContext?.distance ?? intent.engagementRange ?? 0)),

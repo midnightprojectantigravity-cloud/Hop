@@ -1,0 +1,58 @@
+{
+  "id": "FALCON_AUTO_ROOST",
+  "name": "Auto Roost",
+  "description": "Automatically returns the falcon to roost mode when mark is lost.",
+  "slot": "utility",
+  "icon": "R",
+  "keywords": [
+    "COMPANION",
+    "UTILITY"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "self",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": []
+  },
+  "combatScript": [
+    {
+      "id": "falcon_auto_roost_01_state",
+      "kind": "UPDATE_COMPANION_STATE",
+      "phase": "resolution",
+      "target": "self",
+      "mode": "roost"
+    },
+    {
+      "id": "falcon_auto_roost_02_behavior",
+      "kind": "UPDATE_BEHAVIOR_STATE",
+      "phase": "resolution",
+      "target": "self",
+      "clearOverlays": true,
+      "overlays": [
+        {
+          "id": "falcon_roost",
+          "source": "command",
+          "sourceId": "falcon_roost",
+          "rangeModel": "owner_proximity",
+          "selfPreservationBias": 0.35,
+          "controlBias": 0.2,
+          "commitBias": -0.3
+        }
+      ],
+      "anchorActorRef": "owner",
+      "anchorPoint": null
+    },
+    {
+      "id": "falcon_auto_roost_03_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Falcon loses prey and returns to roost mode."
+    }
+  ],
+  "upgrades": {}
+}

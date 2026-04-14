@@ -32,6 +32,17 @@ export const FALCON_STATS = {
     revivalCooldown: 3,
 };
 
+const resolveFalconCommandFlags = (
+    owner: Actor | undefined
+): Pick<NonNullable<Actor['companionState']>, 'keenSight' | 'twinTalons' | 'apexPredator'> => {
+    const upgrades = owner?.activeSkills?.find(skill => skill.id === 'FALCON_COMMAND')?.activeUpgrades || [];
+    return {
+        keenSight: upgrades.includes('KEEN_SIGHT'),
+        twinTalons: upgrades.includes('TWIN_TALONS') || upgrades.includes('FALCON_TWIN_TALONS'),
+        apexPredator: upgrades.includes('APEX_PREDATOR')
+    };
+};
+
 /**
  * Spawn Falcon adjacent to Hunter
  */
@@ -50,11 +61,17 @@ export function spawnFalcon(state: GameState, hunterId: string): { state: GameSt
     if (!validSpawn) return { state, falcon: null };
 
     const falcon = createFalconEntity({ ownerId: hunterId, position: validSpawn });
+    falcon.companionState = {
+        ...falcon.companionState,
+        ...resolveFalconCommandFlags(hunter),
+        mode: falcon.companionState?.mode || 'roost'
+    };
 
     return {
         state: {
             ...state,
             enemies: [...state.enemies, falcon],
+            companions: [...(state.companions || []), falcon],
         },
         falcon,
     };
@@ -74,6 +91,7 @@ export function removeFalcon(state: GameState, falconId: string): GameState {
     return {
         ...state,
         enemies: state.enemies.filter(e => e.id !== falconId),
+        companions: state.companions?.filter(e => e.id !== falconId),
         message: appendTaggedMessage(state.message, 'The Falcon falls but will return!', 'INFO', 'AI'),
     };
 }
@@ -231,9 +249,6 @@ export function executeScoutBehavior(
         return { effects, newPosition: falcon.position, messages };
     }
 
-    // const markPos = markTarget as Point;
-    // const orbitStep = falcon.companionState?.orbitStep ?? 0;
-
     // 1. ACTION PRIORITY: Check for enemies in range for Basic Peck
     const nearestEnemy = findNearestEnemyInRange(state, falcon.position, 1);
     if (nearestEnemy) {
@@ -244,7 +259,11 @@ export function executeScoutBehavior(
     }
 
     // 2. MOVEMENT: Use FALCON_SCOUT skill
-    const scoutResult = SkillRegistry.FALCON_SCOUT.execute(state, falcon);
+    const scoutTarget = SkillRegistry.FALCON_SCOUT.getValidTargets(state, falcon.position)[0];
+    if (!scoutTarget) {
+        return { effects, newPosition: falcon.position, messages };
+    }
+    const scoutResult = SkillRegistry.FALCON_SCOUT.execute(state, falcon, scoutTarget);
     if (scoutResult.consumesTurn) {
         return { effects: scoutResult.effects, newPosition: falcon.position, messages: scoutResult.messages };
     }
@@ -271,13 +290,14 @@ export function executePredatorBehavior(
     const targetEnemy = findFalconTarget(state, falcon) as Actor;
 
     if (!targetEnemy || targetEnemy.hp <= 0) {
-        // Target dead or lost, return to hunter
-        effects.push({
-            type: 'UpdateCompanionState',
-            target: falcon.id,
-            mode: 'roost',
-        });
-        return { effects, newPosition: falcon.position, messages: [tagMessage('Target lost. Falcon returns to roost.', 'INFO', 'AI')] };
+        const roostResult = SkillRegistry.FALCON_AUTO_ROOST.execute(state, falcon, falcon.position);
+        return {
+            effects: roostResult.effects,
+            newPosition: falcon.position,
+            messages: roostResult.messages.length > 0
+                ? roostResult.messages
+                : [tagMessage('Target lost. Falcon returns to roost.', 'INFO', 'AI')]
+        };
     }
 
     const dist = hexDistance(falcon.position, targetEnemy.position);
@@ -363,7 +383,11 @@ export function resolveFalconTurn(state: GameState, falcon: Actor): { state: Gam
     let nextState = state;
 
     // 1. Process movement if changed
-    if (!hexEquals(result.newPosition, falcon.position)) {
+    const hasDisplacementEffect = result.effects.some(effect =>
+        effect.type === 'Displacement'
+        && effect.target === falcon.id
+    );
+    if (!hasDisplacementEffect && !hexEquals(result.newPosition, falcon.position)) {
         const moveEff: AtomicEffect = {
             type: 'Displacement',
             target: falcon.id,
@@ -381,14 +405,11 @@ export function resolveFalconTurn(state: GameState, falcon: Actor): { state: Gam
         });
     }
 
-    const ownerId = falcon.companionOf;
-    const owner = ownerId
-        ? (ownerId === nextState.player.id ? nextState.player : nextState.enemies.find(e => e.id === ownerId))
-        : undefined;
-    const commandUpgrades = owner?.activeSkills?.find(s => s.id === 'FALCON_COMMAND')?.activeUpgrades || [];
-    const hasKeenSight = commandUpgrades.includes('KEEN_SIGHT');
+    const hasKeenSight = !!falcon.companionState?.keenSight;
     if (hasKeenSight) {
-        const liveFalcon = nextState.enemies.find(e => e.id === falcon.id) || falcon;
+        const liveFalcon = nextState.enemies.find(e => e.id === falcon.id)
+            || nextState.companions?.find(e => e.id === falcon.id)
+            || falcon;
         let revealedCount = 0;
         nextState = {
             ...nextState,

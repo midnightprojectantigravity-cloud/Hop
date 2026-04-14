@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { hexEquals } from '../hex';
+import { hexEquals, pointToKey } from '../hex';
 import { gameReducer } from '../logic';
 import { createActiveSkill, SkillRegistry } from '../skillRegistry';
 import { applyEffects } from '../systems/effect-engine';
 import { advanceInitiative, removeFromQueue } from '../systems/initiative';
 import { resolvePassiveSkillForTarget } from '../systems/passive-targeting';
 import { executePassiveWithdrawal } from '../skills/withdrawal';
+import { getActorAilmentCounters } from '../systems/ailments/runtime';
+import { createCompanion } from '../systems/entities/entity-factory';
 import { createMockState, p, placeTile } from './test_utils';
 import type { Actor, GameState } from '../types';
 
@@ -83,6 +85,91 @@ describe('Tightening regressions', () => {
     const next = applyEffects(state, execution.effects, { sourceId: state.player.id });
     expect(next.player.position).toEqual(p(6, 4));
     expect(next.player.hp).toBeGreaterThan(0);
+  });
+
+  it('absorb fire converts fire damage into a small heal', () => {
+    const state = createMockState();
+    state.player.hp = 1;
+    state.player.maxHp = 3;
+    state.player.activeSkills = [
+      ...state.player.activeSkills.filter(skill => skill.id !== 'ABSORB_FIRE'),
+      createActiveSkill('ABSORB_FIRE')
+    ];
+
+    const next = applyEffects(
+      state,
+      [{
+        type: 'Damage',
+        target: state.player.id,
+        amount: 10,
+        reason: 'fireball',
+        damageClass: 'magical',
+        damageSubClass: 'blast',
+        damageElement: 'fire'
+      }],
+      { sourceId: 'enemy-1', targetId: state.player.id }
+    );
+
+    expect(next.player.hp).toBe(2);
+  });
+
+  it('skeleton companions die without leaving a corpse tile behind', () => {
+    const state = createMockState();
+    const target = p(5, 5);
+    placeTile(state, target, [], 'STONE');
+
+    const skeleton = createCompanion({
+      companionType: 'skeleton',
+      ownerId: state.player.id,
+      position: target
+    });
+    state.enemies = [skeleton];
+    state.companions = [skeleton];
+
+    const next = applyEffects(
+      state,
+        [{
+        type: 'Damage',
+        target: skeleton.id,
+        amount: skeleton.hp + 10,
+        reason: 'test',
+        damageClass: 'physical',
+        damageSubClass: 'melee',
+        damageElement: 'neutral'
+      }],
+      { sourceId: state.player.id, targetId: skeleton.id }
+    );
+
+    expect(next.dyingEntities?.some(actor => actor.id === skeleton.id)).toBe(true);
+    expect(next.tiles.get(pointToKey(target))?.traits.has('CORPSE')).toBe(false);
+  });
+
+  it('ice damage extinguishes burn via elemental annihilation', () => {
+    const state = createMockState();
+    state.player.hp = 10;
+    const burned = applyEffects(state, [
+      {
+        type: 'DepositAilmentCounters',
+        target: state.player.id,
+        ailment: 'burn',
+        amount: 4
+      }
+    ], { sourceId: state.player.id, targetId: state.player.id });
+
+    const next = applyEffects(burned, [
+      {
+        type: 'Damage',
+        target: state.player.id,
+        amount: 3,
+        reason: 'ice_shard',
+        damageClass: 'magical',
+        damageSubClass: 'blast',
+        damageElement: 'ice'
+      }
+    ], { sourceId: 'enemy-ice', targetId: state.player.id });
+
+    expect(getActorAilmentCounters(next.player).burn || 0).toBe(0);
+    expect(getActorAilmentCounters(next.player).frozen || 0).toBeGreaterThan(0);
   });
 
   it('resolves blocked-behind-obstacle move clicks to basic move and not dash', () => {

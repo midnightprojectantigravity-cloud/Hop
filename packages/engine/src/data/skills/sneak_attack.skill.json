@@ -1,0 +1,156 @@
+{
+  "id": "SNEAK_ATTACK",
+  "name": "Sneak Attack",
+  "description": "Attack an adjacent enemy. Deals massive damage if executed from stealth.",
+  "slot": "offensive",
+  "icon": "SA",
+  "keywords": [
+    "ACTIVE",
+    "ATTACK",
+    "STEALTH"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 0,
+    "cooldown": 0,
+    "damage": 3
+  },
+  "combat": {
+    "damageClass": "physical",
+    "attackProfile": "melee",
+    "trackingSignature": "melee",
+    "weights": {
+      "instinct": 1
+    }
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 1,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "FACTION_RELATION",
+        "relation": "enemy",
+        "value": true
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "sneak_attack_stealth_hit",
+      "phase": "resolution",
+      "kind": "DEAL_DAMAGE",
+      "target": "target_actor",
+      "resolution": "combat",
+      "basePower": 0,
+      "skillDamageMultiplier": 10,
+      "engagementContext": {
+        "distance": 0
+      },
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "instinct": 1
+      },
+      "conditions": [
+        {
+          "type": "STEALTH_COUNTER",
+          "target": "caster",
+          "op": "gte",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sneak_attack_normal_hit",
+      "phase": "resolution",
+      "kind": "DEAL_DAMAGE",
+      "target": "target_actor",
+      "resolution": "combat",
+      "basePower": 0,
+      "skillDamageMultiplier": 6,
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "instinct": 1
+      },
+      "conditions": [
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "STEALTH_COUNTER",
+            "target": "caster",
+            "op": "gte",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "sneak_attack_stealth_message",
+      "phase": "resolution",
+      "kind": "MESSAGE",
+      "text": "SNEAK ATTACK!",
+      "conditions": [
+        {
+          "type": "STEALTH_COUNTER",
+          "target": "caster",
+          "op": "gte",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sneak_attack_stealth_juice",
+      "phase": "resolution",
+      "kind": "EMIT_JUICE",
+      "effect": "flash",
+      "target": "selected_hex",
+      "color": "#ff0000",
+      "metadata": {
+        "signature": "ATK.STRIKE.SHADOW.SNEAK_ATTACK",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "impact",
+        "element": "shadow",
+        "variant": "sneak_attack",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "SNEAK_ATTACK",
+        "flags": {
+          "crit": true
+        }
+      },
+      "conditions": [
+        {
+          "type": "STEALTH_COUNTER",
+          "target": "caster",
+          "op": "gte",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sneak_attack_normal_message",
+      "phase": "resolution",
+      "kind": "MESSAGE",
+      "text": "Sneak attack (No stealth bonus).",
+      "conditions": [
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "STEALTH_COUNTER",
+            "target": "caster",
+            "op": "gte",
+            "value": 1
+          }
+        }
+      ]
+    }
+  ],
+  "capabilities": {},
+  "upgrades": {}
+}

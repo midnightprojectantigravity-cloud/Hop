@@ -1,0 +1,24 @@
+{
+  "id": "THEME_HAZARDS",
+  "name": "Theme Hazards",
+  "description": "Internal skill for testing floor themes.",
+  "slot": "passive",
+  "icon": "\ud83e\uddea",
+  "keywords": [
+    "INTERNAL",
+    "HAZARD",
+    "TEST"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "upgrades": {}
+}

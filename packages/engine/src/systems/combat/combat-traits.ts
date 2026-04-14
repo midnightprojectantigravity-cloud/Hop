@@ -3,6 +3,7 @@ import type { CombatProfileComponent } from '../components';
 import { getComponent } from '../components';
 import { getEnemyCatalogEntry } from '../../data/enemies';
 import { getCompanionBalanceEntry } from '../../data/companions/content';
+import type { CombatDamageClass } from './damage-taxonomy';
 export const COMBAT_PROFILE_SET_VERSION = 'mvp-v1';
 
 export interface CombatProfile {
@@ -62,12 +63,14 @@ export const extractCombatProfile = (actor: Actor): CombatProfile => {
     };
 };
 
-export const getOutgoingDamageMultiplier = (actor: Actor, damageClass: 'physical' | 'magical'): number => {
+export const getOutgoingDamageMultiplier = (actor: Actor, damageClass: CombatDamageClass): number => {
     const p = extractCombatProfile(actor);
+    if (damageClass === 'true') return 1;
     return damageClass === 'magical' ? p.outgoingMagical : p.outgoingPhysical;
 };
 
-export const getIncomingDamageMultiplier = (actor: Actor, damageClass: 'physical' | 'magical'): number => {
+export const getIncomingDamageMultiplier = (actor: Actor, damageClass: CombatDamageClass): number => {
     const p = extractCombatProfile(actor);
+    if (damageClass === 'true') return 1;
     return damageClass === 'magical' ? p.incomingMagical : p.incomingPhysical;
 };

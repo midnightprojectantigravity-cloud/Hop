@@ -19,9 +19,9 @@ export const useBoardJuicePresentation = ({
     const [juiceDebugEntries, setJuiceDebugEntries] = useState<JuiceDebugEntry[]>([]);
     const poseStore = useMemo(() => createBoardEntityPoseStore(), []);
 
-    const processedCameraCueVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
-    const processedJuiceDebugVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
-    const processedJuicePoseVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
+    const processedCameraCueVisualBatchRef = useRef<string>('');
+    const processedJuiceDebugVisualBatchRef = useRef<string>('');
+    const processedJuicePoseVisualBatchRef = useRef<string>('');
     const juiceDebugTraceEnabledRef = useRef(false);
 
     useEffect(() => {
@@ -44,9 +44,9 @@ export const useBoardJuicePresentation = ({
     // Visual-only actor pose channel (JUICE-owned presentation layer).
     // First slice: BASIC_ATTACK strike phases drive source lunge + target flinch on real entities.
     useEffect(() => {
-        const sourceEvents = boardEventDigest.visualEventsRef;
-        if (processedJuicePoseVisualBatchRef.current === sourceEvents) return;
-        processedJuicePoseVisualBatchRef.current = sourceEvents;
+        const sourceEventsSignature = boardEventDigest.visualEventsSignature;
+        if (processedJuicePoseVisualBatchRef.current === sourceEventsSignature) return;
+        processedJuicePoseVisualBatchRef.current = sourceEventsSignature;
         const newEvents = boardEventDigest.signatureVisualEvents;
         if (newEvents.length === 0) return;
 
@@ -62,7 +62,7 @@ export const useBoardJuicePresentation = ({
         }
     }, [
         boardEventDigest.signatureVisualEvents,
-        boardEventDigest.visualEventsRef,
+        boardEventDigest.visualEventsSignature,
         gameState,
         gameState.player,
         gameState.enemies,
@@ -73,10 +73,10 @@ export const useBoardJuicePresentation = ({
 
     // Handle camera cues (signature-first, legacy fallback during migration)
     useEffect(() => {
-        const sourceEvents = boardEventDigest.visualEventsRef;
-        if (processedCameraCueVisualBatchRef.current === sourceEvents) return;
-        processedCameraCueVisualBatchRef.current = sourceEvents;
-        if (sourceEvents.length === 0) return;
+        const sourceEventsSignature = boardEventDigest.visualEventsSignature;
+        if (processedCameraCueVisualBatchRef.current === sourceEventsSignature) return;
+        processedCameraCueVisualBatchRef.current = sourceEventsSignature;
+        if (boardEventDigest.visualEventsRef.length === 0) return;
 
         const cuePlan = boardEventDigest.cameraCuePlan;
         const cueTimers: number[] = [];
@@ -117,13 +117,13 @@ export const useBoardJuicePresentation = ({
         return () => {
             for (const timerId of cueTimers) window.clearTimeout(timerId);
         };
-    }, [boardEventDigest.cameraCuePlan, boardEventDigest.visualEventsRef]);
+    }, [boardEventDigest.cameraCuePlan, boardEventDigest.visualEventsSignature]);
 
     useEffect(() => {
         if (!import.meta.env.DEV) return;
-        const sourceEvents = boardEventDigest.visualEventsRef;
-        if (processedJuiceDebugVisualBatchRef.current === sourceEvents) return;
-        processedJuiceDebugVisualBatchRef.current = sourceEvents;
+        const sourceEventsSignature = boardEventDigest.visualEventsSignature;
+        if (processedJuiceDebugVisualBatchRef.current === sourceEventsSignature) return;
+        processedJuiceDebugVisualBatchRef.current = sourceEventsSignature;
         const newEvents = boardEventDigest.juiceDebugPayloads;
         if (newEvents.length === 0) return;
 
@@ -158,7 +158,7 @@ export const useBoardJuicePresentation = ({
         if (juiceDebugOverlayEnabled && additions.length > 0) {
             setJuiceDebugEntries(prev => [...additions.slice(-8), ...prev].slice(0, 12));
         }
-    }, [boardEventDigest.juiceDebugPayloads, boardEventDigest.visualEventsRef, juiceDebugOverlayEnabled]);
+    }, [boardEventDigest.juiceDebugPayloads, boardEventDigest.visualEventsSignature, juiceDebugOverlayEnabled]);
 
     const resetBoardJuicePresentation = useCallback(() => {
         setJuiceDebugEntries([]);
@@ -166,9 +166,9 @@ export const useBoardJuicePresentation = ({
         setIsFrozen(false);
         setCameraKickOffsetPx({ x: 0, y: 0 });
         poseStore.reset();
-        processedCameraCueVisualBatchRef.current = null;
-        processedJuiceDebugVisualBatchRef.current = null;
-        processedJuicePoseVisualBatchRef.current = null;
+        processedCameraCueVisualBatchRef.current = '';
+        processedJuiceDebugVisualBatchRef.current = '';
+        processedJuicePoseVisualBatchRef.current = '';
     }, [poseStore]);
 
     return {

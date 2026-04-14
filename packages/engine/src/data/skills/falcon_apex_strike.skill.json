@@ -1,0 +1,129 @@
+{
+  "id": "FALCON_APEX_STRIKE",
+  "name": "Apex Strike",
+  "description": "The falcon dives into a target for lethal damage.",
+  "slot": "offensive",
+  "icon": "\u26a1",
+  "keywords": [
+    "COMPANION",
+    "PHYSICAL"
+  ],
+  "baseVariables": {
+    "range": 4,
+    "cost": 0,
+    "cooldown": 2,
+    "damage": 40
+  },
+  "targeting": {
+    "generator": "radius",
+    "range": 4,
+    "radius": 4,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "OCCUPANCY",
+        "occupied": true
+      }
+    ]
+  },
+  "targetingVariants": [
+    {
+      "when": [
+        {
+          "type": "COMPANION_STATE_NUMBER",
+          "target": "caster",
+          "field": "apexStrikeCooldown",
+          "op": "gte",
+          "value": 1
+        }
+      ],
+      "targeting": {
+        "generator": "self",
+        "range": 0,
+        "predicates": []
+      }
+    }
+  ],
+  "combatScript": [
+    {
+      "id": "falcon_apex_strike_01_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "target_actor",
+      "resolution": "combat",
+      "reason": "apex_strike",
+      "basePower": 0,
+      "skillDamageMultiplier": 40,
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "instinct": 1
+      }
+    },
+    {
+      "id": "falcon_apex_strike_02_impact",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "impact",
+      "target": "selected_hex",
+      "intensity": "high",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.FALCON_APEX_STRIKE",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "impact",
+        "element": "physical",
+        "variant": "falcon_apex_strike",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "FALCON_APEX_STRIKE",
+        "camera": {
+          "kick": "medium"
+        }
+      }
+    },
+    {
+      "id": "falcon_apex_strike_03_cooldown_normal",
+      "kind": "UPDATE_COMPANION_STATE",
+      "phase": "cleanup",
+      "target": "self",
+      "apexStrikeCooldown": 2,
+      "conditions": [
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "COMPANION_FLAG",
+            "target": "caster",
+            "flag": "apexPredator"
+          }
+        }
+      ]
+    },
+    {
+      "id": "falcon_apex_strike_04_cooldown_apex",
+      "kind": "UPDATE_COMPANION_STATE",
+      "phase": "cleanup",
+      "target": "self",
+      "apexStrikeCooldown": 1,
+      "conditions": [
+        {
+          "type": "COMPANION_FLAG",
+          "target": "caster",
+          "flag": "apexPredator"
+        }
+      ]
+    },
+    {
+      "id": "falcon_apex_strike_05_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Falcon executes APEX STRIKE on enemy!"
+    }
+  ],
+  "upgrades": {}
+}

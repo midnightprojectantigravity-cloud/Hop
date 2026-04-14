@@ -1,10 +1,20 @@
 import type { ArmorBurdenTier, WeightClass } from '../../types';
+import type { AiBehaviorOverlayInstance } from '../../types';
 import type { TrinityStats } from '../../systems/combat/trinity-resolver';
 import type { CombatProfile } from '../../systems/combat/combat-traits';
 
 export type CompanionSubtypeId = 'falcon' | 'skeleton';
 export type CompanionRole = 'utility_predator' | 'attrition_body';
 export type CompanionPowerBudgetClass = 'utility_light' | 'support_medium' | 'summon_swarm';
+export type CompanionModeId = 'roost' | 'scout' | 'predator';
+
+export interface CompanionModeDefinition {
+    id: CompanionModeId;
+    commandName: string;
+    commandDescription: string;
+    overlay: AiBehaviorOverlayInstance;
+    anchor: 'owner' | 'point' | 'actor';
+}
 
 export interface CompanionBalanceEntry {
     subtype: CompanionSubtypeId;
@@ -19,6 +29,7 @@ export interface CompanionBalanceEntry {
     skills: string[];
     combatProfile: CombatProfile;
     evaluationExcludedFromEnemyBudget: boolean;
+    modes?: Partial<Record<CompanionModeId, CompanionModeDefinition>>;
 }
 
 export const COMPANION_BALANCE_CONTENT: Record<CompanionSubtypeId, CompanionBalanceEntry> = {
@@ -39,7 +50,54 @@ export const COMPANION_BALANCE_CONTENT: Record<CompanionSubtypeId, CompanionBala
             incomingPhysical: 1,
             incomingMagical: 1
         },
-        evaluationExcludedFromEnemyBudget: true
+        evaluationExcludedFromEnemyBudget: true,
+        modes: {
+            roost: {
+                id: 'roost',
+                commandName: 'Falcon: Roost',
+                commandDescription: 'Falcon returns to you. Heals and cleanses 1 debuff on arrival.',
+                overlay: {
+                    id: 'falcon_roost',
+                    source: 'command',
+                    sourceId: 'falcon_roost',
+                    rangeModel: 'owner_proximity',
+                    selfPreservationBias: 0.35,
+                    controlBias: 0.2,
+                    commitBias: -0.3
+                },
+                anchor: 'owner'
+            },
+            scout: {
+                id: 'scout',
+                commandName: 'Falcon: Scout',
+                commandDescription: 'Click tile to set patrol zone. Falcon orbits and attacks nearby enemies.',
+                overlay: {
+                    id: 'falcon_scout',
+                    source: 'command',
+                    sourceId: 'falcon_scout',
+                    rangeModel: 'anchor_proximity',
+                    controlBias: 0.35,
+                    selfPreservationBias: 0.15,
+                    commitBias: -0.1
+                },
+                anchor: 'point'
+            },
+            predator: {
+                id: 'predator',
+                commandName: 'Falcon: Hunt',
+                commandDescription: 'Click enemy to mark as prey. Falcon pursues and uses Apex Strike.',
+                overlay: {
+                    id: 'falcon_predator',
+                    source: 'command',
+                    sourceId: 'falcon_predator',
+                    desiredRange: [1, 2],
+                    offenseBias: 0.35,
+                    commitBias: 0.3,
+                    preferDamageOverPositioning: true
+                },
+                anchor: 'actor'
+            }
+        }
     },
     skeleton: {
         subtype: 'skeleton',
@@ -47,11 +105,11 @@ export const COMPANION_BALANCE_CONTENT: Record<CompanionSubtypeId, CompanionBala
         powerBudgetClass: 'summon_swarm',
         weightClass: 'Standard',
         armorBurdenTier: 'Medium',
-        trinity: { body: 12, mind: 2, instinct: 4 },
+        trinity: { body: 12, mind: 2, instinct: 6 },
         speed: 50,
         hp: 86,
         maxHp: 86,
-        skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'],
+        skills: ['BASIC_MOVE', 'BASIC_ATTACK'],
         combatProfile: {
             outgoingPhysical: 1.1,
             outgoingMagical: 1,
@@ -67,3 +125,8 @@ export const getCompanionBalanceEntry = (subtype: string): CompanionBalanceEntry
 
 export const listCompanionBalanceEntries = (): CompanionBalanceEntry[] =>
     Object.values(COMPANION_BALANCE_CONTENT);
+
+export const getCompanionModeDefinition = (
+    subtype: CompanionSubtypeId,
+    mode: CompanionModeId
+): CompanionModeDefinition | undefined => COMPANION_BALANCE_CONTENT[subtype].modes?.[mode];

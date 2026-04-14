@@ -1,0 +1,385 @@
+{
+  "fixture": {
+    "id": "firemage_floor8_loss",
+    "version": 1,
+    "seed": "firemage-10",
+    "loadoutId": "FIREMAGE",
+    "floorsTarget": 1,
+    "maxTurnsPerFloor": 20,
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "expected": {
+      "outcome": "lost",
+      "finalFloor": [
+        1,
+        1
+      ],
+      "totalKills": [
+        0,
+        0
+      ],
+      "totalTurns": [
+        8,
+        10
+      ],
+      "playerHp": [
+        0,
+        0
+      ],
+      "fingerprint": "e7b30e4b8583281e"
+    }
+  },
+  "maxTurns": 20,
+  "strictMode": false,
+  "run": {
+    "seed": "firemage-10",
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "loadoutId": "FIREMAGE",
+    "result": "lost",
+    "turnsSpent": 3,
+    "floor": 1,
+    "kills": 0,
+    "hazardBreaches": 0,
+    "score": 11176,
+    "finalPlayerHp": 105,
+    "finalPlayerMaxHp": 105,
+    "finalPlayerHpRatio": 1,
+    "finalSpark": 102,
+    "finalMana": 78,
+    "finalSparkState": "base",
+    "finalSparkRatio": 0.6375,
+    "finalExhaustion": 36,
+    "peakExhaustion": 76,
+    "restTurns": 3,
+    "redlineActions": 0,
+    "sparkBurnDamage": 0,
+    "avgActionsPerPlayerTurn": 6.666666666666667,
+    "directorRedlineBand": 0,
+    "directorResourceStressBand": 0,
+    "playerActionCounts": {
+      "USE_SKILL": 1,
+      "MOVE": 19,
+      "WAIT": 3
+    },
+    "playerSkillUsage": {
+      "FIREBALL": 1
+    },
+    "goalCounts": {
+      "engage": 0,
+      "explore": 23,
+      "recover": 0
+    },
+    "totalPlayerSkillCasts": 1,
+    "playerSkillTelemetry": {
+      "FIREBALL": {
+        "casts": 1,
+        "enemyDamage": 93,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 0,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      }
+    },
+    "autoAttackTriggersByActionType": {},
+    "triangleSignal": {
+      "samples": 1,
+      "avgHitPressure": 1.364,
+      "avgMitigationPressure": 1.5,
+      "avgCritPressure": 0.542,
+      "avgResistancePressure": 0.6
+    },
+    "trinityContribution": {
+      "samples": 1,
+      "bodyContribution": 0.005,
+      "mindContribution": 0.508,
+      "instinctContribution": 0.487
+    },
+    "combatProfileSignal": {
+      "samples": 1,
+      "avgOutgoingMultiplier": 1,
+      "avgIncomingMultiplier": 1,
+      "avgTotalMultiplier": 1
+    },
+    "enemyAiTelemetry": {
+      "actionCounts": {},
+      "skillUsage": {},
+      "offensiveSkillCasts": 0,
+      "damageToPlayer": 0,
+      "visiblePlayerTurns": 0,
+      "idleWithVisiblePlayer": 0,
+      "attackOpportunityTurns": 0,
+      "attackConversionTurns": 0,
+      "threatOpportunityTurns": 0,
+      "threatConversionTurns": 0,
+      "backtrackMoves": 0,
+      "loopMoves": 0,
+      "preservedRestedTurns": 0,
+      "restedBatterySpendSelections": 0,
+      "restedReentryTurns": 0,
+      "trueRestRestedBonusArmedTurns": 0,
+      "voluntaryExhaustionAttempts": 0,
+      "voluntaryExhaustionAllowed": 0,
+      "voluntaryExhaustionBlocked": 0,
+      "turnsEndedRested": 0,
+      "turnsEndedStableOrBetter": 0,
+      "turnsEndedCriticalOrExhausted": 0,
+      "secondActionAttempts": 0,
+      "secondActionAllowed": 0,
+      "thirdActionAttempts": 0,
+      "thirdActionAllowed": 0,
+      "waitForBandPreservationSelections": 0
+    },
+    "pacingSignal": {
+      "samples": 23,
+      "avgSparkRatio": 0.6182065217391302,
+      "avgManaRatio": 0.9949832775919734,
+      "avgReservePressure": 0.38179347826086957,
+      "avgFatiguePressure": 0.16600543478260868,
+      "avgRecoveryPressure": 0.1669230072463768,
+      "avgTurnEndSparkRatio": 0.50625,
+      "visibleHostileSelections": 1,
+      "idleWithVisibleHostile": 0,
+      "attackOpportunityCount": 1,
+      "attackConversionCount": 1,
+      "threatenNextTurnOpportunityCount": 0,
+      "threatenNextTurnConversionCount": 0,
+      "backtrackMoveCount": 0,
+      "loopMoveCount": 18,
+      "lowValueMobilitySelections": 0,
+      "restSelections": 3,
+      "endTurnSelections": 0,
+      "continuedActionSelections": 20,
+      "preservedRestedTurns": 1,
+      "restedBatterySpendSelections": 0,
+      "restedReentryTurns": 0,
+      "trueRestRestedBonusArmedTurns": 0,
+      "voluntaryExhaustionAttempts": 100,
+      "voluntaryExhaustionAllowed": 0,
+      "voluntaryExhaustionBlocked": 100,
+      "turnsEndedRested": 0,
+      "turnsEndedStableOrBetter": 1,
+      "turnsEndedCriticalOrExhausted": 0,
+      "secondActionAttempts": 1,
+      "secondActionAllowed": 1,
+      "thirdActionAttempts": 0,
+      "thirdActionAllowed": 0,
+      "waitForBandPreservationSelections": 3,
+      "firstContactTurn": 1,
+      "firstDamageTurn": 1
+    }
+  },
+  "diagnostics": {
+    "actionCount": 33,
+    "stateFingerprint": "{\"player\":{\"hp\":105,\"maxHp\":105,\"position\":{\"q\":2,\"r\":4,\"s\":-6},\"upgrades\":[\"VISION_TIER_4\"]},\"enemies\":[],\"floor\":1,\"gridWidth\":9,\"gridHeight\":11,\"mapShape\":\"diamond\",\"turnNumber\":4,\"kills\":0,\"rngCounter\":3}"
+  },
+  "strictFingerprint": "3cf9852c4874f737",
+  "actions": [
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 1,
+        "s": -5
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "VISION_TIER_4"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 4,
+        "s": -5
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 4,
+        "s": -5
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 4,
+        "s": -5
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 4,
+        "s": -5
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 4,
+        "s": -5
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 4,
+        "s": -5
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 4,
+        "s": -5
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 4,
+        "s": -5
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 4,
+        "s": -5
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 4,
+        "s": -6
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    }
+  ]
+}

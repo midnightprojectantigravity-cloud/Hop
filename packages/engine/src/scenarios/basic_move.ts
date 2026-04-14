@@ -184,7 +184,10 @@ export const basicMoveScenarios: ScenarioCollection = {
                 const attackCount = logs.filter(l => l.includes('attacked you')).length;
                 const checks = {
                     enemyAdvanced: moveCount >= 1,
-                    noIllegalBurst: attackCount <= 1,
+                    // Footmen now legitimately carry both BASIC_ATTACK and AUTO_ATTACK, so a wait cycle
+                    // can include a normal contact attack plus a passive follow-up without indicating an
+                    // illegal multi-action burst.
+                    noIllegalBurst: attackCount <= 2,
                     noZeroEffectMoveWarning: !logs.some(l => l.includes('produced ZERO effects')),
                 };
 

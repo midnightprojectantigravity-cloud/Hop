@@ -48,10 +48,15 @@ export const actorStateEffectHandlers: AtomicEffectHandlerMap = {
                 companionState: {
                     ...e.companionState,
                     mode: effect.mode || e.companionState?.mode,
-                    markTarget: effect.markTarget !== undefined ? effect.markTarget : e.companionState?.markTarget,
+                    markTarget: effect.markTarget !== undefined
+                        ? (effect.markTarget === null ? undefined : effect.markTarget)
+                        : e.companionState?.markTarget,
                     orbitStep: effect.mode === 'scout' ? 0 : e.companionState?.orbitStep,
                     apexStrikeCooldown: effect.apexStrikeCooldown !== undefined ? effect.apexStrikeCooldown : e.companionState?.apexStrikeCooldown,
                     healCooldown: effect.healCooldown !== undefined ? effect.healCooldown : e.companionState?.healCooldown,
+                    keenSight: effect.keenSight !== undefined ? effect.keenSight : e.companionState?.keenSight,
+                    twinTalons: effect.twinTalons !== undefined ? effect.twinTalons : e.companionState?.twinTalons,
+                    apexPredator: effect.apexPredator !== undefined ? effect.apexPredator : e.companionState?.apexPredator,
                 }
             } as Actor;
         };

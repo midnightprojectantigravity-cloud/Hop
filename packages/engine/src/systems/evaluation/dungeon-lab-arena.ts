@@ -26,6 +26,7 @@ import type { TrinityStats } from '../combat/trinity-resolver';
 import { computeSkillPowerProfileMap } from './balance-skill-power';
 import { computeUnitPowerProfile } from './balance-unit-power';
 import { resolvePending } from '../ai/player/selector';
+import { resolveVirtualSkillDefinition } from '../skill-upgrade-resolution';
 import type { ReplayEnvelopeV3 } from '../replay-validation';
 import { validateReplayEnvelopeV3 } from '../replay-validation';
 import type { GenericUnitAiCandidate, GenericUnitAiSelectionSummary } from '../ai/generic-unit-ai';
@@ -475,10 +476,8 @@ const resolveActorProjection = (actor: DungeonLabArenaActorV2): DungeonLabArenaP
     const cooldownDelta = runtimeSkills.reduce((best, skill) => {
         const definition = SkillRegistry.get(skill.id);
         if (!definition) return best;
-        const skillDelta = (skill.activeUpgrades || []).reduce((total, upgradeId) => {
-            const modifier = definition.upgrades?.[upgradeId];
-            return total + Number(modifier?.modifyCooldown || 0);
-        }, 0);
+        const resolved = resolveVirtualSkillDefinition(definition, skill.activeUpgrades || []);
+        const skillDelta = resolved.skill.baseVariables.cooldown - (definition.baseVariables.cooldown || 0);
         return Math.min(best, skillDelta);
     }, 0);
     const skillProfilesById = computeSkillPowerProfileMap();
@@ -620,6 +619,7 @@ const createCompiledActor = (
             id: reference.compiledActorId,
             type: reference.compiledActorId === 'player' ? 'player' : 'enemy',
             subtype: actor.subtypeRef,
+            visualAssetRef: actor.visualAssetRef,
             position: normalizePoint(actor.position),
             hp: projection.hp,
             maxHp: projection.maxHp,

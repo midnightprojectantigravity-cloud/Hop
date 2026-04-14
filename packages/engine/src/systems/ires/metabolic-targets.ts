@@ -21,7 +21,7 @@ export const DEFAULT_METABOLIC_PROFILE_TEMPLATES: MetabolicProfileTemplate[] = [
     { id: 'skirmisher_light', label: 'Skirmisher Light', body: 8, mind: 6, instinct: 16 },
     { id: 'caster_mind', label: 'Caster Mind', body: 6, mind: 16, instinct: 8 },
     { id: 'companion_falcon', label: 'Companion Falcon', body: 4, mind: 6, instinct: 18 },
-    { id: 'companion_skeleton', label: 'Companion Skeleton', body: 12, mind: 2, instinct: 4 },
+    { id: 'companion_skeleton', label: 'Companion Skeleton', body: 12, mind: 2, instinct: 6 },
     { id: 'boss_anchor', label: 'Boss Anchor', body: 18, mind: 14, instinct: 10 }
 ];
 

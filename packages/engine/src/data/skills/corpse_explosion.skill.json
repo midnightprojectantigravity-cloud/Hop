@@ -1,0 +1,123 @@
+{
+  "id": "CORPSE_EXPLOSION",
+  "name": "Corpse Explosion",
+  "description": "Detonate a target corpse, dealing damage in a 1-tile radius.",
+  "slot": "offensive",
+  "icon": "🧨💀",
+  "keywords": [
+    "VOID",
+    "CORPSE",
+    "AOE"
+  ],
+  "baseVariables": {
+    "range": 4,
+    "cost": 1,
+    "cooldown": 2,
+    "basePower": 2,
+    "damage": 1
+  },
+  "combat": {
+    "damageClass": "magical",
+    "attackProfile": "spell",
+    "trackingSignature": "magic",
+    "weights": {
+      "mind": 1
+    }
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 4,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "CORPSE_PRESENT"
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "corpse_explosion_01_remove_corpse",
+      "kind": "REMOVE_CORPSE",
+      "phase": "resolution",
+      "position": "selected_hex"
+    },
+    {
+      "id": "corpse_explosion_02_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "targetFanOut": "selected_hex_plus_neighbors",
+      "resolution": "combat",
+      "combatPointTargetMode": "proxy_actor",
+      "reason": "corpse_explosion",
+      "includeDangerPreviewHex": true,
+      "theoreticalMaxPower": 2
+    },
+    {
+      "id": "corpse_explosion_ring",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "explosion_ring",
+      "target": "selected_hex",
+      "metadata": {
+        "signature": "ATK.BLAST.VOID.CORPSE_EXPLOSION",
+        "family": "attack",
+        "primitive": "blast",
+        "phase": "impact",
+        "element": "void",
+        "variant": "corpse_explosion",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "CORPSE_EXPLOSION"
+      }
+    },
+    {
+      "id": "corpse_explosion_shake",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "shake",
+      "intensity": "high",
+      "metadata": {
+        "signature": "UI.SHAKE.VOID.CORPSE_EXPLOSION",
+        "family": "ui",
+        "primitive": "shake",
+        "phase": "impact",
+        "element": "void",
+        "variant": "corpse_explosion_shake",
+        "skillId": "CORPSE_EXPLOSION",
+        "camera": {
+          "shake": "high"
+        }
+      }
+    },
+    {
+      "id": "corpse_explosion_text",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "combat_text",
+      "target": "selected_hex",
+      "text": "BOOM!",
+      "metadata": {
+        "signature": "UI.TEXT.VOID.CORPSE_EXPLOSION",
+        "family": "ui",
+        "primitive": "text",
+        "phase": "impact",
+        "element": "void",
+        "variant": "corpse_explosion_text",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "CORPSE_EXPLOSION",
+        "textTone": "damage"
+      }
+    },
+    {
+      "id": "corpse_explosion_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Corpse exploded!"
+    }
+  ],
+  "upgrades": {}
+}

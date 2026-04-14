@@ -44,6 +44,9 @@ const EntityLayerBase: React.FC<EntityLayerProps> = ({
   onSynapseInspectEntity,
   registerActorNodes,
 }) => {
+  const resolveAssetHref = (actor: Actor): string | undefined =>
+    actor.visualAssetRef || assetById.get(resolveUnitAssetId(actor))?.path || resolveUnitFallbackAssetHref(actor);
+
   return (
     <g>
       {lastSpearPath && lastSpearPath.length >= 2 && (() => {
@@ -73,7 +76,7 @@ const EntityLayerBase: React.FC<EntityLayerProps> = ({
         entity={player}
         isDying={playerDefeated}
         poseStore={poseStore}
-        assetHref={assetById.get(resolveUnitAssetId(player))?.path}
+        assetHref={resolveAssetHref(player)}
         fallbackAssetHref={resolveUnitFallbackAssetHref(player)}
         floorTheme={biomeThemeKey}
         synapseMode={isSynapseMode}
@@ -87,7 +90,7 @@ const EntityLayerBase: React.FC<EntityLayerProps> = ({
           key={`${enemy.id}-${floor}`}
           entity={enemy}
           poseStore={poseStore}
-          assetHref={assetById.get(resolveUnitAssetId(enemy))?.path}
+          assetHref={resolveAssetHref(enemy)}
           fallbackAssetHref={resolveUnitFallbackAssetHref(enemy)}
           floorTheme={biomeThemeKey}
           synapseMode={isSynapseMode}
@@ -113,7 +116,7 @@ const EntityLayerBase: React.FC<EntityLayerProps> = ({
           entity={enemy}
           isDying={true}
           poseStore={poseStore}
-          assetHref={assetById.get(resolveUnitAssetId(enemy))?.path}
+          assetHref={resolveAssetHref(enemy)}
           fallbackAssetHref={resolveUnitFallbackAssetHref(enemy)}
           floorTheme={biomeThemeKey}
           registerActorNodes={registerActorNodes}

@@ -1,0 +1,46 @@
+{
+  "id": "BASIC_MOVE",
+  "name": "Walk",
+  "description": "Move to an adjacent or nearby tile within your speed range.",
+  "slot": "passive",
+  "icon": "\ud83d\udc63",
+  "keywords": [
+    "MOVEMENT",
+    "TRAVEL"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "movement_reachable",
+    "range": 1,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "movementPolicy": {
+    "rangeSource": "actor_speed",
+    "freeMoveRangeOverride": 20
+  },
+  "combatScript": [
+    {
+      "id": "basic_move_01_move",
+      "kind": "MOVE_ACTOR",
+      "phase": "movement",
+      "actor": "self",
+      "destination": "selected_hex",
+      "mode": "STEP",
+      "simulatePath": true
+    },
+    {
+      "id": "basic_move_02_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Movement resolved.",
+      "format": "movement_summary",
+      "actor": "self",
+      "includeResolvedRange": true
+    }
+  ],
+  "upgrades": {}
+}

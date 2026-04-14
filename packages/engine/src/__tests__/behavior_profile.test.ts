@@ -232,10 +232,19 @@ describe('behavior profile resolution', () => {
         const spawned = result.effects.find(effect => effect.type === 'SpawnActor');
 
         expect(spawned?.type).toBe('SpawnActor');
-        if (spawned?.type === 'SpawnActor') {
+          if (spawned?.type === 'SpawnActor') {
+            expect(spawned.actor.factionId).toBe(state.player.factionId);
+            expect(spawned.actor.visualAssetRef).toBe('/Hop/assets/bestiary/unit.skeleton.basic.01.webp');
+            expect(spawned.actor.behaviorState?.controller).toBe('generic_ai');
             expect(spawned.actor.behaviorState?.anchorActorId).toBe(state.player.id);
             expect(spawned.actor.behaviorState?.overlays[0]?.sourceId).toBe('raise_dead');
             expect(spawned.actor.behaviorState?.overlays[0]?.desiredRange).toBe(1);
-        }
-    });
+            expect(spawned.actor.components?.get('trinity')).toMatchObject({
+              type: 'trinity',
+              body: 12,
+              mind: 2,
+              instinct: 4
+            });
+          }
+      });
 });

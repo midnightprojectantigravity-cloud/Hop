@@ -73,6 +73,25 @@ describe('spark doctrine exhaustion guard', () => {
         expect(result.voluntaryExhaustionAllowed).toBe(true);
     });
 
+    it('allows a first-action move into exhaustion when it is the only contact window under pressure', () => {
+        const result = evaluateSparkDoctrine({
+            actionType: 'MOVE',
+            payoff: 'standard_payoff',
+            assessment: makeAssessment({
+                sparkBandBefore: 'caution',
+                sparkRatioBefore: 0.48,
+                fullSparkBurstWindow: false
+            }),
+            restedOpportunityMode: 'battery_only',
+            hasStandardOrBetterNonExhaustingAlternative: false,
+            contactWindowOverrideEligible: true
+        });
+
+        expect(result.allowed).toBe(true);
+        expect(result.override).toBe('pressure_only_option');
+        expect(result.voluntaryExhaustionAllowed).toBe(true);
+    });
+
     it('still allows decisive kill windows to override exhaustion entry', () => {
         const result = evaluateSparkDoctrine({
             actionType: 'USE_SKILL',

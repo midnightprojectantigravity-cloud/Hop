@@ -31,7 +31,7 @@ export const DEFAULT_LOADOUT_DEFINITIONS: LoadoutCatalog = {
         name: 'Necromancer',
         description: 'Utilize death and reanimation.',
         startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'CORPSE_EXPLOSION', 'RAISE_DEAD', 'SOUL_SWAP']
+        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'DEATH_TOUCH', 'RAISE_DEAD', 'SOUL_SWAP']
     },
     HUNTER: {
         id: 'HUNTER',

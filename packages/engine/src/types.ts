@@ -2,6 +2,12 @@ import type { GameComponent } from './systems/components';
 import type { SkillID, StatusID, ArchetypeID, JuiceEffectID, AilmentID } from './types/registry';
 import type { JuiceSignaturePayloadV1 } from './types/juice-signature';
 import type { CombatScoreEvent } from './systems/combat/combat-calculator';
+import type {
+    CombatAttackProfile,
+    CombatDamageClass,
+    CombatDamageElement,
+    CombatDamageSubClass
+} from './systems/combat/damage-taxonomy';
 import type { CompiledFloorArtifact, GeneratedPathNetwork, GenerationDebugSnapshot, GenerationSpecInput, GenerationState, RunTelemetryCounters } from './generation/schema';
 import type { IresMetabolicConfig, LinearStatFormula, MetabolicActionBandId } from './systems/ires/metabolic-types';
 
@@ -268,7 +274,18 @@ export type AtomicEffect =
         pathStyle?: MovementPathStyle;
         presentationSequenceId?: string;
     }
-    | { type: 'Damage'; target: 'targetActor' | 'area' | Point | string; amount: number; reason?: string; source?: Point; scoreEvent?: CombatScoreEvent }
+    | {
+        type: 'Damage';
+        target: 'targetActor' | 'area' | Point | string;
+        amount: number;
+        reason?: string;
+        source?: Point;
+        scoreEvent?: CombatScoreEvent;
+        damageClass?: CombatDamageClass;
+        damageSubClass?: CombatDamageSubClass;
+        damageElement?: CombatDamageElement;
+        leechRatio?: number;
+    }
     | { type: 'Heal'; target: 'targetActor' | string; amount: number }
     | { type: 'ApplyStatus'; target: 'targetActor' | Point | string; status: StatusID; duration: number }
     | {
@@ -374,10 +391,13 @@ export type AtomicEffect =
         type: 'UpdateCompanionState';
         target: string;
         mode?: 'scout' | 'predator' | 'roost';
-        markTarget?: string | Point; // ID (Predator) or Point (Scout)
+        markTarget?: string | Point | null; // ID (Predator) or Point (Scout)
         orbitStep?: number;
         apexStrikeCooldown?: number;
         healCooldown?: number;
+        keenSight?: boolean;
+        twinTalons?: boolean;
+        apexPredator?: boolean;
     }
     | {
         type: 'UpdateBehaviorState';
@@ -484,6 +504,7 @@ export interface SkillExecutionResult {
     turnOutcome?: 'reject' | 'continue' | 'end';
     kills?: number;
     stackReactions?: AtomicStackReactionHooks;
+    rngConsumption?: number;
 }
 
 export interface TelegraphProjectionEntry {
@@ -580,12 +601,77 @@ export interface SkillModifier {
     id: string;
     name: string;
     description: string;
+    maxRanks?: number;
+    currentRank?: number;
+    tier?: number;
+    priority?: number;
+    groupId?: string;
+    exclusiveGroup?: string;
+    requires?: SkillUpgradeRequirement[];
+    requiredUpgrades?: string[];
+    requiresPointsInSkill?: number;
+    compatibilityTags?: string[];
+    incompatibleWith?: string[];
     modifyRange?: number;
     modifyCooldown?: number;
     modifyDamage?: number;
     requiresStationary?: boolean;
     extraEffects?: AtomicEffect[];
+    patches?: SkillUpgradePatchDefinition[];
 }
+
+export interface SkillSummonBehavior {
+    controller?: 'manual' | 'generic_ai';
+    overlays?: AiBehaviorOverlayInstance[];
+    anchorActorId?: string;
+    anchorPoint?: Point;
+    goal?: GenericAiGoal;
+}
+
+export interface SkillSummonDefinition {
+    companionType: string;
+    visualAssetRef?: string;
+    trinity?: {
+        body: number;
+        mind: number;
+        instinct: number;
+    };
+    skills?: string[];
+    behavior?: SkillSummonBehavior;
+}
+
+export type SkillUpgradePatchField =
+    | 'range'
+    | 'cooldown'
+    | 'damage'
+    | 'basePower'
+    | 'momentum'
+    | 'leechRatio'
+    | 'damageClass'
+    | 'damageSubClass'
+    | 'damageElement'
+    | 'attackProfile'
+    | 'trackingSignature';
+
+export type SkillUpgradePatchOperation = 'set' | 'add' | 'multiply';
+
+export type SkillUpgradePatchRankMode = 'single' | 'linear';
+
+export interface SkillUpgradePatchDefinition {
+    field: SkillUpgradePatchField;
+    op: SkillUpgradePatchOperation;
+    value?: number | string;
+    scaledValue?: number;
+    coefficientScale?: number;
+    rankMode?: SkillUpgradePatchRankMode;
+}
+
+export type SkillUpgradeRequirement =
+    | string
+    | {
+        upgradeId: string;
+        minRank?: number;
+    };
 
 export interface ScenarioV2 {
     id: string;              // Unique ID (e.g., "bash_into_lava")
@@ -711,7 +797,7 @@ export interface AiSparkDoctrineResult {
         | 'blocked_third_action_exhaustion'
         | 'none';
     sparkScoreDelta: number;
-    override: 'none' | 'big_payoff' | 'surge_only_option';
+    override: 'none' | 'big_payoff' | 'surge_only_option' | 'pressure_only_option';
     restedDecision: 'preserve' | 'spend_battery' | 'reenter' | 'true_rest' | 'none';
     waitForBandPreservation: boolean;
     voluntaryExhaustionAttempt: boolean;
@@ -972,14 +1058,17 @@ export interface SkillDefinition {
         momentum?: number;
     };
     combat?: {
-        damageClass: 'physical' | 'magical' | 'true';
-        attackProfile: 'melee' | 'projectile' | 'spell' | 'status';
+        damageClass: CombatDamageClass;
+        damageSubClass?: CombatDamageSubClass;
+        damageElement?: CombatDamageElement;
+        attackProfile: CombatAttackProfile;
         trackingSignature: 'melee' | 'projectile' | 'magic';
         weights: {
             body?: number;
             mind?: number;
             instinct?: number;
         };
+        leechRatio?: number;
     };
     /** Core Logic: Functional execution returning a list of effects */
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades?: string[], context?: Record<string, any>) => SkillExecutionResult;
@@ -989,6 +1078,8 @@ export interface SkillDefinition {
     metabolicBandProfile?: SkillMetabolicBandProfile;
     capabilities?: SkillCapabilities;
     intentProfile?: SkillIntentProfile;
+    summon?: SkillSummonDefinition;
+    deathDecalVariant?: 'blood' | 'bones';
     upgrades: Record<string, SkillModifier>;
     scenarios?: ScenarioV2[];
 }
@@ -1006,6 +1097,8 @@ export interface Skill {
     range: number;              // Skill range
     upgrades: string[];         // Available upgrades for this skill
     activeUpgrades: string[];   // Upgrades the player has acquired
+    activeUpgradeRanks?: Record<string, number>;
+    deathDecalVariant?: 'blood' | 'bones';
     energyCost?: number;
     pushDistance?: number;      // For Shield Bash
 }
@@ -1060,6 +1153,7 @@ export interface Actor {
     // Companion system (Falcon)
     companionOf?: string;      // Owner's actor ID (for Falcon)
     isFlying?: boolean;        // Ignores traps, ground hazards
+    visualAssetRef?: string;   // Optional authored render override
     companionState?: {
         mode: 'scout' | 'predator' | 'roost';
         markTarget?: Point | string;  // Tile position or Actor ID
@@ -1067,6 +1161,9 @@ export interface Actor {
         revivalCooldown?: number;     // Tethered Spirit countdown
         apexStrikeCooldown?: number;  // Tracking for design alignment
         healCooldown?: number;
+        keenSight?: boolean;
+        twinTalons?: boolean;
+        apexPredator?: boolean;
     };
     behaviorState?: {
         overlays: AiBehaviorOverlayInstance[];

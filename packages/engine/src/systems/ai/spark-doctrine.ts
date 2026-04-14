@@ -59,6 +59,7 @@ export interface SparkDoctrineEvaluationInput {
     hasStandardOrBetterNonExhaustingAlternative: boolean;
     decisivePayoff?: boolean;
     disciplineMultiplier?: number;
+    contactWindowOverrideEligible?: boolean;
 }
 
 const isRestedBand = (band: AiSparkBand): boolean => band === 'rested_hold' || band === 'rested_edge';
@@ -173,7 +174,8 @@ export const evaluateSparkDoctrine = ({
     restedOpportunityMode,
     hasStandardOrBetterNonExhaustingAlternative,
     decisivePayoff = false,
-    disciplineMultiplier = 1
+    disciplineMultiplier = 1,
+    contactWindowOverrideEligible = false
 }: SparkDoctrineEvaluationInput): AiSparkDoctrineResult => {
     const cadence = cadenceMultiplier(assessment) * Math.max(0.9, Math.min(1.1, disciplineMultiplier));
     const override = payoff === 'big_payoff' && decisivePayoff
@@ -187,12 +189,23 @@ export const evaluateSparkDoctrine = ({
             && !hasStandardOrBetterNonExhaustingAlternative
         )
             ? 'surge_only_option'
+            : (
+                actionType === 'MOVE'
+                && payoff === 'standard_payoff'
+                && assessment.isFirstAction
+                && assessment.wouldEnterExhausted
+                && !assessment.wouldActWhileExhausted
+                && contactWindowOverrideEligible
+                && !hasStandardOrBetterNonExhaustingAlternative
+            )
+                ? 'pressure_only_option'
             : 'none';
 
     const voluntaryExhaustionAttempt = assessment.wouldEnterExhausted || assessment.wouldActWhileExhausted;
     const voluntaryExhaustionAllowed = voluntaryExhaustionAttempt && (
         override === 'big_payoff'
         || override === 'surge_only_option'
+        || override === 'pressure_only_option'
     );
 
     if (assessment.wouldActWhileExhausted && override === 'none') {

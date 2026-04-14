@@ -13,16 +13,22 @@ import { bulwarkChargeScenarios } from './bulwark_charge';
 import { vaultScenarios } from './vault';
 import { basicMoveScenarios } from './basic_move';
 import { sentinelBlastScenarios } from './sentinel_blast';
+import { corpseExplosionScenarios } from './corpse_explosion';
 import { fireballScenarios } from './fireball';
+import { firewallScenarios } from './firewall';
+import { meteorImpactScenarios } from './meteor_impact';
+import { multiShootScenarios } from './multi_shoot';
 import { hazardScenarios } from './hazards';
 import { falconCommandScenarios } from './falcon_command';
 import { kineticTriTrapScenarios } from './kinetic_tri_trap';
 import { withdrawalScenarios } from './withdrawal';
 import { absorbFireScenarios } from './absorb_fire';
+import { bombTossScenarios } from './bomb_toss';
 import { tileInteractionScenarios } from './tile_interactions';
 import { telegraphProjectionScenarios } from './telegraph_projection';
 import { raiderDashScenarios } from './raider_dash';
 import { pouncerHookScenarios } from './pouncer_hook';
+import { tornadoKickScenarios } from './tornado_kick';
 import { iceScenarios } from './ice';
 import { snareScenarios } from './snare';
 import { relicScenarios } from './relics';
@@ -31,6 +37,9 @@ import { necromancerScenarios } from './necromancer';
 import { archerShotScenarios } from './archer_shot';
 import { acaeScenarios } from './acae';
 import { attachmentScenarios } from './attachments';
+import { firewalkScenarios } from './firewalk';
+import { setTrapScenarios } from './set_trap';
+import { timeBombScenarios } from './time_bomb';
 
 /**
  * Central registry for all test scenarios
@@ -53,16 +62,23 @@ export const SCENARIO_COLLECTIONS: ScenarioCollection[] = [
     hazardScenarios,
     basicMoveScenarios,
     sentinelBlastScenarios,
+    corpseExplosionScenarios,
     fireballScenarios,
+    firewallScenarios,
+    meteorImpactScenarios,
+    multiShootScenarios,
     falconCommandScenarios,
     kineticTriTrapScenarios,
     withdrawalScenarios,
     absorbFireScenarios,
+    bombTossScenarios,
     tileInteractionScenarios,
     telegraphProjectionScenarios,
     raiderDashScenarios,
     pouncerHookScenarios,
+    tornadoKickScenarios,
     iceScenarios,
+    firewalkScenarios,
     snareScenarios,
     relicScenarios,
     objectiveScenarios,
@@ -70,6 +86,8 @@ export const SCENARIO_COLLECTIONS: ScenarioCollection[] = [
     archerShotScenarios,
     acaeScenarios,
     attachmentScenarios,
+    setTrapScenarios,
+    timeBombScenarios,
 ];
 
 // Flat list of all scenarios for easy iteration

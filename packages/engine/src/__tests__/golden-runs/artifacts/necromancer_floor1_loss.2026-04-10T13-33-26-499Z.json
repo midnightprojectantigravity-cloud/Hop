@@ -1,0 +1,425 @@
+{
+  "fixture": {
+    "id": "necromancer_floor1_loss",
+    "version": 1,
+    "seed": "necromancer-4",
+    "loadoutId": "NECROMANCER",
+    "floorsTarget": 1,
+    "maxTurnsPerFloor": 20,
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "expected": {
+      "outcome": "lost",
+      "finalFloor": [
+        1,
+        1
+      ],
+      "totalKills": [
+        0,
+        0
+      ],
+      "totalTurns": [
+        15,
+        20
+      ],
+      "playerHp": [
+        0,
+        0
+      ],
+      "fingerprint": "111bf67d19fb133f"
+    }
+  },
+  "maxTurns": 20,
+  "strictMode": false,
+  "run": {
+    "seed": "necromancer-4",
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "loadoutId": "NECROMANCER",
+    "result": "lost",
+    "turnsSpent": 2,
+    "floor": 3,
+    "kills": 0,
+    "hazardBreaches": 0,
+    "score": 2084,
+    "finalPlayerHp": 0,
+    "finalPlayerMaxHp": 120,
+    "finalPlayerHpRatio": 0,
+    "finalSpark": 12,
+    "finalMana": 72,
+    "finalSparkState": "exhausted",
+    "finalSparkRatio": 0.06818181818181818,
+    "finalExhaustion": 93,
+    "peakExhaustion": 100,
+    "restTurns": 25,
+    "redlineActions": 1,
+    "sparkBurnDamage": 17,
+    "avgActionsPerPlayerTurn": 6.5,
+    "directorRedlineBand": 4,
+    "directorResourceStressBand": 2,
+    "playerActionCounts": {
+      "MOVE": 9,
+      "USE_SKILL": 4,
+      "WAIT": 27
+    },
+    "playerSkillUsage": {
+      "DEATH_TOUCH": 4
+    },
+    "goalCounts": {
+      "engage": 0,
+      "explore": 40,
+      "recover": 0
+    },
+    "totalPlayerSkillCasts": 4,
+    "playerSkillTelemetry": {
+      "DEATH_TOUCH": {
+        "casts": 4,
+        "enemyDamage": 360,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 17,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      }
+    },
+    "autoAttackTriggersByActionType": {},
+    "triangleSignal": {
+      "samples": 1,
+      "avgHitPressure": 8.333,
+      "avgMitigationPressure": 1.5,
+      "avgCritPressure": 0.461,
+      "avgResistancePressure": 0.6
+    },
+    "trinityContribution": {
+      "samples": 1,
+      "bodyContribution": 0.001,
+      "mindContribution": 0.517,
+      "instinctContribution": 0.481
+    },
+    "combatProfileSignal": {
+      "samples": 1,
+      "avgOutgoingMultiplier": 1,
+      "avgIncomingMultiplier": 1,
+      "avgTotalMultiplier": 1
+    },
+    "enemyAiTelemetry": {
+      "actionCounts": {
+        "WAIT": 4
+      },
+      "skillUsage": {
+        "BASIC_ATTACK": 1,
+        "ARCHER_SHOT": 1
+      },
+      "offensiveSkillCasts": 2,
+      "damageToPlayer": 125,
+      "visiblePlayerTurns": 2,
+      "idleWithVisiblePlayer": 2,
+      "attackOpportunityTurns": 2,
+      "attackConversionTurns": 2,
+      "threatOpportunityTurns": 0,
+      "threatConversionTurns": 0,
+      "backtrackMoves": 0,
+      "loopMoves": 4,
+      "preservedRestedTurns": 0,
+      "restedBatterySpendSelections": 0,
+      "restedReentryTurns": 0,
+      "trueRestRestedBonusArmedTurns": 2,
+      "voluntaryExhaustionAttempts": 10,
+      "voluntaryExhaustionAllowed": 0,
+      "voluntaryExhaustionBlocked": 10,
+      "turnsEndedRested": 3,
+      "turnsEndedStableOrBetter": 4,
+      "turnsEndedCriticalOrExhausted": 0,
+      "secondActionAttempts": 2,
+      "secondActionAllowed": 0,
+      "thirdActionAttempts": 0,
+      "thirdActionAllowed": 0,
+      "waitForBandPreservationSelections": 4
+    },
+    "pacingSignal": {
+      "samples": 40,
+      "avgSparkRatio": 0.39303977272727275,
+      "avgManaRatio": 0.9791666666666666,
+      "avgReservePressure": 0.6069602272727271,
+      "avgFatiguePressure": 0.617755681818182,
+      "avgRecoveryPressure": 0.4221756628787879,
+      "avgTurnEndSparkRatio": 0.3459595959595959,
+      "visibleHostileSelections": 11,
+      "idleWithVisibleHostile": 2,
+      "attackOpportunityCount": 4,
+      "attackConversionCount": 4,
+      "threatenNextTurnOpportunityCount": 0,
+      "threatenNextTurnConversionCount": 0,
+      "backtrackMoveCount": 0,
+      "loopMoveCount": 0,
+      "lowValueMobilitySelections": 0,
+      "restSelections": 21,
+      "endTurnSelections": 6,
+      "continuedActionSelections": 13,
+      "preservedRestedTurns": 3,
+      "restedBatterySpendSelections": 0,
+      "restedReentryTurns": 0,
+      "trueRestRestedBonusArmedTurns": 0,
+      "voluntaryExhaustionAttempts": 32,
+      "voluntaryExhaustionAllowed": 5,
+      "voluntaryExhaustionBlocked": 27,
+      "turnsEndedRested": 0,
+      "turnsEndedStableOrBetter": 4,
+      "turnsEndedCriticalOrExhausted": 21,
+      "secondActionAttempts": 6,
+      "secondActionAllowed": 1,
+      "thirdActionAttempts": 1,
+      "thirdActionAllowed": 0,
+      "waitForBandPreservationSelections": 4,
+      "firstContactTurn": 1,
+      "firstDamageTurn": 1
+    }
+  },
+  "diagnostics": {
+    "actionCount": 53,
+    "stateFingerprint": "{\"player\":{\"hp\":0,\"maxHp\":120,\"position\":{\"q\":4,\"r\":8,\"s\":-12},\"upgrades\":[\"VISION_TIER_2\",\"VISION_TIER_4\"]},\"enemies\":[{\"id\":\"enemy_1_aldyy9\",\"subtype\":\"archer\",\"hp\":83,\"position\":{\"q\":2,\"r\":8,\"s\":-10}}],\"floor\":3,\"gridWidth\":9,\"gridHeight\":11,\"mapShape\":\"diamond\",\"turnNumber\":3,\"kills\":0,\"rngCounter\":0}"
+  },
+  "strictFingerprint": "c276bf7979fab39d",
+  "actions": [
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 2,
+        "r": 7,
+        "s": -9
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "DEATH_TOUCH",
+        "target": {
+          "q": 2,
+          "r": 8,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 4,
+        "s": -8
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "VISION_TIER_2"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 0,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 9,
+        "s": -13
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 8,
+        "s": -12
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "DEATH_TOUCH",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "DEATH_TOUCH",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 6,
+        "r": 6,
+        "s": -12
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "VISION_TIER_4"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 0,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 9,
+        "s": -13
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 8,
+        "s": -12
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "DEATH_TOUCH",
+        "target": {
+          "q": 3,
+          "r": 8,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    }
+  ]
+}

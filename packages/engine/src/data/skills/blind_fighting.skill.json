@@ -1,0 +1,38 @@
+{
+  "id": "BLIND_FIGHTING",
+  "name": "Blind Fighting",
+  "description": "Mitigate unseen-target penalties in close combat.",
+  "slot": "passive",
+  "icon": "BF",
+  "keywords": [
+    "PASSIVE",
+    "COMBAT",
+    "STEALTH"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "movement": [
+      {
+        "domain": "movement",
+        "providerId": "blind_fighting.unseen_penalty",
+        "priority": 5,
+        "kind": "blind_fighting_unseen_penalty_v1",
+        "resolutionMode": "EXTEND",
+        "model": {
+          "unseenAttackPenaltyMultiplier": 0.5
+        }
+      }
+    ]
+  },
+  "upgrades": {}
+}

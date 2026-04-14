@@ -1,0 +1,121 @@
+{
+  "id": "TORNADO_KICK",
+  "name": "Tornado Kick",
+  "description": "Hook a nearby target inward, then spin them back out with a heavier follow-through.",
+  "slot": "offensive",
+  "icon": "tornado_kick",
+  "keywords": [
+    "KINETIC",
+    "PULL",
+    "PUSH"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 0,
+    "cooldown": 1,
+    "damage": 3,
+    "momentum": 2
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 1,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "OCCUPANCY",
+        "occupied": true
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "tornado_pull",
+      "kind": "APPLY_FORCE",
+      "phase": "collision",
+      "target": "target_actor",
+      "source": "caster_hex",
+      "mode": "pull",
+      "direction": "target_to_source",
+      "magnitude": 1,
+      "maxDistance": 1
+    },
+    {
+      "id": "tornado_push",
+      "kind": "APPLY_FORCE",
+      "phase": "resolution",
+      "target": "target_actor",
+      "source": "caster_hex",
+      "mode": "push",
+      "direction": "source_to_target",
+      "magnitude": 2,
+      "maxDistance": 2
+    },
+    {
+      "id": "tornado_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "target_actor",
+      "amount": 3,
+      "reason": "tornado_kick",
+      "damageClass": "physical",
+      "damageSubClass": "strike",
+      "damageElement": "kinetic"
+    },
+    {
+      "id": "tornado_text",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Tornado Kick snaps the target off balance."
+    }
+  ],
+  "intentProfile": {
+    "id": "TORNADO_KICK",
+    "intentTags": [
+      "damage",
+      "control"
+    ],
+    "target": {
+      "range": 1,
+      "pattern": "single"
+    },
+    "estimates": {
+      "damage": 3,
+      "control": 2
+    },
+    "economy": {
+      "cost": 0,
+      "cooldown": 1,
+      "consumesTurn": true
+    },
+    "risk": {
+      "requireEnemyContact": true,
+      "noContactPenalty": 4,
+      "noProgressCastPenalty": 6
+    },
+    "complexity": 2
+  },
+  "resourceProfile": {
+    "primaryResource": "none",
+    "primaryCost": 0,
+    "baseStrain": 0,
+    "countsAsMovement": false,
+    "countsAsAction": true
+  },
+  "physicsPlan": {
+    "kernel": "force_only",
+    "collision": {
+      "onBlocked": "stop",
+      "applyStunOnStop": true,
+      "stunDuration": 1,
+      "compareWeightClass": true
+    },
+    "weightClassModifierTable": {
+      "Light": 1,
+      "Standard": 0,
+      "Heavy": -1,
+      "Anchored": -2,
+      "OuterWall": -3
+    }
+  },
+  "upgrades": {}
+}

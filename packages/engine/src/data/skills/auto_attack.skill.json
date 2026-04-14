@@ -1,0 +1,385 @@
+{
+  "id": "AUTO_ATTACK",
+  "name": "Auto Attack",
+  "description": "Automatically strike adjacent enemies that started the turn adjacent to you.",
+  "slot": "passive",
+  "icon": "\ud83d\udc4a",
+  "keywords": [
+    "PHYSICAL",
+    "MELEE",
+    "PASSIVE"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 0,
+    "cooldown": 0,
+    "damage": 1
+  },
+  "combat": {
+    "damageClass": "physical",
+    "attackProfile": "melee",
+    "trackingSignature": "melee",
+    "weights": {
+      "body": 1
+    }
+  },
+  "targeting": {
+    "generator": "self",
+    "range": 0,
+    "exposeSelfTarget": false,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "preconditions": [
+    {
+      "kind": "stunned",
+      "message": "",
+      "consumesTurn": false
+    }
+  ],
+  "combatScript": [
+    {
+      "id": "auto_attack_01_anticipation",
+      "kind": "EMIT_JUICE",
+      "phase": "declare",
+      "effect": "lightImpact",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 1,
+        "cacheKey": "auto_attack_persistent_targets",
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          },
+          {
+            "type": "TURN_START_ADJACENT"
+          }
+        ]
+      },
+      "intensity": "low",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.AUTO_ATTACK",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "anticipation",
+        "element": "physical",
+        "variant": "auto_attack",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "skillId": "AUTO_ATTACK"
+      }
+    },
+    {
+      "id": "auto_attack_02_travel",
+      "kind": "EMIT_JUICE",
+      "phase": "movement",
+      "effect": "dashBlur",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 1,
+        "cacheKey": "auto_attack_persistent_targets",
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          },
+          {
+            "type": "TURN_START_ADJACENT"
+          }
+        ]
+      },
+      "intensity": "medium",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.AUTO_ATTACK",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "travel",
+        "element": "physical",
+        "variant": "auto_attack",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "skillId": "AUTO_ATTACK"
+      }
+    },
+    {
+      "id": "auto_attack_03_impact",
+      "kind": "EMIT_JUICE",
+      "phase": "resolution",
+      "effect": "heavyImpact",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 1,
+        "cacheKey": "auto_attack_persistent_targets",
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          },
+          {
+            "type": "TURN_START_ADJACENT"
+          }
+        ]
+      },
+      "intensity": "medium",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.AUTO_ATTACK",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "impact",
+        "element": "physical",
+        "variant": "auto_attack",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "skillId": "AUTO_ATTACK"
+      }
+    },
+    {
+      "id": "auto_attack_04_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "resolution": "combat",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 1,
+        "cacheKey": "auto_attack_persistent_targets",
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          },
+          {
+            "type": "TURN_START_ADJACENT"
+          }
+        ]
+      },
+      "combatPointTargetMode": "actor_or_proxy",
+      "reason": "auto_attack",
+      "basePower": 0,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "body": 1
+      }
+    },
+    {
+      "id": "auto_attack_05_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "format": "attack_summary",
+      "actor": "self",
+      "targetActor": "selected_hex",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 1,
+        "cacheKey": "auto_attack_persistent_targets",
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          },
+          {
+            "type": "TURN_START_ADJACENT"
+          }
+        ]
+      },
+      "actionVerb": "attacked",
+      "text": ""
+    },
+    {
+      "id": "auto_attack_06_cleave_damage",
+      "kind": "DEAL_DAMAGE",
+      "phase": "resolution",
+      "target": "selected_hex",
+      "resolution": "combat",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 1,
+        "cacheKey": "auto_attack_cleave_targets",
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          },
+          {
+            "type": "NOT",
+            "predicate": {
+              "type": "TURN_START_ADJACENT"
+            }
+          }
+        ]
+      },
+      "combatPointTargetMode": "actor_or_proxy",
+      "reason": "auto_attack",
+      "basePower": 0,
+      "skillDamageMultiplier": 1,
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "body": 1
+      },
+      "conditions": [
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "CLEAVE"
+        },
+        {
+          "type": "PERSISTENT_TARGET_AVAILABLE"
+        }
+      ]
+    },
+    {
+      "id": "auto_attack_07_cleave_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "format": "attack_summary",
+      "actor": "self",
+      "targetActor": "selected_hex",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 1,
+        "cacheKey": "auto_attack_cleave_targets",
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          },
+          {
+            "type": "NOT",
+            "predicate": {
+              "type": "TURN_START_ADJACENT"
+            }
+          }
+        ]
+      },
+      "actionVerb": "cleaved",
+      "text": "",
+      "conditions": [
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "CLEAVE"
+        },
+        {
+          "type": "PERSISTENT_TARGET_AVAILABLE"
+        }
+      ]
+    },
+    {
+      "id": "auto_attack_08_aftermath",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "lightImpact",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 1,
+        "cacheKey": "auto_attack_persistent_targets",
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          },
+          {
+            "type": "TURN_START_ADJACENT"
+          }
+        ]
+      },
+      "intensity": "low",
+      "metadata": {
+        "signature": "ATK.STRIKE.PHYSICAL.AUTO_ATTACK",
+        "family": "attack",
+        "primitive": "strike",
+        "phase": "aftermath",
+        "element": "physical",
+        "variant": "auto_attack",
+        "sourceRef": {
+          "kind": "source_actor"
+        },
+        "targetRef": {
+          "kind": "target_actor"
+        },
+        "skillId": "AUTO_ATTACK"
+      }
+    }
+  ],
+  "upgrades": {
+    "HEAVY_HANDS": {
+      "id": "HEAVY_HANDS",
+      "name": "Heavy Hands",
+      "description": "Auto-attack damage +1",
+      "instructionPatches": [
+        {
+          "instructionId": "auto_attack_04_damage",
+          "path": "skillDamageMultiplier",
+          "op": "add",
+          "value": 1
+        },
+        {
+          "instructionId": "auto_attack_06_cleave_damage",
+          "path": "skillDamageMultiplier",
+          "op": "add",
+          "value": 1
+        }
+      ]
+    },
+    "CLEAVE": {
+      "id": "CLEAVE",
+      "name": "Cleave",
+      "description": "When auto-attack triggers, hit ALL adjacent enemies"
+    }
+  }
+}

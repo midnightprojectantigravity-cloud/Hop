@@ -145,7 +145,15 @@ export const TILE_EFFECTS: Record<TileEffectID, TileEffectDefinition> = {
         interactsWith: {
             FIRE: (context) => ({
                 effects: [
-                    { type: 'Damage', target: 'area', amount: 3, reason: 'oil_explosion' },
+                    {
+                        type: 'Damage',
+                        target: 'area',
+                        amount: 3,
+                        reason: 'oil_explosion',
+                        damageClass: 'magical',
+                        damageSubClass: 'blast',
+                        damageElement: 'fire'
+                    },
                     { type: 'Juice', effect: 'explosion_ring', target: context.tile.position }
                 ],
                 messages: ['Oil explodes!'],

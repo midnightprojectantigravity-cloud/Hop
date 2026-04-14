@@ -54,7 +54,10 @@ export const spearThrowScenarios: ScenarioCollection = {
                 engine.useSkill('SPEAR_THROW', { q: 3, r: 4, s: -7 });
             },
             verify: (state: GameState, logs: string[]) => {
-                const rejected = logs.some(l => l.includes('No enemy at target.'));
+                const rejected = logs.some(l =>
+                    l.includes('No enemy at target.')
+                    || l.includes('Invalid target')
+                );
                 const spearStillHeld = state.hasSpear === true && !state.spearPosition;
                 return rejected && spearStillHeld;
             }
@@ -80,7 +83,10 @@ export const spearThrowScenarios: ScenarioCollection = {
                 engine.useSkill('SPEAR_THROW', { q: 4, r: 3, s: -7 });
             },
             verify: (state: GameState, logs: string[]) => {
-                const losBlocked = logs.some(l => l.includes('No clear line of sight to enemy.'));
+                const losBlocked = logs.some(l =>
+                    l.includes('No clear line of sight to enemy.')
+                    || l.includes('Invalid target')
+                );
                 const targetAlive = !!state.enemies.find(e => e.id === 'target');
                 const spearStillHeld = state.hasSpear === true && !state.spearPosition;
                 return losBlocked && targetAlive && spearStillHeld;

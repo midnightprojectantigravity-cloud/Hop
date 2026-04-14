@@ -1,0 +1,42 @@
+{
+  "id": "FLIGHT",
+  "name": "Flight",
+  "description": "Replace walking movement with aerial traversal.",
+  "slot": "passive",
+  "icon": "FL",
+  "keywords": [
+    "PASSIVE",
+    "MOVEMENT",
+    "AIRBORNE"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "movement": [
+      {
+        "domain": "movement",
+        "providerId": "flight.movement",
+        "priority": 30,
+        "kind": "flight_replace_v1",
+        "resolutionMode": "REPLACE",
+        "model": {
+          "pathing": "flight",
+          "ignoreGroundHazards": true,
+          "ignoreWalls": false,
+          "allowPassThroughActors": false,
+          "rangeModifier": 0
+        }
+      }
+    ]
+  },
+  "upgrades": {}
+}

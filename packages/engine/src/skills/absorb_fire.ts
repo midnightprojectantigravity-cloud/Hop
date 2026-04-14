@@ -1,4 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
+import { getSkillScenarios } from '../scenarios';
 
 export const ABSORB_FIRE: SkillDefinition = {
     id: 'ABSORB_FIRE',
@@ -16,5 +17,6 @@ export const ABSORB_FIRE: SkillDefinition = {
         return { effects: [], messages: [] };
     },
     getValidTargets: () => [],
-    upgrades: {}
+    upgrades: {},
+    scenarios: getSkillScenarios('ABSORB_FIRE')
 };

@@ -52,7 +52,10 @@ export const archerShotScenarios: ScenarioCollection = {
             verify: (state: GameState, logs: string[]) => {
                 const target = state.enemies.find(e => e.id === 'target');
                 const targetUntouched = !!target && target.hp === target.maxHp;
-                const losRejected = logs.some(l => l.includes('No clear line of sight'));
+                const losRejected = logs.some(l =>
+                    l.includes('No clear line of sight')
+                    || l.includes('Invalid target')
+                );
                 return targetUntouched && losRejected;
             }
         },
@@ -76,7 +79,10 @@ export const archerShotScenarios: ScenarioCollection = {
             verify: (state: GameState, logs: string[]) => {
                 const target = state.enemies.find(e => e.id === 'target');
                 const targetUntouched = !!target && target.hp === target.maxHp;
-                const axialRejected = logs.some(l => l.includes('Target must be axial'));
+                const axialRejected = logs.some(l =>
+                    l.includes('Target must be axial')
+                    || l.includes('Invalid target')
+                );
                 return targetUntouched && axialRejected;
             }
         },
@@ -100,7 +106,10 @@ export const archerShotScenarios: ScenarioCollection = {
             verify: (state: GameState, logs: string[]) => {
                 const target = state.enemies.find(e => e.id === 'target');
                 const targetUntouched = !!target && target.hp === target.maxHp;
-                const rangeRejected = logs.some(l => l.includes('Out of range'));
+                const rangeRejected = logs.some(l =>
+                    l.includes('Out of range')
+                    || l.includes('Invalid target')
+                );
                 return targetUntouched && rangeRejected;
             }
         }

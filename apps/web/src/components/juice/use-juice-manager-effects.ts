@@ -45,9 +45,9 @@ export const useJuiceManagerEffects = ({
         effectsStoreRef.current = createJuiceEffectsStore();
     }
     const effectsStore = effectsStoreRef.current;
-    const processedTimelineBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
-    const processedVisualBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
-    const processedJuiceSignatureBatchRef = useRef<ReadonlyArray<unknown> | null>(null);
+    const processedTimelineBatchRef = useRef<string>('');
+    const processedVisualBatchRef = useRef<string>('');
+    const processedJuiceSignatureBatchRef = useRef<string>('');
     const processedSimulationCount = useRef(0);
     const timelineQueue = useRef<TimelineEvent[]>([]);
     const isRunningQueue = useRef(false);
@@ -188,8 +188,9 @@ export const useJuiceManagerEffects = ({
 
     useEffect(() => {
         if (!timelineEvents.length) return;
-        if (processedTimelineBatchRef.current === timelineEvents) return;
-        processedTimelineBatchRef.current = timelineEvents;
+        const timelineEventsSignature = boardEventDigest?.timelineEventsSignature || String(timelineEvents.length);
+        if (processedTimelineBatchRef.current === timelineEventsSignature) return;
+        processedTimelineBatchRef.current = timelineEventsSignature;
         const newEvents = timelineEvents;
         if (!newEvents.length) return;
         timelineQueue.current.push(...newEvents);
@@ -234,10 +235,10 @@ export const useJuiceManagerEffects = ({
                 setBusyState({ timelineBusy: false });
             }
         })();
-    }, [effectsStore, setBusyState, timelineEvents]);
+    }, [boardEventDigest?.timelineEventsSignature, effectsStore, setBusyState, timelineEvents]);
 
     useEffect(() => {
-        const signatureBatchRef = boardEventDigest?.visualEventsRef || visualEvents;
+        const signatureBatchRef = boardEventDigest?.visualEventsSignature || String(visualEvents.length);
         if (processedJuiceSignatureBatchRef.current === signatureBatchRef) return;
         processedJuiceSignatureBatchRef.current = signatureBatchRef;
         const incoming = boardEventDigest?.signatureVisualEvents
@@ -256,7 +257,7 @@ export const useJuiceManagerEffects = ({
         if (additions.length > 0) {
             effectsStore.enqueueEffects(additions);
         }
-    }, [boardEventDigest?.signatureVisualEvents, boardEventDigest?.visualEventsRef, effectsStore, visualEvents]);
+    }, [boardEventDigest?.signatureVisualEvents, boardEventDigest?.visualEventsSignature, effectsStore, visualEvents]);
 
     useEffect(() => {
         if (playerDefeated && !lastPlayerDefeatedRef.current) {
@@ -267,10 +268,10 @@ export const useJuiceManagerEffects = ({
 
     useEffect(() => {
         if (timelineEvents.length > 0) {
-            processedVisualBatchRef.current = boardEventDigest?.visualEventsRef || visualEvents;
+            processedVisualBatchRef.current = boardEventDigest?.visualEventsSignature || String(visualEvents.length);
             return;
         }
-        const legacyBatchRef = boardEventDigest?.visualEventsRef || visualEvents;
+        const legacyBatchRef = boardEventDigest?.visualEventsSignature || String(visualEvents.length);
         if (processedVisualBatchRef.current === legacyBatchRef) return;
         processedVisualBatchRef.current = legacyBatchRef;
         const incoming = boardEventDigest?.legacyVfxVisualEvents
@@ -284,7 +285,7 @@ export const useJuiceManagerEffects = ({
         if (newEffects.length > 0) {
             effectsStore.enqueueEffects(newEffects);
         }
-    }, [boardEventDigest?.legacyVfxVisualEvents, boardEventDigest?.visualEventsRef, effectsStore, visualEvents, timelineEvents.length]);
+    }, [boardEventDigest?.legacyVfxVisualEvents, boardEventDigest?.visualEventsSignature, effectsStore, visualEvents, timelineEvents.length]);
 
     useEffect(() => {
         const damageEvents = boardEventDigest?.damageSimulationEvents || simulationEvents;
@@ -318,7 +319,7 @@ export const useJuiceManagerEffects = ({
         if (additions.length > 0) {
             effectsStore.enqueueEffects(additions);
         }
-    }, [boardEventDigest?.damageSimulationEvents, simulationEvents, actorById, effectsStore, playerActorId, playerDefeated]);
+    }, [boardEventDigest?.damageSimulationEvents, boardEventDigest?.simulationEventsSignature, simulationEvents, actorById, effectsStore, playerActorId, playerDefeated]);
 
     return effectsStore;
 };

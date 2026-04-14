@@ -1,0 +1,24 @@
+{
+  "id": "ABSORB_FIRE",
+  "name": "Absorb Fire",
+  "description": "Fire heals you instead of harming you.",
+  "slot": "passive",
+  "icon": "\ud83d\udd25",
+  "keywords": [
+    "FIRE",
+    "PASSIVE",
+    "HEALING"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "upgrades": {}
+}

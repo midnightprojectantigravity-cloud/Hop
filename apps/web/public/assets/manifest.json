@@ -729,6 +729,16 @@
       "recommendedFormat": "webp"
     },
     {
+      "id": "unit.skeleton.bones.01",
+      "type": "unit",
+      "layer": "unit",
+      "theme": "core",
+      "path": "/assets/bestiary/unit.skeleton.bones.01.webp",
+      "width": 512,
+      "height": 512,
+      "recommendedFormat": "webp"
+    },
+    {
       "id": "unit.enemy.footman.01",
       "type": "unit",
       "layer": "unit",

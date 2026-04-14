@@ -1,6 +1,8 @@
 import type { CombatAttribute } from './combat-calculator';
 import type { TrackingSignature } from './hit-quality';
-import { COMBAT_TUNING_VARIABLES } from '../../data/combat-tuning-ledger';
+import { resolveCombatTuning } from '../../data/combat-tuning-ledger';
+
+const COMBAT_TUNING = resolveCombatTuning();
 
 export interface ProjectionCoefficientSet {
     body: number;
@@ -28,40 +30,40 @@ export interface HitQualityCoefficientSet {
 }
 
 export const TRINITY_RATIO_V2_HP_COEFFICIENTS = {
-    body: COMBAT_TUNING_VARIABLES.trinityHp.body,
-    instinct: COMBAT_TUNING_VARIABLES.trinityHp.instinct,
-    mind: COMBAT_TUNING_VARIABLES.trinityHp.mind
+    body: COMBAT_TUNING.trinityHp.body,
+    instinct: COMBAT_TUNING.trinityHp.instinct,
+    mind: COMBAT_TUNING.trinityHp.mind
 } as const;
 
 export const TRINITY_RATIO_V2_DEFENSE_DEFAULTS = {
     physical: {
-        body: COMBAT_TUNING_VARIABLES.projection.physicalDefenseBody,
+        body: COMBAT_TUNING.projection.physicalDefenseBody,
         instinct: 0,
         mind: 0
     },
     magical: {
         body: 0,
         instinct: 0,
-        mind: COMBAT_TUNING_VARIABLES.projection.magicalDefenseMind
+        mind: COMBAT_TUNING.projection.magicalDefenseMind
     }
 } as const;
 
 export const TRINITY_RATIO_V2_HQ_COEFFICIENTS: HitQualityCoefficientSet = {
-    hqFloor: COMBAT_TUNING_VARIABLES.hitQuality.floor,
+    hqFloor: COMBAT_TUNING.hitQuality.floor,
     melee: {
-        attackerInstinct: COMBAT_TUNING_VARIABLES.hitQuality.melee.attackerInstinct,
-        defenderInstinct: COMBAT_TUNING_VARIABLES.hitQuality.melee.defenderInstinct,
-        adjacency: COMBAT_TUNING_VARIABLES.hitQuality.melee.adjacency
+        attackerInstinct: COMBAT_TUNING.hitQuality.melee.attackerInstinct,
+        defenderInstinct: COMBAT_TUNING.hitQuality.melee.defenderInstinct,
+        adjacency: COMBAT_TUNING.hitQuality.melee.adjacency
     },
     projectile: {
-        attackerInstinct: COMBAT_TUNING_VARIABLES.hitQuality.projectile.attackerInstinct,
-        defenderInstinct: COMBAT_TUNING_VARIABLES.hitQuality.projectile.defenderInstinct,
-        range: COMBAT_TUNING_VARIABLES.hitQuality.projectile.range
+        attackerInstinct: COMBAT_TUNING.hitQuality.projectile.attackerInstinct,
+        defenderInstinct: COMBAT_TUNING.hitQuality.projectile.defenderInstinct,
+        range: COMBAT_TUNING.hitQuality.projectile.range
     },
     spell: {
-        attackerMind: COMBAT_TUNING_VARIABLES.hitQuality.spell.attackerMind,
-        defenderInstinct: COMBAT_TUNING_VARIABLES.hitQuality.spell.defenderInstinct,
-        distanceDodge: COMBAT_TUNING_VARIABLES.hitQuality.spell.distanceDodge
+        attackerMind: COMBAT_TUNING.hitQuality.spell.attackerMind,
+        defenderInstinct: COMBAT_TUNING.hitQuality.spell.defenderInstinct,
+        distanceDodge: COMBAT_TUNING.hitQuality.spell.distanceDodge
     }
 };
 

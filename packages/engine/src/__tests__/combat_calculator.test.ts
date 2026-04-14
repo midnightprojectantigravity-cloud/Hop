@@ -36,6 +36,9 @@ describe('combat-calculator', () => {
         expect(result.attackProjection).toBe(50);
         expect(result.bodyScaledPower).toBe(50);
         expect(result.basePhysicalDamage).toBe(50);
+        expect(result.damageClass).toBe('physical');
+        expect(result.damageSubClass).toBe('melee');
+        expect(result.damageElement).toBe('neutral');
         expect(result.scoreEvent.baseDamagePressure).toBe(50);
         expect(result.scoreEvent.attackProjection).toBe(50);
     });
@@ -117,7 +120,36 @@ describe('combat-calculator', () => {
         expect(resolveCombatTuning('FIREBALL').trinityLevers.mindDamageMultiplierPerPoint).toBe(0.5);
         expect(archer.attackProjection).toBe(50);
         expect(archer.bodyScaledPower).toBe(50);
+        expect(archer.damageClass).toBe('physical');
+        expect(archer.damageSubClass).toBe('shot');
+        expect(archer.damageElement).toBe('neutral');
         expect(fireball.attackProjection).toBe(50);
         expect(fireball.baseMagicalDamage).toBe(50);
+        expect(fireball.damageClass).toBe('magical');
+        expect(fireball.damageSubClass).toBe('blast');
+        expect(fireball.damageElement).toBe('fire');
+    });
+
+    it('supports mixed physical-fire taxonomy rows', () => {
+        const flameArrow = calculateCombat({
+            attackerId: 'archer',
+            targetId: 'enemy_1',
+            skillId: 'FLAME_ARROW',
+            basePower: 0,
+            trinity: { body: 0, mind: 0, instinct: 100 },
+            targetTrinity: { body: 0, mind: 0, instinct: 0 },
+            damageClass: 'physical',
+            damageSubClass: 'piercing',
+            damageElement: 'fire',
+            attackProfile: 'projectile',
+            trackingSignature: 'projectile',
+            engagementContext: { distance: 4 },
+            statusMultipliers: [],
+            theoreticalMaxPower: 20
+        });
+
+        expect(flameArrow.damageClass).toBe('physical');
+        expect(flameArrow.damageSubClass).toBe('piercing');
+        expect(flameArrow.damageElement).toBe('fire');
     });
 });

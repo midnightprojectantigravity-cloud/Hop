@@ -279,7 +279,10 @@ export const applyPlayerEndOfTurnRules = (
                     type: 'Damage',
                     target: e.id,
                     amount: 1,
-                    reason: 'spear_cleave_pickup'
+                    reason: 'spear_cleave_pickup',
+                    damageClass: 'physical',
+                    damageSubClass: 'slash',
+                    damageElement: 'neutral'
                 }));
                 curState = applyEffects(curState, cleaveEffects, { sourceId: curState.player.id, stepId: actorStepId });
                 messages.push(`Spear cleave hit ${cleaveTargets.length} target(s).`);

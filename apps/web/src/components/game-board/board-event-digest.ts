@@ -9,6 +9,9 @@ export interface BoardEventDigest {
   visualEventsRef: ReadonlyArray<VisualEvent>;
   timelineEventsRef: ReadonlyArray<TimelineEvent>;
   simulationEventsRef: ReadonlyArray<SimulationEvent>;
+  visualEventsSignature: string;
+  timelineEventsSignature: string;
+  simulationEventsSignature: string;
   signatureVisualEvents: ReadonlyArray<VisualEvent>;
   legacyVfxVisualEvents: ReadonlyArray<VisualEvent>;
   movementTraceEvents: ReadonlyArray<VisualEvent>;
@@ -25,6 +28,36 @@ export interface BoardEventDigest {
     index: number;
   }>;
 }
+
+const stableSerialize = (value: unknown): string => {
+  if (value === null) return 'null';
+  const valueType = typeof value;
+  if (valueType === 'string') return JSON.stringify(value);
+  if (valueType === 'number' || valueType === 'boolean') return String(value);
+  if (valueType === 'bigint') return `${(value as bigint).toString()}n`;
+  if (valueType === 'undefined') return 'undefined';
+  if (valueType === 'function') return '[Function]';
+  if (Array.isArray(value)) {
+    return `[${value.map(item => stableSerialize(item)).join(',')}]`;
+  }
+  if (value instanceof Date) {
+    return `Date(${value.toISOString()})`;
+  }
+  if (value instanceof Set) {
+    return `Set(${Array.from(value).map(item => stableSerialize(item)).join(',')})`;
+  }
+  if (value instanceof Map) {
+    return `Map(${Array.from(value.entries()).map(([key, entryValue]) => `${stableSerialize(key)}=>${stableSerialize(entryValue)}`).join(',')})`;
+  }
+  if (valueType === 'object') {
+    const obj = value as Record<string, unknown>;
+    return `{${Object.keys(obj).sort().map((key) => {
+      const entryValue = obj[key];
+      return `${JSON.stringify(key)}:${stableSerialize(entryValue)}`;
+    }).join(',')}}`;
+  }
+  return String(value);
+};
 
 const resolveEventPoint = (payload: any): Point | null => {
   if (!payload) return null;
@@ -45,6 +78,9 @@ export const buildBoardEventDigest = ({
   simulationEvents?: ReadonlyArray<SimulationEvent>;
 }): BoardEventDigest => {
   recordDebugPerfCounter('eventDigestBuildCount');
+  const visualEventsSignature = stableSerialize(visualEvents);
+  const timelineEventsSignature = stableSerialize(timelineEvents);
+  const simulationEventsSignature = stableSerialize(simulationEvents);
 
   const signatureVisualEvents: VisualEvent[] = [];
   const legacyVfxVisualEvents: VisualEvent[] = [];
@@ -135,6 +171,9 @@ export const buildBoardEventDigest = ({
     visualEventsRef: visualEvents,
     timelineEventsRef: timelineEvents,
     simulationEventsRef: simulationEvents,
+    visualEventsSignature,
+    timelineEventsSignature,
+    simulationEventsSignature,
     signatureVisualEvents,
     legacyVfxVisualEvents,
     movementTraceEvents,

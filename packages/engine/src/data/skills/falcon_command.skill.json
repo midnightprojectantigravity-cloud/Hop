@@ -1,0 +1,587 @@
+{
+  "id": "FALCON_COMMAND",
+  "name": "Summon Falcon",
+  "description": "Call your Falcon companion.",
+  "slot": "offensive",
+  "icon": "\ud83e\udd85",
+  "keywords": [
+    "COMPANION",
+    "COMMAND"
+  ],
+  "baseVariables": {
+    "range": 99,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "radius",
+    "range": 99,
+    "radius": 99,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": []
+  },
+  "presentationVariants": [
+    {
+      "when": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": false
+        }
+      ],
+      "name": "Summon Falcon",
+      "description": "Call your Falcon companion."
+    },
+    {
+      "when": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "COMPANION_MODE",
+          "target": "owner_companion",
+          "subtype": "falcon",
+          "mode": "scout"
+        }
+      ],
+      "name": "Falcon: Scout",
+      "description": "Click tile to set patrol zone. Falcon orbits and attacks nearby enemies."
+    },
+    {
+      "when": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "COMPANION_MODE",
+          "target": "owner_companion",
+          "subtype": "falcon",
+          "mode": "predator"
+        }
+      ],
+      "name": "Falcon: Hunt",
+      "description": "Click enemy to mark as prey. Falcon pursues and uses Apex Strike."
+    },
+    {
+      "when": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "COMPANION_MODE",
+          "target": "owner_companion",
+          "subtype": "falcon",
+          "mode": "roost"
+        }
+      ],
+      "name": "Falcon: Roost",
+      "description": "Falcon returns to you. Heals and cleanses 1 debuff on arrival."
+    }
+  ],
+  "combatScript": [
+    {
+      "id": "falcon_command_01_spawn",
+      "kind": "SPAWN_ACTOR",
+      "phase": "declare",
+      "spawnType": "companion",
+      "companionType": "falcon",
+      "owner": "self",
+      "position": "selected_hex",
+      "actorIdStrategy": "falcon_owner_v1",
+      "positionStrategy": "owner_adjacent_first_valid",
+      "initialCompanionState": {
+        "mode": "roost",
+        "orbitStep": 0
+      },
+      "initialBehaviorOverlay": {
+        "id": "falcon_roost",
+        "source": "summon",
+        "sourceId": "falcon_roost",
+        "rangeModel": "owner_proximity",
+        "selfPreservationBias": 0.35,
+        "controlBias": 0.2,
+        "commitBias": -0.3
+      },
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_02_spawn_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Falcon summoned!",
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_03_roost_text",
+      "kind": "EMIT_JUICE",
+      "phase": "declare",
+      "effect": "combat_text",
+      "target": "selected_hex",
+      "text": "Roost",
+      "metadata": {
+        "signature": "UI.TEXT.NEUTRAL.FALCON_ROOST",
+        "family": "ui",
+        "primitive": "text",
+        "phase": "instant",
+        "element": "neutral",
+        "variant": "falcon_roost",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "FALCON_COMMAND",
+        "textTone": "system"
+      },
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "self"
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_04_roost_state",
+      "kind": "UPDATE_COMPANION_STATE",
+      "phase": "resolution",
+      "target": "owner_companion",
+      "mode": "roost",
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "self"
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_05_roost_behavior",
+      "kind": "UPDATE_BEHAVIOR_STATE",
+      "phase": "resolution",
+      "target": "owner_companion",
+      "clearOverlays": true,
+      "overlays": [
+        {
+          "id": "falcon_roost",
+          "source": "command",
+          "sourceId": "falcon_roost",
+          "rangeModel": "owner_proximity",
+          "selfPreservationBias": 0.35,
+          "controlBias": 0.2,
+          "commitBias": -0.3
+        }
+      ],
+      "anchorActorRef": "owner",
+      "anchorPoint": null,
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "self"
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_06_roost_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Falcon returns to roost.",
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "self"
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_07_predator_text",
+      "kind": "EMIT_JUICE",
+      "phase": "declare",
+      "effect": "combat_text",
+      "target": "selected_hex",
+      "text": "\ud83c\udfaf Marked",
+      "metadata": {
+        "signature": "UI.TEXT.NEUTRAL.FALCON_MARK",
+        "family": "ui",
+        "primitive": "text",
+        "phase": "instant",
+        "element": "neutral",
+        "variant": "falcon_mark",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "FALCON_COMMAND",
+        "textTone": "status"
+      },
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "enemy"
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_08_predator_mark_status",
+      "kind": "APPLY_STATUS",
+      "phase": "resolution",
+      "target": "target_actor",
+      "status": "marked_predator",
+      "duration": -1,
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "enemy"
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_09_predator_state",
+      "kind": "UPDATE_COMPANION_STATE",
+      "phase": "resolution",
+      "target": "owner_companion",
+      "mode": "predator",
+      "markTarget": "target_actor_id",
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "enemy"
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_10_predator_behavior",
+      "kind": "UPDATE_BEHAVIOR_STATE",
+      "phase": "resolution",
+      "target": "owner_companion",
+      "clearOverlays": true,
+      "overlays": [
+        {
+          "id": "falcon_predator",
+          "source": "command",
+          "sourceId": "falcon_predator",
+          "desiredRange": [
+            1,
+            2
+          ],
+          "offenseBias": 0.35,
+          "commitBias": 0.3,
+          "preferDamageOverPositioning": true
+        }
+      ],
+      "anchorActorRef": "target_actor",
+      "anchorPoint": null,
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "enemy"
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_11_predator_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Falcon marks enemy as prey!",
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "enemy"
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_12_scout_text",
+      "kind": "EMIT_JUICE",
+      "phase": "declare",
+      "effect": "combat_text",
+      "target": "selected_hex",
+      "text": "Patrol",
+      "metadata": {
+        "signature": "UI.TEXT.NEUTRAL.FALCON_PATROL",
+        "family": "ui",
+        "primitive": "text",
+        "phase": "instant",
+        "element": "neutral",
+        "variant": "falcon_patrol",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "FALCON_COMMAND",
+        "textTone": "system"
+      },
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "FACTION_RELATION",
+            "relation": "self"
+          }
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          }
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_13_scout_state",
+      "kind": "UPDATE_COMPANION_STATE",
+      "phase": "resolution",
+      "target": "owner_companion",
+      "mode": "scout",
+      "markTarget": "selected_hex",
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "FACTION_RELATION",
+            "relation": "self"
+          }
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          }
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_14_scout_behavior",
+      "kind": "UPDATE_BEHAVIOR_STATE",
+      "phase": "resolution",
+      "target": "owner_companion",
+      "clearOverlays": true,
+      "overlays": [
+        {
+          "id": "falcon_scout",
+          "source": "command",
+          "sourceId": "falcon_scout",
+          "rangeModel": "anchor_proximity",
+          "controlBias": 0.35,
+          "selfPreservationBias": 0.15,
+          "commitBias": -0.1
+        }
+      ],
+      "anchorActorId": null,
+      "anchorPoint": "selected_hex",
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "FACTION_RELATION",
+            "relation": "self"
+          }
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          }
+        }
+      ]
+    },
+    {
+      "id": "falcon_command_15_scout_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Falcon set to patrol zone.",
+      "conditions": [
+        {
+          "type": "COMPANION_PRESENT",
+          "owner": "caster",
+          "subtype": "falcon",
+          "value": true
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "FACTION_RELATION",
+            "relation": "self"
+          }
+        },
+        {
+          "type": "NOT",
+          "predicate": {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          }
+        }
+      ]
+    }
+  ],
+  "upgrades": {
+    "KEEN_SIGHT": {
+      "id": "KEEN_SIGHT",
+      "name": "Keen Sight",
+      "description": "Falcon reveals hidden enemies within 3 tiles of its position.",
+      "instructionPatches": [
+        {
+          "instructionId": "falcon_command_04_roost_state",
+          "path": "keenSight",
+          "op": "set",
+          "value": true
+        },
+        {
+          "instructionId": "falcon_command_09_predator_state",
+          "path": "keenSight",
+          "op": "set",
+          "value": true
+        },
+        {
+          "instructionId": "falcon_command_13_scout_state",
+          "path": "keenSight",
+          "op": "set",
+          "value": true
+        }
+      ]
+    },
+    "FALCON_TWIN_TALONS": {
+      "id": "FALCON_TWIN_TALONS",
+      "name": "Twin Talons",
+      "description": "Basic Peck hits 2 targets instead of 1.",
+      "instructionPatches": [
+        {
+          "instructionId": "falcon_command_04_roost_state",
+          "path": "twinTalons",
+          "op": "set",
+          "value": true
+        },
+        {
+          "instructionId": "falcon_command_09_predator_state",
+          "path": "twinTalons",
+          "op": "set",
+          "value": true
+        },
+        {
+          "instructionId": "falcon_command_13_scout_state",
+          "path": "twinTalons",
+          "op": "set",
+          "value": true
+        }
+      ]
+    },
+    "APEX_PREDATOR": {
+      "id": "APEX_PREDATOR",
+      "name": "Apex Predator",
+      "description": "Apex Strike cooldown reduced by 1. Marked enemies take +1 damage from all sources.",
+      "instructionPatches": [
+        {
+          "instructionId": "falcon_command_04_roost_state",
+          "path": "apexPredator",
+          "op": "set",
+          "value": true
+        },
+        {
+          "instructionId": "falcon_command_09_predator_state",
+          "path": "apexPredator",
+          "op": "set",
+          "value": true
+        },
+        {
+          "instructionId": "falcon_command_13_scout_state",
+          "path": "apexPredator",
+          "op": "set",
+          "value": true
+        }
+      ]
+    }
+  }
+}

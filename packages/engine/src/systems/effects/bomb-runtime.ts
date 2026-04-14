@@ -55,13 +55,19 @@ export const buildBombDetonationEffects = (bomb: Actor): AtomicEffect[] => {
             type: 'Damage' as const,
             target: position,
             amount: 1,
-            reason: 'bomb_explosion'
+            reason: 'bomb_explosion',
+            damageClass: 'magical' as const,
+            damageSubClass: 'blast' as const,
+            damageElement: 'fire' as const
         })),
         {
             type: 'Damage' as const,
             target: bomb.id,
             amount: 999,
-            reason: 'bomb_explosion'
+            reason: 'bomb_explosion',
+            damageClass: 'magical' as const,
+            damageSubClass: 'blast' as const,
+            damageElement: 'fire' as const
         },
         {
             type: 'Juice' as const,

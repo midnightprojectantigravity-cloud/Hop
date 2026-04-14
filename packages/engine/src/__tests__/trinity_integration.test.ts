@@ -3,8 +3,9 @@ import type { Actor, GameState, Point } from '../types';
 import { createEmptyRunTelemetry } from '../generation';
 import { BASIC_ATTACK } from '../skills/basic_attack';
 import { FIREBALL } from '../skills/fireball';
+import { DEATH_TOUCH } from '../skills/death_touch';
 import { CORPSE_EXPLOSION } from '../skills/corpse_explosion';
-import { applyAtomicEffect } from '../systems/effect-engine';
+import { applyAtomicEffect, applyEffects } from '../systems/effect-engine';
 import { getInitiativeScore } from '../systems/initiative';
 import { pointToKey } from '../hex';
 
@@ -55,7 +56,7 @@ describe('trinity integration', () => {
 
         const out = BASIC_ATTACK.execute(state, player, targetPos, []);
         const damage = out.effects.find(e => e.type === 'Damage');
-        expect(damage && damage.type === 'Damage' ? damage.amount : 0).toBe(7);
+        expect(damage && damage.type === 'Damage' ? damage.amount : 0).toBe(5);
     });
 
     it('mind stat increases FIREBALL and CORPSE_EXPLOSION base output', () => {
@@ -71,12 +72,41 @@ describe('trinity integration', () => {
         const fireballState = makeState(player, [enemy]);
         const fireballOut = FIREBALL.execute(fireballState, player, enemy.position);
         const fbDamage = fireballOut.effects.find(e => e.type === 'Damage');
-        expect(fbDamage && fbDamage.type === 'Damage' ? fbDamage.amount : 0).toBe(1);
+        expect(fbDamage && fbDamage.type === 'Damage' ? fbDamage.amount : 0).toBe(8);
 
         const corpseState = makeState(player, [enemy], corpseTiles);
         const corpseOut = CORPSE_EXPLOSION.execute(corpseState, player, corpsePos);
         const ceDamage = corpseOut.effects.find(e => e.type === 'Damage');
-        expect(ceDamage && ceDamage.type === 'Damage' ? ceDamage.amount : 0).toBe(3);
+        expect(ceDamage && ceDamage.type === 'Damage' ? ceDamage.amount : 0).toBe(2);
+    });
+
+    it('death touch resolves to a positive damage effect at melee range', () => {
+        const player = makeActor('necromancer', 'player', 'player', { q: 4, r: 4, s: -8 });
+        player.components = new Map([['trinity', { type: 'trinity', body: 0, mind: 6, instinct: 0 }]]);
+        const enemy = makeActor('target', 'enemy', 'enemy', { q: 5, r: 4, s: -9 });
+        const state = { ...makeState(player, [enemy]), mapShape: 'rectangle' as const };
+        const validTargets = DEATH_TOUCH.getValidTargets?.(state, player.position) || [];
+        const validTarget = validTargets[0];
+        expect(validTarget).toBeDefined();
+
+        const out = DEATH_TOUCH.execute(state, player, validTarget!);
+        const damage = out.effects.find(e => e.type === 'Damage');
+
+        expect(out.consumesTurn).toBe(true);
+        expect(damage && damage.type === 'Damage' ? damage.amount : 0).toBeGreaterThan(0);
+    });
+
+    it('death touch damage persists through the effect engine on a lethal hit', () => {
+        const player = makeActor('necromancer', 'player', 'player', { q: 4, r: 4, s: -8 });
+        player.components = new Map([['trinity', { type: 'trinity', body: 0, mind: 6, instinct: 4 }]]);
+        const enemy = makeActor('target', 'enemy', 'enemy', { q: 5, r: 4, s: -9 });
+        const state = { ...makeState(player, [enemy]), mapShape: 'rectangle' as const };
+        const validTarget = DEATH_TOUCH.getValidTargets?.(state, player.position)?.[0];
+
+        const out = DEATH_TOUCH.execute(state, player, validTarget!);
+        const resolved = applyEffects(state, out.effects, { sourceId: player.id, targetId: enemy.id });
+
+        expect(resolved.enemies.find(actor => actor.id === enemy.id)).toBeUndefined();
     });
 
     it('mind lever extends applied status duration from source actor', () => {

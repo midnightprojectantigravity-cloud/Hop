@@ -1,0 +1,149 @@
+{
+  "id": "KINETIC_TRI_TRAP",
+  "name": "Kinetic Tri-Trap",
+  "description": "Deploy 3 hidden traps on axial tiles. Triggered enemies are flung away.",
+  "slot": "defensive",
+  "icon": "\ud83e\udea4",
+  "keywords": [
+    "TRAP",
+    "KINETIC",
+    "DEPLOY"
+  ],
+  "baseVariables": {
+    "range": 2,
+    "cost": 0,
+    "cooldown": 3
+  },
+  "targeting": {
+    "generator": "self",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [
+    {
+      "id": "kinetic_tri_trap_01_clear",
+      "kind": "REMOVE_TRAP",
+      "phase": "declare",
+      "position": "caster_hex",
+      "owner": "self"
+    },
+    {
+      "id": "kinetic_tri_trap_02_place",
+      "kind": "PLACE_TRAP",
+      "phase": "resolution",
+      "owner": "self",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 2,
+        "cacheKey": "kinetic_tri_trap_points",
+        "predicates": [
+          {
+            "type": "HEX_TRAIT",
+            "trait": "BLOCKS_MOVEMENT",
+            "value": false
+          },
+          {
+            "type": "OCCUPANCY",
+            "occupied": false
+          }
+        ],
+        "selection": {
+          "mode": "sample_without_replacement",
+          "count": 3
+        }
+      },
+      "volatileCore": false,
+      "chainReaction": false,
+      "resetCooldown": 2
+    },
+    {
+      "id": "kinetic_tri_trap_03_flash",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "flash",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "caster_hex",
+        "radius": 2,
+        "cacheKey": "kinetic_tri_trap_points",
+        "predicates": [
+          {
+            "type": "HEX_TRAIT",
+            "trait": "BLOCKS_MOVEMENT",
+            "value": false
+          },
+          {
+            "type": "OCCUPANCY",
+            "occupied": false
+          }
+        ],
+        "selection": {
+          "mode": "sample_without_replacement",
+          "count": 3
+        }
+      },
+      "intensity": "low",
+      "color": "#ffaa00",
+      "metadata": {
+        "signature": "ENV.TRAP.KINETIC.DEPLOY",
+        "family": "environment",
+        "primitive": "spawn",
+        "phase": "impact",
+        "element": "kinetic",
+        "variant": "kinetic_tri_trap_deploy",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "KINETIC_TRI_TRAP"
+      }
+    },
+    {
+      "id": "kinetic_tri_trap_04_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "3 traps deployed."
+    }
+  ],
+  "upgrades": {
+    "VOLATILE_CORE": {
+      "id": "VOLATILE_CORE",
+      "name": "Volatile Core",
+      "description": "Traps deal 1 damage when triggered.",
+      "instructionPatches": [
+        {
+          "instructionId": "kinetic_tri_trap_02_place",
+          "path": "volatileCore",
+          "op": "set",
+          "value": true
+        }
+      ]
+    },
+    "TRAP_CHAIN_REACTION": {
+      "id": "TRAP_CHAIN_REACTION",
+      "name": "Chain Reaction",
+      "description": "When a trap triggers, adjacent traps also activate.",
+      "instructionPatches": [
+        {
+          "instructionId": "kinetic_tri_trap_02_place",
+          "path": "chainReaction",
+          "op": "set",
+          "value": true
+        }
+      ]
+    },
+    "QUICK_RELOAD": {
+      "id": "QUICK_RELOAD",
+      "name": "Quick Reload",
+      "description": "Individual trap reset cooldown reduced to 1.",
+      "instructionPatches": [
+        {
+          "instructionId": "kinetic_tri_trap_02_place",
+          "path": "resetCooldown",
+          "op": "set",
+          "value": 1
+        }
+      ]
+    }
+  }
+}

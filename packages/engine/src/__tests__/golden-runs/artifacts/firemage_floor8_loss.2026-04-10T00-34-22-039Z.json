@@ -1,0 +1,909 @@
+{
+  "fixture": {
+    "id": "firemage_floor8_loss",
+    "version": 1,
+    "seed": "firemage-10",
+    "loadoutId": "FIREMAGE",
+    "floorsTarget": 1,
+    "maxTurnsPerFloor": 20,
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "expected": {
+      "outcome": "lost",
+      "finalFloor": [
+        1,
+        1
+      ],
+      "totalKills": [
+        0,
+        0
+      ],
+      "totalTurns": [
+        8,
+        10
+      ],
+      "playerHp": [
+        0,
+        0
+      ],
+      "fingerprint": "e7b30e4b8583281e"
+    }
+  },
+  "maxTurns": 20,
+  "strictMode": false,
+  "run": {
+    "seed": "firemage-10",
+    "policy": "heuristic",
+    "policyProfileId": "sp-v1-default",
+    "loadoutId": "FIREMAGE",
+    "result": "timeout",
+    "turnsSpent": 20,
+    "floor": 7,
+    "kills": 0,
+    "hazardBreaches": 0,
+    "score": 15240,
+    "finalPlayerHp": 105,
+    "finalPlayerMaxHp": 105,
+    "finalPlayerHpRatio": 1,
+    "finalSpark": 88,
+    "finalMana": 78,
+    "finalSparkState": "base",
+    "finalSparkRatio": 0.55,
+    "finalExhaustion": 45,
+    "peakExhaustion": 100,
+    "restTurns": 105,
+    "redlineActions": 1,
+    "sparkBurnDamage": 15,
+    "avgActionsPerPlayerTurn": 2,
+    "directorRedlineBand": 4,
+    "directorResourceStressBand": 3,
+    "playerActionCounts": {
+      "USE_SKILL": 15,
+      "MOVE": 25,
+      "WAIT": 77
+    },
+    "playerSkillUsage": {
+      "FIREBALL": 14,
+      "BASIC_ATTACK": 1
+    },
+    "goalCounts": {
+      "engage": 0,
+      "explore": 117,
+      "recover": 0
+    },
+    "totalPlayerSkillCasts": 15,
+    "playerSkillTelemetry": {
+      "FIREBALL": {
+        "casts": 14,
+        "enemyDamage": 1363,
+        "killShots": 0,
+        "healingReceived": 33,
+        "hazardDamage": 0,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      },
+      "BASIC_ATTACK": {
+        "casts": 1,
+        "enemyDamage": 5,
+        "killShots": 0,
+        "healingReceived": 0,
+        "hazardDamage": 0,
+        "stairsProgress": 0,
+        "shrineProgress": 0,
+        "floorProgress": 0,
+        "lavaSinks": 0
+      }
+    },
+    "autoAttackTriggersByActionType": {},
+    "triangleSignal": {
+      "samples": 3,
+      "avgHitPressure": 1.4959999999999998,
+      "avgMitigationPressure": 1.8333333333333333,
+      "avgCritPressure": 0.542,
+      "avgResistancePressure": 0.5
+    },
+    "trinityContribution": {
+      "samples": 3,
+      "bodyContribution": 0.008666666666666668,
+      "mindContribution": 0.6666666666666666,
+      "instinctContribution": 0.32466666666666666
+    },
+    "combatProfileSignal": {
+      "samples": 3,
+      "avgOutgoingMultiplier": 1,
+      "avgIncomingMultiplier": 1,
+      "avgTotalMultiplier": 1
+    },
+    "enemyAiTelemetry": {
+      "actionCounts": {
+        "WAIT": 39
+      },
+      "skillUsage": {},
+      "offensiveSkillCasts": 0,
+      "damageToPlayer": 0,
+      "visiblePlayerTurns": 3,
+      "idleWithVisiblePlayer": 3,
+      "attackOpportunityTurns": 0,
+      "attackConversionTurns": 0,
+      "threatOpportunityTurns": 0,
+      "threatConversionTurns": 0,
+      "backtrackMoves": 0,
+      "loopMoves": 39,
+      "preservedRestedTurns": 0,
+      "restedBatterySpendSelections": 0,
+      "restedReentryTurns": 0,
+      "trueRestRestedBonusArmedTurns": 36,
+      "voluntaryExhaustionAttempts": 11,
+      "voluntaryExhaustionAllowed": 0,
+      "voluntaryExhaustionBlocked": 11,
+      "turnsEndedRested": 39,
+      "turnsEndedStableOrBetter": 39,
+      "turnsEndedCriticalOrExhausted": 0,
+      "secondActionAttempts": 3,
+      "secondActionAllowed": 0,
+      "thirdActionAttempts": 0,
+      "thirdActionAllowed": 0,
+      "waitForBandPreservationSelections": 39
+    },
+    "pacingSignal": {
+      "samples": 117,
+      "avgSparkRatio": 0.397275641025641,
+      "avgManaRatio": 0.9840017532325225,
+      "avgReservePressure": 0.6027243589743592,
+      "avgFatiguePressure": 0.5531169871794871,
+      "avgRecoveryPressure": 0.39087375356125353,
+      "avgTurnEndSparkRatio": 0.3775162337662338,
+      "visibleHostileSelections": 37,
+      "idleWithVisibleHostile": 13,
+      "attackOpportunityCount": 15,
+      "attackConversionCount": 15,
+      "threatenNextTurnOpportunityCount": 5,
+      "threatenNextTurnConversionCount": 5,
+      "backtrackMoveCount": 0,
+      "loopMoveCount": 0,
+      "lowValueMobilitySelections": 0,
+      "restSelections": 59,
+      "endTurnSelections": 18,
+      "continuedActionSelections": 40,
+      "preservedRestedTurns": 8,
+      "restedBatterySpendSelections": 0,
+      "restedReentryTurns": 0,
+      "trueRestRestedBonusArmedTurns": 3,
+      "voluntaryExhaustionAttempts": 409,
+      "voluntaryExhaustionAllowed": 24,
+      "voluntaryExhaustionBlocked": 385,
+      "turnsEndedRested": 3,
+      "turnsEndedStableOrBetter": 12,
+      "turnsEndedCriticalOrExhausted": 51,
+      "secondActionAttempts": 19,
+      "secondActionAllowed": 1,
+      "thirdActionAttempts": 0,
+      "thirdActionAllowed": 0,
+      "waitForBandPreservationSelections": 15,
+      "firstContactTurn": 1,
+      "firstDamageTurn": 1
+    }
+  },
+  "diagnostics": {
+    "actionCount": 154,
+    "stateFingerprint": "{\"player\":{\"hp\":105,\"maxHp\":105,\"position\":{\"q\":4,\"r\":5,\"s\":-9},\"upgrades\":[\"VISION_TIER_4\",\"VAMPIRIC\",\"VISION_TIER_2\",\"EXTENDED_REACH\",\"VISION_TIER_3\",\"POWER_STRIKE\"]},\"enemies\":[{\"id\":\"enemy_1_khv859\",\"subtype\":\"sprinter\",\"hp\":81,\"position\":{\"q\":3,\"r\":1,\"s\":-4}}],\"floor\":7,\"gridWidth\":9,\"gridHeight\":11,\"mapShape\":\"diamond\",\"turnNumber\":21,\"kills\":0,\"rngCounter\":0}"
+  },
+  "strictFingerprint": "02351650c5f08992",
+  "actions": [
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 1,
+        "s": -5
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "VISION_TIER_4"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 0,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 4,
+          "r": 7,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 9,
+        "s": -13
+      }
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 4,
+          "r": 6,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 7,
+        "r": 4,
+        "s": -11
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "VAMPIRIC"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 0,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 5,
+        "s": -9
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 4,
+          "r": 5,
+          "s": -9
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 7,
+        "s": -12
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "VISION_TIER_2"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 7,
+        "r": 2,
+        "s": -9
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 8,
+          "r": 2,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 0,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 7,
+          "r": 7,
+          "s": -14
+        }
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 3,
+        "s": -6
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 4,
+        "s": -7
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 4,
+          "r": 3,
+          "s": -7
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 3,
+        "r": 3,
+        "s": -6
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "EXTENDED_REACH"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 0,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 2,
+        "s": -6
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 7,
+          "r": 3,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 0,
+        "r": 5,
+        "s": -5
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 0,
+          "r": 5,
+          "s": -5
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 2,
+        "s": -6
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "VISION_TIER_3"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 0,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 1,
+          "r": 10,
+          "s": -11
+        }
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 3,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "BASIC_ATTACK",
+        "target": {
+          "q": 1,
+          "r": 4,
+          "s": -5
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 1,
+          "r": 4,
+          "s": -5
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 1,
+        "r": 3,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "SELECT_UPGRADE",
+      "payload": "POWER_STRIKE"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 0,
+        "s": -4
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "RESOLVE_PENDING"
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 9,
+        "s": -13
+      }
+    },
+    {
+      "type": "ADVANCE_TURN"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 4,
+          "r": 6,
+          "s": -10
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 8,
+        "s": -13
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 6,
+        "r": 7,
+        "s": -13
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 8,
+          "r": 5,
+          "s": -13
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 5,
+        "r": 5,
+        "s": -10
+      }
+    },
+    {
+      "type": "MOVE",
+      "payload": {
+        "q": 4,
+        "r": 5,
+        "s": -9
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "USE_SKILL",
+      "payload": {
+        "skillId": "FIREBALL",
+        "target": {
+          "q": 1,
+          "r": 5,
+          "s": -6
+        }
+      }
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    },
+    {
+      "type": "WAIT"
+    }
+  ]
+}

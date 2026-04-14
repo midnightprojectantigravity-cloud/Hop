@@ -1,12 +1,42 @@
-import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
+import type {
+    AiBehaviorOverlayInstance,
+    AtomicEffect,
+    GameState,
+    Point,
+    SkillDefinition,
+    SkillSummonDefinition,
+    Actor
+} from '../types';
 import { hexDistance } from '../hex';
 import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
-import { stableIdFromSeed } from '../systems/rng';
 import { createCompanion } from '../systems/entities/entity-factory';
+import { createRaiseDeadSkeletonId } from '../systems/entities/companion-id-strategies';
 import { pointToKey } from '../hex';
 import { getActorAt } from '../helpers';
 import { resolveSummonPlacement } from '../systems/summon-placement';
+
+const RAISE_DEAD_SUMMON_OVERLAY: AiBehaviorOverlayInstance = {
+    id: 'raise_dead_skeleton',
+    source: 'summon',
+    sourceId: 'raise_dead',
+    desiredRange: 1,
+    offenseBias: 0.1,
+    commitBias: 0.15,
+    followThroughBias: 0.1
+};
+
+const RAISE_DEAD_SUMMON: SkillSummonDefinition = {
+    companionType: 'skeleton',
+    visualAssetRef: '/Hop/assets/bestiary/unit.skeleton.basic.01.webp',
+    trinity: { body: 12, mind: 2, instinct: 4 },
+    skills: ['BASIC_MOVE', 'BASIC_ATTACK', 'AUTO_ATTACK'],
+    behavior: {
+        controller: 'generic_ai',
+        anchorActorId: 'owner',
+        overlays: [RAISE_DEAD_SUMMON_OVERLAY]
+    }
+};
 
 const hasCorpseAt = (state: GameState, target: Point): boolean => {
     const tile = state.tiles.get(pointToKey(target));
@@ -23,27 +53,6 @@ const getCorpseTargetsInRange = (state: GameState, origin: Point, range: number)
     return targets;
 };
 
-const createUniqueSkeletonId = (state: GameState): string => {
-    const seed = state.initialSeed ?? state.rngSeed ?? '0';
-    const existingIds = new Set<string>([
-        ...state.enemies.map(e => e.id),
-        ...(state.companions || []).map(c => c.id)
-    ]);
-
-    // Include floor so the first summon on each floor cannot collide after migration.
-    let counter = (state.floor << 20)
-        + (state.turnNumber << 12)
-        + (state.actionLog?.length ?? 0)
-        + (state.rngCounter ?? 0);
-    let candidate = `skeleton_${stableIdFromSeed(seed, counter, 8, 'skeleton')}`;
-
-    while (existingIds.has(candidate)) {
-        counter += 1;
-        candidate = `skeleton_${stableIdFromSeed(seed, counter, 8, 'skeleton')}`;
-    }
-    return candidate;
-};
-
 /**
  * RAISE_DEAD Skill
  * Reanimate a corpse into a Skeleton minion.
@@ -51,14 +60,16 @@ const createUniqueSkeletonId = (state: GameState): string => {
 export const RAISE_DEAD: SkillDefinition = {
     id: 'RAISE_DEAD',
     name: 'Raise Dead',
-    description: 'Reanimate a target corpse into a Skeleton minion (Faction: Player).',
+    description: 'Reanimate a target corpse into an owner-aligned Skeleton minion.',
     slot: 'utility',
     icon: '💀✨',
+    deathDecalVariant: 'bones',
     baseVariables: {
         range: 4,
         cost: 1,
         cooldown: 3,
     },
+    summon: RAISE_DEAD_SUMMON,
     execute: (state: GameState, attacker: Actor, target?: Point) => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
@@ -88,17 +99,10 @@ export const RAISE_DEAD: SkillDefinition = {
         const skeleton: Actor = createCompanion({
             companionType: 'skeleton',
             ownerId: attacker.id,
-            id: createUniqueSkeletonId(state),
+            ownerFactionId: attacker.factionId,
+            id: createRaiseDeadSkeletonId(state),
             position: target,
-            initialBehaviorOverlay: {
-                id: 'raise_dead_skeleton',
-                source: 'summon',
-                sourceId: 'raise_dead',
-                desiredRange: 1,
-                offenseBias: 0.1,
-                commitBias: 0.15,
-                followThroughBias: 0.1
-            },
+            summon: RAISE_DEAD_SUMMON,
             initialAnchorActorId: attacker.id
         });
 

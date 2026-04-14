@@ -6,7 +6,8 @@ import {
     ContractValidationError,
     parseBaseUnitDefinition,
     parseCompositeSkillDefinition,
-    parseTacticalDataPack
+    parseTacticalDataPack,
+    validateFixedPointInteger
 } from '../data';
 
 const loadJson = (relativeName: string): unknown => {
@@ -50,5 +51,12 @@ describe('data contract parser', () => {
 
         expect(pack.units).toHaveLength(1);
         expect(pack.skills).toHaveLength(1);
+    });
+
+    it('flags non-integer fixed-point values with a path-aware validation issue', () => {
+        const issues: { path: string; message: string }[] = [];
+        validateFixedPointInteger(1.25, issues, '$.combat.scalar');
+        expect(issues).toHaveLength(1);
+        expect(issues[0]?.message).toContain('scaled integer');
     });
 });

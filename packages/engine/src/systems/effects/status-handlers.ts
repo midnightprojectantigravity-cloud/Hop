@@ -86,7 +86,8 @@ export const statusEffectHandlers: AtomicEffectHandlerMap = {
         let targetActorId = '';
         let targetPos: Point | null = null;
         if (typeof effect.target === 'string') {
-            if (effect.target === 'targetActor') targetActorId = context.targetId || '';
+            if (effect.target === 'self') targetActorId = context.sourceId || state.player.id;
+            else if (effect.target === 'targetActor') targetActorId = context.targetId || '';
             else targetActorId = effect.target;
         } else {
             targetPos = effect.target as Point;

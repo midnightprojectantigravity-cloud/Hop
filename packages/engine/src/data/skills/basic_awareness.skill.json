@@ -1,0 +1,38 @@
+{
+  "id": "BASIC_AWARENESS",
+  "name": "Basic Awareness",
+  "description": "Reveal enemy identity and vitality.",
+  "slot": "passive",
+  "icon": "BA",
+  "keywords": [
+    "PASSIVE",
+    "AWARENESS",
+    "REVEAL"
+  ],
+  "baseVariables": {
+    "range": 0,
+    "cost": 0,
+    "cooldown": 0
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 0,
+    "deterministicSort": "distance_then_q_then_r"
+  },
+  "combatScript": [],
+  "capabilities": {
+    "information": [
+      {
+        "domain": "information",
+        "providerId": "basic_awareness.info",
+        "priority": 10,
+        "kind": "basic_reveal_v1",
+        "reveal": {
+          "name": true,
+          "hp": true
+        }
+      }
+    ]
+  },
+  "upgrades": {}
+}

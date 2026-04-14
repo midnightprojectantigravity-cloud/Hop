@@ -3,6 +3,7 @@ import { hexEquals, pointToKey } from '../hex';
 import { checkVitals } from './entities/actor';
 import { BASE_TILES } from './tiles/tile-registry';
 import { getIncomingDamageMultiplier, getOutgoingDamageMultiplier } from './combat/combat-traits';
+import type { CombatDamageClass } from './combat/damage-taxonomy';
 import { resolveLifoStack } from './resolution-stack';
 import { tryApplyRegisteredAtomicEffect } from './effects/registry';
 import type { AtomicEffectContext } from './effects/types';
@@ -170,11 +171,12 @@ const scaleCombatProfileDamage = (
     rawAmount: number,
     sourceId: string | undefined,
     target: Actor | undefined,
-    damageClass: 'physical' | 'magical',
+    damageClass: CombatDamageClass,
     reason?: string
 ): { amount: number; outgoing: number; incoming: number; total: number } => {
     if (!target) return { amount: rawAmount, outgoing: 1, incoming: 1, total: 1 };
     if (reason && HAZARD_REASONS.has(reason)) return { amount: rawAmount, outgoing: 1, incoming: 1, total: 1 };
+    if (damageClass === 'true') return { amount: rawAmount, outgoing: 1, incoming: 1, total: 1 };
     const source = resolveActorById(state, sourceId);
     if (!source) return { amount: rawAmount, outgoing: 1, incoming: 1, total: 1 };
     const outgoing = getOutgoingDamageMultiplier(source, damageClass);

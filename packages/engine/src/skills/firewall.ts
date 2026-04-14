@@ -26,6 +26,8 @@ export const FIREWALL: SkillDefinition = {
     },
     combat: {
         damageClass: 'magical',
+        damageSubClass: 'blast',
+        damageElement: 'fire',
         attackProfile: 'spell',
         trackingSignature: 'magic',
         weights: { mind: 1 }

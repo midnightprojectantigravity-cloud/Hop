@@ -1,0 +1,71 @@
+{
+  "id": "SET_TRAP",
+  "name": "Set Trap",
+  "description": "Place a hidden trap. Roots units for 3 turns.",
+  "slot": "utility",
+  "icon": "\ud83e\udea4",
+  "keywords": [
+    "TRAP",
+    "CONTROL",
+    "UTILITY"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 1,
+    "cooldown": 2
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 1,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "HEX_TRAIT",
+        "trait": "BLOCKS_MOVEMENT",
+        "value": false
+      },
+      {
+        "type": "HEX_TRAIT",
+        "trait": "LIQUID",
+        "value": false
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "set_trap_01_place",
+      "kind": "PLACE_TRAP",
+      "phase": "resolution",
+      "position": "selected_hex",
+      "owner": "self"
+    },
+    {
+      "id": "set_trap_02_text",
+      "kind": "EMIT_JUICE",
+      "phase": "cleanup",
+      "effect": "combat_text",
+      "target": "selected_hex",
+      "text": "Trapped",
+      "metadata": {
+        "signature": "UI.TEXT.NEUTRAL.SET_TRAP",
+        "family": "ui",
+        "primitive": "text",
+        "phase": "instant",
+        "element": "neutral",
+        "variant": "set_trap",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "SET_TRAP",
+        "textTone": "status"
+      }
+    },
+    {
+      "id": "set_trap_03_message",
+      "kind": "MESSAGE",
+      "phase": "cleanup",
+      "text": "Trap set."
+    }
+  ],
+  "upgrades": {}
+}
