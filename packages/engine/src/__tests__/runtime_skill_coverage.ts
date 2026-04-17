@@ -72,6 +72,11 @@ export const RUNTIME_SKILL_COVERAGE: RuntimeSkillCoverageCase[] = [
         notes: 'Parity plus trinity-stat reveal and awareness coverage.'
     },
     {
+        skillId: 'DASH',
+        tags: ['parity-covered', 'scenario-covered'],
+        notes: 'Parity plus dash momentum, shunt, and collision scenario coverage.'
+    },
+    {
         skillId: 'FALCON_APEX_STRIKE',
         tags: ['parity-covered', 'cross-system-covered'],
         notes: 'Parity plus falcon command and companion-turn coverage.'
@@ -125,6 +130,11 @@ export const RUNTIME_SKILL_COVERAGE: RuntimeSkillCoverageCase[] = [
         skillId: 'FIREWALL',
         tags: ['parity-covered', 'scenario-covered'],
         notes: 'Parity plus firewall geometry and wall-filter scenarios.'
+    },
+    {
+        skillId: 'JUMP',
+        tags: ['parity-covered', 'scenario-covered'],
+        notes: 'Parity plus jump and stunning-landing scenarios.'
     },
     {
         skillId: 'KINETIC_TRI_TRAP',
@@ -192,6 +202,11 @@ export const RUNTIME_SKILL_COVERAGE: RuntimeSkillCoverageCase[] = [
         notes: 'Parity plus shield_throw and integration chain-reaction scenarios.'
     },
     {
+        skillId: 'SHIELD_BASH',
+        tags: ['parity-covered', 'scenario-covered'],
+        notes: 'Parity plus shield_bash push and collision scenarios.'
+    },
+    {
         skillId: 'SPEAR_THROW',
         tags: ['parity-covered', 'scenario-covered'],
         notes: 'Parity plus spear_throw scenarios and vanguard replay artifacts.'
@@ -205,6 +220,11 @@ export const RUNTIME_SKILL_COVERAGE: RuntimeSkillCoverageCase[] = [
         skillId: 'SNEAK_ATTACK',
         tags: ['parity-covered'],
         notes: 'Parity plus stealth-damage branch coverage.'
+    },
+    {
+        skillId: 'SOUL_SWAP',
+        tags: ['parity-covered'],
+        notes: 'Parity plus soul swap swap-behavior coverage.'
     },
     {
         skillId: 'THEME_HAZARDS',
@@ -235,6 +255,16 @@ export const RUNTIME_SKILL_COVERAGE: RuntimeSkillCoverageCase[] = [
         skillId: 'SWIFT_ROLL',
         tags: ['parity-covered'],
         notes: 'Parity plus movement policy and teleport utility coverage.'
+    },
+    {
+        skillId: 'VAULT',
+        tags: ['parity-covered', 'scenario-covered'],
+        notes: 'Parity plus vault parity-shift and landing scenarios.'
+    },
+    {
+        skillId: 'WITHDRAWAL',
+        tags: ['parity-covered', 'scenario-covered'],
+        notes: 'Parity plus withdrawal shot and backroll scenarios.'
     }
 ] ;
 

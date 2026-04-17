@@ -1,6 +1,7 @@
 import type { AtomicEffect, GameState, Point } from '../../types';
 import { DIRECTIONS, hexAdd, hexEquals } from '../../hex';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
+import { isBlockedByWall } from '../validation';
 import { resolveBlockedCollisionEffects } from './collision-policy';
 import { toCanonicalDistance } from './force-contract';
 import { extractTrinityStats } from './combat-calculator';
@@ -105,7 +106,9 @@ export const resolveForce = (state: GameState, input: ForceResolutionInput): For
 
     for (let step = 0; step < distance; step++) {
         const next = hexAdd(cursor, dir);
-        if (!UnifiedTileService.isWalkable(state, next) || isOccupiedByOtherActor(state, next, target.id)) {
+        const blockedByWall = isBlockedByWall(state, next)
+            || UnifiedTileService.getTraitsAt(state, next).has('BLOCKS_MOVEMENT');
+        if (blockedByWall || isOccupiedByOtherActor(state, next, target.id)) {
             collided = true;
             break;
         }
@@ -120,7 +123,8 @@ export const resolveForce = (state: GameState, input: ForceResolutionInput): For
             target: target.id,
             destination: cursor,
             path,
-            simulatePath: true
+            simulatePath: true,
+            ignoreGroundHazards: true
         });
     }
 

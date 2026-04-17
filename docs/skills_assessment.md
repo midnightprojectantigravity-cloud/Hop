@@ -19,7 +19,7 @@ The skill system is the authoring boundary for three audiences:
 
 ### Current source of truth
 
-Every skill is a TypeScript object conforming to `SkillDefinition` (in `packages/engine/src/types.ts`, line 1040). Each file in `packages/engine/src/skills/` exports one const that the auto-generated registry (`packages/engine/src/generated/skill-registry.generated.ts`) collects.
+The engine still exposes skills through `SkillDefinition`, but the live authoring model is now mixed: most runtime-authored skills are backed by JSON sidecars and the generated runtime registry, while a shrinking set of legacy TypeScript exports remain as parity fixtures or compatibility adapters. The generated metadata (`packages/engine/src/generated/skill-registry.generated.ts` and `artifacts/skills/skill-library.metadata.json`) is the practical source of truth for what is live.
 
 ### Live counts (from generated registry)
 
@@ -27,6 +27,8 @@ Every skill is a TypeScript object conforming to `SkillDefinition` (in `packages
 |---|---|
 | Source files in `src/skills/` | 52 |
 | Registered skills in generated registry | 51 |
+| Runtime-authored skills in metadata | 51 |
+| Handler ratio | 0 |
 | Slot: offensive | 15 |
 | Slot: defensive | 3 |
 | Slot: utility | 14 |
@@ -54,8 +56,8 @@ Every skill is a TypeScript object conforming to `SkillDefinition` (in `packages
 - `getValidTargets()` functions are imperative, with per-skill targeting rules (axial, LOS, corpse-only, range gating).
 - Upgrade behavior in complex skills reads upgrade IDs directly rather than reacting to resolved patches or keywords.
 - Capability providers (senses, information, movement) use callback-based `resolve()` functions that cannot be expressed as JSON.
-- `CompositeSkillDefinition` and `CompositeAtomicEffectDefinition` in `contracts.ts` define a richer model but are consumed only by the composite-skill-bridge, not by the 51 registered skills.
-- Companion mode definitions (falcon roost/scout/predator behavior overlays) are hardcoded inside `falcon_command.ts` execute logic rather than living in the companion data layer.
+- `CompositeSkillDefinition` and `CompositeAtomicEffectDefinition` in `contracts.ts` still define a richer model, but the runtime now already uses the JSON skill bridge for the bulk of the live skill set.
+- Companion mode definitions (falcon roost/scout/predator behavior overlays) have been moved into the companion/runtime data path; any remaining work there is parity or cleanup, not foundational migration.
 
 ---
 
@@ -74,16 +76,17 @@ Every skill is a TypeScript object conforming to `SkillDefinition` (in `packages
 | Companion balance | `COMPANION_BALANCE_CONTENT` | Fully data |
 | Enemy bestiary / skill loadouts | `MVP_ENEMY_CONTENT` | Fully data |
 | Loadouts | `DEFAULT_LOADOUT_DEFINITIONS` | Fully data |
+| Runtime-authored live skills | JSON sidecars + generated runtime metadata | Fully data |
 
 ## What Still Requires Imperative Handlers
 
 | Surface | Reason |
 |---|---|
-| `execute()` | Per-skill mechanics: spear recall, bash cascading, falcon modes, dash charges, grapple pull/swap |
-| `getValidTargets()` | Per-skill targeting: axial constraint, LOS checks, corpse-only, occupied-tile filtering |
-| Upgrade branching in execute | `activeUpgrades.includes(...)` checks embedded in imperative code |
-| Capability `resolve()` | Callback-based senses/information/movement decisions |
-| Falcon mode switching | Roost/scout/predator logic hardcoded in `falcon_command.ts` |
+| `execute()` | Remaining legacy parity fixtures still carry per-skill mechanics such as pathing, force resolution, and summon edge cases |
+| `getValidTargets()` | Per-skill targeting remains imperative on legacy fixtures where the runtime VM has not yet absorbed the full contract |
+| Upgrade branching in execute | A small number of legacy execute paths still read `activeUpgrades.includes(...)` directly |
+| Capability `resolve()` | Legacy compatibility adapters still translate the declarative runtime capability data into the existing resolver surface |
+| Falcon mode switching | Compatibility behavior remains in the falcon command path for old fixtures/tests, even though the live runtime now owns the data |
 
 ---
 
@@ -166,7 +169,7 @@ Replace stale assessment with repo-truth roadmap. No code changes.
 
 ### Phase 1: Metadata sidecar extraction
 
-Extract all non-functional metadata from each skill's TypeScript file into a `.json` sidecar that the registry generator reads. No runtime changes; TypeScript files continue to be the source of truth for `execute()` and `getValidTargets()`.
+Extract all non-functional metadata from each skill's TypeScript file into a `.json` sidecar that the registry generator reads. This phase has effectively landed for the current runtime-owned cohort; the remaining work is keeping legacy fixtures and generated runtime metadata in sync.
 
 Sidecar covers: `id`, `name`, `description`, `slot`, `icon`, `tags`, `baseVariables`, `combat`, targeting metadata, `intentProfile` overrides, `resourceProfile`, summon definitions, and the full upgrade tree.
 
@@ -220,7 +223,7 @@ For the ~35 skills that will remain partially imperative after Phases 1-4, forma
 
 ### Phase 6: Capability provider schema
 
-Design a declarative capability-provider schema for senses, information, and movement. This is the longest-term item because the current callback-based API is deeply integrated with the spatial and combat systems.
+Design a declarative capability-provider schema for senses, information, and movement. This is the longest-term item for the remaining legacy compatibility layer, even though the live runtime already consumes declarative capability data for the migrated skills.
 
 Likely shape: a JSON declaration of provider type, priority, conditions, and reveal/decision rules, with the runtime interpreting them instead of calling arbitrary `resolve()` functions.
 

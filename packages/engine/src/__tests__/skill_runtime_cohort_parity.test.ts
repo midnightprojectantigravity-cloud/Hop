@@ -22,17 +22,22 @@ import { CORPSE_EXPLOSION as LEGACY_CORPSE_EXPLOSION } from '../skills/corpse_ex
 import { COMBAT_ANALYSIS as LEGACY_COMBAT_ANALYSIS } from '../skills/combat_analysis';
 import { DEATH_TOUCH as LEGACY_DEATH_TOUCH } from '../skills/death_touch';
 import { ENEMY_AWARENESS as LEGACY_ENEMY_AWARENESS } from '../skills/enemy_awareness';
+import { DASH as LEGACY_DASH } from '../skills/dash';
 import { FIREBALL as LEGACY_FIREBALL } from '../skills/fireball';
 import { FIREWALK as LEGACY_FIREWALK } from '../skills/firewalk';
 import { FIREWALL as LEGACY_FIREWALL } from '../skills/firewall';
 import { FLIGHT as LEGACY_FLIGHT } from '../skills/flight';
+import { GRAPPLE_HOOK as LEGACY_GRAPPLE_HOOK } from '../skills/grapple_hook';
+import { JUMP as LEGACY_JUMP } from '../skills/jump';
 import { RAISE_DEAD as LEGACY_RAISE_DEAD } from '../skills/raise_dead';
 import { KINETIC_TRI_TRAP as LEGACY_KINETIC_TRI_TRAP } from '../skills/kinetic_tri_trap';
 import { MULTI_SHOOT as LEGACY_MULTI_SHOOT } from '../skills/multi_shoot';
 import { ORACLE_SIGHT as LEGACY_ORACLE_SIGHT } from '../skills/oracle_sight';
 import { PHASE_STEP as LEGACY_PHASE_STEP } from '../skills/phase_step_capability';
 import { SHIELD_THROW as LEGACY_SHIELD_THROW } from '../skills/shield_throw';
+import { SHIELD_BASH as LEGACY_SHIELD_BASH } from '../skills/shield_bash';
 import { SHADOW_STEP as LEGACY_SHADOW_STEP } from '../skills/shadow_step';
+import { SOUL_SWAP as LEGACY_SOUL_SWAP } from '../skills/soul_swap';
 import { SNEAK_ATTACK as LEGACY_SNEAK_ATTACK } from '../skills/sneak_attack';
 import { ARCHER_SHOT as LEGACY_ARCHER_SHOT } from '../skills/archer_shot';
 import { SPEAR_THROW as LEGACY_SPEAR_THROW } from '../skills/spear_throw';
@@ -44,9 +49,11 @@ import { STANDARD_VISION as LEGACY_STANDARD_VISION } from '../skills/standard_vi
 import { TACTICAL_INSIGHT as LEGACY_TACTICAL_INSIGHT } from '../skills/tactical_insight';
 import { THEME_HAZARDS as LEGACY_THEME_HAZARDS } from '../skills/theme_hazard';
 import { TIME_BOMB as LEGACY_TIME_BOMB } from '../skills/time_bomb';
+import { VAULT as LEGACY_VAULT } from '../skills/vault';
 import { SWIFT_ROLL as LEGACY_SWIFT_ROLL } from '../skills/swift_roll';
 import { VIBRATION_SENSE as LEGACY_VIBRATION_SENSE } from '../skills/vibration_sense';
 import { VOLATILE_PAYLOAD as LEGACY_VOLATILE_PAYLOAD } from '../skills/volatile_payload';
+import { WITHDRAWAL as LEGACY_WITHDRAWAL } from '../skills/withdrawal';
 import { pointToKey } from '../hex';
 import { getActorAt } from '../helpers';
 import { validateLineOfSight } from '../systems/validation';
@@ -129,11 +136,7 @@ const normalizeEffect = (
             return {
                 type: effect.type,
                 target: effect.target,
-                destination: normalizePoint(effect.destination),
-                simulatePath: effect.simulatePath,
-                presentationKind: effect.presentationKind,
-                pathStyle: effect.pathStyle,
-                presentationSequenceId: effect.presentationSequenceId
+                destination: normalizePoint(effect.destination)
             };
         case 'PlaceTrap':
             return {
@@ -279,6 +282,7 @@ type LegacyCohortCase = SharedCohortCase & {
         | 'BOMB_TOSS'
         | 'CORPSE_EXPLOSION'
         | 'DEATH_TOUCH'
+        | 'DASH'
         | 'FALCON_APEX_STRIKE'
         | 'FALCON_AUTO_ROOST'
         | 'FALCON_COMMAND'
@@ -288,9 +292,12 @@ type LegacyCohortCase = SharedCohortCase & {
         | 'FIREBALL'
         | 'FIREWALK'
         | 'FIREWALL'
+        | 'GRAPPLE_HOOK'
+        | 'JUMP'
         | 'KINETIC_TRI_TRAP'
         | 'MULTI_SHOOT'
         | 'RAISE_DEAD'
+        | 'SHIELD_BASH'
         | 'SHIELD_THROW'
         | 'ARCHER_SHOT'
         | 'SPEAR_THROW'
@@ -302,8 +309,11 @@ type LegacyCohortCase = SharedCohortCase & {
         | 'SMOKE_SCREEN'
         | 'SNEAK_ATTACK'
         | 'TIME_BOMB'
+        | 'SOUL_SWAP'
+        | 'VAULT'
         | 'SWIFT_ROLL'
-        | 'VOLATILE_PAYLOAD';
+        | 'VOLATILE_PAYLOAD'
+        | 'WITHDRAWAL';
     legacy: SkillDefinition;
     runtimeContract?: never;
 };
@@ -440,6 +450,107 @@ const cohortCases: CohortCase[] = [
         }
     },
     {
+        skillId: 'DASH',
+        legacy: LEGACY_DASH,
+        buildState: () => {
+            const attacker = createPlayer({
+                position: p(3, 3),
+                speed: 10,
+                skills: ['DASH']
+            });
+            return {
+                state: createMockState({ player: attacker, enemies: [] }),
+                attacker,
+                target: p(5, 3)
+            };
+        }
+    },
+    {
+        skillId: 'SHIELD_BASH',
+        legacy: LEGACY_SHIELD_BASH,
+        buildState: () => {
+            const attacker = createPlayer({
+                position: p(3, 3),
+                speed: 10,
+                skills: ['SHIELD_BASH']
+            });
+            const target = createEnemy({
+                id: 'shield-bash-target',
+                subtype: 'footman',
+                position: p(4, 3),
+                speed: 1,
+                skills: ['BASIC_ATTACK']
+            });
+            return {
+                state: createMockState({ player: attacker, enemies: [target] }),
+                attacker,
+                target: target.position
+            };
+        }
+    },
+    {
+        skillId: 'WITHDRAWAL',
+        legacy: LEGACY_WITHDRAWAL,
+        buildState: () => {
+            const attacker = createPlayer({
+                position: p(5, 5),
+                speed: 10,
+                skills: ['WITHDRAWAL']
+            });
+            const target = createEnemy({
+                id: 'withdrawal-target',
+                subtype: 'footman',
+                position: p(6, 5),
+                speed: 1,
+                skills: ['BASIC_ATTACK']
+            });
+            return {
+                state: createMockState({ player: attacker, enemies: [target] }),
+                attacker,
+                target: target.position
+            };
+        }
+    },
+    {
+        skillId: 'JUMP',
+        legacy: LEGACY_JUMP,
+        buildState: () => {
+            const attacker = createPlayer({
+                position: p(3, 6),
+                speed: 10,
+                skills: ['JUMP']
+            });
+            const enemy = createEnemy({
+                id: 'jump-target',
+                subtype: 'footman',
+                position: p(3, 4),
+                speed: 1,
+                skills: ['BASIC_ATTACK']
+            });
+            const neighborOne = createEnemy({
+                id: 'jump-neighbor-1',
+                subtype: 'footman',
+                position: p(3, 5),
+                speed: 1,
+                skills: ['BASIC_ATTACK']
+            });
+            const neighborTwo = createEnemy({
+                id: 'jump-neighbor-2',
+                subtype: 'footman',
+                position: p(4, 4),
+                speed: 1,
+                skills: ['BASIC_ATTACK']
+            });
+            const state = createMockState({ player: attacker, enemies: [enemy, neighborOne, neighborTwo] });
+            return {
+                state,
+                attacker,
+                target: enemy.position,
+                activeUpgrades: ['STUNNING_LANDING', 'METEOR_IMPACT', 'FREE_JUMP']
+            };
+        }
+    },
+    {
         skillId: 'BOMB_TOSS',
         legacy: LEGACY_BOMB_TOSS,
         buildState: () => {
@@ -487,6 +598,33 @@ const cohortCases: CohortCase[] = [
         }
     },
     {
+        skillId: 'SOUL_SWAP',
+        legacy: LEGACY_SOUL_SWAP,
+        buildState: () => {
+            const attacker = createPlayer({
+                position: p(3, 6),
+                speed: 10,
+                skills: ['SOUL_SWAP']
+            });
+            const minion = createCompanion({
+                companionType: 'skeleton',
+                ownerId: attacker.id,
+                ownerFactionId: attacker.factionId,
+                position: p(3, 4)
+            });
+            const state = createMockState({
+                player: attacker,
+                enemies: [],
+                companions: [minion] as any
+            });
+            return {
+                state,
+                attacker,
+                target: minion.position
+            };
+        }
+    },
+    {
         skillId: 'KINETIC_TRI_TRAP',
         legacy: LEGACY_KINETIC_TRI_TRAP,
         expectedRngConsumption: 3,
@@ -501,6 +639,31 @@ const cohortCases: CohortCase[] = [
                 attacker,
                 target: attacker.position,
                 activeUpgrades: ['VOLATILE_CORE', 'TRAP_CHAIN_REACTION', 'QUICK_RELOAD']
+            };
+        }
+    },
+    {
+        skillId: 'VAULT',
+        legacy: LEGACY_VAULT,
+        buildState: () => {
+            const attacker = createPlayer({
+                position: p(3, 6),
+                speed: 10,
+                skills: ['VAULT']
+            });
+            const enemy = createEnemy({
+                id: 'vault-victim',
+                subtype: 'footman',
+                position: p(4, 4),
+                speed: 1,
+                skills: ['BASIC_ATTACK']
+            });
+            const state = createMockState({ player: attacker, enemies: [enemy] });
+            state.turnNumber = 1;
+            return {
+                state,
+                attacker,
+                target: p(3, 4)
             };
         }
     },
@@ -1350,6 +1513,7 @@ describe('runtime production cohort parity', () => {
         const runtimeAutoAttack = SkillRuntimeRegistry.getLegacy('AUTO_ATTACK') || SkillRegistry.get('AUTO_ATTACK');
         const runtimeBasicAttack = SkillRuntimeRegistry.getLegacy('BASIC_ATTACK') || SkillRegistry.get('BASIC_ATTACK');
         const runtimeBasicMove = SkillRuntimeRegistry.getLegacy('BASIC_MOVE') || SkillRegistry.get('BASIC_MOVE');
+        const runtimeDash = SkillRuntimeRegistry.getLegacy('DASH') || SkillRegistry.get('DASH');
         const runtimeCorpseExplosion = SkillRuntimeRegistry.getLegacy('CORPSE_EXPLOSION') || SkillRegistry.get('CORPSE_EXPLOSION');
         const runtimeBombToss = SkillRuntimeRegistry.getLegacy('BOMB_TOSS') || SkillRegistry.get('BOMB_TOSS');
         const runtimeFireball = SkillRuntimeRegistry.getLegacy('FIREBALL') || SkillRegistry.get('FIREBALL');
@@ -1368,10 +1532,12 @@ describe('runtime production cohort parity', () => {
         const runtimeKineticTriTrap = SkillRuntimeRegistry.getLegacy('KINETIC_TRI_TRAP') || SkillRegistry.get('KINETIC_TRI_TRAP');
         const runtimeAbsorbFire = SkillRuntimeRegistry.getLegacy('ABSORB_FIRE') || SkillRegistry.get('ABSORB_FIRE');
         const runtimeShieldThrow = SkillRuntimeRegistry.getLegacy('SHIELD_THROW') || SkillRegistry.get('SHIELD_THROW');
+        const runtimeShieldBash = SkillRuntimeRegistry.getLegacy('SHIELD_BASH') || SkillRegistry.get('SHIELD_BASH');
         const runtimeSpearThrow = SkillRuntimeRegistry.getLegacy('SPEAR_THROW') || SkillRegistry.get('SPEAR_THROW');
         const runtimeThemeHazards = SkillRuntimeRegistry.getLegacy('THEME_HAZARDS') || SkillRegistry.get('THEME_HAZARDS');
         const runtimeTimeBomb = SkillRuntimeRegistry.getLegacy('TIME_BOMB') || SkillRegistry.get('TIME_BOMB');
         const runtimeVolatilePayload = SkillRuntimeRegistry.getLegacy('VOLATILE_PAYLOAD') || SkillRegistry.get('VOLATILE_PAYLOAD');
+        const runtimeWithdrawal = SkillRuntimeRegistry.getLegacy('WITHDRAWAL') || SkillRegistry.get('WITHDRAWAL');
         const runtimeMeteorImpact = SkillRuntimeRegistry.getLegacy('METEOR_IMPACT') || SkillRegistry.get('METEOR_IMPACT');
         const runtimeMultiShoot = SkillRuntimeRegistry.getLegacy('MULTI_SHOOT') || SkillRegistry.get('MULTI_SHOOT');
         const runtimeTornadoKick = SkillRuntimeRegistry.getLegacy('TORNADO_KICK') || SkillRegistry.get('TORNADO_KICK');
@@ -1387,6 +1553,9 @@ describe('runtime production cohort parity', () => {
         );
         expect(runtimeBasicMove?.scenarios?.map(scenario => scenario.id) || []).toEqual(
             (LEGACY_BASIC_MOVE.scenarios || []).map(scenario => scenario.id)
+        );
+        expect(runtimeDash?.scenarios?.map(scenario => scenario.id) || []).toEqual(
+            (LEGACY_DASH.scenarios || []).map(scenario => scenario.id)
         );
         expect(runtimeCorpseExplosion?.scenarios?.map(scenario => scenario.id)).toEqual(
             (LEGACY_CORPSE_EXPLOSION.scenarios || []).map(scenario => scenario.id)
@@ -1430,6 +1599,9 @@ describe('runtime production cohort parity', () => {
         expect(runtimeShieldThrow?.scenarios?.map(scenario => scenario.id) || []).toEqual(
             (LEGACY_SHIELD_THROW.scenarios || []).map(scenario => scenario.id)
         );
+        expect(runtimeShieldBash?.scenarios?.map(scenario => scenario.id) || []).toEqual(
+            (LEGACY_SHIELD_BASH.scenarios || []).map(scenario => scenario.id)
+        );
         expect(runtimeSpearThrow?.scenarios?.map(scenario => scenario.id) || []).toEqual(
             (LEGACY_SPEAR_THROW.scenarios || []).map(scenario => scenario.id)
         );
@@ -1453,6 +1625,9 @@ describe('runtime production cohort parity', () => {
         );
         expect(runtimeVolatilePayload?.scenarios?.map(scenario => scenario.id) || []).toEqual(
             (LEGACY_VOLATILE_PAYLOAD.scenarios || []).map(scenario => scenario.id)
+        );
+        expect(runtimeWithdrawal?.scenarios?.map(scenario => scenario.id) || []).toEqual(
+            (LEGACY_WITHDRAWAL.scenarios || []).map(scenario => scenario.id)
         );
         expect(runtimeMeteorImpact?.scenarios?.map(scenario => scenario.id) || []).toEqual([
             'meteor_impact_leap_and_slam',

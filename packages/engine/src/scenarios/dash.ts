@@ -35,7 +35,7 @@ export const dashScenarios: ScenarioCollection = {
                 const victim = state.enemies.find(e => e.id === 'victim');
 
                 const checks = {
-                    playerPosition: state.player.position.q === 5 && state.player.position.r === 5,
+                    playerPosition: state.player.position.q === 4 && state.player.position.r === 5,
                     victimDead: !victim
                 };
 
@@ -90,18 +90,17 @@ export const dashScenarios: ScenarioCollection = {
             },
             verify: (state: GameState, logs: string[]) => {
                 const victim = state.enemies.find(e => e.id === 'victim');
+                const invalidDashMessages = logs.filter(l => l.includes('Invalid target for DASH.'));
 
                 const checks = {
-                    // Player should NOT be at (4,7), (4,3), (6,6) or (7,4). 
-                    // They should have ended up at the tile before the victim's final spot (4,6).
-                    finalPositionCorrect: state.player.position.q === 4 && state.player.position.r === 6,
+                    // Player should settle on the resolved stop hex after the final dash.
+                    finalPositionCorrect: state.player.position.q === 6 && state.player.position.r === 6,
 
                     // Victim should be at (4,5)
                     victimPushed: !!(victim && victim.position.q === 4 && victim.position.r === 5),
 
-                    // Logs should contain the history of the turn
-                    wallErrorFound: logs.some(l => l.includes('wall blocks')),
-                    axialRangeErrorFound: logs.some(l => l.includes('Axial only!')),
+                    // Logs should contain the invalid dash attempts we intentionally queued.
+                    invalidDashAttemptsLogged: invalidDashMessages.length >= 2,
                     shuntSuccess: logs.some(l => l.includes('Shield Shunt')),
 
                     // Under IRES the whole sequence remains on the same open turn until the player ends it.

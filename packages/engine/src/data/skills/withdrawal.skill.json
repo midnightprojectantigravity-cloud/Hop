@@ -1,0 +1,152 @@
+{
+  "id": "WITHDRAWAL",
+  "name": "Withdrawal",
+  "description": "Quick shot + tactical backroll. Auto-triggers when enemies close in.",
+  "slot": "utility",
+  "icon": "↩️",
+  "keywords": [
+    "ACTIVE",
+    "MOVEMENT",
+    "RANGED"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 0,
+    "cooldown": 2,
+    "basePower": 4,
+    "damage": 4
+  },
+  "combat": {
+    "damageClass": "physical",
+    "attackProfile": "projectile",
+    "trackingSignature": "projectile",
+    "weights": {
+      "instinct": 1
+    }
+  },
+  "movementPolicy": {
+    "basePathing": "teleport",
+    "baseIgnoreGroundHazards": false,
+    "validateDestination": {
+      "occupancy": "any",
+      "enforceBounds": true,
+      "requireWalkable": true,
+      "ignoreHazards": false
+    }
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 1,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "OCCUPANCY",
+        "occupied": true
+      },
+      {
+        "type": "FACTION_RELATION",
+        "relation": "enemy"
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "withdrawal_shot",
+      "phase": "resolution",
+      "kind": "DEAL_DAMAGE",
+      "target": "target_actor",
+      "resolution": "combat",
+      "reason": "withdrawal",
+      "basePower": 4,
+      "skillDamageMultiplier": 4,
+      "damageClass": "physical",
+      "attackProfile": "projectile",
+      "trackingSignature": "projectile",
+      "weights": {
+        "instinct": 1
+      }
+    },
+    {
+      "id": "withdrawal_shot_message",
+      "phase": "declare",
+      "kind": "MESSAGE",
+      "text": "Withdrawal shot hits footman!"
+    },
+    {
+      "id": "withdrawal_shot_juice",
+      "phase": "resolution",
+      "kind": "EMIT_JUICE",
+      "effect": "impact",
+      "target": "selected_hex",
+      "metadata": {
+        "signature": "ATK.SHOOT.PHYSICAL.WITHDRAWAL",
+        "family": "attack",
+        "primitive": "shoot",
+        "phase": "impact",
+        "element": "physical",
+        "variant": "withdrawal_shot",
+        "sourceRef": { "kind": "source_actor" },
+        "targetRef": { "kind": "target_hex" },
+        "skillId": "WITHDRAWAL"
+      }
+    },
+    {
+      "id": "withdrawal_backroll",
+      "phase": "movement",
+      "kind": "MOVE_ACTOR",
+      "actor": "self",
+      "destination": "withdrawal_retreat_hex",
+      "mode": "SLIDE",
+      "simulatePath": true
+    },
+    {
+      "id": "withdrawal_backroll_juice",
+      "phase": "cleanup",
+      "kind": "EMIT_JUICE",
+      "effect": "dashBlur",
+      "target": "withdrawal_retreat_hex",
+      "pathRef": "caster_to_selected",
+      "metadata": {
+        "signature": "MOVE.DASH.NEUTRAL.WITHDRAWAL_BACKROLL",
+        "family": "movement",
+        "primitive": "dash",
+        "phase": "travel",
+        "element": "neutral",
+        "variant": "withdrawal_backroll",
+        "sourceRef": { "kind": "source_actor" },
+        "targetRef": { "kind": "target_hex" },
+        "skillId": "WITHDRAWAL"
+      }
+    },
+    {
+      "id": "withdrawal_backroll_message",
+      "phase": "resolution",
+      "kind": "MESSAGE",
+      "text": "Backroll!"
+    }
+  ],
+  "upgrades": {
+    "PARTING_SHOT": {
+      "id": "PARTING_SHOT",
+      "name": "Parting Shot",
+      "description": "Withdrawal deals +1 damage.",
+      "modifyNumbers": [
+        {
+          "path": "baseVariables.basePower",
+          "op": "add",
+          "value": 1
+        }
+      ]
+    },
+    "NIMBLE_FEET": {
+      "id": "NIMBLE_FEET",
+      "name": "Nimble Feet",
+      "description": "Backroll distance increased to 3 hexes."
+    },
+    "HAIR_TRIGGER": {
+      "id": "HAIR_TRIGGER",
+      "name": "Hair Trigger",
+      "description": "Passive reaction does not consume cooldown."
+    }
+  }
+}

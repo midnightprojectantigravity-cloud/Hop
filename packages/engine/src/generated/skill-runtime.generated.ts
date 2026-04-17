@@ -1302,6 +1302,248 @@ export const GENERATED_RUNTIME_SKILLS: SkillRuntimeDefinition[] = [
     "sourcePath": "src/data/skills/corpse_explosion.skill.json"
   },
   {
+    "id": "DASH",
+    "name": "Kinetic Dash",
+    "description": "Dash in a straight line. With a shield, slam into enemies and send them flying!",
+    "slot": "utility",
+    "icon": "💨",
+    "keywords": [
+      "ACTIVE",
+      "MOVEMENT"
+    ],
+    "baseVariables": {
+      "range": 4,
+      "cost": 0,
+      "cooldown": 0
+    },
+    "targeting": {
+      "generator": "single",
+      "range": 4,
+      "deterministicSort": "distance_then_q_then_r",
+      "predicates": [
+        {
+          "type": "AXIAL_ALIGNMENT",
+          "axis": "ANY"
+        }
+      ]
+    },
+    "targetingVariants": [
+      {
+        "when": [
+          {
+            "type": "ENEMY_COUNT",
+            "op": "eq",
+            "value": 0
+          }
+        ],
+        "targeting": {
+          "range": 20
+        }
+      }
+    ],
+    "movementPolicy": {
+      "basePathing": "walk",
+      "baseIgnoreGroundHazards": true,
+      "validateDestination": {
+        "occupancy": "any",
+        "enforceBounds": true,
+        "requireWalkable": true,
+        "ignoreHazards": true
+      }
+    },
+    "combatScript": [
+      {
+        "id": "dash_charge_up",
+        "phase": "declare",
+        "kind": "EMIT_JUICE",
+        "effect": "chargeUp",
+        "target": "caster_hex",
+        "duration": 100,
+        "metadata": {
+          "signature": "MOVE.DASH.NEUTRAL.DASH_CHARGE",
+          "family": "movement",
+          "primitive": "dash",
+          "phase": "anticipation",
+          "element": "neutral",
+          "variant": "dash_charge",
+          "sourceRef": {
+            "kind": "source_actor"
+          },
+          "targetRef": {
+            "kind": "target_hex"
+          },
+          "skillId": "DASH"
+        }
+      },
+      {
+        "id": "dash_trace",
+        "phase": "declare",
+        "kind": "TRACE_PROJECTILE",
+        "target": "selected_hex",
+        "mode": "point_or_wall",
+        "stopAtWalls": true,
+        "stopAtActors": true
+      },
+      {
+        "id": "dash_blur",
+        "phase": "movement",
+        "kind": "EMIT_JUICE",
+        "effect": "dashBlur",
+        "target": "selected_hex",
+        "pathRef": "caster_to_dash_stop",
+        "duration": 150,
+        "metadata": {
+          "signature": "MOVE.DASH.NEUTRAL.DASH",
+          "family": "movement",
+          "primitive": "dash",
+          "phase": "travel",
+          "element": "neutral",
+          "variant": "dash",
+          "sourceRef": {
+            "kind": "source_actor"
+          },
+          "targetRef": {
+            "kind": "target_hex"
+          },
+          "skillId": "DASH"
+        }
+      },
+      {
+        "id": "dash_move",
+        "phase": "movement",
+        "kind": "MOVE_ACTOR",
+        "actor": "self",
+        "destination": "dash_stop_hex",
+        "pathRef": "caster_to_dash_stop",
+        "mode": "STEP",
+        "presentationKind": "dash",
+        "pathStyle": "hex_step",
+        "simulatePath": true
+      },
+      {
+        "id": "dash_message",
+        "phase": "resolution",
+        "kind": "MESSAGE",
+        "text": "Dashed!",
+        "conditions": [
+          {
+            "type": "PROJECTILE_IMPACT",
+            "kind": "empty"
+          }
+        ]
+      },
+      {
+        "id": "dash_obstacle_message",
+        "phase": "resolution",
+        "kind": "MESSAGE",
+        "text": "Stopped by an obstacle (Need shield to shunt).",
+        "conditions": [
+          {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "PROJECTILE_IMPACT",
+                "kind": "actor"
+              },
+              {
+                "type": "NOT",
+                "predicate": {
+                  "type": "WORLD_STATE",
+                  "key": "has_shield"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dash_shunt",
+        "phase": "resolution",
+        "kind": "EMIT_PULSE",
+        "origin": "impact_hex",
+        "direction": "source_to_target",
+        "magnitude": 5,
+        "collision": {
+          "onBlocked": "stop",
+          "applyStunOnStop": true,
+          "stunDuration": 1
+        },
+        "conditions": [
+          {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "PROJECTILE_IMPACT",
+                "kind": "actor"
+              },
+              {
+                "type": "WORLD_STATE",
+                "key": "has_shield"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dash_shunt_message",
+        "phase": "resolution",
+        "kind": "MESSAGE",
+        "text": "Shield Shunt!",
+        "conditions": [
+          {
+            "type": "ALL",
+            "predicates": [
+              {
+                "type": "PROJECTILE_IMPACT",
+                "kind": "actor"
+              },
+              {
+                "type": "WORLD_STATE",
+                "key": "has_shield"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dash_momentum_trail",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "momentumTrail",
+        "pathRef": "caster_to_dash_stop",
+        "metadata": {
+          "signature": "MOVE.DASH.NEUTRAL.DASH_TRAIL",
+          "family": "movement",
+          "primitive": "dash",
+          "phase": "travel",
+          "element": "neutral",
+          "variant": "dash_trail",
+          "sourceRef": {
+            "kind": "source_actor"
+          },
+          "targetRef": {
+            "kind": "target_hex"
+          },
+          "skillId": "DASH"
+        }
+      }
+    ],
+    "upgrades": {
+      "MOMENTUM_SURGE": {
+        "id": "MOMENTUM_SURGE",
+        "name": "Momentum Surge",
+        "description": "+2 Momentum when dashing with shield"
+      },
+      "DASH_CHAIN_REACTION": {
+        "id": "DASH_CHAIN_REACTION",
+        "name": "Chain Reaction",
+        "description": "Enemies pushed into other enemies transfer momentum"
+      }
+    },
+    "compiledFrom": "json",
+    "sourcePath": "src/data/skills/dash.skill.json"
+  },
+  {
     "id": "DEATH_TOUCH",
     "name": "Death Touch",
     "description": "Touch a target and deal death elemental damage. Range 1.",
@@ -2619,7 +2861,10 @@ export const GENERATED_RUNTIME_SKILLS: SkillRuntimeDefinition[] = [
         "kind": "TELEPORT_ACTOR",
         "phase": "movement",
         "actor": "self",
-        "destination": "selected_hex"
+        "destination": "selected_hex",
+        "presentationKind": "teleport",
+        "pathStyle": "blink",
+        "simulatePath": false
       },
       {
         "id": "firewalk_02_immunity",
@@ -2809,6 +3054,251 @@ export const GENERATED_RUNTIME_SKILLS: SkillRuntimeDefinition[] = [
     "upgrades": {},
     "compiledFrom": "json",
     "sourcePath": "src/data/skills/flight.skill.json"
+  },
+  {
+    "id": "JUMP",
+    "name": "Jump",
+    "description": "Leap to an empty tile within range. Can cross lava but not walls.",
+    "slot": "utility",
+    "icon": "🦘",
+    "keywords": [
+      "ACTIVE",
+      "MOVEMENT"
+    ],
+    "baseVariables": {
+      "range": 2,
+      "cost": 0,
+      "cooldown": 2,
+      "basePower": 99,
+      "damage": 1
+    },
+    "combat": {
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "body": 1
+      }
+    },
+    "validationMessages": {
+      "missingTarget": "Select a landing hex!",
+      "outOfRange": "Target out of range!",
+      "noTargetActor": "No target actor at landing hex!",
+      "friendlyTarget": "Cannot land on friendlies!",
+      "invalidTarget": "Invalid landing hex."
+    },
+    "targeting": {
+      "generator": "single",
+      "range": 2,
+      "deterministicSort": "distance_then_q_then_r",
+      "predicates": [
+        {
+          "type": "OCCUPANCY",
+          "occupied": false
+        },
+        {
+          "type": "HEX_TRAIT",
+          "trait": "WALKABLE",
+          "value": true
+        }
+      ]
+    },
+    "targetingVariants": [
+      {
+        "when": [
+          {
+            "type": "RESOLVED_KEYWORD",
+            "keyword": "METEOR_IMPACT"
+          }
+        ],
+        "targeting": {
+          "predicates": [
+            {
+              "type": "OCCUPANCY",
+              "occupied": true
+            },
+            {
+              "type": "HEX_TRAIT",
+              "trait": "WALKABLE",
+              "value": true
+            }
+          ]
+        },
+        "movementPolicy": {
+          "validateDestination": {
+            "occupancy": "enemy",
+            "requireWalkable": true,
+            "ignoreHazards": false
+          }
+        }
+      }
+    ],
+    "movementPolicy": {
+      "basePathing": "teleport",
+      "baseIgnoreGroundHazards": true,
+      "validateDestination": {
+        "occupancy": "any",
+        "enforceBounds": true,
+        "requireWalkable": false,
+        "ignoreHazards": true
+      }
+    },
+    "combatScript": [
+      {
+        "id": "jump_teleport",
+        "phase": "movement",
+        "kind": "TELEPORT_ACTOR",
+        "actor": "self",
+        "destination": "selected_hex",
+        "ignoreWalls": true,
+        "ignoreGroundHazards": true,
+        "simulatePath": false
+      },
+      {
+        "id": "jump_message",
+        "phase": "resolution",
+        "kind": "MESSAGE",
+        "text": "Jumped!",
+        "recordMessage": false
+      },
+      {
+        "id": "jump_meteor_damage",
+        "phase": "resolution",
+        "kind": "DEAL_DAMAGE",
+        "target": "target_actor",
+        "resolution": "combat",
+        "basePower": 99,
+        "skillDamageMultiplier": 1,
+        "suppressReason": true,
+        "damageClass": "physical",
+        "attackProfile": "melee",
+        "trackingSignature": "melee",
+        "weights": {
+          "body": 1
+        },
+        "conditions": [
+          {
+            "type": "RESOLVED_KEYWORD",
+            "keyword": "METEOR_IMPACT"
+          }
+        ]
+      },
+      {
+        "id": "jump_meteor_message",
+        "phase": "resolution",
+        "kind": "MESSAGE",
+        "text": "Meteor Impact killed footman!",
+        "emitEffect": false,
+        "conditions": [
+          {
+            "type": "RESOLVED_KEYWORD",
+            "keyword": "METEOR_IMPACT"
+          }
+        ]
+      },
+      {
+        "id": "jump_stun",
+        "phase": "resolution",
+        "kind": "APPLY_STATUS",
+        "target": "selected_hex",
+        "pointSet": {
+          "kind": "axial_ring",
+          "center": "selected_hex",
+          "radius": 1,
+          "predicates": [
+            {
+              "type": "OCCUPANCY",
+              "occupied": true
+            },
+            {
+              "type": "FACTION_RELATION",
+              "relation": "enemy"
+            }
+          ]
+        },
+        "status": "stunned",
+        "duration": 1,
+        "message": "Enemies stunned by landing impact!",
+        "conditions": [
+          {
+            "type": "RESOLVED_KEYWORD",
+            "keyword": "STUNNING_LANDING"
+          }
+        ]
+      },
+      {
+        "id": "jump_juice",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "shake",
+        "target": "selected_hex",
+        "intensity": "medium",
+        "metadata": {
+          "signature": "MOVE.LEAP.NEUTRAL.JUMP_LAND",
+          "family": "movement",
+          "primitive": "leap",
+          "phase": "impact",
+          "element": "neutral",
+          "variant": "jump_landing",
+          "targetRef": {
+            "kind": "target_hex"
+          },
+          "skillId": "JUMP"
+        }
+      }
+    ],
+    "upgrades": {
+      "JUMP_RANGE": {
+        "id": "JUMP_RANGE",
+        "name": "Extended Jump",
+        "description": "Jump range +1",
+        "modifyNumbers": [
+          {
+            "path": "baseVariables.range",
+            "op": "add",
+            "value": 1
+          }
+        ]
+      },
+      "JUMP_COOLDOWN": {
+        "id": "JUMP_COOLDOWN",
+        "name": "Nimble",
+        "description": "Jump cooldown -1",
+        "modifyNumbers": [
+          {
+            "path": "baseVariables.cooldown",
+            "op": "add",
+            "value": -1
+          }
+        ]
+      },
+      "STUNNING_LANDING": {
+        "id": "STUNNING_LANDING",
+        "name": "Stunning Landing",
+        "description": "All enemies within 1 hex of landing are stunned",
+        "addKeywords": [
+          "STUNNING_LANDING"
+        ]
+      },
+      "METEOR_IMPACT": {
+        "id": "METEOR_IMPACT",
+        "name": "Meteor Impact",
+        "description": "Can land on enemies to kill them",
+        "addKeywords": [
+          "METEOR_IMPACT"
+        ]
+      },
+      "FREE_JUMP": {
+        "id": "FREE_JUMP",
+        "name": "Free Jump",
+        "description": "Can move after jumping",
+        "addKeywords": [
+          "FREE_JUMP"
+        ]
+      }
+    },
+    "compiledFrom": "json",
+    "sourcePath": "src/data/skills/jump.skill.json"
   },
   {
     "id": "KINETIC_TRI_TRAP",
@@ -3682,6 +4172,95 @@ export const GENERATED_RUNTIME_SKILLS: SkillRuntimeDefinition[] = [
     "sourcePath": "src/data/skills/shadow_step.skill.json"
   },
   {
+    "id": "SHIELD_BASH",
+    "name": "Shield Bash",
+    "description": "Push an enemy 1 tile. If they hit a wall or another enemy, they are stunned.",
+    "slot": "defensive",
+    "icon": "🛡️",
+    "keywords": [
+      "ACTIVE",
+      "CONTROL"
+    ],
+    "baseVariables": {
+      "range": 1,
+      "cost": 0,
+      "cooldown": 2
+    },
+    "targeting": {
+      "generator": "single",
+      "range": 1,
+      "deterministicSort": "distance_then_q_then_r",
+      "predicates": [
+        {
+          "type": "OCCUPANCY",
+          "occupied": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "enemy"
+        }
+      ]
+    },
+    "combatScript": [
+      {
+        "id": "shield_bash_message",
+        "phase": "resolution",
+        "kind": "MESSAGE",
+        "text": "Pushed footman!"
+      },
+      {
+        "id": "shield_bash_push",
+        "phase": "resolution",
+        "kind": "APPLY_FORCE",
+        "target": "target_actor",
+        "mode": "push",
+        "direction": "source_to_target",
+        "magnitude": 1,
+        "maxDistance": 1,
+        "resolveImmediately": true,
+        "collision": {
+          "onBlocked": "stop",
+          "applyStunOnStop": true,
+          "stunDuration": 1
+        }
+      }
+    ],
+    "upgrades": {
+      "SHIELD_RANGE": {
+        "id": "SHIELD_RANGE",
+        "name": "Extended Bash",
+        "description": "Range +1"
+      },
+      "SHIELD_COOLDOWN": {
+        "id": "SHIELD_COOLDOWN",
+        "name": "Quick Recovery",
+        "description": "Cooldown -1"
+      },
+      "ARC_BASH": {
+        "id": "ARC_BASH",
+        "name": "Arc Bash",
+        "description": "Bash hits 3-hex frontal arc (+1 cooldown)"
+      },
+      "BASH_360": {
+        "id": "BASH_360",
+        "name": "360° Bash",
+        "description": "Bash hits all neighbors (+1 cooldown)"
+      },
+      "PASSIVE_PROTECTION": {
+        "id": "PASSIVE_PROTECTION",
+        "name": "Passive Protection",
+        "description": "+1 temp armor when shield not on cooldown"
+      },
+      "WALL_SLAM": {
+        "id": "WALL_SLAM",
+        "name": "Wall Slam",
+        "description": "Enemies bashed into obstacles trigger a cascade and stun"
+      }
+    },
+    "compiledFrom": "json",
+    "sourcePath": "src/data/skills/shield_bash.skill.json"
+  },
+  {
     "id": "SHIELD_THROW",
     "name": "Shield Throw",
     "description": "Throw your shield to strike and push enemies. Triggers a kinetic pulse on impact.",
@@ -4288,6 +4867,107 @@ export const GENERATED_RUNTIME_SKILLS: SkillRuntimeDefinition[] = [
     "upgrades": {},
     "compiledFrom": "json",
     "sourcePath": "src/data/skills/sneak_attack.skill.json"
+  },
+  {
+    "id": "SOUL_SWAP",
+    "name": "Soul Swap",
+    "description": "Instantly swap positions with a player-aligned minion.",
+    "slot": "utility",
+    "icon": "🔁👻",
+    "keywords": [
+      "ACTIVE",
+      "MOVEMENT",
+      "ARCANE"
+    ],
+    "baseVariables": {
+      "range": 6,
+      "cost": 0,
+      "cooldown": 3
+    },
+    "targeting": {
+      "generator": "single",
+      "range": 6,
+      "deterministicSort": "distance_then_q_then_r",
+      "predicates": [
+        {
+          "type": "FACTION_RELATION",
+          "relation": "enemy"
+        }
+      ]
+    },
+    "combatScript": [
+      {
+        "id": "soul_swap_arrive",
+        "phase": "movement",
+        "kind": "MOVE_ACTOR",
+        "actor": "target_actor",
+        "destination": "origin_hex",
+        "presentationKind": "teleport",
+        "pathStyle": "blink"
+      },
+      {
+        "id": "soul_swap_depart",
+        "phase": "movement",
+        "kind": "MOVE_ACTOR",
+        "actor": "self",
+        "destination": "selected_hex",
+        "presentationKind": "teleport",
+        "pathStyle": "blink"
+      },
+      {
+        "id": "soul_swap_arrive_juice",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "flash",
+        "target": "selected_hex",
+        "color": "#330066",
+        "metadata": {
+          "signature": "MOVE.BLINK.ARCANE.SOUL_SWAP_ARRIVE",
+          "family": "movement",
+          "primitive": "blink",
+          "phase": "instant",
+          "element": "arcane",
+          "variant": "soul_swap_arrival",
+          "targetRef": {
+            "kind": "target_hex"
+          },
+          "skillId": "SOUL_SWAP"
+        }
+      },
+      {
+        "id": "soul_swap_depart_juice",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "flash",
+        "target": "origin_hex",
+        "color": "#330066",
+        "metadata": {
+          "signature": "MOVE.BLINK.ARCANE.SOUL_SWAP_DEPART",
+          "family": "movement",
+          "primitive": "blink",
+          "phase": "instant",
+          "element": "arcane",
+          "variant": "soul_swap_departure",
+          "targetRef": {
+            "kind": "target_hex"
+          },
+          "skillId": "SOUL_SWAP"
+        }
+      },
+      {
+        "id": "soul_swap_message",
+        "phase": "cleanup",
+        "kind": "MESSAGE",
+        "text": "Soul Swapped!"
+      }
+    ],
+    "validationMessages": {
+      "friendlyTarget": "Target must be a minion!",
+      "invalidTarget": "Target must be a minion!"
+    },
+    "upgrades": {},
+    "compiledFrom": "json",
+    "sourcePath": "src/data/skills/soul_swap.skill.json"
   },
   {
     "id": "SPEAR_THROW",
@@ -5826,6 +6506,264 @@ export const GENERATED_RUNTIME_SKILLS: SkillRuntimeDefinition[] = [
     "sourcePath": "src/data/skills/tornado_kick.skill.json"
   },
   {
+    "id": "VAULT",
+    "name": "Vault",
+    "description": "Leap to an empty tile.",
+    "slot": "utility",
+    "icon": "🏃",
+    "keywords": [
+      "ACTIVE",
+      "MOVEMENT"
+    ],
+    "baseVariables": {
+      "range": 3,
+      "cost": 0,
+      "cooldown": 0
+    },
+    "presentationVariants": [
+      {
+        "when": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "odd"
+          }
+        ],
+        "name": "Stun Vault",
+        "description": "Leap to an empty tile and stun neighbors. (Odd Turn)"
+      }
+    ],
+    "targeting": {
+      "generator": "single",
+      "range": 3,
+      "deterministicSort": "distance_then_q_then_r",
+      "predicates": [
+        {
+          "type": "OCCUPANCY",
+          "occupied": false
+        }
+      ]
+    },
+    "movementPolicy": {
+      "basePathing": "teleport",
+      "baseIgnoreGroundHazards": true,
+      "validateDestination": {
+        "occupancy": "any",
+        "enforceBounds": true,
+        "requireWalkable": true,
+        "ignoreHazards": true
+      }
+    },
+    "combatScript": [
+      {
+        "id": "vault_teleport",
+        "phase": "movement",
+        "kind": "TELEPORT_ACTOR",
+        "actor": "self",
+        "destination": "selected_hex",
+        "ignoreWalls": true,
+        "ignoreGroundHazards": true,
+        "simulatePath": true
+      },
+      {
+        "id": "vault_odd_combat_text",
+        "phase": "resolution",
+        "kind": "EMIT_JUICE",
+        "effect": "combat_text",
+        "target": "selected_hex",
+        "text": "STUN!",
+        "color": "#ffff00",
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "odd"
+          }
+        ]
+      },
+      {
+        "id": "vault_odd_message",
+        "phase": "resolution",
+        "kind": "MESSAGE",
+        "text": "Stun Vault executed!",
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "odd"
+          }
+        ]
+      },
+      {
+        "id": "vault_stun",
+        "phase": "resolution",
+        "kind": "APPLY_STATUS",
+        "target": "selected_hex",
+        "combatPointTargetMode": "proxy_actor",
+        "pointSet": {
+          "kind": "axial_ring",
+          "center": "selected_hex",
+          "radius": 1,
+          "predicates": [
+            {
+              "type": "OCCUPANCY",
+              "occupied": true
+            },
+            {
+              "type": "FACTION_RELATION",
+              "relation": "enemy"
+            }
+          ]
+        },
+        "status": "stunned",
+        "duration": 1,
+        "message": "Slam landing! Neighbors stunned.",
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "odd"
+          }
+        ]
+      },
+      {
+        "id": "vault_even_impact",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "lightImpact",
+        "target": "selected_hex",
+        "intensity": "low",
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "even"
+          }
+        ]
+      },
+      {
+        "id": "vault_even_juice",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "vaultLeap",
+        "target": "selected_hex",
+        "pathRef": "caster_to_selected",
+        "intensity": "medium",
+        "duration": 250,
+        "metadata": {
+          "signature": "MOVE.LEAP.NEUTRAL.VAULT",
+          "family": "movement",
+          "primitive": "leap",
+          "phase": "impact",
+          "element": "neutral",
+          "variant": "vault_even",
+          "targetRef": {
+            "kind": "target_hex"
+          },
+          "skillId": "VAULT"
+        },
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "even"
+          }
+        ]
+      },
+      {
+        "id": "vault_even_message",
+        "phase": "cleanup",
+        "kind": "MESSAGE",
+        "text": "Vaulted!",
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "even"
+          }
+        ]
+      },
+      {
+        "id": "vault_odd_impact",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "heavyImpact",
+        "target": "selected_hex",
+        "intensity": "medium",
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "odd"
+          }
+        ]
+      },
+      {
+        "id": "vault_odd_juice",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "vaultLeap",
+        "target": "selected_hex",
+        "pathRef": "caster_to_selected",
+        "intensity": "medium",
+        "duration": 250,
+        "metadata": {
+          "signature": "MOVE.LEAP.NEUTRAL.VAULT",
+          "family": "movement",
+          "primitive": "leap",
+          "phase": "impact",
+          "element": "neutral",
+          "variant": "vault_odd",
+          "targetRef": {
+            "kind": "target_hex"
+          },
+          "skillId": "VAULT"
+        },
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "odd"
+          }
+        ]
+      },
+      {
+        "id": "vault_odd_shake",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "shake",
+        "target": "selected_hex",
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "odd"
+          }
+        ]
+      },
+      {
+        "id": "vault_odd_stun_burst",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "stunBurst",
+        "target": "selected_hex",
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "odd"
+          }
+        ]
+      },
+      {
+        "id": "vault_odd_trajectory",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "trajectory",
+        "target": "selected_hex",
+        "color": "#00ddff",
+        "conditions": [
+          {
+            "type": "TURN_PARITY",
+            "parity": "odd"
+          }
+        ]
+      }
+    ],
+    "upgrades": {},
+    "compiledFrom": "json",
+    "sourcePath": "src/data/skills/vault.skill.json"
+  },
+  {
     "id": "VIBRATION_SENSE",
     "name": "Vibration Sense",
     "description": "Sense moving units through walls using Instinct.",
@@ -5895,6 +6833,168 @@ export const GENERATED_RUNTIME_SKILLS: SkillRuntimeDefinition[] = [
     "upgrades": {},
     "compiledFrom": "json",
     "sourcePath": "src/data/skills/volatile_payload.skill.json"
+  },
+  {
+    "id": "WITHDRAWAL",
+    "name": "Withdrawal",
+    "description": "Quick shot + tactical backroll. Auto-triggers when enemies close in.",
+    "slot": "utility",
+    "icon": "↩️",
+    "keywords": [
+      "ACTIVE",
+      "MOVEMENT",
+      "RANGED"
+    ],
+    "baseVariables": {
+      "range": 1,
+      "cost": 0,
+      "cooldown": 2,
+      "basePower": 4,
+      "damage": 4
+    },
+    "combat": {
+      "damageClass": "physical",
+      "attackProfile": "projectile",
+      "trackingSignature": "projectile",
+      "weights": {
+        "instinct": 1
+      }
+    },
+    "movementPolicy": {
+      "basePathing": "teleport",
+      "baseIgnoreGroundHazards": false,
+      "validateDestination": {
+        "occupancy": "any",
+        "enforceBounds": true,
+        "requireWalkable": true,
+        "ignoreHazards": false
+      }
+    },
+    "targeting": {
+      "generator": "single",
+      "range": 1,
+      "deterministicSort": "distance_then_q_then_r",
+      "predicates": [
+        {
+          "type": "OCCUPANCY",
+          "occupied": true
+        },
+        {
+          "type": "FACTION_RELATION",
+          "relation": "enemy"
+        }
+      ]
+    },
+    "combatScript": [
+      {
+        "id": "withdrawal_shot_message",
+        "phase": "declare",
+        "kind": "MESSAGE",
+        "text": "Withdrawal shot hits footman!"
+      },
+      {
+        "id": "withdrawal_backroll",
+        "phase": "movement",
+        "kind": "MOVE_ACTOR",
+        "actor": "self",
+        "destination": "withdrawal_retreat_hex",
+        "mode": "SLIDE",
+        "simulatePath": true
+      },
+      {
+        "id": "withdrawal_backroll_message",
+        "phase": "resolution",
+        "kind": "MESSAGE",
+        "text": "Backroll!"
+      },
+      {
+        "id": "withdrawal_shot",
+        "phase": "resolution",
+        "kind": "DEAL_DAMAGE",
+        "target": "target_actor",
+        "resolution": "combat",
+        "reason": "withdrawal",
+        "basePower": 4,
+        "skillDamageMultiplier": 4,
+        "damageClass": "physical",
+        "attackProfile": "projectile",
+        "trackingSignature": "projectile",
+        "weights": {
+          "instinct": 1
+        }
+      },
+      {
+        "id": "withdrawal_shot_juice",
+        "phase": "resolution",
+        "kind": "EMIT_JUICE",
+        "effect": "impact",
+        "target": "selected_hex",
+        "metadata": {
+          "signature": "ATK.SHOOT.PHYSICAL.WITHDRAWAL",
+          "family": "attack",
+          "primitive": "shoot",
+          "phase": "impact",
+          "element": "physical",
+          "variant": "withdrawal_shot",
+          "sourceRef": {
+            "kind": "source_actor"
+          },
+          "targetRef": {
+            "kind": "target_hex"
+          },
+          "skillId": "WITHDRAWAL"
+        }
+      },
+      {
+        "id": "withdrawal_backroll_juice",
+        "phase": "cleanup",
+        "kind": "EMIT_JUICE",
+        "effect": "dashBlur",
+        "target": "withdrawal_retreat_hex",
+        "pathRef": "caster_to_selected",
+        "metadata": {
+          "signature": "MOVE.DASH.NEUTRAL.WITHDRAWAL_BACKROLL",
+          "family": "movement",
+          "primitive": "dash",
+          "phase": "travel",
+          "element": "neutral",
+          "variant": "withdrawal_backroll",
+          "sourceRef": {
+            "kind": "source_actor"
+          },
+          "targetRef": {
+            "kind": "target_hex"
+          },
+          "skillId": "WITHDRAWAL"
+        }
+      }
+    ],
+    "upgrades": {
+      "PARTING_SHOT": {
+        "id": "PARTING_SHOT",
+        "name": "Parting Shot",
+        "description": "Withdrawal deals +1 damage.",
+        "modifyNumbers": [
+          {
+            "path": "baseVariables.basePower",
+            "op": "add",
+            "value": 1
+          }
+        ]
+      },
+      "NIMBLE_FEET": {
+        "id": "NIMBLE_FEET",
+        "name": "Nimble Feet",
+        "description": "Backroll distance increased to 3 hexes."
+      },
+      "HAIR_TRIGGER": {
+        "id": "HAIR_TRIGGER",
+        "name": "Hair Trigger",
+        "description": "Passive reaction does not consume cooldown."
+      }
+    },
+    "compiledFrom": "json",
+    "sourcePath": "src/data/skills/withdrawal.skill.json"
   }
 ];
 
@@ -5910,6 +7010,7 @@ export const GENERATED_RUNTIME_SKILL_IDS = [
   "BURROW",
   "COMBAT_ANALYSIS",
   "CORPSE_EXPLOSION",
+  "DASH",
   "DEATH_TOUCH",
   "ENEMY_AWARENESS",
   "FALCON_APEX_STRIKE",
@@ -5922,6 +7023,7 @@ export const GENERATED_RUNTIME_SKILL_IDS = [
   "FIREWALK",
   "FIREWALL",
   "FLIGHT",
+  "JUMP",
   "KINETIC_TRI_TRAP",
   "METEOR_IMPACT",
   "MULTI_SHOOT",
@@ -5932,9 +7034,11 @@ export const GENERATED_RUNTIME_SKILL_IDS = [
   "SENTINEL_TELEGRAPH",
   "SET_TRAP",
   "SHADOW_STEP",
+  "SHIELD_BASH",
   "SHIELD_THROW",
   "SMOKE_SCREEN",
   "SNEAK_ATTACK",
+  "SOUL_SWAP",
   "SPEAR_THROW",
   "STANDARD_VISION",
   "SWIFT_ROLL",
@@ -5942,15 +7046,17 @@ export const GENERATED_RUNTIME_SKILL_IDS = [
   "THEME_HAZARDS",
   "TIME_BOMB",
   "TORNADO_KICK",
+  "VAULT",
   "VIBRATION_SENSE",
-  "VOLATILE_PAYLOAD"
+  "VOLATILE_PAYLOAD",
+  "WITHDRAWAL"
 ] as const;
 
 export type GeneratedRuntimeSkillID = typeof GENERATED_RUNTIME_SKILL_IDS[number];
 
 export const GENERATED_RUNTIME_SKILL_LIBRARY_METADATA: SkillLibraryMetadata = {
-  "generatedAt": "2026-04-13T15:59:34.048Z",
-  "totalSkills": 45,
+  "generatedAt": "2026-04-17T15:19:01.571Z",
+  "totalSkills": 51,
   "handlerBackedSkillCount": 0,
   "executionHandlerCount": 0,
   "capabilityHandlerCount": 0,
@@ -6180,6 +7286,32 @@ export const GENERATED_RUNTIME_SKILL_LIBRARY_METADATA: SkillLibraryMetadata = {
         "DEAL_DAMAGE",
         "MESSAGE",
         "EMIT_JUICE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "DASH",
+      "name": "Kinetic Dash",
+      "sourcePath": "src/data/skills/dash.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "declare",
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "EMIT_JUICE",
+        "TRACE_PROJECTILE",
+        "MOVE_ACTOR",
+        "MESSAGE",
+        "EMIT_PULSE"
       ],
       "hasPhysicsPlan": false,
       "handlerRefs": {}
@@ -6447,6 +7579,31 @@ export const GENERATED_RUNTIME_SKILL_LIBRARY_METADATA: SkillLibraryMetadata = {
       "handlerRefs": {}
     },
     {
+      "id": "JUMP",
+      "name": "Jump",
+      "sourcePath": "src/data/skills/jump.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "TELEPORT_ACTOR",
+        "MESSAGE",
+        "DEAL_DAMAGE",
+        "APPLY_STATUS",
+        "EMIT_JUICE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
       "id": "KINETIC_TRI_TRAP",
       "name": "Kinetic Tri-Trap",
       "sourcePath": "src/data/skills/kinetic_tri_trap.skill.json",
@@ -6669,6 +7826,26 @@ export const GENERATED_RUNTIME_SKILL_LIBRARY_METADATA: SkillLibraryMetadata = {
       "handlerRefs": {}
     },
     {
+      "id": "SHIELD_BASH",
+      "name": "Shield Bash",
+      "sourcePath": "src/data/skills/shield_bash.skill.json",
+      "slot": "defensive",
+      "keywords": [
+        "ACTIVE",
+        "CONTROL"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "resolution"
+      ],
+      "instructionKinds": [
+        "MESSAGE",
+        "APPLY_FORCE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
       "id": "SHIELD_THROW",
       "name": "Shield Throw",
       "sourcePath": "src/data/skills/shield_throw.skill.json",
@@ -6737,6 +7914,29 @@ export const GENERATED_RUNTIME_SKILL_LIBRARY_METADATA: SkillLibraryMetadata = {
         "DEAL_DAMAGE",
         "MESSAGE",
         "EMIT_JUICE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SOUL_SWAP",
+      "name": "Soul Swap",
+      "sourcePath": "src/data/skills/soul_swap.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT",
+        "ARCANE"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "movement",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "MOVE_ACTOR",
+        "EMIT_JUICE",
+        "MESSAGE"
       ],
       "hasPhysicsPlan": false,
       "handlerRefs": {}
@@ -6890,6 +8090,30 @@ export const GENERATED_RUNTIME_SKILL_LIBRARY_METADATA: SkillLibraryMetadata = {
       "handlerRefs": {}
     },
     {
+      "id": "VAULT",
+      "name": "Vault",
+      "sourcePath": "src/data/skills/vault.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "TELEPORT_ACTOR",
+        "EMIT_JUICE",
+        "MESSAGE",
+        "APPLY_STATUS"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
       "id": "VIBRATION_SENSE",
       "name": "Vibration Sense",
       "sourcePath": "src/data/skills/vibration_sense.skill.json",
@@ -6918,6 +8142,32 @@ export const GENERATED_RUNTIME_SKILL_LIBRARY_METADATA: SkillLibraryMetadata = {
       "targetGenerator": "self",
       "phases": [],
       "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "WITHDRAWAL",
+      "name": "Withdrawal",
+      "sourcePath": "src/data/skills/withdrawal.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT",
+        "RANGED"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "declare",
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "MESSAGE",
+        "MOVE_ACTOR",
+        "DEAL_DAMAGE",
+        "EMIT_JUICE"
+      ],
       "hasPhysicsPlan": false,
       "handlerRefs": {}
     }

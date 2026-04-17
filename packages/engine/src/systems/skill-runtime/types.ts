@@ -70,6 +70,11 @@ export type SkillTargetPredicate =
         value?: boolean;
     }
     | {
+        type: 'ENEMY_COUNT';
+        op: PredicateDistanceOperator;
+        value: number;
+    }
+    | {
         type: 'PROJECTILE_IMPACT';
         kind: 'wall' | 'actor' | 'empty';
         value?: boolean;
@@ -139,6 +144,10 @@ export type SkillTargetPredicate =
         value?: number;
     }
     | {
+        type: 'TURN_PARITY';
+        parity: 'odd' | 'even';
+    }
+    | {
         type: 'WEIGHT_CLASS';
         target: 'caster' | 'target_actor';
         op: 'eq' | 'neq' | 'in';
@@ -148,6 +157,12 @@ export type SkillTargetPredicate =
     | {
         type: 'FACTION_RELATION';
         relation: 'enemy' | 'ally' | 'self';
+        value?: boolean;
+    }
+    | {
+        type: 'FACTION_ID';
+        target: 'caster' | 'target_actor';
+        factionId: string;
         value?: boolean;
     }
     | {
@@ -247,7 +262,9 @@ export type RuntimePointRef =
     | 'anchor_point'
     | 'scout_orbit_destination'
     | 'spear_position'
-    | 'shield_position';
+    | 'shield_position'
+    | 'dash_stop_hex'
+    | 'withdrawal_retreat_hex';
 
 export type RuntimeActorRef =
     | 'self'
@@ -279,6 +296,7 @@ export type RuntimePointFilter =
 export type RuntimePathRef =
     | 'caster_to_selected'
     | 'caster_to_impact'
+    | 'caster_to_dash_stop'
     | 'impact_to_target_actor'
     | 'spear_to_caster'
     | 'shield_to_caster';
@@ -353,7 +371,11 @@ export interface MoveActorInstruction extends BaseInstruction {
     kind: 'MOVE_ACTOR';
     actor: RuntimeActorRef;
     destination: RuntimePointRef;
+    pathRef?: RuntimePathRef;
     mode?: 'STEP' | 'LEAP' | 'SLIDE';
+    presentationKind?: 'teleport' | 'jump' | 'walk' | 'dash' | 'forced_slide';
+    pathStyle?: 'blink' | 'hex_step' | 'arc';
+    presentationSequenceId?: string;
     effectTargetMode?: 'self' | 'actor_id';
     suppressPresentation?: boolean;
     ignoreCollision?: boolean;
@@ -368,6 +390,10 @@ export interface TeleportActorInstruction extends BaseInstruction {
     destination: RuntimePointRef;
     ignoreWalls?: boolean;
     ignoreGroundHazards?: boolean;
+    simulatePath?: boolean;
+    presentationKind?: 'teleport' | 'jump' | 'walk' | 'dash' | 'forced_slide';
+    pathStyle?: 'blink' | 'hex_step' | 'arc';
+    presentationSequenceId?: string;
 }
 
 export interface ApplyForceInstruction extends BaseInstruction {
@@ -379,6 +405,7 @@ export interface ApplyForceInstruction extends BaseInstruction {
     magnitude: number;
     maxDistance: number;
     collision?: SkillCollisionPolicy;
+    resolveImmediately?: boolean;
 }
 
 export interface EmitPulseInstruction extends BaseInstruction {
@@ -427,6 +454,7 @@ export interface DealDamageInstruction extends BaseInstruction {
     theoreticalMaxPower?: number;
     includeDangerPreviewHex?: boolean;
     combatPointTargetMode?: 'proxy_actor' | 'actor_or_proxy' | 'actor_only';
+    suppressReason?: boolean;
     engagementContext?: {
         distance: number;
         losOpen?: boolean;
@@ -447,6 +475,7 @@ export interface ApplyStatusInstruction extends BaseInstruction {
     pointSet?: RuntimePointSet;
     pointFilters?: RuntimePointFilter[];
     message?: string;
+    combatPointTargetMode?: 'proxy_actor' | 'actor_or_proxy' | 'actor_only';
 }
 
 export interface HealInstruction extends BaseInstruction {
@@ -625,6 +654,8 @@ export interface MessageInstruction extends BaseInstruction {
     pointFilters?: RuntimePointFilter[];
     actionVerb?: string;
     includeResolvedRange?: boolean;
+    emitEffect?: boolean;
+    recordMessage?: boolean;
 }
 
 export interface EmitJuiceInstruction extends BaseInstruction {
@@ -703,6 +734,7 @@ export interface SkillRuntimeUpgradeDefinition {
 export interface SkillTargetingVariant {
     when: SkillTargetPredicate[];
     targeting: Partial<SkillTargetingDefinition>;
+    movementPolicy?: Partial<RuntimeMovementPolicy>;
 }
 
 export interface SkillPresentationVariant {

@@ -64,7 +64,8 @@ type RuntimeResolutionContext = {
 const matchesRuntimePredicates = (
     definition: { when: any[] },
     context: RuntimeResolutionContext,
-    trace: ResolutionTrace
+    trace: ResolutionTrace,
+    resolvedKeywords: Set<string>
 ): boolean => {
     if (!context.state || !context.attacker) return false;
     return definition.when.every(predicate =>
@@ -73,7 +74,10 @@ const matchesRuntimePredicates = (
             context.state!,
             context.attacker!,
             context.attacker!.position,
-            trace
+            trace,
+            {
+                resolvedKeywords: [...resolvedKeywords]
+            }
         )
     );
 };
@@ -87,13 +91,31 @@ export const resolveSkillRuntime = (
     const runtime = clone(definition);
     const trace = createTrace(traceMode);
     const resolvedKeywords = new Set(runtime.keywords);
+    for (const upgradeId of activeUpgradeIds) {
+        resolvedKeywords.add(upgradeId);
+    }
 
-    const targetingVariant = runtime.targetingVariants?.find(variant => matchesRuntimePredicates(variant, context, trace));
+    const targetingVariant = runtime.targetingVariants?.find(variant => matchesRuntimePredicates(variant, context, trace, resolvedKeywords));
     if (targetingVariant) {
         runtime.targeting = {
             ...runtime.targeting,
-            ...clone(targetingVariant.targeting)
+            ...clone(targetingVariant.targeting),
+            predicates: targetingVariant.targeting.predicates
+                ? clone(targetingVariant.targeting.predicates)
+                : runtime.targeting.predicates
         };
+        if (targetingVariant.movementPolicy) {
+            runtime.movementPolicy = {
+                ...runtime.movementPolicy,
+                ...clone(targetingVariant.movementPolicy),
+                validateDestination: targetingVariant.movementPolicy.validateDestination
+                    ? {
+                        ...runtime.movementPolicy?.validateDestination,
+                        ...clone(targetingVariant.movementPolicy.validateDestination)
+                    }
+                    : runtime.movementPolicy?.validateDestination
+            };
+        }
         appendTrace(trace, {
             kind: 'patch',
             path: 'targetingVariants',
@@ -101,7 +123,7 @@ export const resolveSkillRuntime = (
         });
     }
 
-    const presentationVariant = runtime.presentationVariants?.find(variant => matchesRuntimePredicates(variant, context, trace));
+    const presentationVariant = runtime.presentationVariants?.find(variant => matchesRuntimePredicates(variant, context, trace, resolvedKeywords));
     if (presentationVariant) {
         if (presentationVariant.name) runtime.name = presentationVariant.name;
         if (presentationVariant.description) runtime.description = presentationVariant.description;
@@ -129,7 +151,10 @@ export const resolveSkillRuntime = (
                     evaluationState,
                     evaluationAttacker,
                     evaluationAttacker.position,
-                    trace
+                    trace,
+                    {
+                        resolvedKeywords: [...resolvedKeywords]
+                    }
                 )
             );
             if (!upgradeApplies) {

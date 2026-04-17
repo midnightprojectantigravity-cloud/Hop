@@ -1,0 +1,243 @@
+{
+  "id": "JUMP",
+  "name": "Jump",
+  "description": "Leap to an empty tile within range. Can cross lava but not walls.",
+  "slot": "utility",
+  "icon": "🦘",
+  "keywords": [
+    "ACTIVE",
+    "MOVEMENT"
+  ],
+  "baseVariables": {
+    "range": 2,
+    "cost": 0,
+    "cooldown": 2,
+    "basePower": 99,
+    "damage": 1
+  },
+  "combat": {
+    "damageClass": "physical",
+    "attackProfile": "melee",
+    "trackingSignature": "melee",
+    "weights": {
+      "body": 1
+    }
+  },
+  "validationMessages": {
+    "missingTarget": "Select a landing hex!",
+    "outOfRange": "Target out of range!",
+    "noTargetActor": "No target actor at landing hex!",
+    "friendlyTarget": "Cannot land on friendlies!",
+    "invalidTarget": "Invalid landing hex."
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 2,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "OCCUPANCY",
+        "occupied": false
+      },
+      {
+        "type": "HEX_TRAIT",
+        "trait": "WALKABLE",
+        "value": true
+      }
+    ]
+  },
+  "targetingVariants": [
+    {
+      "when": [
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "METEOR_IMPACT"
+        }
+      ],
+      "targeting": {
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "HEX_TRAIT",
+            "trait": "WALKABLE",
+            "value": true
+          }
+        ]
+      },
+      "movementPolicy": {
+        "validateDestination": {
+          "occupancy": "enemy",
+          "requireWalkable": true,
+          "ignoreHazards": false
+        }
+      }
+    }
+  ],
+  "movementPolicy": {
+    "basePathing": "teleport",
+    "baseIgnoreGroundHazards": true,
+    "validateDestination": {
+      "occupancy": "any",
+      "enforceBounds": true,
+      "requireWalkable": false,
+      "ignoreHazards": true
+    }
+  },
+  "combatScript": [
+    {
+      "id": "jump_meteor_damage",
+      "phase": "resolution",
+      "kind": "DEAL_DAMAGE",
+      "target": "target_actor",
+      "resolution": "combat",
+      "basePower": 99,
+      "skillDamageMultiplier": 1,
+      "suppressReason": true,
+      "damageClass": "physical",
+      "attackProfile": "melee",
+      "trackingSignature": "melee",
+      "weights": {
+        "body": 1
+      },
+      "conditions": [
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "METEOR_IMPACT"
+        }
+      ]
+    },
+    {
+      "id": "jump_meteor_message",
+      "phase": "resolution",
+      "kind": "MESSAGE",
+      "text": "Meteor Impact killed footman!",
+      "emitEffect": false,
+      "conditions": [
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "METEOR_IMPACT"
+        }
+      ]
+    },
+    {
+      "id": "jump_message",
+      "phase": "resolution",
+      "kind": "MESSAGE",
+      "text": "Jumped!",
+      "recordMessage": false
+    },
+    {
+      "id": "jump_teleport",
+      "phase": "movement",
+      "kind": "TELEPORT_ACTOR",
+      "actor": "self",
+      "destination": "selected_hex",
+      "ignoreWalls": true,
+      "ignoreGroundHazards": true,
+      "simulatePath": false
+    },
+    {
+      "id": "jump_stun",
+      "phase": "resolution",
+      "kind": "APPLY_STATUS",
+      "target": "selected_hex",
+      "pointSet": {
+        "kind": "axial_ring",
+        "center": "selected_hex",
+        "radius": 1,
+        "predicates": [
+          {
+            "type": "OCCUPANCY",
+            "occupied": true
+          },
+          {
+            "type": "FACTION_RELATION",
+            "relation": "enemy"
+          }
+        ]
+      },
+      "status": "stunned",
+      "duration": 1,
+      "message": "Enemies stunned by landing impact!",
+      "conditions": [
+        {
+          "type": "RESOLVED_KEYWORD",
+          "keyword": "STUNNING_LANDING"
+        }
+      ]
+    },
+    {
+      "id": "jump_juice",
+      "phase": "cleanup",
+      "kind": "EMIT_JUICE",
+      "effect": "shake",
+      "target": "selected_hex",
+      "intensity": "medium",
+      "metadata": {
+        "signature": "MOVE.LEAP.NEUTRAL.JUMP_LAND",
+        "family": "movement",
+        "primitive": "leap",
+        "phase": "impact",
+        "element": "neutral",
+        "variant": "jump_landing",
+        "targetRef": {
+          "kind": "target_hex"
+        },
+        "skillId": "JUMP"
+      }
+    }
+  ],
+  "upgrades": {
+    "JUMP_RANGE": {
+      "id": "JUMP_RANGE",
+      "name": "Extended Jump",
+      "description": "Jump range +1",
+      "modifyNumbers": [
+        {
+          "path": "baseVariables.range",
+          "op": "add",
+          "value": 1
+        }
+      ]
+    },
+    "JUMP_COOLDOWN": {
+      "id": "JUMP_COOLDOWN",
+      "name": "Nimble",
+      "description": "Jump cooldown -1",
+      "modifyNumbers": [
+        {
+          "path": "baseVariables.cooldown",
+          "op": "add",
+          "value": -1
+        }
+      ]
+    },
+    "STUNNING_LANDING": {
+      "id": "STUNNING_LANDING",
+      "name": "Stunning Landing",
+      "description": "All enemies within 1 hex of landing are stunned",
+      "addKeywords": [
+        "STUNNING_LANDING"
+      ]
+    },
+    "METEOR_IMPACT": {
+      "id": "METEOR_IMPACT",
+      "name": "Meteor Impact",
+      "description": "Can land on enemies to kill them",
+      "addKeywords": [
+        "METEOR_IMPACT"
+      ]
+    },
+    "FREE_JUMP": {
+      "id": "FREE_JUMP",
+      "name": "Free Jump",
+      "description": "Can move after jumping",
+      "addKeywords": [
+        "FREE_JUMP"
+      ]
+    }
+  }
+}

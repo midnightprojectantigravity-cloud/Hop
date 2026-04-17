@@ -49,7 +49,10 @@
       "kind": "TELEPORT_ACTOR",
       "phase": "movement",
       "actor": "self",
-      "destination": "selected_hex"
+      "destination": "selected_hex",
+      "presentationKind": "teleport",
+      "pathStyle": "blink",
+      "simulatePath": false
     },
     {
       "id": "firewalk_02_immunity",

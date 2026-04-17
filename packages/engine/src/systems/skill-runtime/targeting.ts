@@ -3,6 +3,7 @@ import {
     createHex,
     getGridForShape,
     getNeighbors,
+    getHexLine,
     hexDistance,
     hexEquals,
     pointToKey
@@ -177,6 +178,10 @@ export const evaluateRuntimeSkillPredicate = (
                         : !!state.shieldPosition;
             return compareBoolean(actual, predicate.value ?? true);
         }
+        case 'ENEMY_COUNT': {
+            const actual = state.enemies.filter(enemy => enemy.hp > 0 && enemy.id !== attacker.id).length;
+            return compareNumeric(predicate.op, actual, predicate.value);
+        }
         case 'PROJECTILE_IMPACT':
             return compareBoolean(options.projectileImpactKind === predicate.kind, predicate.value ?? true);
         case 'RESOLVED_KEYWORD':
@@ -244,6 +249,10 @@ export const evaluateRuntimeSkillPredicate = (
                 : 0;
             return compareNumeric(predicate.op || 'eq', movedDistance, Number(predicate.value || 0));
         }
+        case 'TURN_PARITY':
+            return predicate.parity === 'odd'
+                ? state.turnNumber % 2 === 1
+                : state.turnNumber % 2 === 0;
         case 'WEIGHT_CLASS': {
             const subject = predicate.target === 'caster' ? attacker : targetActor;
             const actual = resolveWeightClass(subject);
@@ -262,6 +271,11 @@ export const evaluateRuntimeSkillPredicate = (
                 : predicate.relation === 'ally'
                     ? isAlly
                     : isEnemy;
+            return compareBoolean(actual, predicate.value ?? true);
+        }
+        case 'FACTION_ID': {
+            const subject = predicate.target === 'caster' ? attacker : targetActor;
+            const actual = subject?.factionId === predicate.factionId;
             return compareBoolean(actual, predicate.value ?? true);
         }
         case 'HAS_SKILL': {
@@ -371,6 +385,15 @@ const validateRuntimeMovementTarget = (
     }
 
     if (!movementPolicy.validateDestination) return true;
+
+    if (definition.id === 'DASH') {
+        const line = getHexLine(attacker.position, candidate);
+        for (const point of line.slice(1, -1)) {
+            if (!UnifiedTileService.isWalkable(state, point)) {
+                return false;
+            }
+        }
+    }
 
     return validateMovementDestination(
         state,

@@ -1,0 +1,87 @@
+{
+  "id": "SHIELD_BASH",
+  "name": "Shield Bash",
+  "description": "Push an enemy 1 tile. If they hit a wall or another enemy, they are stunned.",
+  "slot": "defensive",
+  "icon": "🛡️",
+  "keywords": [
+    "ACTIVE",
+    "CONTROL"
+  ],
+  "baseVariables": {
+    "range": 1,
+    "cost": 0,
+    "cooldown": 2
+  },
+  "targeting": {
+    "generator": "single",
+    "range": 1,
+    "deterministicSort": "distance_then_q_then_r",
+    "predicates": [
+      {
+        "type": "OCCUPANCY",
+        "occupied": true
+      },
+      {
+        "type": "FACTION_RELATION",
+        "relation": "enemy"
+      }
+    ]
+  },
+  "combatScript": [
+    {
+      "id": "shield_bash_push",
+      "phase": "resolution",
+      "kind": "APPLY_FORCE",
+      "target": "target_actor",
+      "mode": "push",
+      "direction": "source_to_target",
+      "magnitude": 1,
+      "maxDistance": 1,
+      "resolveImmediately": true,
+      "collision": {
+        "onBlocked": "stop",
+        "applyStunOnStop": true,
+        "stunDuration": 1
+      }
+    },
+    {
+      "id": "shield_bash_message",
+      "phase": "resolution",
+      "kind": "MESSAGE",
+      "text": "Pushed footman!"
+    }
+  ],
+  "upgrades": {
+    "SHIELD_RANGE": {
+      "id": "SHIELD_RANGE",
+      "name": "Extended Bash",
+      "description": "Range +1"
+    },
+    "SHIELD_COOLDOWN": {
+      "id": "SHIELD_COOLDOWN",
+      "name": "Quick Recovery",
+      "description": "Cooldown -1"
+    },
+    "ARC_BASH": {
+      "id": "ARC_BASH",
+      "name": "Arc Bash",
+      "description": "Bash hits 3-hex frontal arc (+1 cooldown)"
+    },
+    "BASH_360": {
+      "id": "BASH_360",
+      "name": "360° Bash",
+      "description": "Bash hits all neighbors (+1 cooldown)"
+    },
+    "PASSIVE_PROTECTION": {
+      "id": "PASSIVE_PROTECTION",
+      "name": "Passive Protection",
+      "description": "+1 temp armor when shield not on cooldown"
+    },
+    "WALL_SLAM": {
+      "id": "WALL_SLAM",
+      "name": "Wall Slam",
+      "description": "Enemies bashed into obstacles trigger a cascade and stun"
+    }
+  }
+}

@@ -29,16 +29,18 @@ import { createRaiseDeadSkeletonId } from '../entities/companion-id-strategies';
 import { createCompanion } from '../entities/entity-factory';
 import { extractTrinityStats } from '../combat/combat-calculator';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../combat/combat-effect';
+import { resolveForce } from '../combat/force';
 import { createBombActor } from '../effects/bomb-runtime';
 import { processKineticPulse } from '../movement/kinetic-kernel';
 import { consumeRandom } from '../rng';
 import { SpatialSystem } from '../spatial-system';
 import { buildSkillIntentProfile } from '../skill-intent-profile';
 import { resolveSummonPlacement } from '../summon-placement';
+import { validateMovementDestination } from '../capabilities/movement-policy';
 import type { CollisionResolutionPolicy } from '../combat/collision-policy';
 import { getSurfaceSkillPowerMultiplier, getSurfaceStatus } from '../tiles/surface-status';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
-import { isBlockedByWall, validateLineOfSight } from '../validation';
+import { findFirstObstacle, isBlockedByWall, validateLineOfSight } from '../validation';
 import { getRuntimeExecutionHandler } from './handler-registry';
 import { resolveRuntimeMovementExecutionPlan } from './movement';
 import { resolveSkillRuntime } from './resolve';
@@ -236,6 +238,8 @@ const resolvePointRef = (
         }
         return orbitPositions[(currentIdx + 1) % orbitPositions.length];
     }
+    if (ref === 'dash_stop_hex') return resolveDashStopPoint(attacker, state, context);
+    if (ref === 'withdrawal_retreat_hex') return resolveWithdrawalRetreatPoint(attacker, state, context);
     if (ref === 'spear_position') return state.spearPosition ? clonePoint(state.spearPosition) : undefined;
     if (ref === 'shield_position') return state.shieldPosition ? clonePoint(state.shieldPosition) : undefined;
     if (!context.targetActorId) return undefined;
@@ -255,6 +259,8 @@ const resolvePathRef = (
         ? [resolvePointRef('caster_hex', attacker, state, context), resolvePointRef('selected_hex', attacker, state, context)]
         : pathRef === 'caster_to_impact'
             ? [resolvePointRef('caster_hex', attacker, state, context), resolvePointRef('impact_hex', attacker, state, context)]
+            : pathRef === 'caster_to_dash_stop'
+                ? [resolvePointRef('caster_hex', attacker, state, context), resolvePointRef('dash_stop_hex', attacker, state, context)]
             : pathRef === 'impact_to_target_actor'
                 ? [resolvePointRef('impact_hex', attacker, state, context), resolvePointRef('target_actor_hex', attacker, state, context)]
                 : pathRef === 'spear_to_caster'
@@ -292,6 +298,74 @@ const resolvePathPenultimatePoint = (
     const path = resolvePathRef(pathRef, attacker, state, context);
     if (!path || path.length < 2) return undefined;
     return clonePoint(path[path.length - 2]!);
+};
+
+const resolveDashStopPoint = (
+    attacker: Actor,
+    state: GameState,
+    context: ExecutionContext
+): Point | undefined => {
+    const selectedHex = resolvePointRef('selected_hex', attacker, state, context);
+    if (!selectedHex) return undefined;
+    const trace = context.projectileTrace;
+    if (!trace) return clonePoint(selectedHex);
+    if (trace.impactKind === 'wall') return undefined;
+    if (trace.impactKind === 'empty') return clonePoint(selectedHex);
+    if (trace.line.length < 2) return undefined;
+    return clonePoint(trace.line[trace.line.length - 2]!);
+};
+
+const resolveWithdrawalRetreatPoint = (
+    attacker: Actor,
+    state: GameState,
+    context: ExecutionContext
+): Point | undefined => {
+    const targetHex = resolvePointRef('selected_hex', attacker, state, context);
+    if (!targetHex) return undefined;
+    const directionIndex = getDirectionFromTo(targetHex, attacker.position);
+    if (directionIndex === -1) return undefined;
+    const retreatVector = hexDirection(directionIndex);
+    const withdrawalSkill = attacker.activeSkills?.find(skill => skill.id === 'WITHDRAWAL');
+    const maxDistance = withdrawalSkill?.activeUpgrades?.includes('NIMBLE_FEET') ? 3 : 1;
+    const policy = {
+        ignoreWalls: false,
+        movementModel: {
+            pathing: 'walk' as const,
+            ignoreWalls: false,
+            ignoreGroundHazards: false,
+            allowPassThroughActors: false,
+            rangeModifier: 0
+        }
+    };
+
+    for (let distance = maxDistance; distance >= 1; distance -= 1) {
+        let cursor = clonePoint(attacker.position);
+        let valid = true;
+        for (let step = 0; step < distance; step += 1) {
+            cursor = hexAdd(cursor, retreatVector);
+            const validation = validateMovementDestination(state, attacker, cursor, policy, {
+                occupancy: 'none',
+                excludeActorId: attacker.id
+            });
+            if (!validation.isValid) {
+                valid = false;
+                break;
+            }
+        }
+        if (valid) return cursor;
+    }
+
+    const alternateDirections = [(directionIndex + 1) % 6, (directionIndex + 5) % 6];
+    for (const altDirection of alternateDirections) {
+        let cursor = hexAdd(attacker.position, hexDirection(altDirection));
+        const validation = validateMovementDestination(state, attacker, cursor, policy, {
+            occupancy: 'none',
+            excludeActorId: attacker.id
+        });
+        if (validation.isValid) return cursor;
+    }
+
+    return undefined;
 };
 
 const resolveJuiceMetadata = (
@@ -1131,10 +1205,18 @@ const lowerResolvedSkillRuntime = (
                 const requestedDestination = resolvePointRef(instruction.destination, attacker, state, context);
                 if (!actorRef || !requestedDestination) break;
 
-                const movementPlan = (resolved.runtime.movementPolicy
-                    && (resolved.targeting.generator === 'movement_reachable' || instruction.simulatePath))
-                    ? resolveRuntimeMovementExecutionPlan(resolved.runtime, state, actorRef, requestedDestination)
+                const explicitPath = instruction.pathRef
+                    ? resolvePathRef(instruction.pathRef, attacker, state, context)
                     : undefined;
+                const movementPlan = explicitPath
+                    ? undefined
+                    : (resolved.runtime.movementPolicy
+                        && (resolved.targeting.generator === 'movement_reachable' || instruction.simulatePath))
+                        ? resolveRuntimeMovementExecutionPlan(resolved.runtime, state, actorRef, requestedDestination)
+                        : undefined;
+                if (explicitPath && explicitPath.length < 2) {
+                    break;
+                }
                 if (movementPlan && (!movementPlan.path || movementPlan.path.length < 2)) {
                     break;
                 }
@@ -1156,8 +1238,8 @@ const lowerResolvedSkillRuntime = (
                             : actorRef.id,
                     destination,
                     source,
-                    path: movementPlan?.path || undefined,
-                    simulatePath: movementPlan?.movementPolicy.simulatePath ?? instruction.simulatePath,
+                    path: movementPlan?.path || explicitPath || undefined,
+                    simulatePath: instruction.simulatePath ?? movementPlan?.movementPolicy.simulatePath ?? !!explicitPath,
                     ignoreCollision: instruction.ignoreCollision ?? (movementPlan ? true : undefined),
                     ignoreWalls: instruction.ignoreWalls ?? movementPlan?.movementPolicy.ignoreWalls,
                     ignoreGroundHazards: instruction.ignoreGroundHazards ?? (
@@ -1167,23 +1249,12 @@ const lowerResolvedSkillRuntime = (
                                 || movementPlan.movementPolicy.pathing === 'teleport')
                             : undefined
                     ),
-                    presentationKind: suppressPresentation
-                        ? undefined
-                        : instruction.mode === 'LEAP'
-                            ? 'jump'
-                            : instruction.mode === 'SLIDE'
-                                ? 'forced_slide'
-                                : 'walk',
-                    pathStyle: suppressPresentation
-                        ? undefined
-                        : instruction.mode === 'LEAP'
-                            ? 'arc'
-                            : 'hex_step',
-                    presentationSequenceId: suppressPresentation
-                        ? undefined
-                        : movementPlan
-                        ? `${actorRef.id}:${resolved.runtime.id}:${destination.q},${destination.r},${destination.s}:${state.turnNumber}`
-                        : undefined
+                    presentationKind: suppressPresentation ? undefined : instruction.presentationKind,
+                    pathStyle: suppressPresentation ? undefined : instruction.pathStyle,
+                    presentationSequenceId: suppressPresentation ? undefined : instruction.presentationSequenceId
+                        ?? (resolved.runtime.id === 'DASH'
+                            ? `${actorRef.id}:DASH:${destination.q},${destination.r},${destination.s}:${state.turnNumber}`
+                            : undefined)
                 });
                 break;
             }
@@ -1215,12 +1286,17 @@ const lowerResolvedSkillRuntime = (
                     target: instruction.actor === 'self' ? 'self' : actorRef.id,
                     destination,
                     source,
-                    simulatePath: movementPolicy?.simulatePath,
+                    simulatePath: instruction.simulatePath ?? movementPolicy?.simulatePath,
                     ignoreWalls: instruction.ignoreWalls ?? movementPolicy?.ignoreWalls ?? true,
                     ignoreGroundHazards: instruction.ignoreGroundHazards ?? movementPolicy?.ignoreGroundHazards ?? true,
-                    presentationKind: 'teleport',
-                    pathStyle: 'blink',
-                    presentationSequenceId: `${actorRef.id}:${resolved.runtime.id}:${destination.q},${destination.r},${destination.s}:${state.turnNumber}`
+                    presentationKind: instruction.presentationKind
+                        ?? (resolved.runtime.id === 'JUMP' ? 'jump' : undefined),
+                    pathStyle: instruction.pathStyle
+                        ?? (resolved.runtime.id === 'JUMP' ? 'arc' : undefined),
+                    presentationSequenceId: instruction.presentationSequenceId
+                        ?? (resolved.runtime.id === 'JUMP'
+                            ? `${actorRef.id}:JUMP:${destination.q},${destination.r},${destination.s}:${state.turnNumber}`
+                            : undefined)
                 });
                 break;
             }
@@ -1237,15 +1313,30 @@ const lowerResolvedSkillRuntime = (
                     executionTrace,
                     'physicsPlan.weightClassModifierTable'
                 );
-                effects.push({
-                    type: 'ApplyForce',
-                    target: actorRef.id,
-                    source,
-                    mode: instruction.mode,
-                    magnitude,
-                    maxDistance: instruction.maxDistance,
-                    collision: toCollisionPolicy(instruction.collision, context.collisionPolicy, context.physicsPlan) || { onBlocked: 'stop' }
-                });
+                if (instruction.resolveImmediately) {
+                    const resolution = resolveForce(state, {
+                        source,
+                        targetActorId: actorRef.id,
+                        mode: instruction.mode,
+                        magnitude,
+                        maxDistance: instruction.maxDistance,
+                        collision: toCollisionPolicy(instruction.collision, context.collisionPolicy, context.physicsPlan) || { onBlocked: 'stop' }
+                    });
+                    effects.push(...resolution.effects);
+                    if (resolution.collided && instruction.collision?.applyStunOnStop) {
+                        messages.push(`Bashed ${resolveActorLabel(actorRef, state)} into obstacle!`);
+                    }
+                } else {
+                    effects.push({
+                        type: 'ApplyForce',
+                        target: actorRef.id,
+                        source,
+                        mode: instruction.mode,
+                        magnitude,
+                        maxDistance: instruction.maxDistance,
+                        collision: toCollisionPolicy(instruction.collision, context.collisionPolicy, context.physicsPlan) || { onBlocked: 'stop' }
+                    });
+                }
                 break;
             }
             case 'EMIT_PULSE': {
@@ -1337,7 +1428,7 @@ const lowerResolvedSkillRuntime = (
                                 instruction.combatPointTargetMode === 'actor_only' && resolvedTarget.actor
                                     ? resolvedTarget.actor.id
                                     : resolvedTarget.effectTarget,
-                                instruction.reason || resolved.runtime.id.toLowerCase()
+                                instruction.reason ?? (instruction.suppressReason ? undefined : resolved.runtime.id.toLowerCase())
                             )
                         );
                     }
@@ -1408,11 +1499,14 @@ const lowerResolvedSkillRuntime = (
                 );
                 if (resolvedTargets.length > 0) {
                     for (const resolvedTarget of resolvedTargets) {
+                        const applyStatusTarget = instruction.target === 'self'
+                            ? 'self'
+                            : instruction.combatPointTargetMode === 'proxy_actor'
+                                ? resolvedTarget.point
+                                : resolvedTarget.actor?.id || resolvedTarget.effectTarget;
                         effects.push({
                             type: 'ApplyStatus',
-                            target: resolvedTarget.actor
-                                ? resolvedTarget.actor.id
-                                : resolvedTarget.point,
+                            target: applyStatusTarget,
                             status: instruction.status,
                             duration: instruction.duration
                         });
@@ -1765,13 +1859,13 @@ const lowerResolvedSkillRuntime = (
                                 : undefined);
                         if (!targetActor) continue;
                         const message = `${resolveActorLabel(messageActor, state)} ${actionVerb} ${resolveActorLabel(targetActor, state).toLowerCase()}!`;
-                        messages.push(message);
-                        effects.push({ type: 'Message', text: message });
+                        if (instruction.recordMessage !== false) messages.push(message);
+                        if (instruction.emitEffect !== false) effects.push({ type: 'Message', text: message });
                     }
                     break;
                 }
-                messages.push(messageText);
-                effects.push({ type: 'Message', text: messageText });
+                if (instruction.recordMessage !== false) messages.push(messageText);
+                if (instruction.emitEffect !== false) effects.push({ type: 'Message', text: messageText });
                 break;
             }
         }
@@ -1880,10 +1974,13 @@ export const resolveAndExecuteSkillRuntime = (
     }
 
     const lowered = lowerResolvedSkillRuntime(resolved, state, attacker, targetToUse, traceMode, runtimeContext);
+    const consumesTurn = resolved.runtime.id === 'JUMP' && resolved.resolvedKeywords.includes('FREE_JUMP')
+        ? false
+        : true;
     return {
         effects: lowered.effects,
         messages: lowered.messages,
-        consumesTurn: true,
+        consumesTurn,
         rngConsumption: lowered.rngConsumption,
         resolvedRuntime: resolved,
         executionTrace: lowered.executionTrace

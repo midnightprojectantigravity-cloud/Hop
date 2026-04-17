@@ -181,6 +181,87 @@
     }
   },
   "biomePresets": {
+    "void": {
+      "seed": "biome-sandbox-seed",
+      "injectHazards": true,
+      "biomeLayers": {
+        "undercurrent": {
+          "default": "/assets/biomes/biome.black.toxic.01.webp",
+          "mode": "repeat",
+          "scalePx": 192,
+          "opacity": 0.62,
+          "offsetX": 0,
+          "offsetY": 0,
+          "scroll": {
+            "x": 160,
+            "y": 110,
+            "durationMs": 92000
+          }
+        },
+        "crust": {
+          "default": "/assets/biomes/biome.black.floor.02.webp",
+          "mode": "repeat",
+          "scalePx": 176,
+          "opacity": 1,
+          "seedShiftPx": 56,
+          "offsetX": 0,
+          "offsetY": 0
+        },
+        "clutter": {
+          "density": 0.14,
+          "maxPerHex": 1,
+          "bleedScaleMax": 2
+        }
+      },
+      "walls": {
+        "mode": "custom",
+        "interiorDensity": 0,
+        "clusterBias": 0,
+        "keepPerimeter": true,
+        "mountainPath": "/assets/biomes/biome.black.obsidian.01.webp",
+        "mountainScale": 0.53,
+        "mountainOffsetX": 0,
+        "mountainOffsetY": 0,
+        "mountainAnchorX": 0.5,
+        "mountainAnchorY": 0.55,
+        "mountainCrustBlendMode": "multiply",
+        "mountainCrustBlendOpacity": 1,
+        "mountainTintColor": "#4e3636",
+        "mountainTintBlendMode": "overlay",
+        "mountainTintOpacity": 1,
+        "scale": 0.53,
+        "offsetX": 0,
+        "offsetY": 0,
+        "anchorX": 0.5,
+        "anchorY": 0.55,
+        "crustBlendMode": "multiply",
+        "crustBlendOpacity": 1,
+        "tintColor": "#4e3636",
+        "tintBlendMode": "overlay",
+        "tintOpacity": 1
+      },
+      "biomeMaterials": {
+        "crust": {
+          "detailA": {
+            "default": "/assets/biomes/biome.black.floor.02.webp",
+            "mode": "off",
+            "scalePx": 192,
+            "opacity": 0.18
+          },
+          "detailB": {
+            "default": "/assets/biomes/biome.black.floor.01.webp",
+            "mode": "off",
+            "scalePx": 240,
+            "opacity": 0.14
+          },
+          "tint": {
+            "default": "#536e8e",
+            "opacity": 0.14,
+            "blendMode": "overlay"
+          }
+        }
+      }
+    },
     "inferno": {
       "seed": "biome-sandbox-seed",
       "injectHazards": true,
@@ -617,6 +698,48 @@
       "layer": "prop",
       "theme": "inferno",
       "path": "/assets/biomes/biome.volcano.mountain.05.webp",
+      "width": 406,
+      "height": 457,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.78
+      },
+      "tags": [
+        "clutter",
+        "obstacle",
+        "mountain",
+        "blocking",
+        "inferno"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "prop.inferno.clutter.obsidian.01",
+      "type": "prop",
+      "layer": "prop",
+      "theme": "inferno",
+      "path": "/assets/biomes/biome.black.obsidian.01.webp",
+      "width": 406,
+      "height": 457,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.78
+      },
+      "tags": [
+        "clutter",
+        "obstacle",
+        "mountain",
+        "blocking",
+        "inferno"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
+      "id": "prop.inferno.clutter.red.boulder.01",
+      "type": "prop",
+      "layer": "prop",
+      "theme": "inferno",
+      "path": "/assets/biomes/biome.red.boulder.01.webp",
       "width": 406,
       "height": 457,
       "anchor": {

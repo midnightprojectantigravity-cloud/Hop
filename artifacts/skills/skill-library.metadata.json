@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-13T15:59:34.048Z",
-  "totalSkills": 45,
+  "generatedAt": "2026-04-17T15:19:01.571Z",
+  "totalSkills": 51,
   "handlerBackedSkillCount": 0,
   "executionHandlerCount": 0,
   "capabilityHandlerCount": 0,
@@ -230,6 +230,32 @@
         "DEAL_DAMAGE",
         "MESSAGE",
         "EMIT_JUICE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "DASH",
+      "name": "Kinetic Dash",
+      "sourcePath": "src/data/skills/dash.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "declare",
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "EMIT_JUICE",
+        "TRACE_PROJECTILE",
+        "MOVE_ACTOR",
+        "MESSAGE",
+        "EMIT_PULSE"
       ],
       "hasPhysicsPlan": false,
       "handlerRefs": {}
@@ -497,6 +523,31 @@
       "handlerRefs": {}
     },
     {
+      "id": "JUMP",
+      "name": "Jump",
+      "sourcePath": "src/data/skills/jump.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "TELEPORT_ACTOR",
+        "MESSAGE",
+        "DEAL_DAMAGE",
+        "APPLY_STATUS",
+        "EMIT_JUICE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
       "id": "KINETIC_TRI_TRAP",
       "name": "Kinetic Tri-Trap",
       "sourcePath": "src/data/skills/kinetic_tri_trap.skill.json",
@@ -719,6 +770,26 @@
       "handlerRefs": {}
     },
     {
+      "id": "SHIELD_BASH",
+      "name": "Shield Bash",
+      "sourcePath": "src/data/skills/shield_bash.skill.json",
+      "slot": "defensive",
+      "keywords": [
+        "ACTIVE",
+        "CONTROL"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "resolution"
+      ],
+      "instructionKinds": [
+        "MESSAGE",
+        "APPLY_FORCE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
       "id": "SHIELD_THROW",
       "name": "Shield Throw",
       "sourcePath": "src/data/skills/shield_throw.skill.json",
@@ -787,6 +858,29 @@
         "DEAL_DAMAGE",
         "MESSAGE",
         "EMIT_JUICE"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "SOUL_SWAP",
+      "name": "Soul Swap",
+      "sourcePath": "src/data/skills/soul_swap.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT",
+        "ARCANE"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "movement",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "MOVE_ACTOR",
+        "EMIT_JUICE",
+        "MESSAGE"
       ],
       "hasPhysicsPlan": false,
       "handlerRefs": {}
@@ -940,6 +1034,30 @@
       "handlerRefs": {}
     },
     {
+      "id": "VAULT",
+      "name": "Vault",
+      "sourcePath": "src/data/skills/vault.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "TELEPORT_ACTOR",
+        "EMIT_JUICE",
+        "MESSAGE",
+        "APPLY_STATUS"
+      ],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
       "id": "VIBRATION_SENSE",
       "name": "Vibration Sense",
       "sourcePath": "src/data/skills/vibration_sense.skill.json",
@@ -968,6 +1086,32 @@
       "targetGenerator": "self",
       "phases": [],
       "instructionKinds": [],
+      "hasPhysicsPlan": false,
+      "handlerRefs": {}
+    },
+    {
+      "id": "WITHDRAWAL",
+      "name": "Withdrawal",
+      "sourcePath": "src/data/skills/withdrawal.skill.json",
+      "slot": "utility",
+      "keywords": [
+        "ACTIVE",
+        "MOVEMENT",
+        "RANGED"
+      ],
+      "targetGenerator": "single",
+      "phases": [
+        "declare",
+        "movement",
+        "resolution",
+        "cleanup"
+      ],
+      "instructionKinds": [
+        "MESSAGE",
+        "MOVE_ACTOR",
+        "DEAL_DAMAGE",
+        "EMIT_JUICE"
+      ],
       "hasPhysicsPlan": false,
       "handlerRefs": {}
     }

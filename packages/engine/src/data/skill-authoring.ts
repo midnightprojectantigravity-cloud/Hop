@@ -72,6 +72,7 @@ const VALID_POINT_PATTERN_SHORTHANDS = new Set([
 const VALID_PATH_REFS = new Set([
     'caster_to_selected',
     'caster_to_impact',
+    'caster_to_dash_stop',
     'impact_to_target_actor',
     'spear_to_caster',
     'shield_to_caster'
@@ -356,6 +357,12 @@ const validatePredicate = (value: unknown, issues: SkillAuthoringValidationIssue
             }
             if (value.value !== undefined && typeof value.value !== 'boolean') push(issues, `${path}.value`, 'Expected boolean');
             return true;
+        case 'ENEMY_COUNT':
+            if (!isString(value.op) || !new Set(['eq', 'lte', 'gte']).has(value.op)) {
+                push(issues, `${path}.op`, 'Expected eq|lte|gte');
+            }
+            if (!isNumber(value.value)) push(issues, `${path}.value`, 'Expected number');
+            return true;
         case 'PROJECTILE_IMPACT':
             if (!isString(value.kind) || !new Set(['wall', 'actor', 'empty']).has(value.kind)) {
                 push(issues, `${path}.kind`, 'Expected wall|actor|empty');
@@ -411,6 +418,11 @@ const validatePredicate = (value: unknown, issues: SkillAuthoringValidationIssue
             if (value.op !== undefined && (!isString(value.op) || !new Set(['eq', 'lte', 'gte']).has(value.op))) push(issues, `${path}.op`, 'Expected eq|lte|gte');
             if (value.value !== undefined && !isNumber(value.value)) push(issues, `${path}.value`, 'Expected number');
             return true;
+        case 'TURN_PARITY':
+            if (!isString(value.parity) || !new Set(['odd', 'even']).has(value.parity)) {
+                push(issues, `${path}.parity`, 'Expected odd|even');
+            }
+            return true;
         case 'WEIGHT_CLASS':
             if (!isString(value.target) || !new Set(['caster', 'target_actor']).has(value.target)) push(issues, `${path}.target`, 'Expected caster|target_actor');
             if (!isString(value.op) || !new Set(['eq', 'neq', 'in']).has(value.op)) push(issues, `${path}.op`, 'Expected eq|neq|in');
@@ -418,6 +430,15 @@ const validatePredicate = (value: unknown, issues: SkillAuthoringValidationIssue
         case 'FACTION_RELATION':
             if (!isString(value.relation) || !new Set(['enemy', 'ally', 'self']).has(value.relation)) {
                 push(issues, `${path}.relation`, 'Expected enemy|ally|self');
+            }
+            if (value.value !== undefined && typeof value.value !== 'boolean') push(issues, `${path}.value`, 'Expected boolean');
+            return true;
+        case 'FACTION_ID':
+            if (!isString(value.target) || !new Set(['caster', 'target_actor']).has(value.target)) {
+                push(issues, `${path}.target`, 'Expected caster|target_actor');
+            }
+            if (!isString(value.factionId) || value.factionId.length === 0) {
+                push(issues, `${path}.factionId`, 'Expected non-empty faction id');
             }
             if (value.value !== undefined && typeof value.value !== 'boolean') push(issues, `${path}.value`, 'Expected boolean');
             return true;
