@@ -96,5 +96,5 @@ npx tsx packages/engine/scripts/runUpaCalibration.ts 300 80 heuristic artifacts/
 - Current runtime reference: `docs/STATUS.md`
 - Architecture overview: `docs/MASTER_TECH_STACK.md`
 - Guardrails and merge law: `docs/GOLD_STANDARD_MANIFESTO.md`
-- Active tracker: `docs/NEXT_LEVEL.md`
+- Historical tracker snapshot: `docs/NEXT_LEVEL.md`
 - Historical milestone material: `docs/archive/`

@@ -69,14 +69,11 @@ const baseProps = {
   onDismissWorldgenError: vi.fn(),
   worldgenInitialized: false,
   worldgenWarmState: 'idle' as const,
-  arcadeSplashWaitingForReady: false,
-  showArcadeDelayedPulse: false,
-  onEnterArcadeSplash: vi.fn(),
-  onOpenHubFromArcadeSplash: vi.fn()
+  onLaunchArcade: vi.fn(),
 };
 
 describe('hub route shell route split', () => {
-  it('renders the arcade splash on the arcade home route', () => {
+  it('renders the arcade biome chooser on the arcade home route', () => {
     const html = renderToStaticMarkup(
       <HubRouteShell
         {...baseProps}
@@ -85,16 +82,12 @@ describe('hub route shell route split', () => {
       />
     );
 
-    expect(html).toContain('ASHES');
-    expect(html).toContain('WORLD');
-    expect(html).toContain('Start');
+    expect(html).toContain('Choose a biome-backed run on the splash backdrop');
+    expect(html).toContain('Vanguard + Inferno');
+    expect(html).toContain('Hunter + Void');
     expect(html).toContain('Hub');
-    expect(html).toContain('data-arcade-splash-shell');
-    expect(html).toContain('class="arcade-splash-shell absolute inset-0"');
-    expect(html).toContain('data-arcade-splash-title-stack');
-    expect(html).toContain('class="arcade-splash-title-stack"');
-    expect(html).toContain('data-arcade-splash-action-stack');
-    expect(html).toContain('text-white');
+    expect(html).toContain('Start Vanguard');
+    expect(html).toContain('Start Hunter');
   });
 
   it('renders the strategic hub screen on the dedicated hub route', () => {

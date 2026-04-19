@@ -5,15 +5,13 @@ import { describe, expect, it } from 'vitest';
 const ROOT = existsSync(join(process.cwd(), 'src'))
     ? join(process.cwd(), 'src')
     : join(process.cwd(), 'packages', 'engine', 'src');
-const BANNED_IMPORT_PATTERNS = [
-    /from\s+['"][^'"]*skills\/targeting['"]/,
-    /from\s+['"][^'"]*systems\/movement\/movement['"]/
-];
 
-const RETIRED_MODULES = [
-    join(ROOT, 'skills', 'targeting.ts'),
-    join(ROOT, 'systems', 'movement', 'movement.ts')
-];
+const ALLOWED_RUNTIME_BRIDGE_HELPER_CONSUMERS = new Set([
+    join(ROOT, 'skillRegistry.ts').replace(/\\/g, '/'),
+    join(ROOT, 'systems', 'skill-runtime', 'bridge.ts').replace(/\\/g, '/')
+]);
+
+const GUARDED_HELPERS = ['getRuntimeSkillDefinition', 'getRuntimeSkillDefinitionRegistry'];
 
 const walk = (dir: string): string[] => {
     const out: string[] = [];
@@ -31,23 +29,23 @@ const walk = (dir: string): string[] => {
     return out;
 };
 
-describe('targeting/path import guard', () => {
-    it('prevents runtime imports of deprecated targeting/path modules', () => {
+describe('skill runtime bridge boundary', () => {
+    it('keeps runtime skill-registry helpers scoped to the shared registry boundary', () => {
         const offenders: string[] = [];
+
         for (const file of walk(ROOT)) {
             const normalized = file.replace(/\\/g, '/');
             if (normalized.includes('/__tests__/')) continue;
+
             const content = readFileSync(file, 'utf8');
-            if (BANNED_IMPORT_PATTERNS.some(pattern => pattern.test(content))) {
+            const referencesGuardedHelper = GUARDED_HELPERS.some(helper => content.includes(helper));
+            if (!referencesGuardedHelper) continue;
+
+            if (!ALLOWED_RUNTIME_BRIDGE_HELPER_CONSUMERS.has(normalized)) {
                 offenders.push(normalized);
             }
         }
 
         expect(offenders).toEqual([]);
-    });
-
-    it('keeps retired targeting/path modules deleted', () => {
-        const survivors = RETIRED_MODULES.filter(existsSync).map(file => file.replace(/\\/g, '/'));
-        expect(survivors).toEqual([]);
     });
 });

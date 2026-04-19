@@ -88,6 +88,6 @@ npm --workspace @hop/engine run test:acae:strict
 
 1. Current runtime law: `docs/STATUS.md`
 2. Architecture overview: `docs/MASTER_TECH_STACK.md`
-3. Active tracker: `docs/NEXT_LEVEL.md`
+3. Historical tracker snapshot: `docs/NEXT_LEVEL.md`
 4. Historical milestone material: `docs/archive/`
 5. Balance doctrine: `docs/GOLD_STANDARD_BALANCING.md`

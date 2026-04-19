@@ -665,11 +665,12 @@ const createAilmentEffectsIfEnabled = (
 export const createTileAilmentInjectionEffects = (
     state: GameState,
     actor: Actor,
-    tileKind: 'lava' | 'fire' | 'wet' | 'miasma' | 'ice',
+    tileKind: 'lava' | 'toxic' | 'fire' | 'wet' | 'miasma' | 'ice',
     intensity: 'pass' | 'enter' | 'stay'
 ): AtomicEffect[] => {
     const amountTable: Record<typeof tileKind, Record<typeof intensity, number>> = {
         lava: { pass: 8, enter: 14, stay: 10 },
+        toxic: { pass: 6, enter: 10, stay: 8 },
         fire: { pass: 4, enter: 6, stay: 5 },
         wet: { pass: 3, enter: 5, stay: 4 },
         miasma: { pass: 4, enter: 7, stay: 6 },
@@ -677,6 +678,7 @@ export const createTileAilmentInjectionEffects = (
     };
     const ailmentByTile: Record<typeof tileKind, AilmentID> = {
         lava: 'burn',
+        toxic: 'poison',
         fire: 'burn',
         wet: 'wet',
         miasma: 'poison',

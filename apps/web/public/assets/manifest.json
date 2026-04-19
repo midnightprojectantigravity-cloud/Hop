@@ -482,6 +482,27 @@
       "recommendedFormat": "webp"
     },
     {
+      "id": "tile.void.toxic.01",
+      "type": "tile",
+      "layer": "ground",
+      "theme": "void",
+      "path": "/assets/biomes/biome.black.toxic.01.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tags": [
+        "lava",
+        "hazard",
+        "void",
+        "poison",
+        "toxic"
+      ],
+      "recommendedFormat": "webp"
+    },
+    {
       "id": "tile.catacombs.wall.01",
       "type": "tile",
       "layer": "ground",

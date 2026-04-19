@@ -2,6 +2,10 @@
 
 Assessment refreshed against current repo state after the fast-engine-loop remediation pass.
 
+Status note: this is a living assessment, not a frozen historical snapshot. Some of the "outstanding" items below have since been partially or fully addressed by later runtime migration and docs cleanup work, so the actionable sections should be read as a maintenance backlog rather than a precise list of current blockers.
+
+Biome note: the current arcade proof now uses a split contract. `themeId` selects the applied biome/render hazard flavor, while `contentThemeId` keeps the authored 10-floor arcade content family stable so Vanguard and Hunter can share the same floor structure with different hazard materialization.
+
 ## Current Validation State
 
 Engine:
@@ -18,6 +22,11 @@ Practical meaning:
 - the previous highest-signal failures were in scenario/targeting setup drift and stale expectations
 - the practical full-suite command is now actionable and green
 - the remaining slow validation work is the acceptance-heavy tier kept outside `test:full`
+
+Current repo context:
+- the runtime skill bridge has expanded significantly beyond the state described in the original remediation pass
+- generated runtime metadata and coverage manifests are now part of the standard maintenance loop
+- docs and legacy compatibility cleanup are the main wrap-up focus rather than a new migration phase
 
 ## Actions Already Completed
 
@@ -62,19 +71,19 @@ Likely next step:
 
 ### 2. Deprecated / compatibility code decisions
 
-Needs explicit decision:
+Resolved in the wrap-up pass:
 - `packages/engine/src/skills/targeting.ts`
-  - do not auto-delete until its compatibility sentinel role and guard coverage are intentionally retired
+  - retired; `SpatialSystem.getAxialTargets` is the live replacement
 - `packages/engine/src/systems/movement/movement.ts`
-  - `resolveMove` remains a legacy-removal candidate
-  - `processKineticRequest` is live and must remain
+  - retired as a deprecated module after confirming no live imports remained
+  - kinetic behavior remains owned by `systems/movement/kinetic-kernel.ts` and `systems/movement/hex-bridge.ts`
 
 ### 3. Doc and archive hygiene
 
 Still pending:
 - move completed milestone docs from `docs/` root into `docs/archive/`
 - normalize remaining live references to archived docs and generated artifact locations
-- review `ROADMAP_HISTORY.md` for stale open checkboxes that still read as active work
+- keep `docs/STATUS.md` as the only current-law runtime document and label `docs/NEXT_LEVEL.md` as historical only
 
 ### 4. Runtime logging policy
 

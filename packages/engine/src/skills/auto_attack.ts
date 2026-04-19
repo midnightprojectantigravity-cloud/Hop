@@ -4,7 +4,7 @@ import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import { isStunned } from '../systems/status';
-import { getRuntimeSkillLegacyDefinition } from '../systems/skill-runtime/bridge';
+import { getSkillDefinition } from '../skillRegistry';
 
 import { getSkillScenarios } from '../scenarios';
 
@@ -43,7 +43,7 @@ export const AUTO_ATTACK: SkillDefinition = {
      * - attacker: The entity with this skill
      * - target: Not used (auto-attack hits all valid neighbors)
      * - activeUpgrades: Active upgrades for this skill
-     * - context.previousNeighbors: Array of positions that were adjacent at turn start (legacy)
+     * - context.previousNeighbors: Array of positions that were adjacent at turn start (compatibility fallback)
      * - context.attackerTurnStartPosition: Position of attacker at start of their individual turn (initiative-based)
      * - context.allActorsTurnStartPositions: Map of actorId -> turnStartPosition for all actors
      */
@@ -201,7 +201,7 @@ export const AUTO_ATTACK: SkillDefinition = {
         // Using IDs avoids "The Great Swap" bug and temporal coupling with previousPosition.
         const persistentTargetIds = context?.persistentTargetIds || [];
 
-        // If no persistent IDs are provided, we attempt to use legacy previousNeighbors.
+        // If no persistent IDs are provided, we fall back to previousNeighbors.
         // This keeps scenarios and initialization states working.
         const previousNeighbors = context?.previousNeighbors || [];
 
@@ -316,7 +316,7 @@ export const AUTO_ATTACK: SkillDefinition = {
  * 
  * @param state Current game state
  * @param entity The entity performing the auto-attack
- * @param previousNeighbors Positions that were adjacent at turn start (Legacy)
+ * @param previousNeighbors Positions that were adjacent at turn start (compatibility fallback)
  * @param attackerTurnStartPosition Position of attacker at turn start
  * @param persistentTargetIds IDs of enemies that were adjacent at turn start
  * @returns Updated state and kill count
@@ -348,7 +348,7 @@ export const applyAutoAttack = (
         }
     }
 
-    const runtimeBackedAutoAttack = getRuntimeSkillLegacyDefinition('AUTO_ATTACK');
+    const runtimeBackedAutoAttack = getSkillDefinition('AUTO_ATTACK');
     const executeSkill = runtimeBackedAutoAttack || AUTO_ATTACK;
     const result = executeSkill.execute(state, entity, undefined, activeUpgrades, {
         previousNeighbors,

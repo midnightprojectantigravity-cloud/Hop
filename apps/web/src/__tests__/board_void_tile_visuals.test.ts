@@ -29,6 +29,7 @@ describe('board void tile visuals', () => {
         expect(flagsByKey.get(pointToKey(VOID_TILE))).toEqual({
             isWall: false,
             isLava: false,
+            isToxic: false,
             isFire: false,
             isVoid: true,
         });
@@ -36,5 +37,10 @@ describe('board void tile visuals', () => {
 
     it('uses the dedicated void tile asset regardless of biome theme', () => {
         expect(resolveTileAssetId({ theme: 'inferno', isVoid: true })).toBe('tile.void.floor.01');
+    });
+
+    it('renders TOXIC and LAVA tiles with their dedicated hazard assets', () => {
+        expect(resolveTileAssetId({ theme: 'void', isToxic: true })).toBe('tile.void.toxic.01');
+        expect(resolveTileAssetId({ theme: 'inferno', isLava: true })).toBe('tile.inferno.lava.01');
     });
 });

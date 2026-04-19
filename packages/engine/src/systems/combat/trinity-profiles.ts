@@ -41,7 +41,7 @@ export const LIVE_TRINITY_PROFILE: TrinityProfile = {
         SKIRMISHER: { body: 12, mind: 8, instinct: 14 },
         FIREMAGE: { body: 5, mind: 30, instinct: 15 },
         NECROMANCER: { body: 10, mind: 30, instinct: 10 },
-        HUNTER: { body: 4, mind: 4, instinct: 9 },
+        HUNTER: { body: 40, mind: 4, instinct: 59 },
         ASSASSIN: { body: 3, mind: 4, instinct: 10 },
     }),
     enemySubtype: ENEMY_TRINITY_PROFILE,

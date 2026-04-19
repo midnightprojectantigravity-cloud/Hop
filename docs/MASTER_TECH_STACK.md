@@ -123,5 +123,5 @@ npm --workspace @hop/engine run check-script-imports
 
 - Current law: `docs/STATUS.md`
 - Guardrails: `docs/GOLD_STANDARD_MANIFESTO.md`
-- Active tracker: `docs/NEXT_LEVEL.md`
+- Historical tracker snapshot: `docs/NEXT_LEVEL.md`
 - Historical milestone docs: `docs/archive/`

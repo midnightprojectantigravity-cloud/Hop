@@ -13,20 +13,6 @@ export {
     type GenericAiGoalProfile
 } from '../generic-goal';
 
-const getVisibleHostileCount = (state: GameState): number => {
-    const visibleIds = new Set([
-        ...(state.visibility?.playerFog.visibleActorIds || []),
-        ...(state.visibility?.playerFog.detectedActorIds || [])
-    ]);
-
-    return state.enemies.filter(enemy =>
-        enemy.hp > 0
-        && enemy.factionId === 'enemy'
-        && enemy.subtype !== 'bomb'
-        && (visibleIds.size === 0 || visibleIds.has(enemy.id))
-    ).length;
-};
-
 const getAliveHostileCount = (state: GameState): number =>
     state.enemies.filter(enemy =>
         enemy.hp > 0
@@ -44,7 +30,6 @@ export const chooseGenericAiGoal = (
     const explicitGoal = state.player.behaviorState?.goal;
     if (explicitGoal) return normalizeGenericAiGoal(explicitGoal);
 
-    const visibleHostiles = getVisibleHostileCount(visibleState);
     const aliveHostiles = getAliveHostileCount(visibleState);
     if (aliveHostiles > 0) {
         const hpRatio = Number(visibleState.player.hp || 0) / Math.max(1, Number(visibleState.player.maxHp || 1));

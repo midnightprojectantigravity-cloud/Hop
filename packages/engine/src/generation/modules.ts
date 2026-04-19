@@ -79,7 +79,7 @@ const createInfernoModules = (): ModuleRegistryEntry[] => ([
         id: 'inferno_lava_pocket',
         theme: 'inferno',
         footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: 0, dr: 1 }, { dq: -1, dr: 1 }],
-        tileStamps: [{ dq: 0, dr: 0, baseId: 'LAVA' }, { dq: 1, dr: 0, baseId: 'LAVA' }, { dq: 0, dr: 1, baseId: 'LAVA' }, { dq: -1, dr: 1, baseId: 'VOID' }],
+        tileStamps: [{ dq: 0, dr: 0, baseId: 'HAZARD' }, { dq: 1, dr: 0, baseId: 'HAZARD' }, { dq: 0, dr: 1, baseId: 'HAZARD' }, { dq: -1, dr: 1, baseId: 'VOID' }],
         claimTemplates: [{ id: 'heat_pull', kind: 'movement_corridor', hardness: 'soft', from: { dq: -1, dr: 0 }, to: { dq: 1, dr: 0 } }],
         capability: {
             tacticalTags: ['hazard_lure'],
@@ -97,7 +97,7 @@ const createInfernoModules = (): ModuleRegistryEntry[] => ([
         id: 'inferno_heat_funnel',
         theme: 'inferno',
         footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: 0, dr: -1 }, { dq: 0, dr: 1 }, { dq: -1, dr: 1 }],
-        tileStamps: [{ dq: -1, dr: 0, baseId: 'LAVA' }, { dq: 1, dr: 0, baseId: 'LAVA' }, { dq: -1, dr: 1, baseId: 'WALL' }],
+        tileStamps: [{ dq: -1, dr: 0, baseId: 'HAZARD' }, { dq: 1, dr: 0, baseId: 'HAZARD' }, { dq: -1, dr: 1, baseId: 'WALL' }],
         gaskets: [{ id: 'heat_lane', dq: 0, dr: 0, direction: 0, state: 'open_optional' }],
         claimTemplates: [{ id: 'funnel_lane', kind: 'movement_corridor', hardness: 'soft', from: { dq: 0, dr: -1 }, to: { dq: 0, dr: 1 } }],
         capability: {
@@ -116,7 +116,7 @@ const createInfernoModules = (): ModuleRegistryEntry[] => ([
         id: 'inferno_broken_bridge',
         theme: 'inferno',
         footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: 0, dr: -1 }, { dq: 0, dr: 1 }],
-        tileStamps: [{ dq: -1, dr: 0, baseId: 'LAVA' }, { dq: 1, dr: 0, baseId: 'LAVA' }, { dq: 0, dr: 0, baseId: 'STONE' }],
+        tileStamps: [{ dq: -1, dr: 0, baseId: 'HAZARD' }, { dq: 1, dr: 0, baseId: 'HAZARD' }, { dq: 0, dr: 0, baseId: 'STONE' }],
         claimTemplates: [{ id: 'bridge_crossing', kind: 'movement_corridor', hardness: 'hard', from: { dq: 0, dr: -1 }, to: { dq: 0, dr: 1 } }],
         capability: {
             tacticalTags: ['hazard_lure', 'flank_route'],
@@ -315,7 +315,7 @@ const createInfernoModules = (): ModuleRegistryEntry[] => ([
         id: 'inferno_fire_step',
         theme: 'inferno',
         footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: 0, dr: -1 }],
-        tileStamps: [{ dq: 0, dr: 0, baseId: 'LAVA' }],
+        tileStamps: [{ dq: 0, dr: 0, baseId: 'HAZARD' }],
         claimTemplates: [{ id: 'fire_step', kind: 'movement_corridor', hardness: 'soft', from: { dq: -1, dr: 0 }, to: { dq: 1, dr: 0 } }],
         capability: {
             tacticalTags: ['hazard_lure'],
@@ -387,7 +387,7 @@ const createInfernoModules = (): ModuleRegistryEntry[] => ([
         id: 'inferno_failed_escape',
         theme: 'inferno',
         footprint: [{ dq: -1, dr: 0 }, { dq: 0, dr: 0 }, { dq: 1, dr: 0 }, { dq: -1, dr: 1 }, { dq: 1, dr: -1 }],
-        tileStamps: [{ dq: -1, dr: 1, baseId: 'LAVA' }, { dq: 1, dr: -1, baseId: 'WALL' }],
+        tileStamps: [{ dq: -1, dr: 1, baseId: 'HAZARD' }, { dq: 1, dr: -1, baseId: 'WALL' }],
         claimTemplates: [{ id: 'escape_line', kind: 'movement_corridor', hardness: 'soft', from: { dq: -1, dr: 0 }, to: { dq: 1, dr: 0 } }],
         capability: {
             tacticalTags: ['flank_route', 'hazard_lure'],

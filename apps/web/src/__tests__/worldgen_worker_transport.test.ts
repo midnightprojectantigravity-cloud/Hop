@@ -17,7 +17,9 @@ describe('worldgen worker transport', () => {
       loadoutId: 'VANGUARD',
       mode: 'normal',
       mapSize: DEFAULT_START_RUN_MAP_SIZE,
-      mapShape: DEFAULT_START_RUN_MAP_SHAPE
+      mapShape: DEFAULT_START_RUN_MAP_SHAPE,
+      themeId: 'void',
+      contentThemeId: 'inferno'
     });
 
     const context = buildStartRunCompileContext({
@@ -27,11 +29,14 @@ describe('worldgen worker transport', () => {
       date: payload.date,
       mapSize: payload.mapSize,
       mapShape: payload.mapShape,
+      themeId: payload.themeId,
+      contentThemeId: payload.contentThemeId,
       generationSpec: payload.generationSpec,
       includeDebug: true
     });
 
     expect(() => assertStructuredCloneSafeWorldgenPayload(context)).not.toThrow();
+    expect(context.contentThemeId).toBe('inferno');
   });
 
   it('sanitizes floor-transition payloads so active skills are structured-clone safe', () => {
@@ -48,6 +53,8 @@ describe('worldgen worker transport', () => {
     const context = buildTransitionCompileContext(run, false);
 
     expect(() => assertStructuredCloneSafeWorldgenPayload(context)).not.toThrow();
+    expect(context.themeId).toBe(run.theme);
+    expect(context.contentThemeId).toBe(run.contentTheme);
     expect(context.playerCarryover.activeSkills).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

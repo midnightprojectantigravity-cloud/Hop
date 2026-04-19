@@ -40,7 +40,7 @@ import { validateMovementDestination } from '../capabilities/movement-policy';
 import type { CollisionResolutionPolicy } from '../combat/collision-policy';
 import { getSurfaceSkillPowerMultiplier, getSurfaceStatus } from '../tiles/surface-status';
 import { UnifiedTileService } from '../tiles/unified-tile-service';
-import { findFirstObstacle, isBlockedByWall, validateLineOfSight } from '../validation';
+import { isBlockedByWall, validateLineOfSight } from '../validation';
 import { getRuntimeExecutionHandler } from './handler-registry';
 import { resolveRuntimeMovementExecutionPlan } from './movement';
 import { resolveSkillRuntime } from './resolve';
@@ -669,7 +669,6 @@ const resolveRuntimeStatusMultipliers = (
 
 const resolveDirectionVector = (
     direction: 'source_to_target' | 'target_to_source',
-    attacker: Actor,
     context: ExecutionContext
 ): Point | undefined => {
     const source = context.initialCasterPosition;
@@ -769,7 +768,7 @@ const applyInitialStatuses = (
     );
 };
 
-const materializeLegacyUpgrades = (definition: SkillRuntimeDefinition): Record<string, SkillModifier> => {
+const materializeSkillDefinitionUpgrades = (definition: SkillRuntimeDefinition): Record<string, SkillModifier> => {
     const upgrades: Record<string, SkillModifier> = {};
     for (const [upgradeId, upgrade] of Object.entries(definition.upgrades || {})) {
         const patches: NonNullable<SkillModifier['patches']> = [];
@@ -798,7 +797,7 @@ const resolveActorAtPoint = (state: GameState, point: Point): Actor | undefined 
     return state.companions?.find(candidate => hexEquals(candidate.position, point));
 };
 
-const deriveLegacyCombatProfile = (definition: SkillRuntimeDefinition): SkillDefinition['combat'] | undefined => {
+const deriveSkillDefinitionCombatProfile = (definition: SkillRuntimeDefinition): SkillDefinition['combat'] | undefined => {
     if (definition.combat) return definition.combat;
     const damageInstruction = definition.combatScript.find(
         instruction => instruction.kind === 'DEAL_DAMAGE'
@@ -822,7 +821,7 @@ const deriveLegacyCombatProfile = (definition: SkillRuntimeDefinition): SkillDef
     };
 };
 
-const resolveLegacyPresentationActor = (
+const resolveMaterializedPresentationActor = (
     definition: SkillRuntimeDefinition,
     state: GameState
 ): Actor | undefined => {
@@ -838,11 +837,11 @@ const resolveLegacyPresentationActor = (
     );
 };
 
-const resolveLegacyPresentationRuntime = (
+const resolveMaterializedPresentationRuntime = (
     definition: SkillRuntimeDefinition,
     state: GameState
 ): ResolvedSkillRuntime => {
-    const actor = resolveLegacyPresentationActor(definition, state);
+    const actor = resolveMaterializedPresentationActor(definition, state);
     return resolveSkillRuntime(
         definition,
         actor?.activeSkills.find(skill => skill.id === definition.id)?.activeUpgrades || [],
@@ -863,7 +862,7 @@ const getRuntimeSkillUpgradeSet = (actor: Actor, skillId: string): Set<string> =
     return new Set(activeSkill?.activeUpgrades || []);
 };
 
-const computeLegacyStandardVisionRange = (observer: Actor, definition: SkillRuntimeDefinition): number => {
+const computeStandardVisionRange = (observer: Actor, definition: SkillRuntimeDefinition): number => {
     const provider = definition.capabilities?.senses?.find(candidate => candidate.kind === 'standard_vision_los_v1');
     if (!provider) return 0;
     const trinity = extractTrinityStats(observer);
@@ -876,7 +875,7 @@ const computeLegacyStandardVisionRange = (observer: Actor, definition: SkillRunt
     return clamp(provider.range.base + tier + Math.floor(statPool / 100), provider.range.minimum, provider.range.maximum);
 };
 
-const computeLegacyEnemyAwarenessRange = (observer: Actor, definition: SkillRuntimeDefinition): number => {
+const computeEnemyAwarenessRange = (observer: Actor, definition: SkillRuntimeDefinition): number => {
     const provider = definition.capabilities?.senses?.find(candidate => candidate.kind === 'enemy_awareness_los_v1');
     if (!provider) return 0;
     const trinity = extractTrinityStats(observer);
@@ -886,14 +885,14 @@ const computeLegacyEnemyAwarenessRange = (observer: Actor, definition: SkillRunt
     return clamp(provider.range.base + Math.floor(awarenessScore * 1.5), provider.range.minimum, provider.range.maximum);
 };
 
-const computeLegacyVibrationSenseRange = (observer: Actor, definition: SkillRuntimeDefinition): number => {
+const computeVibrationSenseRange = (observer: Actor, definition: SkillRuntimeDefinition): number => {
     const provider = definition.capabilities?.senses?.find(candidate => candidate.kind === 'vibration_sense_motion_v1');
     if (!provider) return 0;
     const trinity = extractTrinityStats(observer);
     return clamp(provider.range.base + Math.floor(trinity.instinct / 8), provider.range.minimum, provider.range.maximum);
 };
 
-const materializeLegacyCapabilityProviders = (definition: SkillRuntimeDefinition): SkillCapabilities | undefined => {
+const materializeSkillDefinitionCapabilityProviders = (definition: SkillRuntimeDefinition): SkillCapabilities | undefined => {
     const capabilities = definition.capabilities;
     if (!capabilities) return undefined;
 
@@ -966,7 +965,7 @@ const materializeLegacyCapabilityProviders = (definition: SkillRuntimeDefinition
                                 maxRange: 0
                             };
                         }
-                        const range = computeLegacyStandardVisionRange(query.observer, definition);
+                        const range = computeStandardVisionRange(query.observer, definition);
                         if (query.distance > range) {
                             return {
                                 decision: 'neutral',
@@ -974,7 +973,7 @@ const materializeLegacyCapabilityProviders = (definition: SkillRuntimeDefinition
                                 maxRange: range
                             };
                         }
-                        const los = query.evaluateLegacyLineOfSight({
+                        const los = query.evaluateFallbackLineOfSight({
                             stopAtWalls: query.stopAtWalls,
                             stopAtActors: query.stopAtActors,
                             stopAtLava: query.stopAtLava,
@@ -1012,7 +1011,7 @@ const materializeLegacyCapabilityProviders = (definition: SkillRuntimeDefinition
                                 maxRange: 0
                             };
                         }
-                        const range = computeLegacyEnemyAwarenessRange(query.observer, definition);
+                        const range = computeEnemyAwarenessRange(query.observer, definition);
                         if (query.distance > range) {
                             return {
                                 decision: 'neutral',
@@ -1020,7 +1019,7 @@ const materializeLegacyCapabilityProviders = (definition: SkillRuntimeDefinition
                                 maxRange: range
                             };
                         }
-                        const los = query.evaluateLegacyLineOfSight({
+                        const los = query.evaluateFallbackLineOfSight({
                             stopAtWalls: query.stopAtWalls,
                             stopAtActors: query.stopAtActors,
                             stopAtLava: query.stopAtLava,
@@ -1042,7 +1041,7 @@ const materializeLegacyCapabilityProviders = (definition: SkillRuntimeDefinition
                         };
                     }
                     case 'vibration_sense_motion_v1': {
-                        const range = computeLegacyVibrationSenseRange(query.observer, definition);
+                        const range = computeVibrationSenseRange(query.observer, definition);
                         if (query.distance > range) {
                             return {
                                 decision: 'neutral',
@@ -1147,7 +1146,6 @@ const lowerResolvedSkillRuntime = (
     }
 
     for (const instruction of resolved.combatScript) {
-        const targetActorRef = resolveActorRef('target_actor', attacker, state, context);
         const conditionAttacker = {
             ...attacker,
             position: clonePoint(context.initialCasterPosition)
@@ -1341,7 +1339,7 @@ const lowerResolvedSkillRuntime = (
             }
             case 'EMIT_PULSE': {
                 const origin = resolvePointRef(instruction.origin, attacker, state, context);
-                const direction = resolveDirectionVector(instruction.direction, attacker, context);
+                const direction = resolveDirectionVector(instruction.direction, context);
                 if (!origin || !direction) break;
                 const pulseMagnitude = adjustMagnitudeForWeightClass(
                     instruction.magnitude || context.physicsPlan.baseMomentum || resolved.runtime.baseVariables.momentum || 0,
@@ -1987,23 +1985,23 @@ export const resolveAndExecuteSkillRuntime = (
     };
 };
 
-export const materializeLegacySkillDefinition = (
+export const materializeSkillDefinition = (
     definition: SkillRuntimeDefinition
 ): SkillDefinition => {
     const dynamicPresentation = !!definition.presentationVariants?.length;
-    const legacy: SkillDefinition = {
+    const materialized: SkillDefinition = {
         id: definition.id as any,
         name: dynamicPresentation
-            ? ((state: GameState) => resolveLegacyPresentationRuntime(definition, state).runtime.name)
+            ? ((state: GameState) => resolveMaterializedPresentationRuntime(definition, state).runtime.name)
             : definition.name,
         description: dynamicPresentation
-            ? ((state: GameState) => resolveLegacyPresentationRuntime(definition, state).runtime.description)
+            ? ((state: GameState) => resolveMaterializedPresentationRuntime(definition, state).runtime.description)
             : definition.description,
         slot: definition.slot,
         icon: definition.icon,
         baseVariables: { ...definition.baseVariables },
-        combat: deriveLegacyCombatProfile(definition),
-        capabilities: materializeLegacyCapabilityProviders(definition),
+        combat: deriveSkillDefinitionCombatProfile(definition),
+        capabilities: materializeSkillDefinitionCapabilityProviders(definition),
         execute: (state, attacker, target, activeUpgrades = [], context = {}) => {
             const traceMode = (context.traceMode as ResolutionTraceMode | undefined) || 'summary';
             const execution = resolveAndExecuteSkillRuntime(definition, state, attacker, target, activeUpgrades, traceMode, context);
@@ -2027,8 +2025,8 @@ export const materializeLegacySkillDefinition = (
         summon: definition.summon,
         deathDecalVariant: definition.deathDecalVariant,
         scenarios: getSkillScenarios(definition.id),
-        upgrades: materializeLegacyUpgrades(definition)
+        upgrades: materializeSkillDefinitionUpgrades(definition)
     };
-    legacy.intentProfile = legacy.intentProfile || buildSkillIntentProfile(legacy);
-    return legacy;
+    materialized.intentProfile = materialized.intentProfile || buildSkillIntentProfile(materialized);
+    return materialized;
 };

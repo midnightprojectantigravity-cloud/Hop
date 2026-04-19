@@ -1,8 +1,9 @@
 # UPA Guide
 
 Roadmap docs:
-- Active tracker: `docs/NEXT_LEVEL.md`
+- Current runtime law: `docs/STATUS.md`
 - Backlog: `docs/BALANCE_BACKLOG.md`
+- Historical tracker snapshot: `docs/NEXT_LEVEL.md`
 - Historical milestones: `docs/ROADMAP_HISTORY.md`
 - AI convergence milestone: `docs/archive/AI_CONVERGENCE_MILESTONE_2026-02-28.md`
 

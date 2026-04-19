@@ -23,11 +23,15 @@ export class TileResolver {
         return tile.baseId === 'LAVA' || traits.has('LAVA') || traits.has('FIRE');
     }
 
+    private static isToxicHazard(tile: Tile, traits: Set<string>): boolean {
+        return tile.baseId === 'TOXIC' || traits.has('TOXIC');
+    }
+
     private static appendAcaeTileInjection(
         combinedResult: TileHookResult,
         state: GameState,
         actor: Actor,
-        tileKind: 'lava' | 'fire' | 'wet' | 'miasma' | 'ice',
+        tileKind: 'lava' | 'toxic' | 'fire' | 'wet' | 'miasma' | 'ice',
         intensity: 'pass' | 'enter' | 'stay',
         message?: string
     ): void {
@@ -76,10 +80,37 @@ export class TileResolver {
 
         const traits = UnifiedTileService.getTraitsForTile(state, tile);
         let appliedHeatInjection = false;
+        const toxicHazard = this.isToxicHazard(tile, traits);
+        const fireHazard = this.isFireHazard(tile, traits);
 
         if (traits.has('HAZARDOUS') && !actor.isFlying) {
-            const fireProtected = this.isFireHazard(tile, traits) && this.hasFireProtection(actor);
-            if (this.isFireHazard(tile, traits) && !fireProtected) {
+            const fireProtected = fireHazard && this.hasFireProtection(actor);
+            if (toxicHazard) {
+                this.appendAcaeTileInjection(
+                    combinedResult,
+                    state,
+                    actor,
+                    'toxic',
+                    'enter',
+                    'Toxic fumes seep into your lungs.'
+                );
+                this.mergeResults(combinedResult, {
+                    effects: [
+                        {
+                            type: 'Damage',
+                            target: actor.id,
+                            amount: 99,
+                            reason: 'toxic_sink',
+                            damageClass: 'magical',
+                            damageSubClass: 'status',
+                            damageElement: 'poison'
+                        },
+                        { type: 'Juice', effect: 'lavaSink', target: actor.position }
+                    ],
+                    messages: [`Toxic sludge overwhelms you!`],
+                    interrupt: true
+                });
+            } else if (fireHazard && !fireProtected) {
                 this.appendAcaeTileInjection(
                     combinedResult,
                     state,
@@ -94,7 +125,24 @@ export class TileResolver {
                 // Damage conversion/healing is handled downstream by Damage resolution.
             } else {
                 const damage = 99;
-                if (tile.baseId === 'LAVA' || traits.has('LAVA')) {
+                if (toxicHazard) {
+                    this.mergeResults(combinedResult, {
+                        effects: [
+                            {
+                                type: 'Damage',
+                                target: actor.id,
+                                amount: damage,
+                                reason: 'toxic_sink',
+                                damageClass: 'true',
+                                damageSubClass: 'status',
+                                damageElement: 'poison'
+                            },
+                            { type: 'Juice', effect: 'lavaSink', target: actor.position }
+                        ],
+                        messages: [`Toxic sludge overwhelms you!`],
+                        interrupt: true
+                    });
+                } else if (tile.baseId === 'LAVA' || traits.has('LAVA')) {
                     this.mergeResults(combinedResult, {
                         effects: [
                             {
@@ -219,9 +267,28 @@ export class TileResolver {
         };
 
         // 1. Process Base Traits
+        const toxicHazard = this.isToxicHazard(tile, traits);
+        const fireHazard = this.isFireHazard(tile, traits);
         if (traits.has('HAZARDOUS') && !actor.isFlying && !ignoreGroundHazards) {
-            const fireProtected = this.isFireHazard(tile, traits) && this.hasFireProtection(actor);
-            if (this.isFireHazard(tile, traits) && !fireProtected) {
+            const fireProtected = fireHazard && this.hasFireProtection(actor);
+            if (toxicHazard) {
+                this.mergeResults(combinedResult, {
+                    effects: [
+                        {
+                            type: 'Damage',
+                            target: actor.id,
+                            amount: 99,
+                            reason: 'toxic_sink',
+                            damageClass: 'true',
+                            damageSubClass: 'status',
+                            damageElement: 'poison'
+                        },
+                        { type: 'Juice', effect: 'lavaSink', target: tile.position }
+                    ],
+                    messages: ['Consumed by Toxic sludge!'],
+                    interrupt: true
+                });
+            } else if (fireHazard && !fireProtected) {
                 this.appendAcaeTileInjection(
                     combinedResult,
                     state,
@@ -264,7 +331,13 @@ export class TileResolver {
                         },
                         { type: 'Juice', effect: 'lavaSink', target: tile.position }
                     ],
-                    messages: [(tile.baseId === 'LAVA' || traits.has('LAVA')) ? 'Sunk in Lava!' : 'Consumed by Void!'],
+                    messages: [
+                        toxicHazard
+                            ? 'Consumed by Toxic sludge!'
+                            : (tile.baseId === 'LAVA' || traits.has('LAVA'))
+                                ? 'Sunk in Lava!'
+                                : 'Consumed by Void!'
+                    ],
                     interrupt: true
                 });
             }
@@ -441,7 +514,9 @@ export class TileResolver {
 
         const traits = UnifiedTileService.getTraitsForTile(state, tile);
         // Traits
-        if ((tile.baseId === 'LAVA' || traits.has('LAVA')) && !actor.isFlying && !actor.statusEffects.some(s => s.type === 'fire_immunity')) {
+        if ((tile.baseId === 'TOXIC' || traits.has('TOXIC')) && !actor.isFlying) {
+            this.appendAcaeTileInjection(combinedResult, state, actor, 'toxic', 'stay', 'Toxic sludge thickens.');
+        } else if ((tile.baseId === 'LAVA' || traits.has('LAVA')) && !actor.isFlying && !actor.statusEffects.some(s => s.type === 'fire_immunity')) {
             this.appendAcaeTileInjection(combinedResult, state, actor, 'lava', 'stay', 'Molten heat builds up.');
         }
 

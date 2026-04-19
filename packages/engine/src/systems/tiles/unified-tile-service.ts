@@ -62,10 +62,13 @@ export const UnifiedTileService = {
         }
 
         // 2. Base ID Mappings (Fallback for lost traits during serialization)
-        if (tile.baseId === 'LAVA') {
+        if (tile.baseId === 'LAVA' || tile.baseId === 'TOXIC') {
             traits.add('HAZARDOUS');
             traits.add('LIQUID');
-            traits.add('LAVA' as TileTrait); // Added for visual targeting
+            traits.add((tile.baseId as TileTrait)); // Added for visual targeting
+            if (tile.baseId === 'TOXIC') {
+                traits.add('TOXIC' as TileTrait);
+            }
         }
         if (tile.baseId === 'WALL') {
             traits.add('BLOCKS_MOVEMENT');

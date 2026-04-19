@@ -30,6 +30,7 @@ describe('worldgen runtime session', () => {
             seed: 'worldgen-runtime-start',
             mapSize: { width: 9, height: 11 },
             mapShape: 'diamond' as const,
+            themeId: 'void' as const,
             includeDebug: false
         };
 
@@ -37,6 +38,7 @@ describe('worldgen runtime session', () => {
         const syncArtifact = compileStartRunArtifact(context);
 
         expect(sessionArtifact).toEqual(syncArtifact);
+        expect(sessionArtifact.theme).toBe('void');
     });
 
     it('matches sync pending-floor artifact compilation', () => {
@@ -46,7 +48,8 @@ describe('worldgen runtime session', () => {
             payload: {
                 loadoutId: 'VANGUARD',
                 mode: 'normal',
-                seed: 'worldgen-runtime-pending'
+                seed: 'worldgen-runtime-pending',
+                themeId: 'void'
             }
         });
 
@@ -56,6 +59,7 @@ describe('worldgen runtime session', () => {
             rngSeed: run.rngSeed,
             mapSize: { width: run.gridWidth, height: run.gridHeight },
             mapShape: run.mapShape || 'diamond',
+            themeId: run.theme,
             playerCarryover: {
                 hp: run.player.hp,
                 maxHp: run.player.maxHp,
@@ -81,5 +85,6 @@ describe('worldgen runtime session', () => {
         const syncArtifact = compilePendingFloorArtifact(context);
 
         expect(sessionResult.artifact).toEqual(syncArtifact);
+        expect(sessionResult.artifact.theme).toBe('void');
     });
 });

@@ -22,7 +22,7 @@ export const BIOME_VISUALS: Record<BiomeColor, BiomeVisualSpec> = {
   black: {
     label: 'Swamp / Wastes',
     floorAssetId: 'tile.void.floor.01',
-    hazardAssetId: 'tile.catacombs.lava.01'
+    hazardAssetId: 'tile.void.toxic.01'
   },
   red: {
     label: 'Mountains / Volcanic',

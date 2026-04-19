@@ -28,7 +28,7 @@ export function isBlockedByMovementObstacle(state: GameState, position: Point): 
  */
 export function isBlockedByLava(state: GameState, position: Point): boolean {
     const tile = state.tiles.get(pointToKey(position));
-    return tile?.baseId === 'LAVA' || tile?.traits.has('LIQUID') || false;
+    return tile?.baseId === 'LAVA' || tile?.baseId === 'TOXIC' || tile?.traits.has('LIQUID') || false;
 }
 
 /**
@@ -121,7 +121,7 @@ const buildObserverSenseContext = (
     };
 };
 
-const computeLegacyLineOfSight = (
+const computeFallbackLineOfSight = (
     state: GameState,
     origin: Point,
     target: Point,
@@ -155,9 +155,9 @@ export function validateLineOfSight(
     target: Point,
     options: LineOfSightOptions = {}
 ): { isValid: boolean; blockedBy?: 'wall' | 'actor' | 'lava'; blockedAt?: Point } {
-    const legacy = computeLegacyLineOfSight(state, origin, target, options);
+    const fallbackResult = computeFallbackLineOfSight(state, origin, target, options);
     const observer = resolveObserver(state, options);
-    if (!observer) return legacy;
+    if (!observer) return fallbackResult;
 
     const capabilityResult = resolveSenseLineOfSight({
         state,
@@ -169,7 +169,7 @@ export function validateLineOfSight(
         stopAtLava: options.stopAtLava ?? false,
         excludeActorId: options.excludeActorId,
         context: buildObserverSenseContext(state, observer, options.context),
-        evaluateLegacyLineOfSight: (overrides) => computeLegacyLineOfSight(state, origin, target, {
+        evaluateFallbackLineOfSight: (overrides) => computeFallbackLineOfSight(state, origin, target, {
             stopAtWalls: overrides?.stopAtWalls ?? options.stopAtWalls,
             stopAtActors: overrides?.stopAtActors ?? options.stopAtActors,
             stopAtLava: overrides?.stopAtLava ?? options.stopAtLava,
@@ -177,7 +177,7 @@ export function validateLineOfSight(
         })
     });
 
-    if (!capabilityResult.usedCapabilities) return legacy;
+    if (!capabilityResult.usedCapabilities) return fallbackResult;
     if (capabilityResult.isValid) return { isValid: true };
     return {
         isValid: false,
@@ -198,7 +198,7 @@ export function hasClearLineToActor(
     excludeActorId?: string,
     observer?: Actor | string
 ): boolean {
-    const strictLegacyEvaluator = (
+    const strictFallbackEvaluator = (
         overrides?: {
             stopAtWalls?: boolean;
             stopAtActors?: boolean;
@@ -227,7 +227,7 @@ export function hasClearLineToActor(
         ? resolveObserver(state, { observerId: observer })
         : observer;
 
-    if (!observerActor) return strictLegacyEvaluator().isValid;
+    if (!observerActor) return strictFallbackEvaluator().isValid;
 
     const capabilityResult = resolveSenseLineOfSight({
         state,
@@ -239,10 +239,10 @@ export function hasClearLineToActor(
         stopAtLava: false,
         excludeActorId,
         context: buildObserverSenseContext(state, observerActor),
-        evaluateLegacyLineOfSight: strictLegacyEvaluator
+        evaluateFallbackLineOfSight: strictFallbackEvaluator
     });
 
-    if (!capabilityResult.usedCapabilities) return strictLegacyEvaluator().isValid;
+    if (!capabilityResult.usedCapabilities) return strictFallbackEvaluator().isValid;
     return capabilityResult.isValid;
 }
 
@@ -251,7 +251,7 @@ export function hasClearLineToActor(
  */
 export function isHazardousTile(state: GameState, position: Point): { isHazard: boolean; isFireHazard: boolean } {
     const traits = UnifiedTileService.getTraitsAt(state, position);
-    const isHazard = traits.has('HAZARDOUS') || traits.has('LAVA') || traits.has('FIRE') || traits.has('VOID');
+    const isHazard = traits.has('HAZARDOUS') || traits.has('LAVA') || traits.has('TOXIC') || traits.has('FIRE') || traits.has('VOID');
     const isFireHazard = traits.has('LAVA') || traits.has('FIRE');
     return { isHazard, isFireHazard };
 }

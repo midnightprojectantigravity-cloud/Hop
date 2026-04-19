@@ -39,6 +39,7 @@ type GenerateInitialStateFn = (
     generationOptions?: {
         generationSpec?: GenerationSpecInput;
         generationState?: GenerationState;
+        themeId?: import('./types').FloorTheme;
     }
 ) => GameState;
 
@@ -194,7 +195,8 @@ export const resolvePendingStateAction = (
             s.mapShape,
             {
                 generationSpec: nextGenerationState.spec,
-                generationState: nextGenerationState
+                generationState: nextGenerationState,
+                themeId: s.theme
             }
         );
         next.ruleset = withResolvedIresRuleset({

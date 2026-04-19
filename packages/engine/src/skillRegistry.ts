@@ -7,7 +7,7 @@ import type { SkillDefinition } from './types';
 import type { SkillID } from './types/registry';
 import { hydrateSkillIntentProfiles } from './systems/skill-intent-profile';
 import { getCompositeSkillRuntimeRegistry } from './systems/composite-skill-bridge';
-import { getRuntimeSkillDefinition, getRuntimeSkillLegacyRegistry } from './systems/skill-runtime/bridge';
+import { getRuntimeSkillDefinition, getRuntimeSkillDefinitionRegistry } from './systems/skill-runtime/bridge';
 import { resolveSkillRuntime } from './systems/skill-runtime/resolve';
 import { GENERATED_COMPOSITIONAL_SKILLS } from './generated/skill-registry.generated';
 import { registerCapabilitySkillDefinitionResolver } from './systems/capabilities/cache';
@@ -16,17 +16,21 @@ import { resolveVirtualSkillDefinition } from './systems/skill-upgrade-resolutio
 import { hexEquals } from './hex';
 
 /**
- * A registry of all skills using the new Compositional Skill Framework.
+ * Residual TypeScript-authored compositional skills.
+ * Live runtime-authored skills are merged in through the runtime bridge below.
  */
 export const COMPOSITIONAL_SKILLS = GENERATED_COMPOSITIONAL_SKILLS;
 
 let skillIntentCoverageValidated = false;
 let capabilityResolverRegistered = false;
 
+// Compatibility boundary: shared engine consumers still ask `SkillRegistry`
+// for `SkillDefinition`-shaped objects, so runtime-authored skills are
+// materialized into that shape here and only here.
 const getBaseRegistry = (): Record<string, SkillDefinition> => ({
     ...(COMPOSITIONAL_SKILLS as Record<string, SkillDefinition>),
     ...getCompositeSkillRuntimeRegistry(),
-    ...getRuntimeSkillLegacyRegistry()
+    ...getRuntimeSkillDefinitionRegistry()
 });
 
 const ensureSkillIntentCoverageValidated = (registry: Record<string, SkillDefinition>): void => {
@@ -170,7 +174,7 @@ export const SkillRegistry = SkillRegistryBase as typeof SkillRegistryBase & Rec
 export const getSkillRange = SkillRegistry.getSkillRange;
 
 /**
- * Find a skill definition by ID. (Legacy helper kept for compatibility)
+ * Find a skill definition by ID.
  */
 export const getSkillDefinition = (id: string): SkillDefinition | undefined => {
     return SkillRegistry.get(id);

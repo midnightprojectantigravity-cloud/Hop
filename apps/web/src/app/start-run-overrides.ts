@@ -2,7 +2,7 @@ import {
   DEFAULT_START_RUN_MAP_SHAPE as ENGINE_DEFAULT_START_RUN_MAP_SHAPE,
   DEFAULT_START_RUN_MAP_SIZE as ENGINE_DEFAULT_START_RUN_MAP_SIZE,
 } from '@hop/engine';
-import type { Action, GridSize, MapShape } from '@hop/engine';
+import type { Action, FloorTheme, GridSize, MapShape } from '@hop/engine';
 
 export const DEFAULT_START_RUN_MAP_SIZE: GridSize = {
   ...ENGINE_DEFAULT_START_RUN_MAP_SIZE
@@ -56,6 +56,8 @@ export interface BuildStartRunPayloadOptions {
   date?: string;
   mapSize?: GridSize;
   mapShape?: MapShape;
+  themeId?: FloorTheme;
+  contentThemeId?: FloorTheme;
   mapSizeInputMode?: MapSizeInputMode;
 }
 
@@ -66,6 +68,8 @@ export const buildStartRunPayload = ({
   date,
   mapSize,
   mapShape,
+  themeId,
+  contentThemeId,
   mapSizeInputMode = 'usable'
 }: BuildStartRunPayloadOptions): StartRunPayload => {
   const resolvedMapShape: MapShape = mapShape === 'rectangle' ? 'rectangle' : 'diamond';
@@ -79,6 +83,8 @@ export const buildStartRunPayload = ({
     ...(seed ? { seed } : {}),
     ...(date ? { date } : {}),
     ...(resolvedMapSize ? { mapSize: resolvedMapSize } : {}),
-    ...(mapShape ? { mapShape } : {})
+    ...(mapShape ? { mapShape } : {}),
+    ...(themeId ? { themeId } : {}),
+    ...((contentThemeId || themeId) ? { contentThemeId: contentThemeId || themeId } : {})
   };
 };

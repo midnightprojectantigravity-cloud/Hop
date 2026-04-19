@@ -83,6 +83,8 @@ const buildStartRunSessionInput = (
                 gridWidth: context.mapSize?.width,
                 gridHeight: context.mapSize?.height,
                 mapShape: context.mapShape as GenerationMapShape | undefined,
+                theme: context.themeId,
+                contentTheme: context.contentThemeId || context.themeId,
                 generationSpec: context.generationSpec,
                 generationState: createGenerationState(runSeed, context.generationSpec)
             }
@@ -123,6 +125,8 @@ const buildPendingFloorSessionInput = (
             gridWidth: context.mapSize.width,
             gridHeight: context.mapSize.height,
             mapShape: context.mapShape as GenerationMapShape,
+            theme: context.themeId,
+            contentTheme: context.contentThemeId || context.themeId,
             generationSpec: advancedGenerationState.spec,
             generationState: advancedGenerationState
         }

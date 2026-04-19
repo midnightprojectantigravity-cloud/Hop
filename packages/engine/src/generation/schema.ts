@@ -1,3 +1,5 @@
+import type { FloorTheme } from '../types';
+
 export type AuthoringBinding = 'hard' | 'soft';
 
 export type RelaxableFeature =
@@ -297,7 +299,7 @@ export interface SpatialPlan {
 export interface ModuleTileStamp {
     dq: number;
     dr: number;
-    baseId: 'STONE' | 'WALL' | 'LAVA' | 'VOID';
+    baseId: 'STONE' | 'WALL' | 'LAVA' | 'VOID' | 'HAZARD';
 }
 
 export interface ModuleEnemySeed {
@@ -519,6 +521,8 @@ export interface CompilerSessionInput {
         gridWidth?: number;
         gridHeight?: number;
         mapShape?: GenerationMapShape;
+        theme?: FloorTheme;
+        contentTheme?: FloorTheme;
         generationSpec?: GenerationSpecInput;
         generationState?: GenerationState;
     };
@@ -661,6 +665,7 @@ export interface CompiledFloorArtifact {
     rulesetOverrides?: Record<string, unknown>;
     floor: number;
     theme: string;
+    contentTheme?: string;
     gridWidth: number;
     gridHeight: number;
     mapShape: GenerationMapShape;
@@ -693,6 +698,8 @@ export interface StartRunCompileContext {
     date?: string;
     mapSize?: { width: number; height: number };
     mapShape?: GenerationMapShape;
+    themeId?: FloorTheme;
+    contentThemeId?: FloorTheme;
     rulesetOverrides?: Record<string, unknown>;
     generationSpec?: GenerationSpecInput;
     includeDebug?: boolean;
@@ -704,6 +711,8 @@ export interface TransitionCompileContext {
     rngSeed?: string;
     mapSize: { width: number; height: number };
     mapShape: GenerationMapShape;
+    themeId?: FloorTheme;
+    contentThemeId?: FloorTheme;
     playerCarryover: {
         hp: number;
         maxHp: number;

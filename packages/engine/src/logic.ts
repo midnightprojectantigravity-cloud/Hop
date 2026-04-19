@@ -3,7 +3,7 @@
  * Follows the Command Pattern & Immutable State.
  * resolveEnemyActions and gameReducer are the primary entry points.
  */
-import type { GameState, Action, AtomicEffect, GridSize, MapShape } from './types';
+import type { GameState, Action, AtomicEffect, FloorTheme, GridSize, MapShape } from './types';
 import type { CompiledFloorArtifact, GenerationSpecInput, GenerationState } from './generation/schema';
 import { INITIAL_PLAYER_STATS, GRID_WIDTH, GRID_HEIGHT } from './constants';
 import { getNeighbors } from './hex';
@@ -222,7 +222,8 @@ const applyCompiledFloorArtifactToState = (
             floor: artifact.floor,
             upgrades: appliedLoadout.upgrades,
             rooms: artifact.rooms,
-            theme: getFloorTheme(artifact.floor),
+            theme: artifact.theme as FloorTheme,
+            contentTheme: (artifact.contentTheme || artifact.theme) as FloorTheme,
             commandLog: [],
             undoStack: [],
             rngSeed: artifact.runSeed,
@@ -279,7 +280,8 @@ const applyCompiledFloorArtifactToState = (
         pendingFrames: undefined,
         floor: artifact.floor,
         rooms: artifact.rooms,
-        theme: getFloorTheme(artifact.floor),
+        theme: artifact.theme as FloorTheme,
+        contentTheme: (artifact.contentTheme || artifact.theme) as FloorTheme,
         commandLog: [],
         undoStack: [],
         rngSeed: nextFloorSeed,
@@ -335,6 +337,8 @@ export const generateInitialState = (
     generationOptions?: {
         generationSpec?: GenerationSpecInput;
         generationState?: GenerationState;
+        themeId?: FloorTheme;
+        contentThemeId?: FloorTheme;
     }
 ): GameState => {
     ensureTacticalDataBootstrapped();
@@ -345,7 +349,8 @@ export const generateInitialState = (
     const resolvedMapConfig = resolveRunMapConfig(mapSize, mapShape);
 
     // Determine floor theme
-    const theme = getFloorTheme(floor);
+    const theme: FloorTheme = (generationOptions?.themeId || getFloorTheme(floor)) as FloorTheme;
+    const contentTheme: FloorTheme = (generationOptions?.contentThemeId || generationOptions?.themeId || getFloorTheme(floor)) as FloorTheme;
 
     const initialGenerationState = generationOptions?.generationState
         || createInitialCompilerGenerationState(initialSeed ?? actualSeed, generationOptions?.generationSpec);
@@ -353,6 +358,8 @@ export const generateInitialState = (
         gridWidth: resolvedMapConfig.width,
         gridHeight: resolvedMapConfig.height,
         mapShape: resolvedMapConfig.mapShape,
+        theme,
+        contentTheme,
         generationSpec: generationOptions?.generationSpec,
         generationState: initialGenerationState
     });
@@ -422,7 +429,8 @@ export const generateInitialState = (
         floor,
         upgrades,
         rooms: dungeon.rooms,
-        theme,
+        theme: compiledFloor.artifact.theme as FloorTheme,
+        contentTheme: (compiledFloor.artifact.contentTheme || compiledFloor.artifact.theme) as FloorTheme,
 
         // Command & Replay
         commandLog: [],

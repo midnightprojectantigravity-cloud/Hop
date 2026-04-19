@@ -2,6 +2,8 @@
 
 ## Status
 
+Status note: this tracker is historical. Current law lives in `docs/STATUS.md`, and the open checkboxes below are preserved as a record of the old maintenance board rather than active work items.
+
 As of March 27, 2026:
 
 - Trinity v2 and IRES are fully integrated live runtime.

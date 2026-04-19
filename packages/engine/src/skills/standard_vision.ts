@@ -59,7 +59,7 @@ export const STANDARD_VISION: SkillDefinition = {
                         maxRange: range
                     };
                 }
-                const los = query.evaluateLegacyLineOfSight({
+                const los = query.evaluateFallbackLineOfSight({
                     stopAtWalls: query.stopAtWalls,
                     stopAtActors: query.stopAtActors,
                     stopAtLava: query.stopAtLava,

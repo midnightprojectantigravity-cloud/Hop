@@ -23,6 +23,13 @@ export const BASE_TILES: Record<TileID, BaseTile> = {
         defaultTraits: new Set(['LIQUID', 'HAZARDOUS']),
         visual: { color: '#ff4400', icon: '🌋' }
     },
+    TOXIC: {
+        id: 'TOXIC',
+        name: 'Toxic Miasma',
+        description: 'Poisonous toxic liquid',
+        defaultTraits: new Set(['LIQUID', 'HAZARDOUS', 'TOXIC']),
+        visual: { color: '#3ddc84', icon: '☣️' }
+    },
     WALL: {
         id: 'WALL',
         name: 'Wall',

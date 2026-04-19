@@ -75,7 +75,7 @@ export const ENEMY_AWARENESS: SkillDefinition = {
                     };
                 }
 
-                const los = query.evaluateLegacyLineOfSight({
+                const los = query.evaluateFallbackLineOfSight({
                     stopAtWalls: query.stopAtWalls,
                     stopAtActors: query.stopAtActors,
                     stopAtLava: query.stopAtLava,
@@ -102,4 +102,3 @@ export const ENEMY_AWARENESS: SkillDefinition = {
     },
     upgrades: {}
 };
-

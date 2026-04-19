@@ -9,6 +9,7 @@ const summarizeState = (state: ReturnType<typeof generateInitialState>) => ({
     gridWidth: state.gridWidth,
     gridHeight: state.gridHeight,
     mapShape: state.mapShape,
+    theme: state.theme,
     player: {
         position: pointToKey(state.player.position),
         hp: state.player.hp,
@@ -54,6 +55,38 @@ const summarizeState = (state: ReturnType<typeof generateInitialState>) => ({
         : undefined
 });
 
+const normalizeHazardTileDigest = (digest: string): string =>
+    digest.replace(/:LAVA\b/g, ':HAZARD').replace(/:TOXIC\b/g, ':HAZARD');
+
+const summarizeArtifact = (artifact: ReturnType<typeof compileStartRunArtifact>) => ({
+    floor: artifact.floor,
+    gridWidth: artifact.gridWidth,
+    gridHeight: artifact.gridHeight,
+    mapShape: artifact.mapShape,
+    playerSpawn: pointToKey(artifact.playerSpawn),
+    stairsPosition: pointToKey(artifact.stairsPosition),
+    shrinePosition: artifact.shrinePosition ? pointToKey(artifact.shrinePosition) : undefined,
+    enemySpawns: [...artifact.enemySpawns]
+        .map(enemy => `${enemy.id}:${enemy.subtype}:${pointToKey(enemy.position)}`)
+        .sort(),
+    rooms: [...artifact.rooms]
+        .map(room => `${room.id}:${room.type}:${pointToKey(room.center)}`)
+        .sort(),
+    pathNetwork: {
+        mainLandmarkIds: artifact.pathNetwork.landmarks.filter(landmark => landmark.onPath).map(landmark => landmark.id).sort(),
+        hiddenLandmarkIds: artifact.pathNetwork.landmarks.filter(landmark => !landmark.onPath).map(landmark => landmark.id).sort(),
+        tacticalTileCount: artifact.pathNetwork.tacticalTileKeys.length,
+        visualTileCount: artifact.pathNetwork.visualTileKeys.length
+    },
+    tileDigest: normalizeHazardTileDigest(
+        Array.from(artifact.tileBaseIds)
+            .map((code, index) => `${index}:${code}`)
+            .join('|')
+    ),
+    theme: artifact.theme,
+    contentTheme: artifact.contentTheme
+});
+
 describe('worldgen artifact application parity', () => {
     it('matches START_RUN reducer output when applying a compiled start-run artifact', () => {
         const hub = gameReducer(generateInitialState(1, 'artifact-start-hub'), { type: 'EXIT_TO_HUB' });
@@ -64,7 +97,8 @@ describe('worldgen artifact application parity', () => {
             mode: 'normal',
             seed,
             mapSize: { width: hub.gridWidth, height: hub.gridHeight },
-            mapShape: hub.mapShape
+            mapShape: hub.mapShape,
+            themeId: 'void'
         });
 
         const artifactApplied = gameReducer(hub, {
@@ -76,7 +110,8 @@ describe('worldgen artifact application parity', () => {
             payload: {
                 loadoutId: 'VANGUARD',
                 mode: 'normal',
-                seed
+                seed,
+                themeId: 'void'
             }
         });
 
@@ -181,7 +216,8 @@ describe('worldgen artifact application parity', () => {
             mode: 'normal',
             seed: 'artifact-fog-reset-seed',
             mapSize: { width: seededHub.gridWidth, height: seededHub.gridHeight },
-            mapShape: seededHub.mapShape
+            mapShape: seededHub.mapShape,
+            themeId: 'void'
         });
 
         const artifactApplied = gameReducer(seededHub, {
@@ -193,11 +229,56 @@ describe('worldgen artifact application parity', () => {
             payload: {
                 loadoutId: 'VANGUARD',
                 mode: 'normal',
-                seed: 'artifact-fog-reset-seed'
+                seed: 'artifact-fog-reset-seed',
+                themeId: 'void'
             }
         });
 
         expect(artifactApplied.visibility?.playerFog.exploredTileKeys).not.toContain(staleExploredKey);
         expect(artifactApplied.visibility).toEqual(direct.visibility);
+    });
+
+    it('keeps the same arcade floor structure while swapping inferno hazards for void hazards', () => {
+        const seed = 'artifact-biome-split-seed';
+        const mapSize = { width: 9, height: 11 };
+        const mapShape = 'diamond' as const;
+
+        const infernoArtifact = compileStartRunArtifact({
+            loadoutId: 'VANGUARD',
+            mode: 'normal',
+            seed,
+            mapSize,
+            mapShape,
+            themeId: 'inferno',
+            contentThemeId: 'inferno'
+        });
+
+        const voidArtifact = compileStartRunArtifact({
+            loadoutId: 'HUNTER',
+            mode: 'normal',
+            seed,
+            mapSize,
+            mapShape,
+            themeId: 'void',
+            contentThemeId: 'inferno'
+        });
+
+        expect(summarizeArtifact(infernoArtifact).theme).toBe('inferno');
+        expect(summarizeArtifact(infernoArtifact).contentTheme).toBe('inferno');
+        expect(summarizeArtifact(voidArtifact).theme).toBe('void');
+        expect(summarizeArtifact(voidArtifact).contentTheme).toBe('inferno');
+
+        const normalizedInferno = {
+            ...summarizeArtifact(infernoArtifact),
+            theme: undefined,
+            contentTheme: undefined
+        };
+        const normalizedVoid = {
+            ...summarizeArtifact(voidArtifact),
+            theme: undefined,
+            contentTheme: undefined
+        };
+
+        expect(normalizedVoid).toEqual(normalizedInferno);
     });
 });

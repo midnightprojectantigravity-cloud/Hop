@@ -9,7 +9,7 @@ import type { AtomicEffectHandlerMap } from './types';
 import { addDyingEntityOnce, shouldLeaveCorpse } from './corpse-utils';
 import { isAbsorbableFireDamage, resolveAbsorbFireHealAmount } from './fire-absorb';
 
-const HAZARD_DAMAGE_REASONS = ['lava_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage'] as const;
+const HAZARD_DAMAGE_REASONS = ['lava_sink', 'toxic_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage'] as const;
 
 const hasReason = (reason: string | undefined, list: readonly string[]) => !!reason && list.includes(reason);
 const resolveDamageElement = (effect: { damageElement?: string; scoreEvent?: { damageElement?: string } }): string | undefined =>

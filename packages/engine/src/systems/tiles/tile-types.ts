@@ -40,6 +40,7 @@ export type TileTrait =
     | 'DAMAGING'       // Causes damage (Generic)
     | 'CORPSE'         // Persistent corpse marker for necromancy interactions
     | 'LAVA'           // Specific: Damaging + Liquid
+    | 'TOXIC'          // Specific: Damaging + Liquid + poison flavor
     | 'FIRE'           // Specific: Damaging + Flammable
     | 'VOID'           // Specific: Eternal vacuum
     | 'PIT';           // Specific: Instant death/falling

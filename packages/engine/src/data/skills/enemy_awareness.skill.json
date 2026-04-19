@@ -37,7 +37,7 @@
         },
         "requireEnemyObserver": true,
         "hardBlockWhenBlind": true,
-        "useLegacyLineOfSight": true
+        "useFallbackLineOfSight": true
       }
     ]
   },

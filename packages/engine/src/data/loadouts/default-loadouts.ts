@@ -38,7 +38,7 @@ export const DEFAULT_LOADOUT_DEFINITIONS: LoadoutCatalog = {
         name: 'Hunter',
         description: 'Ranged precision and traps.',
         startingUpgrades: [],
-        startingSkills: ['BASIC_MOVE', 'BASIC_ATTACK', 'FALCON_COMMAND', 'KINETIC_TRI_TRAP', 'WITHDRAWAL']
+        startingSkills: ['BASIC_MOVE', 'ARCHER_SHOT', 'FALCON_COMMAND', 'KINETIC_TRI_TRAP', 'WITHDRAWAL']
     },
     ASSASSIN: {
         id: 'ASSASSIN',

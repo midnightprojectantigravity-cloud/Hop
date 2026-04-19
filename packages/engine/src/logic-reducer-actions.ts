@@ -32,11 +32,13 @@ type ReducerDeps = {
         loadout?: Loadout,
         mapSize?: GridSize,
         mapShape?: MapShape,
-        generationOptions?: {
-            generationSpec?: GenerationSpecInput;
-            generationState?: GenerationState;
-        }
-    ) => GameState;
+            generationOptions?: {
+                generationSpec?: GenerationSpecInput;
+                generationState?: GenerationState;
+                themeId?: import('./types').FloorTheme;
+                contentThemeId?: import('./types').FloorTheme;
+            }
+        ) => GameState;
     generateHubState: () => GameState;
     warnTurnStackInvariant: (message: string, payload?: Record<string, unknown>) => void;
 };
@@ -177,13 +179,13 @@ export const resolveGameStateAction = (
         }
 
         case 'START_RUN': {
-            const { loadoutId, seed, mode, date, mapSize, mapShape, rulesetOverrides, generationSpec } = a.payload;
+            const { loadoutId, seed, mode, date, mapSize, mapShape, themeId, contentThemeId, rulesetOverrides, generationSpec } = a.payload;
             const loadout = DEFAULT_LOADOUTS[loadoutId];
             if (!loadout) return s;
             if (mode === 'daily') {
                 const dateKey = toDateKey(date);
                 const dailySeed = createDailySeed(dateKey);
-                const next = deps.generateInitialState(1, seed || dailySeed, undefined, undefined, loadout, mapSize, mapShape, { generationSpec });
+                const next = deps.generateInitialState(1, seed || dailySeed, undefined, undefined, loadout, mapSize, mapShape, { generationSpec, themeId, contentThemeId });
                 const mergedRuleset = resolveAcaeRuleset({
                     ...next,
                     ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)
@@ -209,7 +211,7 @@ export const resolveGameStateAction = (
                     intentPreview: buildIntentPreview(withVisibility)
                 };
             }
-            const next = deps.generateInitialState(1, seed, undefined, undefined, loadout, mapSize, mapShape, { generationSpec });
+            const next = deps.generateInitialState(1, seed, undefined, undefined, loadout, mapSize, mapShape, { generationSpec, themeId, contentThemeId });
             const mergedRuleset = resolveAcaeRuleset({
                 ...next,
                 ruleset: mergeRunRulesetOverrides(s.ruleset || next.ruleset, rulesetOverrides)

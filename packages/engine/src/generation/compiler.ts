@@ -1,4 +1,4 @@
-import type { Entity, GameState, MapShape, Point, Room } from '../types';
+import type { Entity, FloorTheme, GameState, MapShape, Point, Room } from '../types';
 import type { Tile } from '../systems/tiles/tile-types';
 import { FLOOR_THEMES, GRID_HEIGHT, GRID_WIDTH } from '../constants';
 import { createHex, getGridForShape, getMapRowBoundsForColumn, isTileInMapShape, pointToKey } from '../hex';
@@ -12,6 +12,7 @@ import { getBaseUnitDefinitionBySubtype } from '../systems/entities/base-unit-re
 import { instantiateActorFromDefinitionWithCursor, type PropensityRngCursor } from '../systems/entities/propensity-instantiation';
 import { createEnemy, getEnemySkillLoadout } from '../systems/entities/entity-factory';
 import { createDailySeed, toDateKey } from '../systems/run-objectives';
+import { resolveBiomeHazardTileId } from '../systems/biomes';
 import { registerCompilerPassApi } from './session';
 import { buildModuleRegistryIndex } from './modules';
 import { hexDistanceInt, hasClearLosInt, hexParity, hexRaycastInt } from './math/hex-int';
@@ -65,6 +66,8 @@ export interface DungeonGenerationOptions {
     gridWidth?: number;
     gridHeight?: number;
     mapShape?: MapShape;
+    theme?: FloorTheme;
+    contentTheme?: FloorTheme;
     generationSpec?: GenerationSpecInput;
     generationState?: GenerationState;
 }
@@ -111,6 +114,7 @@ interface ResolvedAuthoredFloor {
 interface CompilerSessionRuntimeState extends CompilerSessionState {
     resolvedMap?: { width: number; height: number; mapShape: MapShape };
     theme?: string;
+    contentTheme?: string;
     specSource?: GenerationSpecInput;
     generationStateValue?: GenerationState;
     familyId?: string;
@@ -137,18 +141,25 @@ const TILE_CODE_BY_ID = {
     STONE: 0,
     WALL: 1,
     LAVA: 2,
-    VOID: 3
+    VOID: 3,
+    TOXIC: 4
 } as const;
 
 const TILE_ID_BY_CODE: Record<number, keyof typeof TILE_CODE_BY_ID> = {
     0: 'STONE',
     1: 'WALL',
     2: 'LAVA',
-    3: 'VOID'
+    3: 'VOID',
+    4: 'TOXIC'
 };
 
 const themeDefaultClosure = (theme: string): 'WALL' | 'VOID' =>
     theme === 'inferno' ? 'WALL' : 'VOID';
+
+const resolveAuthoredBaseId = (baseId: string, appliedTheme?: FloorTheme): 'STONE' | 'WALL' | 'LAVA' | 'VOID' | 'TOXIC' => {
+    if (baseId === 'HAZARD') return resolveBiomeHazardTileId(appliedTheme);
+    return baseId as 'STONE' | 'WALL' | 'LAVA' | 'VOID' | 'TOXIC';
+};
 
 const buildClaimKeySet = (
     claims: SpatialClaim[],
@@ -180,7 +191,7 @@ const stableStringify = (value: unknown): string => {
     return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(',')}}`;
 };
 
-const createTile = (baseId: 'STONE' | 'WALL' | 'LAVA' | 'VOID', position: Point): Tile => ({
+const createTile = (baseId: 'STONE' | 'WALL' | 'LAVA' | 'VOID' | 'TOXIC', position: Point): Tile => ({
     baseId,
     position,
     traits: new Set(BASE_TILES[baseId].defaultTraits),
@@ -504,7 +515,7 @@ const resolveFloorIntent = (
     return {
         floor,
         role,
-        theme: authoredFloor?.theme || options.theme,
+        theme: options.theme || authoredFloor?.theme || getFloorTheme(floor),
         board: {
             width: options.width,
             height: options.height,
@@ -1052,7 +1063,8 @@ const realizeArenaArtifact = (
     floor: number,
     _seed: string,
     modulePlan: ModulePlan,
-    authoredFloor: AuthoredFloor | undefined
+    authoredFloor: AuthoredFloor | undefined,
+    appliedTheme: FloorTheme
 ): {
     tiles: Map<string, Tile>;
     spawnPositions: Point[];
@@ -1075,7 +1087,7 @@ const realizeArenaArtifact = (
         }
         for (const stamp of module.tileStamps) {
             const point = toWorld(placement.anchor, stamp);
-            tileMap.set(pointToKey(point), createTile(stamp.baseId, point));
+            tileMap.set(pointToKey(point), createTile(resolveAuthoredBaseId(stamp.baseId, appliedTheme), point));
         }
     }
 
@@ -1083,7 +1095,7 @@ const realizeArenaArtifact = (
         const point = createHex(stamp.dq, stamp.dr);
         if (!tileMap.has(pointToKey(point))) continue;
         reservedKeys.add(pointToKey(point));
-        tileMap.set(pointToKey(point), createTile(stamp.baseId, point));
+        tileMap.set(pointToKey(point), createTile(resolveAuthoredBaseId(stamp.baseId, appliedTheme), point));
     }
 
     const { spawnPositions } = resolveArenaSpawnPositions(arena, tileMap, map, reservedKeys);
@@ -2144,7 +2156,8 @@ const applyEnvironmentalPressure = (
     intent: FloorIntentRequest,
     seed: string,
     authoredFloor?: AuthoredFloor,
-    claims: SpatialClaim[] = []
+    claims: SpatialClaim[] = [],
+    appliedTheme?: FloorTheme
 ): { tiles: Map<string, Tile>; pathNetwork: GeneratedPathNetwork; diagnostics: string[] } => {
     const nextTiles = new Map(tiles);
     const clusters: EnvironmentalPressureCluster[] = [];
@@ -2253,7 +2266,7 @@ const applyEnvironmentalPressure = (
 
         const routeMembership = resolveTileRouteMembership(pathNetwork, centerKey);
         const clusterKeys = [centerKey];
-        nextTiles.set(centerKey, createTile('LAVA', centerTile.position));
+        nextTiles.set(centerKey, createTile(resolveBiomeHazardTileId(appliedTheme), centerTile.position));
         usedTileKeys.add(centerKey);
 
         const allowSecondTile = intent.role === 'pressure_spike' || intent.role === 'elite';
@@ -2270,7 +2283,7 @@ const applyEnvironmentalPressure = (
                 });
             if (secondaryKey) {
                 const secondaryTile = nextTiles.get(secondaryKey)!;
-                nextTiles.set(secondaryKey, createTile('LAVA', secondaryTile.position));
+                nextTiles.set(secondaryKey, createTile(resolveBiomeHazardTileId(appliedTheme), secondaryTile.position));
                 usedTileKeys.add(secondaryKey);
                 clusterKeys.push(secondaryKey);
             }
@@ -2698,7 +2711,7 @@ const buildArtifactDigest = (
 const emptyArtifact = (
     floor: number,
     seed: string,
-    options: { width: number; height: number; mapShape: MapShape; theme: string },
+    options: { width: number; height: number; mapShape: MapShape; theme: string; contentTheme?: string },
     generationState: GenerationState,
     mode: CompiledFloorArtifact['mode'] = 'floor_transition',
     debugSnapshot?: GenerationDebugSnapshot
@@ -2707,6 +2720,7 @@ const emptyArtifact = (
     runSeed: generationState.runSeed || seed,
     floor,
     theme: options.theme,
+    ...(options.contentTheme ? { contentTheme: options.contentTheme } : {}),
     gridWidth: options.width,
     gridHeight: options.height,
     mapShape: options.mapShape as GenerationMapShape,
@@ -2734,7 +2748,7 @@ const encodeTileBaseIds = (
         .sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)));
     return Uint8Array.from(grid.map(point => {
         const tile = tiles.get(pointToKey(point));
-        const baseId = tile?.baseId === 'WALL' || tile?.baseId === 'LAVA' || tile?.baseId === 'VOID'
+        const baseId = tile?.baseId === 'WALL' || tile?.baseId === 'LAVA' || tile?.baseId === 'VOID' || tile?.baseId === 'TOXIC'
             ? tile.baseId
             : 'STONE';
         return TILE_CODE_BY_ID[baseId];
@@ -3014,7 +3028,7 @@ const failRuntimeState = (
     state: CompilerSessionRuntimeState,
     failure: GenerationFailure
 ): CompilerSessionRuntimeState => {
-    if (!state.resolvedMap || !state.theme || !state.generationStateValue) {
+    if (!state.resolvedMap || !state.theme || !state.contentTheme || !state.generationStateValue) {
         throw new Error(`Cannot finalize compiler failure ${failure.code} before normalizeSpec.`);
     }
 
@@ -3036,7 +3050,8 @@ const failRuntimeState = (
         state.input.seed,
         {
             ...state.resolvedMap,
-            theme: state.theme
+            theme: state.theme,
+            contentTheme: state.contentTheme
         },
         generationState,
         'floor_transition',
@@ -3077,7 +3092,8 @@ const runCompilerPass = (
 
     switch (pass) {
         case 'normalizeSpec': {
-            const theme = getFloorTheme(state.input.floor);
+            const theme = (state.input.options?.theme || getFloorTheme(state.input.floor)) as FloorTheme;
+            const contentTheme = (state.input.options?.contentTheme || state.input.options?.theme || getFloorTheme(state.input.floor)) as FloorTheme;
             const spec = defaultSpecForCompile(state.input.options?.generationSpec || state.input.options?.generationState?.spec);
             const lintFindings = lintGenerationSpecInput(spec);
             const generationState = ensureGenerationState(
@@ -3099,6 +3115,7 @@ const runCompilerPass = (
                 ...state,
                 resolvedMap,
                 theme,
+                contentTheme,
                 specSource: spec,
                 generationStateValue: generationState,
                 familyId,
@@ -3131,14 +3148,14 @@ const runCompilerPass = (
         case 'emitPathProgram':
             return state;
         case 'resolveFloorIntent':
-            if (!state.generationStateValue || !state.resolvedMap || !state.theme) return state;
+            if (!state.generationStateValue || !state.resolvedMap || !state.contentTheme) return state;
             return {
                 ...state,
                 intent: resolveFloorIntent(state.input.floor, state.generationStateValue, {
                     width: state.resolvedMap.width,
                     height: state.resolvedMap.height,
                     mapShape: state.resolvedMap.mapShape,
-                    theme: state.theme
+                    theme: state.contentTheme
                 }, state.authoredFloor)
             };
         case 'resolveNarrativeSceneRequest':
@@ -3164,8 +3181,8 @@ const runCompilerPass = (
                 spatialBudget: budget
             };
         case 'embedSpatialPlan':
-            if (!state.arena || !state.blueprint) return state;
-            const embedded = embedSpatialPlan(state.arena, state.blueprint, state.authoredFloor, state.theme || 'inferno', state.input.seed);
+            if (!state.arena || !state.blueprint || !state.contentTheme) return state;
+            const embedded = embedSpatialPlan(state.arena, state.blueprint, state.authoredFloor, state.contentTheme, state.input.seed);
             if ('stage' in embedded) {
                 return failRuntimeState(state, embedded);
             }
@@ -3175,11 +3192,11 @@ const runCompilerPass = (
                 spatialPlan
             } as CompilerSessionRuntimeState;
         case 'resolveModulePlan':
-            if (!state.blueprint || !state.theme || !state.arena || !state.spatialPlan) return state;
+            if (!state.blueprint || !state.contentTheme || !state.arena || !state.spatialPlan) return state;
             const modulePlan = resolveModulePlan(
                 state.blueprint,
                 state.authoredFloor,
-                state.theme,
+                state.contentTheme,
                 state.arena,
                 state.spatialPlan,
                 state.input.seed
@@ -3198,14 +3215,15 @@ const runCompilerPass = (
                 claims: registerSpatialClaims(state.modulePlan)
             };
         case 'realizeArenaArtifact':
-            if (!state.arena || !state.modulePlan || !state.resolvedMap) return state;
+            if (!state.arena || !state.modulePlan || !state.resolvedMap || !state.theme) return state;
             const realized = realizeArenaArtifact(
                 state.arena,
                 state.resolvedMap,
                 state.input.floor,
                 state.input.seed,
                 state.modulePlan,
-                state.authoredFloor
+                state.authoredFloor,
+                state.theme as FloorTheme
             );
             return {
                 ...state,
@@ -3224,10 +3242,10 @@ const runCompilerPass = (
                 sceneSignature: buildSceneSignature(state.sceneRequest, state.intent, state.modulePlan)
             } as CompilerSessionRuntimeState;
         case 'closeUnresolvedGaskets':
-            if (!state.realizedTiles || !state.theme || !state.modulePlan) return state;
+            if (!state.realizedTiles || !state.contentTheme || !state.modulePlan) return state;
             return {
                 ...state,
-                realizedTiles: closeUnresolvedGaskets(state.realizedTiles, state.theme, state.modulePlan, state.claims || [])
+                realizedTiles: closeUnresolvedGaskets(state.realizedTiles, state.contentTheme, state.modulePlan, state.claims || [])
             } as CompilerSessionRuntimeState;
         case 'classifyPathLandmarks':
             if (!state.arena || !state.blueprint || !state.spatialPlan || !state.modulePlan || !state.realizedTiles) return state;
@@ -3278,7 +3296,7 @@ const runCompilerPass = (
                 pathDiagnosticsValue: visualPath.diagnostics
             } as CompilerSessionRuntimeState;
         case 'applyEnvironmentalPressure':
-            if (!state.arena || !state.realizedTiles || !state.pathNetworkValue || !state.intent || !state.resolvedMap) return state;
+            if (!state.arena || !state.realizedTiles || !state.pathNetworkValue || !state.intent || !state.resolvedMap || !state.theme) return state;
             const pressured = applyEnvironmentalPressure(
                 state.arena,
                 state.realizedTiles,
@@ -3286,7 +3304,8 @@ const runCompilerPass = (
                 state.intent,
                 state.input.seed,
                 state.authoredFloor,
-                state.claims || []
+                state.claims || [],
+                state.theme as FloorTheme
             );
             const pressuredSpawnTopology = resolveArenaSpawnPositions(
                 state.arena,
@@ -3329,7 +3348,7 @@ const runCompilerPass = (
                 }))
             } as CompilerSessionRuntimeState;
         case 'finalizeGenerationState':
-            if (!state.resolvedMap || !state.theme || !state.generationStateValue || !state.arena || !state.modulePlan || !state.realizedTiles || !state.spawnPositions || !state.rooms || !state.sceneSignature || !state.verificationReport || !state.verificationDigest || !state.artifactDigest || !state.pathNetworkValue) {
+            if (!state.resolvedMap || !state.theme || !state.contentTheme || !state.generationStateValue || !state.arena || !state.modulePlan || !state.realizedTiles || !state.spawnPositions || !state.rooms || !state.sceneSignature || !state.verificationReport || !state.verificationDigest || !state.artifactDigest || !state.pathNetworkValue) {
                 return state;
             }
             const pathSummary = buildPathSummary(state.pathNetworkValue);
@@ -3376,6 +3395,7 @@ const runCompilerPass = (
                 runSeed: nextGenerationState.runSeed,
                 floor: state.input.floor,
                 theme: state.theme,
+                contentTheme: state.contentTheme || state.input.options?.contentTheme || state.input.options?.theme,
                 gridWidth: state.resolvedMap.width,
                 gridHeight: state.resolvedMap.height,
                 mapShape: state.resolvedMap.mapShape,
@@ -3452,7 +3472,8 @@ export const compileStandaloneFloor = (
     const spec = defaultSpecForCompile(options?.generationSpec || options?.generationState?.spec);
     const { familyId, spec: authoredFloor } = resolveAuthoredFloor(floor, spec);
     const resolvedMap = expandMapConfigForAuthoredFloor(resolveMapConfig(options), authoredFloor);
-    const theme = getFloorTheme(floor);
+    const theme = (options?.theme || authoredFloor?.theme || getFloorTheme(floor)) as FloorTheme;
+    const contentTheme = (options?.contentTheme || theme) as FloorTheme;
     const lintFindings = lintGenerationSpecInput(spec);
     const generationState = ensureGenerationState(
         options?.generationState,
@@ -3496,7 +3517,7 @@ export const compileStandaloneFloor = (
             suggestedRelaxations: failure.suggestedRelaxations,
             diagnostics: failure.diagnostics
         },
-        artifact: emptyArtifact(floor, seed, { ...resolvedMap, theme }, generationState, 'floor_transition', debugSnapshot),
+        artifact: emptyArtifact(floor, seed, { ...resolvedMap, theme, contentTheme }, generationState, 'floor_transition', debugSnapshot),
         ...(debugSnapshot ? { debugSnapshot } : {}),
         failure
     });
@@ -3523,7 +3544,7 @@ export const compileStandaloneFloor = (
         width: resolvedMap.width,
         height: resolvedMap.height,
         mapShape: resolvedMap.mapShape,
-        theme
+        theme: contentTheme
     }, authoredFloor);
     const sceneRequest = resolveNarrativeSceneRequest(intent, generationState);
     const blueprint = buildTopologicalBlueprint(intent, authoredFloor);
@@ -3566,7 +3587,7 @@ export const compileStandaloneFloor = (
         });
     }
 
-    const embedded = embedSpatialPlan(arena, blueprint, authoredFloor, theme, seed);
+    const embedded = embedSpatialPlan(arena, blueprint, authoredFloor, contentTheme, seed);
     if ('stage' in embedded) {
         const sceneSignature = buildSceneSignature(sceneRequest, intent, { placements: [] });
         return failWith(embedded, {
@@ -3599,7 +3620,7 @@ export const compileStandaloneFloor = (
         });
     }
     const { spatialPlan } = embedded;
-    const modulePlan = resolveModulePlan(blueprint, authoredFloor, theme, arena, spatialPlan, seed);
+    const modulePlan = resolveModulePlan(blueprint, authoredFloor, contentTheme, arena, spatialPlan, seed);
     if ('stage' in modulePlan) {
         const sceneSignature = buildSceneSignature(sceneRequest, intent, { placements: [] });
         return failWith(modulePlan, {
@@ -3631,11 +3652,12 @@ export const compileStandaloneFloor = (
         floor,
         seed,
         modulePlan,
-        authoredFloor
+        authoredFloor,
+        theme
     );
     const { anchors } = realizeSceneEvidence(sceneRequest, modulePlan, arena);
     const sceneSignature = buildSceneSignature(sceneRequest, intent, modulePlan);
-    const closedTiles = closeUnresolvedGaskets(realizedTiles, theme, modulePlan, claims);
+    const closedTiles = closeUnresolvedGaskets(realizedTiles, contentTheme, modulePlan, claims);
     const classified = buildPathLandmarks(arena, closedTiles, blueprint, spatialPlan, modulePlan, anchors, authoredFloor);
     const tacticalPath = buildTacticalPathNetwork(closedTiles, classified.landmarks, intent.routeProfile);
     if ('stage' in tacticalPath) {
@@ -3662,7 +3684,8 @@ export const compileStandaloneFloor = (
         intent,
         seed,
         authoredFloor,
-        claims
+        claims,
+        theme
     );
     const pathNetwork = pressured.pathNetwork;
     const pathDiagnostics = pressured.diagnostics;
@@ -3728,6 +3751,7 @@ export const compileStandaloneFloor = (
         runSeed: nextGenerationState.runSeed,
         floor,
         theme,
+        contentTheme,
         gridWidth: resolvedMap.width,
         gridHeight: resolvedMap.height,
         mapShape: resolvedMap.mapShape,
@@ -3843,6 +3867,8 @@ export const compileStartRunArtifact = (
         gridWidth: resolvedMap.width,
         gridHeight: resolvedMap.height,
         mapShape: resolvedMap.mapShape,
+        theme: context.themeId,
+        contentTheme: context.contentThemeId || context.themeId,
         generationSpec: context.generationSpec,
         generationState: initialGenerationState
     });
@@ -3888,6 +3914,8 @@ export const compilePendingFloorArtifact = (
         gridWidth: context.mapSize.width,
         gridHeight: context.mapSize.height,
         mapShape: context.mapShape as MapShape,
+        theme: context.themeId,
+        contentTheme: context.contentThemeId || context.themeId,
         generationSpec: advancedGenerationState.spec,
         generationState: advancedGenerationState
     });

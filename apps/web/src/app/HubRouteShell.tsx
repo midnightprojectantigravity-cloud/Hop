@@ -4,6 +4,7 @@ import type { UiPreferencesV2 } from './ui-preferences';
 import type { TutorialOnboardingState, TutorialProgress, TutorialSession } from './tutorial/tutorial-state-machine';
 import { shouldShowTutorialOnboarding } from './tutorial/tutorial-state-machine';
 import { TutorialOnboardingPrompt } from './tutorial/tutorial-step-overlay';
+import { ArcadeHub } from '../components/ArcadeHub';
 import {
   LazyHubScreen,
   LazyLeaderboardScreen,
@@ -11,7 +12,7 @@ import {
   LazyTutorialReplayScreen
 } from './lazy-screens';
 import { ScreenTransitionShell } from './screen-transition-shell';
-import { AppScreenFallback, ArcadeSplashGate, WorldgenErrorOverlay, type WorldgenUiError } from './route-shell-shared';
+import { AppScreenFallback, WorldgenErrorOverlay, type WorldgenUiError } from './route-shell-shared';
 
 export const HubRouteShell = ({
   gameState,
@@ -52,14 +53,8 @@ export const HubRouteShell = ({
   onSkipTutorial,
   worldgenUiError,
   worldgenProgressLabel,
-  worldgenStatusLine,
   onDismissWorldgenError,
-  worldgenInitialized,
-  worldgenWarmState,
-  arcadeSplashWaitingForReady,
-  showArcadeDelayedPulse,
-  onEnterArcadeSplash,
-  onOpenHubFromArcadeSplash
+  onLaunchArcade
 }: {
   gameState: GameState;
   homePath: string;
@@ -103,10 +98,7 @@ export const HubRouteShell = ({
   onDismissWorldgenError: () => void;
   worldgenInitialized: boolean;
   worldgenWarmState: 'idle' | 'warming' | 'ready' | 'error';
-  arcadeSplashWaitingForReady: boolean;
-  showArcadeDelayedPulse: boolean;
-  onEnterArcadeSplash: () => void;
-  onOpenHubFromArcadeSplash: () => void;
+  onLaunchArcade: (loadoutId: string, themeId: import('@hop/engine').FloorTheme, contentThemeId: import('@hop/engine').FloorTheme) => void;
 }) => {
   if (dedicatedRoutesEnabled && isSettingsRoute) {
     return (
@@ -163,15 +155,9 @@ export const HubRouteShell = ({
     return (
       <>
         <ScreenTransitionShell motionMode={uiPreferences.motionMode} screenId="arcade-home">
-          <ArcadeSplashGate
-            worldgenInitialized={worldgenInitialized}
-            worldgenWarmState={worldgenWarmState}
-            waitingForReady={arcadeSplashWaitingForReady}
-            showDelayedPulse={showArcadeDelayedPulse}
-            statusLine={worldgenStatusLine || worldgenProgressLabel}
-            error={worldgenUiError?.message}
-            onStartArcade={onEnterArcadeSplash}
-            onOpenHub={onOpenHubFromArcadeSplash}
+          <ArcadeHub
+            onBack={() => navigateTo(hubPath)}
+            onLaunchArcade={onLaunchArcade}
           />
         </ScreenTransitionShell>
         <WorldgenErrorOverlay

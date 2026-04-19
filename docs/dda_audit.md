@@ -3,6 +3,10 @@
 > **Scope:** Full engine codebase (`packages/engine/src/`) and authoring tools (`apps/web/src/app/DungeonLabScreen.tsx`)
 > **Date:** 2026-04-01
 
+Status note: this audit predates the latest runtime-skill migration and docs cleanup pass. Its structural findings are still useful, but the skill-system sections should be read with the current repo reality in mind: many live skills are already runtime-authored JSON definitions, runtime metadata is generated, and the engine is now a mixed legacy/runtime authoring model rather than a purely TypeScript-authored one.
+
+Biome note: the arcade implementation now separates authored content from applied biome. The run content family stays inferno-authored, while `themeId` chooses the applied biome hazard flavor (`inferno` lava or `void` toxic) and `contentThemeId` keeps the 10-floor layout consistent across both choices.
+
 ---
 
 ## Executive Summary

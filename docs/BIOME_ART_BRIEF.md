@@ -29,7 +29,7 @@ This project uses a hybrid visual model:
 Required files: `biome.<theme>.floor.01.webp`, `biome.<theme>.floor.02.webp`, `biome.<theme>.floor.03.webp`.
 
 2. Terrain hazards (only terrain hazards, not status effects)
-Required file (example): `biome.<theme>.hazard.lava.01.webp`. Optional variants: `.02`, `.03`.
+Required files (examples): `biome.<theme>.hazard.lava.01.webp` and `biome.<theme>.hazard.toxic.01.webp`. Optional variants: `.02`, `.03`.
 
 3. Clutter sprites (transparent WebP)
 Target subjects: debris, cracked slabs, rubble, bones, roots, dead vegetation, ruins. Do not produce wall chunks/blockers.
@@ -53,7 +53,7 @@ File pattern: `biome.<theme>.transition.<assetName>.01.webp` (+ optional `.02`, 
 
 ## Naming Matrix
 1. Floor: `biome.<theme>.floor.01.webp`, `biome.<theme>.floor.02.webp`, `biome.<theme>.floor.03.webp`
-2. Terrain hazard: `biome.<theme>.hazard.lava.01.webp` (+ optional `.02`, `.03`)
+2. Terrain hazard: `biome.<theme>.hazard.lava.01.webp` or `biome.<theme>.hazard.toxic.01.webp` (+ optional `.02`, `.03`)
 3. Clutter: `biome.<theme>.clutter.<assetName>.01.webp` (+ optional `.02`, `.03`)
 4. Transition: `biome.<theme>.transition.<assetName>.01.webp` (+ optional `.02`, `.03`)
 

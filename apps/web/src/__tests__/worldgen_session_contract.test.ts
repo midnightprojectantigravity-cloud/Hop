@@ -14,7 +14,8 @@ describe('worldgen session contract', () => {
     expect(source).toContain('ensureWorldgenReady');
     expect(source).toContain('worldgenWarmState');
     expect(source).toContain('compileRunStart');
-    expect(source).toContain('handleEnterArcadeSplash');
-    expect(source).toContain('handleOpenHubFromArcadeSplash');
+    expect(source).not.toContain('handleEnterArcadeSplash');
+    expect(source).not.toContain('handleOpenHubFromArcadeSplash');
+    expect(source).not.toContain('resolveArcadeSplashStartRunRequest');
   });
 });

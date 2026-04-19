@@ -45,11 +45,13 @@ export const resolveBoardTileVisualFlags = (
         const traits = UnifiedTileService.getTraitsAt(gameState, hex);
         const isWall = traits.has('BLOCKS_MOVEMENT') && traits.has('BLOCKS_LOS');
         const isVoid = tile?.baseId === 'VOID' || traits.has('VOID');
-        const hasLava = traits.has('LAVA') || (traits.has('HAZARDOUS') && traits.has('LIQUID'));
+        const hasLava = tile?.baseId === 'LAVA' || traits.has('LAVA');
+        const hasToxic = tile?.baseId === 'TOXIC' || traits.has('TOXIC');
         const hasFire = traits.has('FIRE');
         out.set(key, {
             isWall,
             isLava: !isWall && !isVoid && hasLava,
+            isToxic: !isWall && !isVoid && hasToxic,
             isFire: !isWall && !isVoid && hasFire,
             isVoid: !isWall && isVoid
         });

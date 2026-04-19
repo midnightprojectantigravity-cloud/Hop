@@ -312,9 +312,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const interactionTiles = useMemo<InteractionTileModel[]>(() => (
         cells.map((hex) => {
             const tileKey = pointToKey(hex);
-            const flags = tileVisualFlags.get(tileKey) || { isWall: false, isLava: false, isFire: false, isVoid: false };
+            const flags = tileVisualFlags.get(tileKey) || { isWall: false, isLava: false, isToxic: false, isFire: false, isVoid: false };
             const isWall = flags.isWall;
             const isLava = flags.isLava;
+            const isToxic = flags.isToxic;
             const isFire = flags.isFire;
             const isVoid = flags.isVoid;
             const isMoveHighlight =
@@ -328,16 +329,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     && !isWall
                     && !isVoid
                     && !isLava
+                    && !isToxic
                     && !isFire
                 );
             const isSkillHighlight = !!selectedSkillId && selectedSkillTargetSet.has(tileKey);
             const renderWallTile = isWall && !mountainCoveredWallKeys.has(tileKey);
-            const interactionOnly = hybridInteractionLayerEnabled && !renderWallTile && !isVoid;
+            const interactionOnly = hybridInteractionLayerEnabled && !renderWallTile && !isVoid && !isLava && !isToxic && !isFire;
             const isStairs = tileKey === stairsKey;
             const isShrine = shrineKey ? tileKey === shrineKey : false;
             const tileAssetId = resolveTileAssetId({
                 isWall: renderWallTile,
                 isLava,
+                isToxic,
                 isFire,
                 isVoid,
                 isStairs,

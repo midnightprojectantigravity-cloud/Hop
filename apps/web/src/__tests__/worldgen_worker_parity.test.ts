@@ -25,6 +25,8 @@ const summarizeState = (state: ReturnType<typeof generateInitialState>) => ({
     height: state.gridHeight,
     shape: state.mapShape
   },
+  theme: state.theme,
+  contentTheme: state.contentTheme,
   player: {
     position: pointToKey(state.player.position),
     hp: state.player.hp,
@@ -70,7 +72,9 @@ describe('worldgen worker parity', () => {
       mode: 'normal',
       seed: 'web-worker-parity-start',
       mapSize: DEFAULT_START_RUN_MAP_SIZE,
-      mapShape: DEFAULT_START_RUN_MAP_SHAPE
+      mapShape: DEFAULT_START_RUN_MAP_SHAPE,
+      themeId: 'void',
+      contentThemeId: 'inferno'
     });
 
     const context = buildStartRunCompileContext({
@@ -80,6 +84,8 @@ describe('worldgen worker parity', () => {
       date: payload.date,
       mapSize: payload.mapSize,
       mapShape: payload.mapShape,
+      themeId: payload.themeId,
+      contentThemeId: payload.contentThemeId,
       generationSpec: payload.generationSpec,
       includeDebug: false
     });

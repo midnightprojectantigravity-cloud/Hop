@@ -910,7 +910,7 @@ export interface SenseQuery {
     stopAtLava: boolean;
     distance: number;
     context?: Record<string, unknown>;
-    evaluateLegacyLineOfSight: (
+    evaluateFallbackLineOfSight: (
         overrides?: Partial<Pick<SenseQuery, 'stopAtWalls' | 'stopAtActors' | 'stopAtLava' | 'excludeActorId'>>
     ) => SenseLineOfSightResult;
 }
@@ -1247,6 +1247,7 @@ export interface GameState {
     // Procedural generation
     rooms?: Room[];
     theme?: FloorTheme;
+    contentTheme?: FloorTheme;
 
     // Command & Replay (Goal 2)
     commandLog: Command[];
@@ -1346,7 +1347,7 @@ export type Action =
     | { type: 'ADVANCE_TURN' }
     | { type: 'LOAD_STATE'; payload: GameState }
     | { type: 'APPLY_WORLDGEN_ARTIFACT'; payload: CompiledFloorArtifact }
-    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string; mode?: 'normal' | 'daily'; date?: string; mapSize?: GridSize; mapShape?: MapShape; rulesetOverrides?: RunRulesetOverrides; generationSpec?: GenerationSpecInput } }
+    | { type: 'START_RUN'; payload: { loadoutId: string; seed?: string; mode?: 'normal' | 'daily'; date?: string; mapSize?: GridSize; mapShape?: MapShape; themeId?: FloorTheme; contentThemeId?: FloorTheme; rulesetOverrides?: RunRulesetOverrides; generationSpec?: GenerationSpecInput } }
     | { type: 'APPLY_LOADOUT'; payload: any }
     | { type: 'EXIT_TO_HUB' }
     | { type: 'RESOLVE_PENDING' };

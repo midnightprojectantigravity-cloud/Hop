@@ -782,7 +782,7 @@ export interface RuntimeSenseCapabilityProviderDefinition {
     };
     requireEnemyObserver?: boolean;
     hardBlockWhenBlind?: boolean;
-    useLegacyLineOfSight?: boolean;
+    useFallbackLineOfSight?: boolean;
 }
 
 export interface RuntimeMovementCapabilityProviderDefinition {

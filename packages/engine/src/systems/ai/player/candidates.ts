@@ -18,6 +18,7 @@ export const isHazardTile = (state: GameState, p: Point): boolean => {
     if (!tile) return false;
     return tile.traits.has('HAZARDOUS')
         || tile.baseId === 'LAVA'
+        || tile.baseId === 'TOXIC'
         || !!tile.effects?.some(e => e.id === 'FIRE' || e.id === 'SNARE');
 };
 

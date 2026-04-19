@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Action, GameState, GridSize, MapShape } from '@hop/engine';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Action, FloorTheme, GameState, GridSize, MapShape } from '@hop/engine';
 import { usePendingFloorWorldgen } from './use-pending-floor-worldgen';
 import {
   buildStartRunPayload,
@@ -12,15 +12,8 @@ import {
   writeRunResumeContext,
   type RunResumeContext
 } from './run-resume-context';
-import { emitUiMetric } from './ui-telemetry';
 import type { WorldgenWorkerState } from './use-worldgen-worker';
 import type { WorldgenUiError } from './route-shell-shared';
-
-export const resolveArcadeSplashStartRunRequest = () => ({
-  loadoutId: 'VANGUARD',
-  mode: 'daily' as const,
-  source: 'arcade_start_run'
-});
 
 export interface WorldgenSessionController {
   worldgenUiError: WorldgenUiError | null;
@@ -38,14 +31,12 @@ export interface WorldgenSessionController {
     date?: string;
     mapSize?: GridSize;
     mapShape?: MapShape;
+    themeId?: FloorTheme;
+    contentThemeId?: FloorTheme;
     mapSizeInputMode?: 'usable' | 'grid';
   }) => Promise<void>;
   clearWorldgenUiError: () => void;
   reportWorldgenUiError: (kind: WorldgenUiError['kind'], message: string) => void;
-  arcadeSplashWaitingForReady: boolean;
-  showArcadeDelayedPulse: boolean;
-  handleEnterArcadeSplash: () => void;
-  handleOpenHubFromArcadeSplash: () => void;
 }
 
 export const useWorldgenSession = ({
@@ -55,9 +46,6 @@ export const useWorldgenSession = ({
   dispatchWithTrace,
   setRunResumeContext,
   dispatchSensory,
-  navigateTo,
-  hubPath,
-  isArcadeRoute,
   onRunStarted
 }: {
   gameState: GameState;
@@ -66,15 +54,9 @@ export const useWorldgenSession = ({
   dispatchWithTrace: (action: Action, source: string) => void;
   setRunResumeContext: (context: RunResumeContext) => void;
   dispatchSensory: (payload: Parameters<typeof import('./sensory-dispatcher').dispatchSensoryEvent>[0]) => void;
-  navigateTo: (path: string) => void;
-  hubPath: string;
-  isArcadeRoute: boolean;
   onRunStarted?: () => void;
 }): WorldgenSessionController => {
-  const delayedPulseMetricSentRef = useRef(false);
   const [worldgenUiError, setWorldgenUiError] = useState<WorldgenUiError | null>(null);
-  const [arcadeSplashWaitingForReady, setArcadeSplashWaitingForReady] = useState(false);
-  const [showArcadeDelayedPulse, setShowArcadeDelayedPulse] = useState(false);
 
   const clearWorldgenUiError = useCallback(() => {
     setWorldgenUiError(null);
@@ -150,27 +132,6 @@ export const useWorldgenSession = ({
     });
   }, [worldgenWarmState, worldgenWorker.error]);
 
-  useEffect(() => {
-    if (isArcadeRoute && gameState.gameStatus === 'hub') return;
-    setArcadeSplashWaitingForReady(false);
-    setShowArcadeDelayedPulse(false);
-  }, [gameState.gameStatus, isArcadeRoute]);
-
-  useEffect(() => {
-    if (!arcadeSplashWaitingForReady || worldgenWarmState === 'ready') {
-      setShowArcadeDelayedPulse(false);
-      return;
-    }
-    const pulseTimeout = window.setTimeout(() => {
-      setShowArcadeDelayedPulse(true);
-      if (!delayedPulseMetricSentRef.current) {
-        emitUiMetric('splash_delayed_ready_pulse_shown', 1, { thresholdMs: 1500 });
-        delayedPulseMetricSentRef.current = true;
-      }
-    }, 1500);
-    return () => window.clearTimeout(pulseTimeout);
-  }, [arcadeSplashWaitingForReady, worldgenWarmState]);
-
   const startRun = useCallback(async (params: {
     loadoutId: string;
     mode: 'normal' | 'daily';
@@ -179,6 +140,8 @@ export const useWorldgenSession = ({
     date?: string;
     mapSize?: GridSize;
     mapShape?: MapShape;
+    themeId?: FloorTheme;
+    contentThemeId?: FloorTheme;
     mapSizeInputMode?: 'usable' | 'grid';
   }) => {
     const initialized = await ensureWorldgenReady('start_run').then(() => true).catch(() => null);
@@ -193,6 +156,8 @@ export const useWorldgenSession = ({
       date: params.date,
       mapSize: params.mapSize || DEFAULT_START_RUN_MAP_SIZE,
       mapShape: params.mapShape || DEFAULT_START_RUN_MAP_SHAPE,
+      themeId: params.themeId,
+      contentThemeId: params.contentThemeId,
       mapSizeInputMode: params.mapSizeInputMode || 'usable'
     });
     const context = buildStartRunCompileContext({
@@ -202,6 +167,8 @@ export const useWorldgenSession = ({
       date: payload.date,
       mapSize: payload.mapSize,
       mapShape: payload.mapShape,
+      themeId: payload.themeId,
+      contentThemeId: payload.contentThemeId,
       generationSpec: payload.generationSpec,
       includeDebug: worldgenDebugEnabled
     });
@@ -244,35 +211,6 @@ export const useWorldgenSession = ({
     worldgenWorker
   ]);
 
-  const handleEnterArcadeSplash = useCallback(() => {
-    dispatchSensory({
-      id: 'ui-danger-drum',
-      intensity: 1.0,
-      priority: 'high',
-      context: 'hub'
-    });
-    clearWorldgenUiError();
-    setArcadeSplashWaitingForReady(true);
-    setShowArcadeDelayedPulse(false);
-    const startRunRequest = resolveArcadeSplashStartRunRequest();
-    void startRun(startRunRequest)
-      .then(() => {
-        setShowArcadeDelayedPulse(false);
-      })
-      .catch(() => {
-        // startRun reports worldgen errors through session state.
-      })
-      .finally(() => {
-        setArcadeSplashWaitingForReady(false);
-      });
-  }, [clearWorldgenUiError, dispatchSensory, startRun]);
-
-  const handleOpenHubFromArcadeSplash = useCallback(() => {
-    setArcadeSplashWaitingForReady(false);
-    setShowArcadeDelayedPulse(false);
-    navigateTo(hubPath);
-  }, [hubPath, navigateTo]);
-
   return useMemo(() => ({
     worldgenUiError,
     worldgenProgressLabel,
@@ -283,20 +221,12 @@ export const useWorldgenSession = ({
     ensureWorldgenReady,
     startRun,
     clearWorldgenUiError,
-    reportWorldgenUiError,
-    arcadeSplashWaitingForReady,
-    showArcadeDelayedPulse,
-    handleEnterArcadeSplash,
-    handleOpenHubFromArcadeSplash
+    reportWorldgenUiError
   }), [
-    arcadeSplashWaitingForReady,
     clearWorldgenUiError,
     ensureWorldgenReady,
-    handleEnterArcadeSplash,
-    handleOpenHubFromArcadeSplash,
     pendingFloorWorldgen,
     reportWorldgenUiError,
-    showArcadeDelayedPulse,
     startRun,
     worldgenProgressLabel,
     worldgenStatusLine,

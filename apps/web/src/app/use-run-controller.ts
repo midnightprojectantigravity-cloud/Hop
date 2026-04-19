@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { hexEquals, type Action, type GameState, type GridSize, type MapShape, type Point } from '@hop/engine';
+import { hexEquals, type Action, type FloorTheme, type GameState, type GridSize, type MapShape, type Point } from '@hop/engine';
 import { buildReplayRecordFromGameState } from './use-run-recording';
 import {
   resolveRunLostOverlayVisible,
@@ -92,6 +92,8 @@ export const useRunController = ({
     date?: string;
     mapSize?: GridSize;
     mapShape?: MapShape;
+    themeId?: FloorTheme;
+    contentThemeId?: FloorTheme;
     mapSizeInputMode?: 'usable' | 'grid';
   }) => Promise<void>;
   activeTutorialStepId: TutorialStepId | null;
@@ -406,6 +408,8 @@ export const useRunController = ({
       date: restartPayload.date,
       mapSize: { width: gameState.gridWidth, height: gameState.gridHeight },
       mapShape: gameState.mapShape || DEFAULT_START_RUN_MAP_SHAPE,
+      themeId: gameState.theme,
+      contentThemeId: gameState.contentTheme || gameState.theme,
       mapSizeInputMode: 'grid',
       source: 'quick_restart'
     });
@@ -418,6 +422,7 @@ export const useRunController = ({
     gameState.mapShape,
     gameState.player.archetype,
     gameState.selectedLoadoutId,
+    gameState.theme,
     handleExitToHub,
     resetReplayUi,
     runResumeContext,

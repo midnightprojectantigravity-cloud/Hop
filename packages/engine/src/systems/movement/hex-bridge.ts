@@ -75,7 +75,7 @@ export function prepareKineticSimulation(
     const dirVec = HEX_DIRECTIONS[dirKey];
 
     // Collect all entities that matter for kinetic simulation
-    const allEntities: { id: string; type: 'player' | 'enemy' | 'wall' | 'lava'; hex: Point }[] = [];
+    const allEntities: { id: string; type: 'player' | 'enemy' | 'wall' | 'lava' | 'toxic'; hex: Point }[] = [];
 
     // Player
     allEntities.push({ id: 'player', type: 'player', hex: state.player.position });
@@ -93,6 +93,8 @@ export function prepareKineticSimulation(
             allEntities.push({ id: `wall_${key}`, type: 'wall', hex: tile.position });
         } else if (tile.baseId === 'LAVA') {
             allEntities.push({ id: `lava_${key}`, type: 'lava', hex: tile.position });
+        } else if (tile.baseId === 'TOXIC') {
+            allEntities.push({ id: `toxic_${key}`, type: 'toxic', hex: tile.position });
         }
     });
 
@@ -112,7 +114,7 @@ export function prepareKineticSimulation(
                 kType = 'S'; // Shooter
             } else if (ent.type === 'wall') {
                 kType = 'I'; // Immovable
-            } else if (ent.type === 'lava') {
+            } else if (ent.type === 'lava' || ent.type === 'toxic') {
                 kType = 'L'; // Lava (handled in apply phase)
             } else {
                 kType = 'M'; // Movable (other actors)

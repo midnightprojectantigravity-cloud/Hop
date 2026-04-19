@@ -273,8 +273,8 @@ const validateCapabilities = (
                 if (provider.hardBlockWhenBlind !== undefined && typeof provider.hardBlockWhenBlind !== 'boolean') {
                     push(issues, `${providerPath}.hardBlockWhenBlind`, 'Expected boolean');
                 }
-                if (provider.useLegacyLineOfSight !== undefined && typeof provider.useLegacyLineOfSight !== 'boolean') {
-                    push(issues, `${providerPath}.useLegacyLineOfSight`, 'Expected boolean');
+                if (provider.useFallbackLineOfSight !== undefined && typeof provider.useFallbackLineOfSight !== 'boolean') {
+                    push(issues, `${providerPath}.useFallbackLineOfSight`, 'Expected boolean');
                 }
             });
         }

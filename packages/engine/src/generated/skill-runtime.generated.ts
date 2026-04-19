@@ -1657,7 +1657,7 @@ export const GENERATED_RUNTIME_SKILLS: SkillRuntimeDefinition[] = [
           },
           "requireEnemyObserver": true,
           "hardBlockWhenBlind": true,
-          "useLegacyLineOfSight": true
+          "useFallbackLineOfSight": true
         }
       ]
     },
@@ -6103,7 +6103,7 @@ export const GENERATED_RUNTIME_SKILLS: SkillRuntimeDefinition[] = [
             "addVisionTier": true
           },
           "hardBlockWhenBlind": true,
-          "useLegacyLineOfSight": true
+          "useFallbackLineOfSight": true
         }
       ]
     },
@@ -7055,7 +7055,7 @@ export const GENERATED_RUNTIME_SKILL_IDS = [
 export type GeneratedRuntimeSkillID = typeof GENERATED_RUNTIME_SKILL_IDS[number];
 
 export const GENERATED_RUNTIME_SKILL_LIBRARY_METADATA: SkillLibraryMetadata = {
-  "generatedAt": "2026-04-17T15:19:01.571Z",
+  "generatedAt": "2026-04-19T19:15:21.941Z",
   "totalSkills": 51,
   "handlerBackedSkillCount": 0,
   "executionHandlerCount": 0,

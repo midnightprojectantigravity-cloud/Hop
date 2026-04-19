@@ -15,7 +15,7 @@ import {
     computeEnemyButcherFactor
 } from '../skills/enemy_awareness';
 
-type LegacyLosOptions = {
+type FallbackLosOptions = {
     stopAtWalls?: boolean;
     stopAtActors?: boolean;
     stopAtLava?: boolean;
@@ -43,11 +43,11 @@ const sortKeys = (values: Iterable<string>): string[] => [...new Set(values)].so
 
 const sortActorIds = (values: Iterable<string>): string[] => [...new Set(values)].sort((a, b) => a.localeCompare(b));
 
-const computeLegacyLineOfSight = (
+const computeFallbackLineOfSight = (
     state: GameState,
     origin: Point,
     target: Point,
-    options: LegacyLosOptions = {}
+    options: FallbackLosOptions = {}
 ): { isValid: boolean; blockedBy?: 'wall' | 'actor' | 'lava'; blockedAt?: Point } => {
     const line = getHexLine(origin, target);
     const pathToCheck = line.slice(1);
@@ -92,7 +92,7 @@ const resolveSense = (
     stopAtLava: false,
     excludeActorId: observer.id,
     context: buildObserverSenseContext(state, observer),
-    evaluateLegacyLineOfSight: (overrides) => computeLegacyLineOfSight(state, observer.position, target, {
+    evaluateFallbackLineOfSight: (overrides) => computeFallbackLineOfSight(state, observer.position, target, {
         stopAtWalls: overrides?.stopAtWalls,
         stopAtActors: overrides?.stopAtActors,
         stopAtLava: overrides?.stopAtLava,

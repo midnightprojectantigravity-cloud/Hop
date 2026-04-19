@@ -43,10 +43,10 @@ export const FIREWALK: SkillDefinition = {
 
         const tile = state.tiles.get(pointToKey(target));
         const isFire = tile?.effects.some(e => e.id === 'FIRE');
-        const isLava = tile?.baseId === 'LAVA' || tile?.traits.has('LIQUID');
+        const isLava = tile?.baseId === 'LAVA' || tile?.baseId === 'TOXIC' || tile?.traits.has('LIQUID');
 
         if (!isFire && !isLava) {
-            return { effects, messages: ['Can only teleport to Fire or Lava!'], consumesTurn: false };
+            return { effects, messages: ['Can only teleport to Fire, Lava, or Toxic!'], consumesTurn: false };
         }
 
         const destination = validateMovementDestination(state, attacker, target, movementPolicy, {
@@ -116,7 +116,7 @@ export const FIREWALK: SkillDefinition = {
             const dist = hexDistance(origin, tile.position);
             if (dist > 0 && dist <= range) {
                 const isFire = tile.effects.some(e => e.id === 'FIRE');
-                const isLava = tile.baseId === 'LAVA' || tile.traits.has('LIQUID');
+                const isLava = tile.baseId === 'LAVA' || tile.baseId === 'TOXIC' || tile.traits.has('LIQUID');
                 if (isFire || isLava) {
                     targets.push(tile.position);
                 }

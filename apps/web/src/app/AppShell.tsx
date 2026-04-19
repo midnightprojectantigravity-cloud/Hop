@@ -63,7 +63,8 @@ const summarizeActionPayload = (action: Action): Record<string, unknown> | undef
   if ((action as { type?: string }).type === 'START_RUN') {
     return {
       loadoutId: record.loadoutId ?? 'unknown',
-      mode: record.mode ?? 'normal'
+      mode: record.mode ?? 'normal',
+      themeId: record.themeId ?? 'unspecified'
     };
   }
 
@@ -270,9 +271,6 @@ export function AppShell() {
     dispatchWithTrace,
     setRunResumeContext,
     dispatchSensory,
-    navigateTo,
-    hubPath,
-    isArcadeRoute,
     onRunStarted: () => runStartedProxyRef.current()
   });
   replayStepBlockedRef.current = isReplayStepBlocked({
@@ -565,10 +563,13 @@ export function AppShell() {
           onDismissWorldgenError={worldgenSession.clearWorldgenUiError}
           worldgenInitialized={worldgenSession.worldgenInitialized}
           worldgenWarmState={worldgenSession.worldgenWarmState}
-          arcadeSplashWaitingForReady={worldgenSession.arcadeSplashWaitingForReady}
-          showArcadeDelayedPulse={worldgenSession.showArcadeDelayedPulse}
-          onEnterArcadeSplash={worldgenSession.handleEnterArcadeSplash}
-          onOpenHubFromArcadeSplash={worldgenSession.handleOpenHubFromArcadeSplash}
+          onLaunchArcade={(loadoutId, themeId, contentThemeId) => void worldgenSession.startRun({
+            loadoutId,
+            themeId,
+            contentThemeId,
+            mode: 'daily',
+            source: 'arcade_start_run'
+          })}
         />
       </>
     );

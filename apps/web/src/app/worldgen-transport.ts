@@ -1,5 +1,6 @@
 import type {
   GameState,
+  FloorTheme,
   StartRunCompileContext,
   TransitionCompileContext,
 } from '@hop/engine';
@@ -78,6 +79,8 @@ export const buildTransitionCompileContext = (
     rngSeed: gameState.rngSeed,
     mapSize: { width: gameState.gridWidth, height: gameState.gridHeight },
     mapShape: gameState.mapShape || 'diamond',
+    themeId: gameState.theme as FloorTheme | undefined,
+    contentThemeId: (gameState.contentTheme || gameState.theme) as FloorTheme | undefined,
     playerCarryover: {
       hp: gameState.player.hp,
       maxHp: gameState.player.maxHp,

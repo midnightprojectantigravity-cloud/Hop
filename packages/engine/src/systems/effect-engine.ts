@@ -163,7 +163,7 @@ const resolveActorAt = (state: GameState, pos?: Point | null): Actor | undefined
     return state.enemies.find(e => hexEquals(e.position, pos)) || state.companions?.find(e => hexEquals(e.position, pos));
 };
 
-const HAZARD_REASONS = new Set(['lava_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage', 'burning', 'oil_explosion']);
+const HAZARD_REASONS = new Set(['lava_sink', 'toxic_sink', 'void_sink', 'hazard_intercept', 'lava_tick', 'fire_damage', 'burning', 'oil_explosion']);
 const LEGACY_MIRRORED_JUICE_IDS = new Set(['impact', 'flash', 'spearTrail', 'shake']);
 
 const scaleCombatProfileDamage = (

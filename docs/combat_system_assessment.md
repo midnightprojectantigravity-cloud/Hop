@@ -4,7 +4,13 @@
 
 **Scope:** `packages/engine/src/combat`, `packages/engine/src/skills`, `packages/engine/src/systems`, `packages/engine/src/data/contracts.ts`
 
-This document provides a comprehensive, repository-grounded assessment of the engine's Combat System and Skill Systems. The goal is to establish a clear architectural roadmap for migrating from procedural, imperative TypeScript code to generic, schema-validated, data-driven JSON configurations, unified under a shared effect resolution engine.
+This document provides a repository-grounded assessment of the engine's Combat System and Skill Systems.
+
+Status note: the live engine is already well past the "all-imperative" stage described in the older roadmap below. Many skills are now runtime-authored JSON definitions compiled into the generated runtime library and metadata, `handlerRatio` is `0`, and the remaining TypeScript entries mostly serve as legacy fixtures or compatibility adapters. The roadmap sections below are still useful as architectural history, but they should be read as partially completed migration goals rather than current repo truth.
+
+For the detailed per-skill inventory, upgrade tree summary, and companion/loadout snapshot, use [skills_assessment.md](c:/Users/philippe.cave/Documents/Antigravity/Hop/docs/skills_assessment.md) as the canonical companion document.
+
+Biome note: the current arcade proof now separates authored content from applied biome. Vanguard and Hunter can share the same inferno-authored 10-floor content path while `themeId` switches the applied hazard/render theme between `inferno` and `void`, which is how the engine materializes lava versus toxic tiles without duplicating the floor family.
 
 ---
 
@@ -14,20 +20,19 @@ The Hop Engine currently bridges two eras:
 1. **The procedural past**, where combat execution and skill logic are written as imperative TypeScript functions (e.g., `execute()` handlers in `src/skills/*`).
 2. **The declarative future**, governed by `src/data/contracts.ts` and `CompositeSkillDefinition`, which allows content to be expressed purely as semantic, stack-based JSON data payloads.
 
-Our primary objective is to fully embrace the declarative future. By decomposing the **Combat System** (timeline events, effect resolution, lifecycle hooks) and the **Skill System** (targeting, upgrades, companions) into generic pieces, we can enable true data-driven content authorship.
+Our primary objective is still to favor declarative content authorship, but the current implementation already reflects a hybrid reality: runtime-authored JSON, generated runtime metadata, and a shrinking set of imperative compatibility paths.
 
 ---
 
 ## 2. Current State Analytics
 
 ### 2.1 The Skill System
-The skill system is tracked in `packages/engine/src/skills/` with 51 registered skills.
+The skill system is tracked across `packages/engine/src/skills/`, `packages/engine/src/data/skills/`, and the generated runtime library/metadata with 51 live runtime skills, while `skill-registry.generated.ts` now only covers the small residual compositional TypeScript cohort.
 - **Data-Driven Elements (Existing):** `baseVariables`, damage taxonomies, `SkillModifier` (upgrades), intent profiles, and resource/metabolic profiles.
 - **Procedural Elements (Technical Debt):** 
-  - `execute(state, context)` handles complex effect sequencing implicitly.
-  - Targeting boundaries (`getValidTargets`) have imperative visibility logic.
-  - Upgrade checks (`activeUpgrades.includes(...)`) enforce branching pathways in code.
-  - Capability systems (Movement, Senses, Vision) rely on callback-based `resolve()` methods.
+  - Some legacy `execute(state, context)` and `getValidTargets()` implementations still exist as parity fixtures.
+  - A few compatibility adapters still translate runtime authoring into the older resolver surfaces.
+  - Most live capability, companion, and movement behavior is now runtime-authored rather than callback-driven, but the roadmap sections below still describe the migration path that was followed.
 
 ### 2.2 The Combat System
 Foundational engine logic resides mostly inside `packages/engine/src/systems/`.

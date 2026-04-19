@@ -12,6 +12,7 @@ export type TileID =
     | 'GRASS'
     | 'STONE'
     | 'LAVA'
+    | 'TOXIC'
     | 'WALL'
     | 'ICE'
     | 'VOID'

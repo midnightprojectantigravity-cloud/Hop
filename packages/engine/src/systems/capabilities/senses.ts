@@ -15,13 +15,13 @@ interface SenseResolutionInput {
     stopAtLava: boolean;
     excludeActorId?: string;
     context?: Record<string, unknown>;
-    evaluateLegacyLineOfSight: SenseQuery['evaluateLegacyLineOfSight'];
+    evaluateFallbackLineOfSight: SenseQuery['evaluateFallbackLineOfSight'];
 }
 
 export const resolveSenseLineOfSight = (input: SenseResolutionInput): SenseResult => {
     const bundle = getCompiledCapabilityBundleForActor(input.state, input.observer);
     if (bundle.senses.length === 0) {
-        const fallback = input.evaluateLegacyLineOfSight({
+        const fallback = input.evaluateFallbackLineOfSight({
             stopAtWalls: input.stopAtWalls,
             stopAtActors: input.stopAtActors,
             stopAtLava: input.stopAtLava,
@@ -54,7 +54,7 @@ export const resolveSenseLineOfSight = (input: SenseResolutionInput): SenseResul
         excludeActorId: input.excludeActorId,
         distance: hexDistance(input.origin, input.target),
         context: input.context,
-        evaluateLegacyLineOfSight: input.evaluateLegacyLineOfSight
+        evaluateFallbackLineOfSight: input.evaluateFallbackLineOfSight
     };
 
     const foldCandidates: FoldCandidate[] = [];
@@ -80,7 +80,7 @@ export const resolveSenseLineOfSight = (input: SenseResolutionInput): SenseResul
 
     const folded = foldCapabilityDecisions(foldCandidates);
     const isValid = folded.decision === 'allow';
-    const fallback = input.evaluateLegacyLineOfSight({
+    const fallback = input.evaluateFallbackLineOfSight({
         stopAtWalls: input.stopAtWalls,
         stopAtActors: input.stopAtActors,
         stopAtLava: input.stopAtLava,

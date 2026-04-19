@@ -32,7 +32,9 @@ export const getSurfaceStatus = (state: GameState, hexCoord: Point): SurfaceStat
     }
     if (
         tile.baseId === 'LAVA'
+        || tile.baseId === 'TOXIC'
         || traits.has('LAVA')
+        || traits.has('TOXIC')
         || traits.has('FIRE')
         || hasEffect('FIRE')
     ) {

@@ -1,7 +1,7 @@
 import type { GameState, Point } from '@hop/engine';
 import type { VisualAssetEntry, VisualAssetManifest, VisualBlendMode } from '../../visual/asset-manifest';
 
-export type TileVisualFlags = { isWall: boolean; isLava: boolean; isFire: boolean; isVoid: boolean };
+export type TileVisualFlags = { isWall: boolean; isLava: boolean; isToxic: boolean; isFire: boolean; isVoid: boolean };
 export type Vec2 = { x: number; y: number };
 export type LayerScroll = Vec2 & { durationMs: number };
 export type FrameRect = { x: number; y: number; width: number; height: number };
