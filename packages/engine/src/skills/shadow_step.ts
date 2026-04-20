@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexEquals } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
 import {
@@ -104,5 +103,4 @@ export const SHADOW_STEP: SkillDefinition = {
         });
     },
     upgrades: {},
-    scenarios: getSkillScenarios('SHADOW_STEP')
 };

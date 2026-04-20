@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { createBombActor } from '../systems/effects/bomb-runtime';
@@ -65,5 +64,4 @@ export const BOMB_TOSS: SkillDefinition = {
         return valid;
     },
     upgrades: {},
-    scenarios: getSkillScenarios('BOMB_TOSS')
 };

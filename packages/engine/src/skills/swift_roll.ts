@@ -1,7 +1,6 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
 import {
@@ -93,5 +92,4 @@ export const SWIFT_ROLL: SkillDefinition = {
         });
     },
     upgrades: {},
-    scenarios: getSkillScenarios('SWIFT_ROLL')
 };

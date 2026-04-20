@@ -13,11 +13,9 @@ export * from './systems/combat';
 export * from './systems/ai';
 export * from './systems/entities';
 export * from './systems/effect-engine';
-// 
 export * from './systems/initiative';
 export * from './systems/map';
 export * from './systems/rng';
-export * from './systems/theme';
 export * from './systems/spatial-system';
 export * from './systems/score';
 export * from './systems/run-objectives';

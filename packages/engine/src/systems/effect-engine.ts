@@ -219,8 +219,6 @@ export const applyAtomicEffect = (state: GameState, effect: AtomicEffect, contex
  * Apply a list of effects to the game state.
  */
 export const applyEffects = (state: GameState, effects: AtomicEffect[], context: AtomicEffectContext = {}): GameState => {
-    // Legacy themeInterceptors decommissioned. 
-    // Hazard logic is now unified in TileResolver and executed during Displacement or turn ends.
     const baseTraceOffset = state.stackTrace?.length || 0;
     const baseResolution = resolveLifoStack(state, effects, {
         apply: (s, effect) => applyAtomicEffect(s, effect, context),

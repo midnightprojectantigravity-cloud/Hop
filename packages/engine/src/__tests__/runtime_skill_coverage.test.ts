@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { SkillRegistry } from '../skillRegistry';
 import { getRuntimeSkillLibraryMetadata, SkillRuntimeRegistry } from '../systems/skill-runtime';
+import { getSkillScenarios } from '../scenarios/skill-scenarios';
 import { RUNTIME_SKILL_COVERAGE, RUNTIME_SKILL_COVERAGE_BY_ID } from './runtime_skill_coverage';
 
 const ALLOWED_TAGS = new Set([
@@ -29,7 +29,7 @@ describe('runtime skill coverage manifest', () => {
             expect(runtime?.id).toBe(entry.skillId);
             expect(runtime?.compiledFrom).toBe('json');
 
-            const scenarios = SkillRegistry.get(entry.skillId)?.scenarios?.map(scenario => scenario.id) || [];
+            const scenarios = getSkillScenarios(entry.skillId).map(scenario => scenario.id);
             if (entry.tags.includes('scenario-covered')) {
                 expect(scenarios.length).toBeGreaterThan(0);
             }

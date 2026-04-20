@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getNeighbors, hexDistance, hexEquals } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
@@ -118,5 +117,4 @@ export const FIREBALL: SkillDefinition = {
         return SpatialSystem.getAxialTargets(state, origin, 3);
     },
     upgrades: {},
-    scenarios: getSkillScenarios('FIREBALL')
 };

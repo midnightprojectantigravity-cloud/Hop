@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 
 /**
  * SMOKE_SCREEN Skill
@@ -78,5 +77,4 @@ export const SMOKE_SCREEN: SkillDefinition = {
             description: 'Adjacent hostile units are blinded for 1 turn.'
         }
     },
-    scenarios: getSkillScenarios('SMOKE_SCREEN')
 };

@@ -25,4 +25,3 @@ export const getBaseUnitDefinitionBySubtype = (subtype: string): BaseUnitDefinit
 
 export const getAllBaseUnitDefinitions = (): BaseUnitDefinition[] =>
     [...unitsById.values()];
-

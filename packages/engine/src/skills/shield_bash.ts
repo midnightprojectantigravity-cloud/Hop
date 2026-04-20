@@ -1,7 +1,6 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getDirectionFromTo, getNeighbors, hexAdd, hexDirection, hexDistance, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { pointToKey } from '../hex';
 import { SpatialSystem } from '../systems/spatial-system';
@@ -144,5 +143,4 @@ export const SHIELD_BASH: SkillDefinition = {
         PASSIVE_PROTECTION: { id: 'PASSIVE_PROTECTION', name: 'Passive Protection', description: '+1 temp armor when shield not on cooldown' },
         WALL_SLAM: { id: 'WALL_SLAM', name: 'Wall Slam', description: 'Enemies bashed into obstacles trigger a cascade and stun' }
     },
-    scenarios: getSkillScenarios('SHIELD_BASH')
 };

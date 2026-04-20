@@ -45,10 +45,9 @@ import {
     compileStandaloneFloor,
     createInitialCompilerGenerationState,
     createEmptyRunTelemetry,
-    rebuildEnemiesFromArtifact,
-    rebuildTilesFromArtifact,
     initializeGenerationForState
 } from './generation';
+import { rebuildEnemiesFromArtifact, rebuildTilesFromArtifact } from './generation/artifact-helpers';
 import { hydrateGameStateIres, resolveIresRuleset, withResolvedIresRuleset } from './systems/ires';
 import { mergeCombatRulesetOverride, resolveCombatRuleset } from './systems/combat/combat-ruleset';
 import { createEmptyEnemyAiRunTelemetry } from './systems/ai/enemy/runtime-telemetry';

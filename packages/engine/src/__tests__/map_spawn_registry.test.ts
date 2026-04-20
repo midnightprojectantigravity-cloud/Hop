@@ -6,9 +6,10 @@ import { generateDungeon, generateEnemies } from '../systems/map';
 import { bootstrapTacticalData, resetTacticalDataBootstrap } from '../systems/tactical-data-bootstrap';
 import { createEnemyFromBestiary } from '../systems/entities/entity-factory';
 import { deriveMaxHpFromTrinity } from '../systems/combat/trinity-resolver';
+import type { Entity } from '../types';
 
 const summarizeEnemies = (enemies: ReturnType<typeof generateEnemies>) =>
-    enemies.map(enemy => ({
+    (enemies as Entity[]).map((enemy: Entity) => ({
         id: enemy.id,
         subtype: enemy.subtype,
         hp: enemy.hp,
@@ -62,7 +63,7 @@ describe('map spawn registry', () => {
 
         expect(enemies.length).toBeGreaterThan(0);
         expect(
-            enemies.every(enemy => enemy.activeSkills.some(skill => String(skill.id) === 'TEST_ONLY_SKILL'))
+            (enemies as Entity[]).every((enemy: Entity) => enemy.activeSkills.some(skill => String(skill.id) === 'TEST_ONLY_SKILL'))
         ).toBe(true);
     });
 
@@ -90,7 +91,7 @@ describe('map spawn registry', () => {
         expect(archer.enemyType).toBe('ranged');
         expect(archer.speed).toBe(1); // baseline preserved
         expect(archer.armorBurdenTier).toBe('Light');
-        expect(archer.activeSkills.map(s => s.id)).toContain('ARCHER_SHOT');
+        expect(archer.activeSkills.map((s: any) => s.id)).toContain('ARCHER_SHOT');
         expect(archer.components?.get('combat_profile')).toMatchObject({
             type: 'combat_profile',
             outgoingPhysical: 2.6,

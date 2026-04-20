@@ -5,8 +5,8 @@ import { applyEffects } from '../systems/effect-engine';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import { isStunned } from '../systems/status';
 import { getSkillDefinition } from '../skillRegistry';
+import { getSkillScenarios } from '../scenarios/skill-scenarios';
 
-import { getSkillScenarios } from '../scenarios';
 
 /**
  * Auto Attack - A passive skill that triggers at the end of the entity's turn.
@@ -31,6 +31,7 @@ export const AUTO_ATTACK: SkillDefinition = {
         trackingSignature: 'melee',
         weights: { body: 1 }
     },
+    scenarios: getSkillScenarios('AUTO_ATTACK'),
     /**
      * Unlike other skills, AUTO_ATTACK is not directly executed via USE_SKILL action.
      * Instead, it's triggered by the game engine at the end of the entity's turn.
@@ -307,7 +308,6 @@ export const AUTO_ATTACK: SkillDefinition = {
             description: 'When auto-attack triggers, hit ALL adjacent enemies'
         },
     },
-    scenarios: getSkillScenarios('AUTO_ATTACK')
 };
 
 /**

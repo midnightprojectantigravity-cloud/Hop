@@ -13,6 +13,7 @@ import { GENERATED_COMPOSITIONAL_SKILLS } from './generated/skill-registry.gener
 import { registerCapabilitySkillDefinitionResolver } from './systems/capabilities/cache';
 import { resolveSkillMetabolicBandProfile, resolveSkillResourceProfile } from './systems/ires';
 import { resolveVirtualSkillDefinition } from './systems/skill-upgrade-resolution';
+import { getSkillScenarios } from './scenarios/skill-scenarios';
 import { hexEquals } from './hex';
 
 /**
@@ -60,6 +61,7 @@ const getMergedRegistry = (): Record<string, SkillDefinition> => {
                 {
                     ...def,
                     ...(metabolicBandProfile ? { metabolicBandProfile } : {}),
+                    scenarios: def.scenarios || getSkillScenarios(skillId),
                     resourceProfile
                 }
             ];
@@ -106,8 +108,6 @@ export function createDefaultSkills(): any[] {
 
 // Export as SkillRegistry for convenience
 const SkillRegistryBase = {
-    ...getBaseRegistry(),
-
     /**
      * Find a skill definition by ID.
      */
@@ -166,7 +166,45 @@ const SkillRegistryBase = {
     }
 };
 
-export const SkillRegistry = SkillRegistryBase as typeof SkillRegistryBase & Record<string, any>;
+export const SkillRegistry = new Proxy(SkillRegistryBase as Record<string, any>, {
+    get(target, prop, receiver) {
+        if (typeof prop === 'string' && prop in target) {
+            return Reflect.get(target, prop, receiver);
+        }
+        if (typeof prop === 'string') {
+            const registry = getMergedRegistry();
+            if (prop in registry) return registry[prop];
+        }
+        return Reflect.get(target, prop, receiver);
+    },
+    has(target, prop) {
+        if (typeof prop === 'string' && prop in target) return true;
+        if (typeof prop === 'string') {
+            return prop in getMergedRegistry();
+        }
+        return Reflect.has(target, prop);
+    },
+    ownKeys(target) {
+        return [...new Set([...Reflect.ownKeys(target), ...Reflect.ownKeys(getMergedRegistry())])];
+    },
+    getOwnPropertyDescriptor(target, prop) {
+        if (typeof prop === 'string' && prop in target) {
+            return Object.getOwnPropertyDescriptor(target, prop);
+        }
+        if (typeof prop === 'string') {
+            const registry = getMergedRegistry();
+            if (prop in registry) {
+                return {
+                    configurable: true,
+                    enumerable: true,
+                    writable: true,
+                    value: registry[prop]
+                };
+            }
+        }
+        return Object.getOwnPropertyDescriptor(target, prop);
+    }
+}) as typeof SkillRegistryBase & Record<string, any>;
 
 /**
  * Get the dynamic range of a skill for an actor, including upgrades.

@@ -4,7 +4,6 @@ import {
     getHexLine, hexDirection
 } from '../hex';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { processKineticPulse } from '../systems/movement/kinetic-kernel';
 import { SKILL_JUICE_SIGNATURES } from '../systems/visual/juice-manifest';
 import { validateLineOfSight, validateAxialDirection } from '../systems/validation';
@@ -105,5 +104,4 @@ export const SHIELD_THROW: SkillDefinition = {
     getValidTargets: (state: GameState, origin: Point) => SpatialSystem.getAxialTargets(state, origin, 4),
 
     upgrades: {},
-    scenarios: getSkillScenarios('SHIELD_THROW')
 };

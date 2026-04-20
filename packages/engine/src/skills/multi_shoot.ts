@@ -2,7 +2,6 @@ import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../
 import { getNeighbors, hexDistance } from '../hex';
 import { pointToKey } from '../hex';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
@@ -94,5 +93,4 @@ export const MULTI_SHOOT: SkillDefinition = {
         return SpatialSystem.getAxialTargets(state, origin, 4);
     },
     upgrades: {},
-    scenarios: getSkillScenarios('MULTI_SHOOT')
 };

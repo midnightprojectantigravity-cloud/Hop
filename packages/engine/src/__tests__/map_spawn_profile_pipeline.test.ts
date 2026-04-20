@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getEnemyCatalogEntry, getFloorSpawnProfile } from '../data/enemies';
 import { generateDungeon, generateEnemies } from '../systems/map';
 import { bootstrapTacticalData, resetTacticalDataBootstrap } from '../systems/tactical-data-bootstrap';
+import type { Entity } from '../types';
 
 describe('map spawn profile pipeline', () => {
     it('clamps floor spawn profile lookups at max configured floor', () => {
@@ -29,7 +30,7 @@ describe('map spawn profile pipeline', () => {
         expect(enemies.length).toBeGreaterThan(0);
         expect(enemies.every(enemy => enemy.subtype === 'footman')).toBe(true);
 
-        const spentBudget = enemies.reduce((sum, enemy) => {
+        const spentBudget = (enemies as Entity[]).reduce((sum: number, enemy: Entity) => {
             const cost = getEnemyCatalogEntry(enemy.subtype || '')?.bestiary.stats.cost || 0;
             return sum + cost;
         }, 0);
@@ -46,9 +47,9 @@ describe('map spawn profile pipeline', () => {
         const seed = 'profile-pipeline-floor-9';
         const dungeon = generateDungeon(floor, seed);
         const enemies = generateEnemies(floor, dungeon.spawnPositions, seed);
-        const sentinelCount = enemies.filter(enemy => enemy.subtype === 'sentinel').length;
-        const rangedOrBossCount = enemies.filter(enemy => enemy.enemyType === 'ranged' || enemy.enemyType === 'boss').length;
-        const frontlineCount = enemies.filter(enemy => {
+        const sentinelCount = (enemies as Entity[]).filter((enemy: Entity) => enemy.subtype === 'sentinel').length;
+        const rangedOrBossCount = (enemies as Entity[]).filter((enemy: Entity) => enemy.enemyType === 'ranged' || enemy.enemyType === 'boss').length;
+        const frontlineCount = (enemies as Entity[]).filter((enemy: Entity) => {
             const entry = getEnemyCatalogEntry(enemy.subtype || '');
             return entry?.contract.balanceTags.includes('frontline');
         }).length;
@@ -73,8 +74,8 @@ describe('map spawn profile pipeline', () => {
 
         expect(profile.allowedSubtypes).toEqual(['butcher']);
         expect(enemies).toHaveLength(1);
-        expect(enemies[0]?.subtype).toBe('butcher');
-        expect(enemies[0]?.enemyType).toBe('boss');
+        expect((enemies as Entity[])[0]?.subtype).toBe('butcher');
+        expect((enemies as Entity[])[0]?.enemyType).toBe('boss');
 
         resetTacticalDataBootstrap();
     });

@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { pointToKey } from '../hex';
 import {
@@ -125,5 +124,4 @@ export const FIREWALK: SkillDefinition = {
         return targets;
     },
     upgrades: {},
-    scenarios: getSkillScenarios('FIREWALK')
 };

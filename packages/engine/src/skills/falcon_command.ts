@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexEquals, getNeighbors } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 import { getActorAt } from '../helpers';
 import { SpatialSystem } from '../systems/spatial-system';
 import { getFalconForHunter } from '../systems/falcon';
@@ -261,5 +260,5 @@ export const FALCON_COMMAND: SkillDefinition = {
             description: 'Apex Strike cooldown reduced by 1. Marked enemies take +1 damage from all sources.',
         },
     },
-    scenarios: getSkillScenarios('FALCON_COMMAND'),
+    
 };

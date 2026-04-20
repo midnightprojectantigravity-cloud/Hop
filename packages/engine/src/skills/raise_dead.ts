@@ -8,7 +8,6 @@ import type {
     Actor
 } from '../types';
 import { hexDistance } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { createCompanion } from '../systems/entities/entity-factory';
 import { createRaiseDeadSkeletonId } from '../systems/entities/companion-id-strategies';
@@ -141,5 +140,4 @@ export const RAISE_DEAD: SkillDefinition = {
         });
     },
     upgrades: {},
-    scenarios: getSkillScenarios('RAISE_DEAD')
 };

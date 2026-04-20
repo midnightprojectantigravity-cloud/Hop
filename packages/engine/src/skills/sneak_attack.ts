@@ -1,7 +1,6 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getNeighbors } from '../hex';
 import { getEnemyAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 
@@ -87,5 +86,4 @@ export const SNEAK_ATTACK: SkillDefinition = {
         return getNeighbors(origin).filter(n => !!getEnemyAt(state.enemies, n));
     },
     upgrades: {},
-    scenarios: getSkillScenarios('SNEAK_ATTACK')
 };

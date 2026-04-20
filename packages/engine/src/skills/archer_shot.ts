@@ -1,9 +1,9 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getHexLine, hexDistance, hexEquals, hexDirection } from '../hex';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange, validateAxialDirection, hasClearLineToActor } from '../systems/validation';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
+import { getSkillScenarios } from '../scenarios/skill-scenarios';
 
 const ARCHER_MIN_RANGE = 2;
 const ARCHER_MAX_RANGE = 4;
@@ -32,6 +32,7 @@ export const ARCHER_SHOT: SkillDefinition = {
         trackingSignature: 'projectile',
         weights: { instinct: 1 }
     },
+    scenarios: getSkillScenarios('ARCHER_SHOT'),
     execute: (state: GameState, shooter: Actor, target?: Point): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
@@ -174,5 +175,4 @@ export const ARCHER_SHOT: SkillDefinition = {
             .filter((p, idx, arr) => arr.findIndex(other => hexEquals(other, p)) === idx);
     },
     upgrades: {},
-    scenarios: getSkillScenarios('ARCHER_SHOT')
 };

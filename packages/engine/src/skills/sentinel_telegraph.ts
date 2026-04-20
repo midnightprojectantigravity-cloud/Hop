@@ -1,5 +1,4 @@
 import type { Actor, AtomicEffect, GameState, Point, SkillDefinition } from '../types';
-import { getSkillScenarios } from '../scenarios';
 import { SpatialSystem } from '../systems/spatial-system';
 
 /**
@@ -50,5 +49,4 @@ export const SENTINEL_TELEGRAPH: SkillDefinition = {
         return SpatialSystem.getAreaTargets(state, origin, 3);
     },
     upgrades: {},
-    scenarios: getSkillScenarios('SENTINEL_TELEGRAPH')
 };

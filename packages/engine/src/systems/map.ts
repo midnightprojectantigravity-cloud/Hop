@@ -5,7 +5,8 @@
 import { FLOOR_THEMES } from '../constants';
 import type { FloorTheme, Point } from '../types';
 import type { DungeonGenerationOptions, DungeonResult } from '../generation/compiler';
-import { compileStandaloneFloor, generateFloorEnemies } from '../generation/compiler';
+import { compileStandaloneFloor } from '../generation/compiler';
+import { generateFloorEnemies } from '../generation/enemy-generation';
 
 export type { DungeonGenerationOptions, DungeonResult } from '../generation/compiler';
 

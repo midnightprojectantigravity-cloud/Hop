@@ -1,7 +1,6 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getHexLine, hexDistance, getNeighbors } from '../hex';
 import { getActorAt, getEnemyAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange, validateAxialDirection, hasClearLineToActor } from '../systems/validation';
 import { SKILL_JUICE_SIGNATURES } from '../systems/visual/juice-manifest';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
@@ -281,5 +280,4 @@ export const SPEAR_THROW: SkillDefinition = {
         DEEP_BREATH: { id: 'DEEP_BREATH', name: 'Deep Breath', description: 'Reset Jump cooldown on spear kill' },
         SPEAR_CLEAVE: { id: 'SPEAR_CLEAVE', name: 'Cleave', description: 'Damage all neighbors when picking up spear' }
     },
-    scenarios: getSkillScenarios('SPEAR_THROW')
 };

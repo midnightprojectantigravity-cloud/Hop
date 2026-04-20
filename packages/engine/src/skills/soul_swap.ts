@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 
 /**
@@ -99,5 +98,4 @@ export const SOUL_SWAP: SkillDefinition = {
             .map(e => e.position);
     },
     upgrades: {},
-    scenarios: getSkillScenarios('SOUL_SWAP')
 };

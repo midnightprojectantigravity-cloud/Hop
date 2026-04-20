@@ -1,23 +1,62 @@
 import type { Entity, FloorTheme, GameState, MapShape, Point, Room } from '../types';
 import type { Tile } from '../systems/tiles/tile-types';
-import { FLOOR_THEMES, GRID_HEIGHT, GRID_WIDTH } from '../constants';
-import { createHex, getGridForShape, getMapRowBoundsForColumn, isTileInMapShape, pointToKey } from '../hex';
+import { FLOOR_THEMES } from '../constants';
+import { createHex, pointToKey } from '../hex';
 import { isSpecialTile } from '../helpers';
 import { BASE_TILES } from '../systems/tiles/tile-registry';
 import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
-import { createRng, stableIdFromSeed } from '../systems/rng';
-import { getEnemyCatalogEntry, getEnemyCatalogSkillLoadout, getFloorSpawnProfile } from '../data/enemies';
-import { ensureTacticalDataBootstrapped } from '../systems/tactical-data-bootstrap';
-import { getBaseUnitDefinitionBySubtype } from '../systems/entities/base-unit-registry';
-import { instantiateActorFromDefinitionWithCursor, type PropensityRngCursor } from '../systems/entities/propensity-instantiation';
-import { createEnemy, getEnemySkillLoadout } from '../systems/entities/entity-factory';
 import { createDailySeed, toDateKey } from '../systems/run-objectives';
 import { resolveBiomeHazardTileId } from '../systems/biomes';
 import { registerCompilerPassApi } from './session';
 import { buildModuleRegistryIndex } from './modules';
 import { hexDistanceInt, hasClearLosInt, hexParity, hexRaycastInt } from './math/hex-int';
-import { createRng32, pickByIndex, shuffleStable } from './rng32';
+import { createRng32, shuffleStable } from './rng32';
 import { advanceGenerationStateFromCompletedFloor, buildDirectorEntropyKey, createGenerationState, ensureGenerationState, initializeFloorTelemetry } from './telemetry';
+import { hashString, stableStringify } from './hash';
+import {
+    buildEdgeSignature,
+    buildEdgesFromTileKeys,
+    buildPathBendKeys,
+    computeMaxStraightRun,
+    isHazardousPathTile,
+    isPathEligibleTile,
+    parseKeyToHex,
+    resolveTileRouteMembership,
+    sortPathEdges,
+    walkableNeighborKeys
+} from './compiler-path-utils';
+import {
+    buildTacticalPathNetwork,
+    buildVisualPathNetwork
+} from './compiler-path-network';
+import {
+    BaseArena,
+    collectAnchors,
+    buildBaseArena,
+    buildTopologicalBlueprint,
+    expandMapConfigForAuthoredFloor,
+    reserveSpatialBudget,
+    resolveFloorIntent,
+    resolveMapConfig,
+    resolveNarrativeSceneRequest
+} from './compiler-context';
+import {
+    registerSpatialClaims,
+    realizeSceneEvidence,
+    resolveModulePlan
+} from './compiler-materialization';
+import {
+    buildArtifactDigest,
+    buildPathDiagnostics,
+    buildPathSummary,
+    buildSceneSignature,
+    encodeTileBaseIds,
+    encodeTileEffects,
+    emptyArtifact,
+    rebuildEnemiesFromArtifact,
+    rebuildTilesFromArtifact
+} from './artifact-helpers';
+import { generateFloorEnemies } from './enemy-generation';
 import type {
     AuthoredPathOverride,
     AuthoredFloorFamilySpec,
@@ -96,14 +135,6 @@ export interface CompileStandaloneFloorResult {
     failure?: GenerationFailure;
 }
 
-interface BaseArena {
-    allHexes: Point[];
-    playerSpawn: Point;
-    stairsPosition: Point;
-    shrinePosition?: Point;
-    center: Point;
-}
-
 type AuthoredFloor = AuthoredFloorSpec;
 
 interface ResolvedAuthoredFloor {
@@ -173,22 +204,6 @@ const buildClaimKeySet = (
         }
     }
     return keys;
-};
-
-const hashString = (value: string): string => {
-    let hash = 2166136261 >>> 0;
-    for (let i = 0; i < value.length; i++) {
-        hash ^= value.charCodeAt(i);
-        hash = Math.imul(hash, 16777619) >>> 0;
-    }
-    return hash.toString(16).padStart(8, '0');
-};
-
-const stableStringify = (value: unknown): string => {
-    if (value === null || typeof value !== 'object') return JSON.stringify(value);
-    if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(',')}}`;
 };
 
 const createTile = (baseId: 'STONE' | 'WALL' | 'LAVA' | 'VOID' | 'TOXIC', position: Point): Tile => ({
@@ -267,6 +282,72 @@ const filterAuthoredEnemySeeds = (
 
 const getFloorTheme = (floor: number): string => FLOOR_THEMES[floor] || 'inferno';
 
+const getPathOverride = (
+    authoredFloor: AuthoredFloor | undefined,
+    targetId: string
+): AuthoredPathOverride | undefined => authoredFloor?.pathOverrides?.[targetId];
+
+const resolveLandmarkRoute = (
+    override: AuthoredPathOverride | undefined,
+    onPathDefault: boolean,
+    fallbackMembership: Exclude<RouteMembership, 'hidden'>
+): { onPath: boolean; routeMembership: RouteMembership } => {
+    if (override?.routeHint === 'hidden') {
+        return {
+            onPath: false,
+            routeMembership: 'hidden'
+        };
+    }
+    if (override?.routeHint === 'primary' || override?.routeHint === 'alternate') {
+        const onPath = override.onPath ?? true;
+        return {
+            onPath,
+            routeMembership: onPath ? override.routeHint : 'hidden'
+        };
+    }
+    const onPath = override?.onPath ?? onPathDefault;
+    return {
+        onPath,
+        routeMembership: onPath ? fallbackMembership : 'hidden'
+    };
+};
+
+const buildStraightRunHotspotKeys = (pathNetwork: GeneratedPathNetwork, minStraightRun: number): Set<string> => {
+    const hotspots = new Set<string>();
+    if (minStraightRun <= 0) return hotspots;
+    const orderedTiles = new Set(pathNetwork.visualTileKeys.length > 0 ? pathNetwork.visualTileKeys : pathNetwork.tacticalTileKeys);
+    const segments = pathNetwork.segments
+        .filter(segment => segment.kind !== 'spur')
+        .map(segment => segment.tileKeys)
+        .filter(tileKeys => tileKeys.length > 0);
+
+    for (const tileKeys of segments) {
+        let runStart = 0;
+        while (runStart < tileKeys.length) {
+            let runEnd = runStart + 1;
+            while (runEnd < tileKeys.length) {
+                const previous = parseKeyToHex(tileKeys[runEnd - 1]!);
+                const current = parseKeyToHex(tileKeys[runEnd]!);
+                const before = runEnd - 2 >= runStart ? parseKeyToHex(tileKeys[runEnd - 2]!) : undefined;
+                const direction = `${current.q - previous.q},${current.r - previous.r}`;
+                const beforeDirection = before ? `${previous.q - before.q},${previous.r - before.r}` : undefined;
+                if (beforeDirection && beforeDirection !== direction) break;
+                runEnd += 1;
+            }
+            const runLength = runEnd - runStart;
+            if (runLength >= minStraightRun) {
+                for (let index = runStart; index < runEnd; index += 1) {
+                    const key = tileKeys[index]!;
+                    if (orderedTiles.has(key)) hotspots.add(key);
+                }
+            }
+            runStart = runEnd;
+        }
+    }
+
+    return hotspots;
+};
+
 const defaultSpecForCompile = (spec?: GenerationSpecInput): GenerationSpecInput =>
     spec || DEFAULT_WORLDGEN_SPEC;
 
@@ -312,394 +393,6 @@ const resolveAuthoredFloor = (
     };
 };
 
-const chooseSpecialPoint = (anchors: AuthoredFloor['anchors'], id: string, fallback: Point): Point => {
-    const source = anchors?.[id];
-    return source ? createHex(source.q, source.r) : fallback;
-};
-
-const resolveMapConfig = (options?: DungeonGenerationOptions): { width: number; height: number; mapShape: MapShape } => {
-    const width = Number.isInteger(options?.gridWidth) && Number(options?.gridWidth) > 0
-        ? Number(options?.gridWidth)
-        : GRID_WIDTH;
-    const height = Number.isInteger(options?.gridHeight) && Number(options?.gridHeight) > 0
-        ? Number(options?.gridHeight)
-        : GRID_HEIGHT;
-    return {
-        width,
-        height,
-        mapShape: options?.mapShape === 'rectangle' ? 'rectangle' : 'diamond'
-    };
-};
-
-const expandMapConfigForAuthoredFloor = (
-    resolvedMap: { width: number; height: number; mapShape: MapShape },
-    authoredFloor?: AuthoredFloor
-): { width: number; height: number; mapShape: MapShape } => {
-    if (!authoredFloor) return resolvedMap;
-
-    const registry = buildModuleRegistryIndex();
-    let maxQ = resolvedMap.width - 1;
-    let maxR = resolvedMap.height - 1;
-
-    Object.values(authoredFloor.anchors || {}).forEach(anchor => {
-        maxQ = Math.max(maxQ, anchor.q);
-        maxR = Math.max(maxR, anchor.r);
-    });
-
-    (authoredFloor.pinnedModules || []).forEach((pinned) => {
-        const entry = registry.entriesById[pinned.id];
-        if (!entry) {
-            maxQ = Math.max(maxQ, pinned.anchor.q);
-            maxR = Math.max(maxR, pinned.anchor.r);
-            return;
-        }
-        entry.footprint.forEach(local => {
-            maxQ = Math.max(maxQ, pinned.anchor.q + local.dq);
-            maxR = Math.max(maxR, pinned.anchor.r + local.dr);
-        });
-    });
-
-    let width = maxQ + 1;
-    let height = maxR + 1;
-    const candidatePoints: Point[] = [];
-
-    Object.values(authoredFloor.anchors || {}).forEach(anchor => {
-        candidatePoints.push(createHex(anchor.q, anchor.r));
-    });
-
-    (authoredFloor.pinnedModules || []).forEach((pinned) => {
-        const entry = registry.entriesById[pinned.id];
-        if (!entry) {
-            candidatePoints.push(createHex(pinned.anchor.q, pinned.anchor.r));
-            return;
-        }
-        entry.footprint.forEach(local => {
-            candidatePoints.push(createHex(pinned.anchor.q + local.dq, pinned.anchor.r + local.dr));
-        });
-    });
-
-    while (candidatePoints.some(point => !isTileInMapShape(point.q, point.r, width, height, resolvedMap.mapShape))) {
-        height += 1;
-        width = Math.max(width, maxQ + 1);
-    }
-
-    return {
-        ...resolvedMap,
-        width,
-        height
-    };
-};
-
-const buildBaseArena = (
-    floor: number,
-    seed: string,
-    options: { width: number; height: number; mapShape: MapShape },
-    authoredFloor?: AuthoredFloor
-): BaseArena => {
-    const rng = createRng32(`${seed}:base`);
-    const { width, height, mapShape } = options;
-    const allHexes = getGridForShape(width, height, mapShape);
-    const centerQ = Math.floor(width / 2);
-    const bounds = getMapRowBoundsForColumn(centerQ, width, height, mapShape);
-    const topR = bounds?.minR ?? 0;
-    const bottomR = bounds?.maxR ?? (height - 1);
-    const centerR = Math.floor((topR + bottomR) / 2);
-    const defaultSpawn = createHex(centerQ, bottomR);
-    const defaultStairs = createHex(centerQ, topR);
-    const playerSpawn = chooseSpecialPoint(authoredFloor?.anchors, 'entry', defaultSpawn);
-    const stairsPosition = chooseSpecialPoint(authoredFloor?.anchors, 'exit', defaultStairs);
-    const registry = buildModuleRegistryIndex();
-    const reservedKeys = new Set<string>();
-    Object.values(authoredFloor?.anchors || {}).forEach(anchor => {
-        reservedKeys.add(pointToKey(createHex(anchor.q, anchor.r)));
-    });
-    (authoredFloor?.pinnedModules || []).forEach((pinned) => {
-        const entry = registry.entriesById[pinned.id];
-        if (!entry) {
-            reservedKeys.add(pointToKey(createHex(pinned.anchor.q, pinned.anchor.r)));
-            return;
-        }
-        entry.footprint.forEach(local => {
-            reservedKeys.add(pointToKey(createHex(pinned.anchor.q + local.dq, pinned.anchor.r + local.dr)));
-        });
-    });
-    const shrineCandidates = allHexes
-        .filter(hex =>
-            pointToKey(hex) !== pointToKey(playerSpawn)
-            && pointToKey(hex) !== pointToKey(stairsPosition)
-            && !reservedKeys.has(pointToKey(hex))
-            && hexDistanceInt(hex, playerSpawn) >= 3
-        )
-        .sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)));
-
-    return {
-        allHexes,
-        playerSpawn,
-        stairsPosition,
-        shrinePosition: authoredFloor?.anchors?.shrine
-            ? createHex(authoredFloor.anchors.shrine.q, authoredFloor.anchors.shrine.r)
-            : (floor >= 1 ? pickByIndex(shrineCandidates, rng) : undefined),
-        center: createHex(centerQ, centerR)
-    };
-};
-
-const resolveFloorIntent = (
-    floor: number,
-    generationState: GenerationState,
-    options: { width: number; height: number; mapShape: MapShape; theme: string },
-    authoredFloor?: AuthoredFloor
-): FloorIntentRequest => {
-    const directorState = generationState.directorState;
-    const redlinePressureBand = Math.max(
-        Number(directorState?.redlineBand || 0),
-        Number(directorState?.resourceStressBand || 0)
-    );
-    const scheduledRole = floor === 10 ? 'boss'
-        : floor === 1 ? 'onboarding'
-        : floor % 5 === 0 ? 'elite'
-            : floor % 2 === 0 ? 'pressure_spike'
-                : 'recovery';
-    const directorForcesRecovery = !authoredFloor?.role
-        && scheduledRole !== 'boss'
-        && scheduledRole !== 'elite'
-        && scheduledRole !== 'onboarding'
-        && redlinePressureBand >= 2;
-    const role = authoredFloor?.role || (directorForcesRecovery ? 'recovery' : scheduledRole);
-    const prefersSafeResetRecovery = role === 'recovery' && redlinePressureBand >= 2;
-
-    const requiredTacticalTags = authoredFloor?.requiredTacticalTags
-        ? [...authoredFloor.requiredTacticalTags].sort()
-        : role === 'pressure_spike'
-            ? ['choke']
-            : role === 'recovery'
-                ? (prefersSafeResetRecovery ? ['safe_reset'] : ['hazard_lure'])
-                : role === 'elite'
-                    ? ['perch']
-                    : role === 'boss'
-                        ? ['boss_arena']
-                    : [];
-
-    const requiredNarrativeTags = authoredFloor?.requiredNarrativeTags
-        ? [...authoredFloor.requiredNarrativeTags].sort()
-        : role === 'pressure_spike'
-            ? ['siege_breach']
-            : role === 'recovery'
-                ? (prefersSafeResetRecovery ? ['failed_escape'] : ['collapsed_crossing'])
-                : role === 'elite'
-                    ? ['watch_post']
-                    : role === 'boss'
-                        ? ['ritual_site']
-                    : [];
-    const chokeRatioBps = role === 'pressure_spike'
-        ? Math.max(4500, 8000 - (redlinePressureBand * 1000))
-        : role === 'boss'
-            ? Math.max(8000, 9000 - (redlinePressureBand * 250))
-            : Math.max(1500, 3000 - (redlinePressureBand * 500));
-    const hazardLureDemand = role === 'boss'
-        ? 1
-        : role === 'recovery'
-            ? (prefersSafeResetRecovery ? 0 : 1)
-            : 0;
-    const resetBudget = role === 'recovery'
-        ? Math.min(4, 2 + redlinePressureBand)
-        : redlinePressureBand >= 3
-            ? 1
-            : 0;
-    const parTurnTarget = 8
-        + floor
-        + Number(directorState?.tensionBand || 0)
-        + Number(directorState?.resourceStressBand || 0)
-        + Number(directorState?.redlineBand || 0);
-    const routeProfile = resolveRouteProfile(role, authoredFloor);
-
-    return {
-        floor,
-        role,
-        theme: options.theme || authoredFloor?.theme || getFloorTheme(floor),
-        board: {
-            width: options.width,
-            height: options.height,
-            mapShape: options.mapShape
-        },
-        requiredTacticalTags,
-        forbiddenTacticalTags: [],
-        requiredNarrativeTags,
-        chokeRatioBps,
-        flankDemand: role === 'elite' ? 2 : 1,
-        perchDemand: role === 'elite' || role === 'boss' ? 1 : 0,
-        hazardLureDemand,
-        resetBudget,
-        parTurnTarget,
-        routeProfile
-    };
-};
-
-const resolveNarrativeSceneRequest = (
-    intent: FloorIntentRequest,
-    generationState: GenerationState
-): NarrativeSceneRequest => {
-    const motif = intent.requiredNarrativeTags[0]
-        || (intent.role === 'pressure_spike' ? 'siege_breach'
-            : intent.role === 'boss' ? 'ritual_site'
-                : intent.role === 'elite' ? 'watch_post'
-                : 'collapsed_crossing');
-    const repeatedRecently = generationState.sceneSignatureHistory.some(scene => scene.motif === motif);
-    const alternateMotif = motif === 'watch_post' ? 'failed_escape' : 'watch_post';
-
-    return {
-        motif: repeatedRecently && intent.role !== 'elite' && intent.role !== 'boss' ? alternateMotif : motif,
-        mood: intent.role === 'pressure_spike' ? 'tense' : intent.role === 'elite' || intent.role === 'boss' ? 'alert' : 'grim',
-        evidenceQuota: intent.role === 'onboarding' ? 1 : intent.role === 'boss' ? 3 : 2,
-        encounterPosture: intent.role === 'pressure_spike'
-            ? 'fortified_hold'
-            : intent.role === 'boss'
-                ? 'ritual_defense'
-            : intent.role === 'elite'
-                ? 'crossfire_screen'
-                : 'predatory_lure'
-    };
-};
-
-const buildTopologicalBlueprint = (
-    intent: FloorIntentRequest,
-    authoredFloor?: AuthoredFloor
-): TopologicalBlueprint => {
-    const slots: TopologicalBlueprint['slots'] = [];
-    const hasSufficientPinnedCoverage = (authoredFloor?.pinnedModules?.length || 0) >= 2;
-    const secondaryAnchor = authoredFloor?.anchors?.secondary_slot;
-    const secondaryPathOverride = authoredFloor?.pathOverrides?.secondary_slot;
-    const hasPinnedSecondaryModule = Boolean(
-        secondaryAnchor
-        && authoredFloor?.pinnedModules?.some((placed) =>
-            placed.anchor.q === secondaryAnchor.q && placed.anchor.r === secondaryAnchor.r
-        )
-    );
-    const needsExplicitSecondarySlot = Boolean(
-        !hasSufficientPinnedCoverage
-        || secondaryPathOverride?.onPath
-        || hasPinnedSecondaryModule
-    );
-    if (intent.requiredTacticalTags.length > 0) {
-        slots.push({
-            id: 'primary_slot',
-            kind: intent.requiredTacticalTags[0],
-            requiredTacticalTags: [...intent.requiredTacticalTags],
-            requiredNarrativeTags: [...intent.requiredNarrativeTags],
-            preferredAnchorKind: 'center' as const,
-            adjacencyIds: [],
-            onPathDefault: true,
-            pathOrderDefault: 100
-        });
-    }
-    if (needsExplicitSecondarySlot && (intent.role === 'elite' || intent.role === 'pressure_spike' || intent.role === 'boss')) {
-        slots.push({
-            id: 'secondary_slot',
-            kind: intent.role === 'elite' ? 'perch' : intent.role === 'boss' ? 'objective' : 'hazard_field',
-            requiredTacticalTags: intent.role === 'elite' ? ['perch'] : intent.role === 'boss' ? ['boss_arena'] : ['hazard_lure'],
-            requiredNarrativeTags: intent.role === 'elite' ? ['watch_post'] : intent.role === 'boss' ? ['ritual_site'] : ['collapsed_crossing'],
-            preferredAnchorKind: intent.role === 'elite' ? 'upper' : intent.role === 'boss' ? 'center' : 'right',
-            adjacencyIds: ['primary_slot'],
-            onPathDefault: false,
-            pathOrderDefault: 200
-        });
-    }
-
-    return {
-        floor: intent.floor,
-        role: intent.role,
-        theme: intent.theme,
-        slots,
-        closedPaths: authoredFloor?.closedPaths || []
-    };
-};
-
-const buildParityOffset = (
-    requirement: ClosedPathRequirement,
-    entry: Point,
-    exit: Point
-): { offset: number; info: SpatialBudget['closedPathOffsets'][string] } => {
-    const distance = hexDistanceInt(entry, exit);
-    const pathParity: 'even' | 'odd' = distance % 2 === 0 ? 'even' : 'odd';
-    const requiresWiggle = (
-        (distance % 2 === 1 && requirement.requiredParity === 'even')
-        || (distance % 2 === 0 && requirement.requiredParity === 'odd')
-    );
-    const wiggleHexes = requiresWiggle ? 2 : requirement.flexibleLoop ? 1 : 0;
-    return {
-        offset: wiggleHexes,
-        info: { distance, pathParity, requiresWiggle, wiggleHexes }
-    };
-};
-
-const collectAnchors = (arena: BaseArena, authoredFloor?: AuthoredFloor): Record<string, Point> => {
-    const anchors: Record<string, Point> = {
-        entry: arena.playerSpawn,
-        exit: arena.stairsPosition
-    };
-    Object.entries(authoredFloor?.anchors || {}).forEach(([id, anchor]) => {
-        anchors[id] = createHex(anchor.q, anchor.r);
-    });
-    return anchors;
-};
-
-const reserveSpatialBudget = (
-    arena: BaseArena,
-    blueprint: TopologicalBlueprint,
-    authoredFloor: AuthoredFloor | undefined
-): SpatialBudget | GenerationFailure => {
-    const freeCellsByParity = { even: 0, odd: 0 };
-    for (const cell of arena.allHexes) {
-        if (hexParity(cell) === 0) freeCellsByParity.even += 1;
-        else freeCellsByParity.odd += 1;
-    }
-
-    const anchorById = collectAnchors(arena, authoredFloor);
-
-    const closedPathOffsets: SpatialBudget['closedPathOffsets'] = {};
-    for (const requirement of blueprint.closedPaths) {
-        const entry = anchorById[requirement.entryAnchorId];
-        const exit = anchorById[requirement.exitAnchorId];
-        if (!entry || !exit) {
-            return {
-                stage: 'reserveSpatialBudget',
-                code: 'SPEC_UNKNOWN_ANCHOR',
-                severity: 'error',
-                conflict: {
-                    authoredId: requirement.id,
-                    constraintType: 'SPEC_UNKNOWN_ANCHOR',
-                    spatialContext: { hexes: [], anchorIds: [requirement.entryAnchorId, requirement.exitAnchorId] }
-                },
-                diagnostics: [`Closed path ${requirement.id} references an unknown anchor.`]
-            };
-        }
-        const { offset, info } = buildParityOffset(requirement, entry, exit);
-        closedPathOffsets[requirement.id] = info;
-        if (info.requiresWiggle && arena.allHexes.length < requirement.requiredLength + offset) {
-            return {
-                stage: 'reserveSpatialBudget',
-                code: 'PARITY_CLOSURE_UNSAT',
-                severity: 'error',
-                conflict: {
-                    authoredId: requirement.id,
-                    constraintType: 'PARITY_CLOSURE_UNSAT',
-                    spatialContext: { hexes: [entry, exit] }
-                },
-                diagnostics: [`Closed path ${requirement.id} cannot absorb the required ${offset}-hex parity wiggle.`]
-            };
-        }
-    }
-
-    return {
-        freeCellsByParity,
-        connectorSeatsByParity: { ...freeCellsByParity },
-        loopCandidateAnchorsByParity: {
-            even: arena.allHexes.filter(cell => hexParity(cell) === 0).map(pointToKey),
-            odd: arena.allHexes.filter(cell => hexParity(cell) === 1).map(pointToKey)
-        },
-        pinnedFootprints: (authoredFloor?.pinnedModules || []).map(item => item.id),
-        closedPathOffsets
-    };
-};
 
 const chooseAnchorCandidates = (arena: BaseArena, kind: 'center' | 'upper' | 'lower' | 'left' | 'right'): Point[] => {
     const all = [...arena.allHexes].sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)));
@@ -872,191 +565,6 @@ const embedSpatialPlan = (
     };
 };
 
-const resolveModulePlan = (
-    blueprint: TopologicalBlueprint,
-    authoredFloor: AuthoredFloor | undefined,
-    theme: string,
-    arena: BaseArena,
-    spatialPlan: SpatialPlan,
-    rngSeed: string
-): ModulePlan | GenerationFailure => {
-    const registry = buildModuleRegistryIndex();
-    const occupied = new Set<string>();
-    occupied.add(pointToKey(arena.playerSpawn));
-    occupied.add(pointToKey(arena.stairsPosition));
-    if (arena.shrinePosition) {
-        occupied.add(pointToKey(arena.shrinePosition));
-    }
-    const placements: ModulePlacement[] = [];
-    const rng = createRng32(`${rngSeed}:modules`);
-    const blockedIds = new Set(authoredFloor?.blockedModuleIds || []);
-
-    const updateSlotAnchor = (slotId: string, anchor: Point) => {
-        spatialPlan.anchorById[slotId] = anchor;
-        const slotPlacement = spatialPlan.slotPlacements.find(item => item.slotId === slotId);
-        if (slotPlacement) {
-            slotPlacement.anchor = anchor;
-        } else {
-            spatialPlan.slotPlacements.push({ slotId, anchor });
-        }
-        spatialPlan.gasketAnchors[slotId] = anchor;
-    };
-
-    const candidateModuleIdsForSlot = (slot: TopologicalBlueprint['slots'][number]): string[] =>
-        getCandidateModuleEntriesForSlot(slot, authoredFloor, theme, registry, blockedIds).map(entry => entry.id);
-
-    const candidateAnchorsForSlot = (slot: TopologicalBlueprint['slots'][number]): Point[] => {
-        const seen = new Set<string>();
-        const preferred = spatialPlan.anchorById[slot.id];
-        const otherCandidates = chooseAnchorCandidates(arena, slot.preferredAnchorKind);
-        const shuffledOthers = shuffleStable(otherCandidates, rng);
-        return [preferred, ...shuffledOthers]
-            .filter((anchor): anchor is Point => Boolean(anchor))
-            .filter(anchor => {
-                const key = pointToKey(anchor);
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
-    };
-
-    const placeModule = (moduleId: string, slotId: string, anchor: Point): GenerationFailure | undefined => {
-        const module = registry.entriesById[moduleId];
-        if (!module) {
-            return {
-                stage: 'resolveModulePlan',
-                code: 'MODULE_NOT_FOUND',
-                severity: 'error',
-                conflict: {
-                    authoredId: moduleId,
-                    constraintType: 'MODULE_NOT_FOUND',
-                    spatialContext: { hexes: [anchor], anchorIds: [slotId] }
-                },
-                diagnostics: [`Unknown module ${moduleId}.`]
-            };
-        }
-        if (!fitsFootprint(anchor, module.footprint, arena, occupied, new Set([pointToKey(anchor)]))) {
-            return {
-                stage: 'resolveModulePlan',
-                code: 'MODULE_FOOTPRINT_BLOCKED',
-                severity: 'error',
-                conflict: {
-                    authoredId: moduleId,
-                    constraintType: 'MODULE_FOOTPRINT_BLOCKED',
-                    spatialContext: { hexes: [anchor], anchorIds: [slotId] }
-                },
-                diagnostics: [`Module ${moduleId} cannot fit at ${pointToKey(anchor)}.`]
-            };
-        }
-
-        const footprintKeys = module.footprint.map(local => pointToKey(toWorld(anchor, local)));
-        footprintKeys.forEach(key => occupied.add(key));
-        placements.push({ moduleId, slotId, anchor, footprintKeys, onPath: false });
-        return undefined;
-    };
-
-    for (const pinned of authoredFloor?.pinnedModules || []) {
-        const anchor = createHex(pinned.anchor.q, pinned.anchor.r);
-        const matchingSlotId = blueprint.slots.find(slot =>
-            pointToKey(spatialPlan.anchorById[slot.id] || arena.center) === pointToKey(anchor)
-            && !placements.some(item => item.slotId === slot.id)
-        )?.id;
-        const failure = placeModule(pinned.id, matchingSlotId || pinned.id, anchor);
-        if (failure) return failure;
-    }
-
-    for (const slot of blueprint.slots) {
-        if (placements.some(item => item.slotId === slot.id)) continue;
-        const explicitCandidateIds = candidateModuleIdsForSlot(slot);
-
-        if (explicitCandidateIds.length === 0) continue;
-        const candidates = shuffleStable(explicitCandidateIds, rng);
-        let placed = false;
-        const anchorCandidates = candidateAnchorsForSlot(slot);
-        let lastAnchor = spatialPlan.anchorById[slot.id] || arena.center;
-        for (const anchor of anchorCandidates) {
-            lastAnchor = anchor;
-            for (const moduleId of candidates) {
-                const failure = placeModule(moduleId, slot.id, anchor);
-                if (!failure) {
-                    updateSlotAnchor(slot.id, anchor);
-                    placed = true;
-                    break;
-                }
-            }
-            if (placed) {
-                break;
-            }
-        }
-        if (!placed && slot.requiredTacticalTags.length > 0) {
-            return {
-                stage: 'resolveModulePlan',
-                code: 'SEARCH_BUDGET_EXCEEDED',
-                severity: 'error',
-                conflict: {
-                    authoredId: slot.id,
-                    constraintType: 'SEARCH_BUDGET_EXCEEDED',
-                    spatialContext: { hexes: [lastAnchor], anchorIds: [slot.id] }
-                },
-                diagnostics: [`No candidate module could satisfy slot ${slot.id}.`]
-            };
-        }
-    }
-
-    return { placements };
-};
-
-const registerSpatialClaims = (modulePlan: ModulePlan): SpatialClaim[] => {
-    const registry = buildModuleRegistryIndex();
-    const claims: SpatialClaim[] = [];
-    for (const placement of modulePlan.placements) {
-        const module = registry.entriesById[placement.moduleId];
-        const anchor = placement.anchor;
-        for (const template of module.claimTemplates || []) {
-            const from = toWorld(anchor, template.from);
-            const to = toWorld(anchor, template.to);
-            claims.push({
-                id: `${placement.slotId}:${template.id}`,
-                kind: template.kind,
-                hardness: template.hardness,
-                sourceModuleId: placement.moduleId,
-                from,
-                to,
-                cells: hexRaycastInt(from, to)
-            });
-        }
-    }
-    return claims.sort((a, b) => a.id.localeCompare(b.id));
-};
-
-const realizeSceneEvidence = (
-    scene: NarrativeSceneRequest,
-    plan: ModulePlan,
-    arena: BaseArena
-): { anchors: NarrativeAnchor[]; evidence: Array<{ id: string; tag: string; point: Point }> } => {
-    const anchors: NarrativeAnchor[] = [];
-    const evidence: Array<{ id: string; tag: string; point: Point }> = [];
-    const preferredPoint = plan.placements[0]?.anchor || arena.center;
-    anchors.push({
-        id: `scene_anchor_${scene.motif}`,
-        kind: scene.motif,
-        point: preferredPoint
-    });
-    evidence.push({
-        id: `evidence_primary_${scene.motif}`,
-        tag: scene.motif,
-        point: preferredPoint
-    });
-    if (scene.evidenceQuota > 1 && arena.shrinePosition) {
-        evidence.push({
-            id: `evidence_secondary_${scene.encounterPosture}`,
-            tag: scene.encounterPosture,
-            point: arena.shrinePosition
-        });
-    }
-    return { anchors, evidence };
-};
-
 const realizeArenaArtifact = (
     arena: BaseArena,
     map: { width: number; height: number; mapShape: MapShape },
@@ -1144,15 +652,6 @@ const closeUnresolvedGaskets = (
     return nextTiles;
 };
 
-const walkableNeighborKeys = (point: Point): string[] => ([
-    createHex(point.q + 1, point.r),
-    createHex(point.q + 1, point.r - 1),
-    createHex(point.q, point.r - 1),
-    createHex(point.q - 1, point.r),
-    createHex(point.q - 1, point.r + 1),
-    createHex(point.q, point.r + 1)
-]).map(pointToKey);
-
 const emptyGeneratedPathNetwork = (): GeneratedPathNetwork => ({
     landmarks: [],
     tacticalTileKeys: [],
@@ -1165,218 +664,6 @@ const emptyGeneratedPathNetwork = (): GeneratedPathNetwork => ({
     maxStraightRun: 0,
     environmentalPressureClusters: []
 });
-
-const resolveRouteProfile = (
-    role: FloorIntentRequest['role'],
-    authoredFloor?: AuthoredFloor
-): RouteProfile => {
-    if (authoredFloor && role !== 'boss') {
-        return {
-            mode: 'single',
-            minRouteCount: 1,
-            maxStraightRun: 5,
-            minBranchSeparationTiles: 0,
-            rejoinBeforeExit: true,
-            obstacleClusterBudget: 1,
-            trapClusterBudget: 0,
-            lavaClusterBudget: 1,
-            saferRouteBias: 'none',
-            riskierRouteBias: 'none'
-        };
-    }
-    switch (role) {
-        case 'recovery':
-            return {
-                mode: 'dual_route',
-                minRouteCount: 2,
-                maxStraightRun: 4,
-                minBranchSeparationTiles: 3,
-                rejoinBeforeExit: true,
-                obstacleClusterBudget: 2,
-                trapClusterBudget: 1,
-                lavaClusterBudget: 0,
-                saferRouteBias: 'strong',
-                riskierRouteBias: 'soft'
-            };
-        case 'pressure_spike':
-            return {
-                mode: 'dual_route',
-                minRouteCount: 2,
-                maxStraightRun: 4,
-                minBranchSeparationTiles: 3,
-                rejoinBeforeExit: true,
-                obstacleClusterBudget: 2,
-                trapClusterBudget: 2,
-                lavaClusterBudget: 2,
-                saferRouteBias: 'soft',
-                riskierRouteBias: 'strong'
-            };
-        case 'elite':
-            return {
-                mode: 'dual_route_pre_arena',
-                minRouteCount: 2,
-                maxStraightRun: 4,
-                minBranchSeparationTiles: 3,
-                rejoinBeforeExit: true,
-                obstacleClusterBudget: 2,
-                trapClusterBudget: 1,
-                lavaClusterBudget: 2,
-                saferRouteBias: 'soft',
-                riskierRouteBias: 'strong'
-            };
-        case 'boss':
-            return {
-                mode: 'arena_single',
-                minRouteCount: 1,
-                maxStraightRun: 5,
-                minBranchSeparationTiles: 0,
-                rejoinBeforeExit: true,
-                obstacleClusterBudget: 1,
-                trapClusterBudget: 0,
-                lavaClusterBudget: 1,
-                saferRouteBias: 'none',
-                riskierRouteBias: 'none'
-            };
-        case 'onboarding':
-        default:
-            return {
-                mode: 'single',
-                minRouteCount: 1,
-                maxStraightRun: 4,
-                minBranchSeparationTiles: 0,
-                rejoinBeforeExit: true,
-                obstacleClusterBudget: 1,
-                trapClusterBudget: 0,
-                lavaClusterBudget: 0,
-                saferRouteBias: 'none',
-                riskierRouteBias: 'none'
-            };
-    }
-};
-
-const parseKeyToHex = (key: string): Point => {
-    const [q, r] = key.split(',').map(Number);
-    return createHex(q, r);
-};
-
-const canonicalPathEdge = (left: string, right: string): PathEdge =>
-    left.localeCompare(right) <= 0
-        ? { fromKey: left, toKey: right }
-        : { fromKey: right, toKey: left };
-
-const buildEdgeSignature = (edge: PathEdge): string => `${edge.fromKey}|${edge.toKey}`;
-
-const buildEdgesFromTileKeys = (tileKeys: string[]): PathEdge[] => {
-    const seen = new Set<string>();
-    const edges: PathEdge[] = [];
-    for (let index = 1; index < tileKeys.length; index += 1) {
-        const previous = tileKeys[index - 1];
-        const current = tileKeys[index];
-        if (!previous || !current || previous === current) continue;
-        const edge = canonicalPathEdge(previous, current);
-        const signature = buildEdgeSignature(edge);
-        if (seen.has(signature)) continue;
-        seen.add(signature);
-        edges.push(edge);
-    }
-    return edges;
-};
-
-const sortPathEdges = (edges: Iterable<PathEdge>): PathEdge[] =>
-    Array.from(edges).sort((left, right) =>
-        left.fromKey.localeCompare(right.fromKey) || left.toKey.localeCompare(right.toKey)
-    );
-
-const buildPathSummary = (pathNetwork: GeneratedPathNetwork): PathSummary => {
-    const mainLandmarkIds = pathNetwork.landmarks
-        .filter(landmark => landmark.onPath)
-        .map(landmark => landmark.id)
-        .sort();
-    const primaryLandmarkIds = pathNetwork.landmarks
-        .filter(landmark => landmark.routeMembership === 'primary' || landmark.routeMembership === 'shared')
-        .map(landmark => landmark.id)
-        .sort();
-    const alternateLandmarkIds = pathNetwork.landmarks
-        .filter(landmark => landmark.routeMembership === 'alternate' || landmark.routeMembership === 'shared')
-        .map(landmark => landmark.id)
-        .sort();
-    const hiddenLandmarkIds = pathNetwork.landmarks
-        .filter(landmark => !landmark.onPath)
-        .map(landmark => landmark.id)
-        .sort();
-    const obstacleClusterCount = pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'obstacle').length;
-    const trapClusterCount = pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'trap').length;
-    const lavaClusterCount = pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'lava').length;
-
-    return {
-        mainLandmarkIds,
-        primaryLandmarkIds,
-        alternateLandmarkIds,
-        hiddenLandmarkIds,
-        routeCount: pathNetwork.routeCount,
-        junctionCount: pathNetwork.junctionTileKeys.length,
-        maxStraightRun: pathNetwork.maxStraightRun,
-        obstacleClusterCount,
-        trapClusterCount,
-        lavaClusterCount,
-        tacticalTileCount: pathNetwork.tacticalTileKeys.length,
-        visualTileCount: pathNetwork.visualTileKeys.length
-    };
-};
-
-const buildPathDiagnostics = (pathNetwork: GeneratedPathNetwork): string[] => ([
-    `main_landmarks=${pathNetwork.landmarks.filter(landmark => landmark.onPath).map(landmark => landmark.id).sort().join(',') || 'none'}`,
-    `primary_landmarks=${pathNetwork.landmarks.filter(landmark => landmark.routeMembership === 'primary' || landmark.routeMembership === 'shared').map(landmark => landmark.id).sort().join(',') || 'none'}`,
-    `alternate_landmarks=${pathNetwork.landmarks.filter(landmark => landmark.routeMembership === 'alternate' || landmark.routeMembership === 'shared').map(landmark => landmark.id).sort().join(',') || 'none'}`,
-    `hidden_landmarks=${pathNetwork.landmarks.filter(landmark => !landmark.onPath).map(landmark => landmark.id).sort().join(',') || 'none'}`,
-    `route_count=${pathNetwork.routeCount}`,
-    `junction_count=${pathNetwork.junctionTileKeys.length}`,
-    `max_straight_run=${pathNetwork.maxStraightRun}`,
-    `obstacle_clusters=${pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'obstacle').length}`,
-    `trap_clusters=${pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'trap').length}`,
-    `lava_clusters=${pathNetwork.environmentalPressureClusters.filter(cluster => cluster.kind === 'lava').length}`,
-    `primary_route_tiles=${new Set(pathNetwork.segments.filter(segment => segment.routeMembership === 'primary' || segment.routeMembership === 'shared').flatMap(segment => segment.tileKeys)).size}`,
-    `alternate_route_tiles=${new Set(pathNetwork.segments.filter(segment => segment.routeMembership === 'alternate' || segment.routeMembership === 'shared').flatMap(segment => segment.tileKeys)).size}`,
-    `tactical_tiles=${pathNetwork.tacticalTileKeys.length}`,
-    `visual_tiles=${pathNetwork.visualTileKeys.length}`,
-    `segments=${pathNetwork.segments.map(segment => `${segment.kind}:${segment.fromLandmarkId}->${segment.toLandmarkId}`).join('|') || 'none'}`
-]);
-
-const getPathOverride = (
-    authoredFloor: AuthoredFloor | undefined,
-    targetId: string
-): AuthoredPathOverride | undefined => authoredFloor?.pathOverrides?.[targetId];
-
-const resolveLandmarkRoute = (
-    override: AuthoredPathOverride | undefined,
-    onPathDefault: boolean,
-    fallbackMembership: Exclude<RouteMembership, 'hidden'>
-): { onPath: boolean; routeMembership: RouteMembership } => {
-    if (override?.routeHint === 'hidden') {
-        return {
-            onPath: false,
-            routeMembership: 'hidden'
-        };
-    }
-    if (override?.routeHint === 'primary' || override?.routeHint === 'alternate') {
-        const onPath = override.onPath ?? true;
-        return {
-            onPath,
-            routeMembership: onPath ? override.routeHint : 'hidden'
-        };
-    }
-    const onPath = override?.onPath ?? onPathDefault;
-    return {
-        onPath,
-        routeMembership: onPath ? fallbackMembership : 'hidden'
-    };
-};
-
-const isPathEligibleTile = (tile: Tile | undefined): boolean =>
-    !!tile && tile.baseId !== 'VOID' && !tile.traits.has('BLOCKS_MOVEMENT');
-
-const isHazardousPathTile = (tile: Tile | undefined): boolean =>
-    !!tile && tile.traits.has('HAZARDOUS');
 
 const buildPathLandmarks = (
     arena: BaseArena,
@@ -1738,415 +1025,6 @@ const buildOrderedMainLandmarks = (landmarks: PathLandmark[], tiles: Map<string,
     }
 
     return chain;
-};
-
-const buildSegmentDirectionKey = (fromKey: string, toKey: string): string => {
-    const from = parseKeyToHex(fromKey);
-    const to = parseKeyToHex(toKey);
-    return `${to.q - from.q},${to.r - from.r}`;
-};
-
-const buildPathBendKeys = (pathNetwork: GeneratedPathNetwork): Set<string> => {
-    const bendKeys = new Set<string>();
-    pathNetwork.segments
-        .filter(segment => segment.kind !== 'spur')
-        .forEach(segment => {
-            for (let index = 1; index < segment.tileKeys.length - 1; index += 1) {
-                const previousKey = segment.tileKeys[index - 1]!;
-                const currentKey = segment.tileKeys[index]!;
-                const nextKey = segment.tileKeys[index + 1]!;
-                if (buildSegmentDirectionKey(previousKey, currentKey) !== buildSegmentDirectionKey(currentKey, nextKey)) {
-                    bendKeys.add(currentKey);
-                }
-            }
-        });
-    return bendKeys;
-};
-
-const computeMaxStraightRun = (
-    pathNetwork: GeneratedPathNetwork,
-    additionalBreakKeys: ReadonlySet<string> = new Set<string>()
-): number => {
-    const breakKeys = new Set<string>([
-        ...pathNetwork.junctionTileKeys,
-        ...Array.from(buildPathBendKeys(pathNetwork)),
-        ...Array.from(additionalBreakKeys)
-    ]);
-    let maxStraightRun = 0;
-    pathNetwork.segments
-        .filter(segment => segment.kind !== 'spur')
-        .forEach(segment => {
-            if (segment.tileKeys.length === 0) return;
-            maxStraightRun = Math.max(maxStraightRun, 1);
-            let lastDirection = '';
-            let runLength = 1;
-            for (let index = 1; index < segment.tileKeys.length; index += 1) {
-                const previousKey = segment.tileKeys[index - 1]!;
-                const currentKey = segment.tileKeys[index]!;
-                if (breakKeys.has(previousKey) || breakKeys.has(currentKey)) {
-                    lastDirection = '';
-                    runLength = 1;
-                    maxStraightRun = Math.max(maxStraightRun, runLength);
-                    continue;
-                }
-                const nextDirection = buildSegmentDirectionKey(previousKey, currentKey);
-                if (nextDirection === lastDirection) {
-                    runLength += 1;
-                } else {
-                    runLength = 2;
-                    lastDirection = nextDirection;
-                }
-                maxStraightRun = Math.max(maxStraightRun, runLength);
-            }
-        });
-    return maxStraightRun;
-};
-
-const buildStraightRunHotspotKeys = (
-    pathNetwork: Pick<GeneratedPathNetwork, 'segments'>,
-    minimumRunLength: number
-): Set<string> => {
-    const hotspots = new Set<string>();
-    if (minimumRunLength < 3) return hotspots;
-
-    for (const segment of pathNetwork.segments) {
-        if (segment.kind === 'spur' || segment.tileKeys.length < minimumRunLength) continue;
-
-        let runStartIndex = 0;
-        let currentDirection = buildSegmentDirectionKey(segment.tileKeys[0], segment.tileKeys[1]);
-
-        const flushRun = (endIndexExclusive: number) => {
-            const runTileKeys = segment.tileKeys.slice(runStartIndex, endIndexExclusive);
-            if (runTileKeys.length >= minimumRunLength) {
-                hotspots.add(runTileKeys[Math.floor(runTileKeys.length / 2)]!);
-            }
-        };
-
-        for (let index = 1; index < segment.tileKeys.length - 1; index += 1) {
-            const nextDirection = buildSegmentDirectionKey(segment.tileKeys[index], segment.tileKeys[index + 1]);
-            if (nextDirection === currentDirection) continue;
-            flushRun(index + 1);
-            runStartIndex = index;
-            currentDirection = nextDirection;
-        }
-
-        flushRun(segment.tileKeys.length);
-    }
-
-    return hotspots;
-};
-
-const buildAlternateRouteSegment = (
-    tiles: Map<string, Tile>,
-    primarySegments: PathSegment[],
-    landmarkById: Map<string, PathLandmark>,
-    routeProfile: RouteProfile
-): { segment: PathSegment; junctionTileKeys: string[]; sharedLandmarkIds: string[] } | undefined => {
-    const primaryTrail = primarySegments.reduce<string[]>((trail, segment, index) => (
-        index === 0
-            ? [...segment.tileKeys]
-            : [...trail, ...segment.tileKeys.slice(1)]
-    ), []);
-    if (routeProfile.minRouteCount < 2 || primaryTrail.length < Math.max(6, routeProfile.minBranchSeparationTiles + 3)) {
-        return undefined;
-    }
-
-    const desiredSplitIndex = Math.max(1, Math.floor((primaryTrail.length - 1) / 3));
-    const desiredMergeIndex = Math.min(
-        primaryTrail.length - 2,
-        Math.max(desiredSplitIndex + 2, Math.ceil(((primaryTrail.length - 1) * 2) / 3))
-    );
-    const pairCandidates: Array<{ splitIndex: number; mergeIndex: number; score: number }> = [];
-    for (let splitIndex = 1; splitIndex <= Math.max(1, primaryTrail.length - 4); splitIndex += 1) {
-        for (let mergeIndex = splitIndex + 2; mergeIndex <= primaryTrail.length - 2; mergeIndex += 1) {
-            const score = Math.abs(splitIndex - desiredSplitIndex) + Math.abs(mergeIndex - desiredMergeIndex);
-            pairCandidates.push({ splitIndex, mergeIndex, score });
-        }
-    }
-    pairCandidates.sort((left, right) =>
-        left.score - right.score
-        || (right.mergeIndex - right.splitIndex) - (left.mergeIndex - left.splitIndex)
-        || left.splitIndex - right.splitIndex
-    );
-
-    const primaryTileSet = new Set(primarySegments.flatMap(segment => segment.tileKeys));
-    for (const candidate of pairCandidates) {
-        const sourceKey = primaryTrail[candidate.splitIndex]!;
-        const targetKey = primaryTrail[candidate.mergeIndex]!;
-        if (sourceKey === targetKey) continue;
-        const splitSegment = primarySegments.find(segment => segment.tileKeys.includes(sourceKey));
-        const mergeSegment = [...primarySegments].reverse().find(segment => segment.tileKeys.includes(targetKey));
-        const splitLandmarkId = splitSegment?.fromLandmarkId || 'entry';
-        const mergeLandmarkId = mergeSegment?.toLandmarkId || 'exit';
-        const betweenPrimaryKeys = new Set<string>();
-        primaryTrail.slice(candidate.splitIndex, candidate.mergeIndex + 1).forEach(key => betweenPrimaryKeys.add(key));
-        betweenPrimaryKeys.delete(sourceKey);
-        betweenPrimaryKeys.delete(targetKey);
-
-        const alternatePath = findShortestPath(
-            tiles,
-            [sourceKey],
-            targetKey,
-            new Set<string>(),
-            {
-                disfavoredKeys: betweenPrimaryKeys,
-                disfavorCost: 60
-            }
-        );
-        if (!alternatePath) continue;
-
-        const offPrimaryKeys = alternatePath.tileKeys.filter(key =>
-            key !== sourceKey
-            && key !== targetKey
-            && !primaryTileSet.has(key)
-        );
-        if (new Set(offPrimaryKeys).size < routeProfile.minBranchSeparationTiles) continue;
-
-        return {
-            segment: {
-                id: `alternate:${splitLandmarkId}->${mergeLandmarkId}`,
-                fromLandmarkId: splitLandmarkId,
-                toLandmarkId: mergeLandmarkId,
-                tileKeys: alternatePath.tileKeys,
-                edges: alternatePath.edges,
-                kind: 'alternate',
-                routeMembership: 'alternate'
-            },
-            junctionTileKeys: [sourceKey, targetKey],
-            sharedLandmarkIds: Array.from(landmarkById.values())
-                .filter(landmark => {
-                    const key = pointToKey(landmark.point);
-                    return key === sourceKey || key === targetKey;
-                })
-                .map(landmark => landmark.id)
-        };
-    }
-
-    return undefined;
-};
-
-const buildTacticalPathNetwork = (
-    tiles: Map<string, Tile>,
-    landmarks: PathLandmark[],
-    routeProfile: RouteProfile
-): { pathNetwork: GeneratedPathNetwork; diagnostics: string[] } | GenerationFailure => {
-    const mainChain = buildOrderedMainLandmarks(landmarks, tiles);
-    if ('stage' in mainChain) return mainChain;
-
-    const landmarkById = new Map(landmarks.map(landmark => [landmark.id, landmark]));
-    const mainTileKeys = new Set<string>();
-    const tacticalTileKeys = new Set<string>();
-    const mainEdges = new Map<string, PathEdge>();
-    const tacticalEdges = new Map<string, PathEdge>();
-    const segments: PathSegment[] = [];
-    const primarySegments: PathSegment[] = [];
-
-    for (let index = 1; index < mainChain.length; index += 1) {
-        const fromId = mainChain[index - 1]!;
-        const toId = mainChain[index]!;
-        const from = landmarkById.get(fromId)!;
-        const to = landmarkById.get(toId)!;
-        const result = findShortestPath(
-            tiles,
-            [pointToKey(from.point)],
-            pointToKey(to.point),
-            mainTileKeys
-        );
-        if (!result) {
-            return {
-                stage: 'buildTacticalPathNetwork',
-                code: fromId === 'entry' && toId === 'exit'
-                    ? 'TACTICAL_PATH_START_EXIT_UNREACHABLE'
-                    : 'TACTICAL_PATH_MAIN_LANDMARK_UNREACHABLE',
-                severity: 'error',
-                conflict: {
-                    authoredId: toId,
-                    constraintType: fromId === 'entry' && toId === 'exit'
-                        ? 'TACTICAL_PATH_START_EXIT_UNREACHABLE'
-                        : 'TACTICAL_PATH_MAIN_LANDMARK_UNREACHABLE',
-                    spatialContext: {
-                        hexes: [from.point, to.point],
-                        anchorIds: [fromId, toId]
-                    }
-                },
-                diagnostics: [`Unable to connect ${fromId} to ${toId} with a walkable main route.`]
-            };
-        }
-
-        result.tileKeys.forEach(key => {
-            mainTileKeys.add(key);
-            tacticalTileKeys.add(key);
-        });
-        result.edges.forEach(edge => {
-            const signature = buildEdgeSignature(edge);
-            mainEdges.set(signature, edge);
-            tacticalEdges.set(signature, edge);
-        });
-        const segment: PathSegment = {
-            id: `primary:${fromId}->${toId}`,
-            fromLandmarkId: fromId,
-            toLandmarkId: toId,
-            tileKeys: result.tileKeys,
-            edges: result.edges,
-            kind: 'primary',
-            routeMembership: 'primary'
-        };
-        primarySegments.push(segment);
-        segments.push(segment);
-    }
-
-    let routeCount = 1;
-    const junctionTileKeys = new Set<string>();
-    const alternateRoute = (
-        routeProfile.mode === 'dual_route'
-        || routeProfile.mode === 'dual_route_pre_arena'
-    ) ? buildAlternateRouteSegment(tiles, primarySegments, landmarkById, routeProfile) : undefined;
-
-    if (alternateRoute) {
-        routeCount = 2;
-        alternateRoute.segment.tileKeys.forEach(key => tacticalTileKeys.add(key));
-        alternateRoute.segment.edges.forEach(edge => tacticalEdges.set(buildEdgeSignature(edge), edge));
-        alternateRoute.junctionTileKeys.forEach(key => junctionTileKeys.add(key));
-        alternateRoute.sharedLandmarkIds.forEach(landmarkId => {
-            const landmark = landmarkById.get(landmarkId);
-            if (landmark && landmark.routeMembership === 'primary') {
-                landmark.routeMembership = 'shared';
-            }
-        });
-        segments.push(alternateRoute.segment);
-    }
-
-    const landmarkOwnerByMainTile: Record<string, string> = {};
-    segments
-        .filter(segment => segment.kind === 'primary')
-        .forEach(segment => {
-            segment.tileKeys.forEach((tileKey, index) => {
-                const distanceToStart = index;
-                const distanceToEnd = segment.tileKeys.length - 1 - index;
-                const owner = distanceToStart <= distanceToEnd ? segment.fromLandmarkId : segment.toLandmarkId;
-                const existingOwner = landmarkOwnerByMainTile[tileKey];
-                if (!existingOwner || owner.localeCompare(existingOwner) < 0) {
-                    landmarkOwnerByMainTile[tileKey] = owner;
-                }
-            });
-        });
-
-    const hiddenLandmarks = landmarks
-        .filter(landmark => !landmark.onPath)
-        .sort((left, right) =>
-            left.orderHint - right.orderHint || left.id.localeCompare(right.id)
-        );
-
-    for (const landmark of hiddenLandmarks) {
-        const targetKey = pointToKey(landmark.point);
-        if (mainTileKeys.has(targetKey)) {
-            tacticalTileKeys.add(targetKey);
-            continue;
-        }
-        const result = findShortestPath(
-            tiles,
-            Array.from(mainTileKeys).sort(),
-            targetKey,
-            mainTileKeys
-        );
-        if (!result) {
-            return {
-                stage: 'buildTacticalPathNetwork',
-                code: 'TACTICAL_PATH_OFFPATH_UNREACHABLE',
-                severity: 'error',
-                conflict: {
-                    authoredId: landmark.id,
-                    constraintType: 'TACTICAL_PATH_OFFPATH_UNREACHABLE',
-                    spatialContext: {
-                        hexes: [landmark.point],
-                        anchorIds: [landmark.id]
-                    }
-                },
-                diagnostics: [`Off-path landmark ${landmark.id} cannot be reached from the main route.`]
-            };
-        }
-        result.tileKeys.forEach(key => tacticalTileKeys.add(key));
-        result.edges.forEach(edge => tacticalEdges.set(buildEdgeSignature(edge), edge));
-        const fromLandmarkId = landmarkOwnerByMainTile[result.sourceKey] || 'entry';
-        const fromLandmark = landmarkById.get(fromLandmarkId);
-        segments.push({
-            id: `spur:${fromLandmarkId}->${landmark.id}`,
-            fromLandmarkId,
-            toLandmarkId: landmark.id,
-            tileKeys: result.tileKeys,
-            edges: result.edges,
-            kind: 'spur',
-            routeMembership: fromLandmark?.routeMembership === 'alternate' ? 'alternate' : 'primary'
-        });
-    }
-
-    const reachableTileKeys = new Set(tacticalTileKeys);
-    const finalizedLandmarks = landmarks.map(landmark => ({
-        ...landmark,
-        reachable: reachableTileKeys.has(pointToKey(landmark.point))
-    }));
-
-    const pathNetwork: GeneratedPathNetwork = {
-        landmarks: finalizedLandmarks,
-        tacticalTileKeys: Array.from(tacticalTileKeys).sort(),
-        tacticalEdges: sortPathEdges(tacticalEdges.values()),
-        visualTileKeys: [],
-        visualEdges: [],
-        segments: segments.sort((left, right) => left.id.localeCompare(right.id)),
-        routeCount,
-        junctionTileKeys: Array.from(junctionTileKeys).sort(),
-        maxStraightRun: 0,
-        environmentalPressureClusters: []
-    };
-    pathNetwork.maxStraightRun = computeMaxStraightRun(pathNetwork);
-
-    return {
-        pathNetwork,
-        diagnostics: buildPathDiagnostics(pathNetwork)
-    };
-};
-
-const buildVisualPathNetwork = (
-    pathNetwork: GeneratedPathNetwork
-): { pathNetwork: GeneratedPathNetwork; diagnostics: string[] } => {
-    const visualTileKeys = new Set<string>();
-    const visualEdges = new Map<string, PathEdge>();
-    pathNetwork.segments
-        .filter(segment => segment.kind !== 'spur')
-        .forEach(segment => {
-            segment.tileKeys.forEach(key => visualTileKeys.add(key));
-            segment.edges.forEach(edge => visualEdges.set(buildEdgeSignature(edge), edge));
-        });
-
-    const nextPathNetwork: GeneratedPathNetwork = {
-        ...pathNetwork,
-        visualTileKeys: Array.from(visualTileKeys).sort(),
-        visualEdges: sortPathEdges(visualEdges.values()),
-        maxStraightRun: computeMaxStraightRun({
-            ...pathNetwork,
-            visualTileKeys: Array.from(visualTileKeys).sort(),
-            visualEdges: sortPathEdges(visualEdges.values())
-        })
-    };
-
-    return {
-        pathNetwork: nextPathNetwork,
-        diagnostics: buildPathDiagnostics(nextPathNetwork)
-    };
-};
-
-const resolveTileRouteMembership = (
-    pathNetwork: GeneratedPathNetwork,
-    tileKey: string
-): Exclude<RouteMembership, 'hidden'> => {
-    const memberships = new Set<Exclude<RouteMembership, 'hidden'>>();
-    pathNetwork.segments
-        .filter(segment => segment.kind !== 'spur' && segment.tileKeys.includes(tileKey))
-        .forEach(segment => memberships.add(segment.routeMembership));
-    if (memberships.has('shared')) return 'shared';
-    if (memberships.has('primary') && memberships.has('alternate')) return 'shared';
-    if (memberships.has('alternate')) return 'alternate';
-    return 'primary';
 };
 
 const applyEnvironmentalPressure = (
@@ -2649,345 +1527,6 @@ const verifyArenaArtifact = (
     };
 };
 
-const buildSceneSignature = (
-    sceneRequest: NarrativeSceneRequest,
-    intent: FloorIntentRequest,
-    modulePlan: ModulePlan
-): SceneSignature => ({
-    sceneId: hashString(stableStringify({
-        role: intent.role,
-        motif: sceneRequest.motif,
-        modules: modulePlan.placements.map(item => item.moduleId)
-    })),
-    motif: sceneRequest.motif,
-    mood: sceneRequest.mood,
-    encounterPosture: sceneRequest.encounterPosture,
-    primaryEvidence: sceneRequest.motif,
-    secondaryEvidence: modulePlan.placements[1]?.moduleId,
-    hostileRosterDescriptor: intent.role === 'elite' ? 'elevated' : 'standard',
-    terrainDescriptor: intent.theme,
-    spatialDescriptor: modulePlan.placements.length > 1 ? 'layered' : 'focused'
-});
-
-const buildArtifactDigest = (
-    modulePlan: ModulePlan,
-    tiles: Map<string, Tile>,
-    scene: SceneSignature,
-    pathNetwork: GeneratedPathNetwork
-): string => {
-    const tileSignature = Array.from(tiles.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([key, tile]) => `${key}:${tile.baseId}:${tile.effects.map(effect => `${effect.id}:${effect.duration}:${effect.potency}`).join('&')}`)
-        .join('|');
-    return hashString(stableStringify({
-        modules: modulePlan.placements.map(item => item.moduleId),
-        tileSignature,
-        scene,
-        pathNetwork: {
-            landmarks: pathNetwork.landmarks.map(landmark => ({
-                id: landmark.id,
-                onPath: landmark.onPath,
-                routeMembership: landmark.routeMembership,
-                reachable: landmark.reachable
-            })),
-            tacticalTileKeys: pathNetwork.tacticalTileKeys,
-            visualTileKeys: pathNetwork.visualTileKeys,
-            routeCount: pathNetwork.routeCount,
-            junctionTileKeys: pathNetwork.junctionTileKeys,
-            maxStraightRun: pathNetwork.maxStraightRun,
-            environmentalPressureClusters: pathNetwork.environmentalPressureClusters,
-            segments: pathNetwork.segments.map(segment => ({
-                id: segment.id,
-                kind: segment.kind,
-                routeMembership: segment.routeMembership,
-                fromLandmarkId: segment.fromLandmarkId,
-                toLandmarkId: segment.toLandmarkId,
-                tileKeys: segment.tileKeys
-            }))
-        }
-    }));
-};
-
-const emptyArtifact = (
-    floor: number,
-    seed: string,
-    options: { width: number; height: number; mapShape: MapShape; theme: string; contentTheme?: string },
-    generationState: GenerationState,
-    mode: CompiledFloorArtifact['mode'] = 'floor_transition',
-    debugSnapshot?: GenerationDebugSnapshot
-): CompiledFloorArtifact => ({
-    mode,
-    runSeed: generationState.runSeed || seed,
-    floor,
-    theme: options.theme,
-    ...(options.contentTheme ? { contentTheme: options.contentTheme } : {}),
-    gridWidth: options.width,
-    gridHeight: options.height,
-    mapShape: options.mapShape as GenerationMapShape,
-    playerSpawn: createHex(Math.floor(options.width / 2), Math.max(0, options.height - 1)),
-    stairsPosition: createHex(Math.floor(options.width / 2), 0),
-    tileBaseIds: new Uint8Array(0),
-    enemySpawns: [],
-    rooms: [],
-    generationDelta: generationState,
-    modulePlacements: [],
-    logicAnchors: [],
-    pathNetwork: emptyGeneratedPathNetwork(),
-    verificationDigest: 'invalid',
-    artifactDigest: 'invalid',
-    ...(debugSnapshot ? { debugSnapshot } : {})
-});
-
-const encodeTileBaseIds = (
-    tiles: Map<string, Tile>,
-    width: number,
-    height: number,
-    mapShape: MapShape
-): Uint8Array => {
-    const grid = getGridForShape(width, height, mapShape)
-        .sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)));
-    return Uint8Array.from(grid.map(point => {
-        const tile = tiles.get(pointToKey(point));
-        const baseId = tile?.baseId === 'WALL' || tile?.baseId === 'LAVA' || tile?.baseId === 'VOID' || tile?.baseId === 'TOXIC'
-            ? tile.baseId
-            : 'STONE';
-        return TILE_CODE_BY_ID[baseId];
-    }));
-};
-
-const encodeTileEffects = (tiles: Map<string, Tile>) =>
-    Array.from(tiles.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .flatMap(([key, tile]) => tile.effects.length > 0
-            ? [{
-                key,
-                effects: tile.effects.map(effect => ({
-                    id: effect.id,
-                    duration: effect.duration,
-                    potency: effect.potency
-                }))
-            }]
-            : []
-        );
-
-export const rebuildTilesFromArtifact = (artifact: CompiledFloorArtifact): Map<string, Tile> => {
-    const grid = getGridForShape(artifact.gridWidth, artifact.gridHeight, artifact.mapShape as MapShape)
-        .sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)));
-    const tiles = new Map<string, Tile>();
-    for (let index = 0; index < grid.length; index += 1) {
-        const point = grid[index];
-        if (!point) continue;
-        const baseId = TILE_ID_BY_CODE[artifact.tileBaseIds[index] ?? 0] || 'STONE';
-        tiles.set(pointToKey(point), createTile(baseId, point));
-    }
-    for (const effectEntry of artifact.tileEffects || []) {
-        const tile = tiles.get(effectEntry.key);
-        if (!tile) continue;
-        tiles.set(effectEntry.key, {
-            ...tile,
-            effects: effectEntry.effects.map(effect => ({
-                id: effect.id as any,
-                duration: effect.duration,
-                potency: effect.potency
-            }))
-        });
-    }
-    return tiles;
-};
-
-export const rebuildEnemiesFromArtifact = (artifact: CompiledFloorArtifact): Entity[] =>
-    artifact.enemySpawns
-        .map((spawn) => {
-            const catalogEntry = getEnemyCatalogEntry(spawn.subtype as any);
-            if (!catalogEntry) return undefined;
-            const stats = catalogEntry.bestiary.stats;
-            const unitDef = getBaseUnitDefinitionBySubtype(spawn.subtype as any);
-            if (unitDef) {
-                return instantiateActorFromDefinitionWithCursor({
-                    rngSeed: `${artifact.runSeed}:artifact:${spawn.id}`,
-                    rngCounter: 0
-                }, unitDef, {
-                    actorId: spawn.id,
-                    position: spawn.position,
-                    subtype: spawn.subtype,
-                    factionId: 'enemy'
-                }).actor;
-            }
-            return createEnemy({
-                id: spawn.id,
-                subtype: spawn.subtype,
-                position: spawn.position,
-                speed: stats.speed || 1,
-                skills: getEnemyCatalogSkillLoadout(spawn.subtype as any, { source: 'runtime', includePassive: true }).length > 0
-                    ? getEnemyCatalogSkillLoadout(spawn.subtype as any, { source: 'runtime', includePassive: true })
-                    : getEnemySkillLoadout(spawn.subtype as any),
-                weightClass: stats.weightClass || 'Standard',
-                armorBurdenTier: catalogEntry.contract.metabolicProfile.armorBurdenTier,
-                enemyType: stats.type as 'melee' | 'ranged'
-            });
-        })
-        .filter((enemy): enemy is Entity => !!enemy)
-        .sort((a, b) => a.id.localeCompare(b.id));
-
-const countSpawnTags = (subtypes: string[]) => subtypes.reduce((acc, subtype) => {
-    const entry = getEnemyCatalogEntry(subtype as any);
-    if (!entry) return acc;
-    if (entry.contract.balanceTags.includes('frontline')) acc.frontline += 1;
-    if (entry.contract.balanceTags.includes('flanker')) acc.flanker += 1;
-    if (entry.contract.balanceTags.includes('support')) acc.support += 1;
-    if (entry.contract.combatRole === 'hazard_setter') acc.hazardSetter += 1;
-    if (entry.contract.combatRole === 'boss_anchor') acc.bossAnchor += 1;
-    if (entry.bestiary.stats.type === 'ranged' || entry.bestiary.stats.type === 'boss') acc.ranged += 1;
-    return acc;
-}, {
-    frontline: 0,
-    ranged: 0,
-    hazardSetter: 0,
-    flanker: 0,
-    support: 0,
-    bossAnchor: 0
-});
-
-const spawnProfileAllowsSubtype = (
-    profile: ReturnType<typeof getFloorSpawnProfile>,
-    selectedSubtypes: string[],
-    candidateSubtype: string
-): boolean => {
-    const nextCounts = countSpawnTags([...selectedSubtypes, candidateSubtype]);
-    const { composition } = profile;
-    return nextCounts.frontline <= composition.frontlineMax
-        && nextCounts.ranged <= composition.rangedMax
-        && nextCounts.hazardSetter <= composition.hazardSetterMax
-        && nextCounts.flanker <= composition.flankerMax
-        && nextCounts.support <= composition.supportMax
-        && nextCounts.bossAnchor <= composition.bossAnchorMax;
-};
-
-const chooseWeightedSubtype = (
-    subtypeIds: string[],
-    floorRole: ReturnType<typeof getFloorSpawnProfile>['role'],
-    rng: ReturnType<typeof createRng>
-): string | undefined => {
-    const weighted = subtypeIds.map(subtype => ({
-        subtype,
-        weight: Math.max(1, getEnemyCatalogEntry(subtype)?.contract.spawnProfile.spawnRoleWeights[floorRole] ?? 1)
-    }));
-    const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
-    if (total <= 0) return weighted[0]?.subtype;
-    let roll = rng.next() * total;
-    for (const entry of weighted) {
-        roll -= entry.weight;
-        if (roll <= 0) return entry.subtype;
-    }
-    return weighted[weighted.length - 1]?.subtype;
-};
-
-const generateFloorEnemiesInternal = (
-    floor: number,
-    spawnPositions: Point[],
-    seed: string,
-    forcedSeeds: Array<Point & { subtype: string }> = []
-): Entity[] => {
-    ensureTacticalDataBootstrapped();
-    const rng = createRng(`${seed}:enemies`);
-    const spawnProfile = getFloorSpawnProfile(floor);
-    let remainingBudget = spawnProfile.budget;
-    let propensityCursor: PropensityRngCursor = {
-        rngSeed: `${seed}:enemy-propensity`,
-        rngCounter: 0
-    };
-    const usedKeys = new Set<string>();
-    const enemies: Entity[] = [];
-    const selectedSubtypes: string[] = [];
-
-    const instantiateSeed = (subtype: string, position: Point): Entity | undefined => {
-        const catalogEntry = getEnemyCatalogEntry(subtype as any);
-        if (!catalogEntry) return undefined;
-        const stats = catalogEntry.bestiary.stats;
-        const enemySeedCounter = (propensityCursor.rngCounter << 8) + enemies.length;
-        const enemyId = `enemy_${enemies.length}_${stableIdFromSeed(seed, enemySeedCounter, 6, subtype)}`;
-        const unitDef = getBaseUnitDefinitionBySubtype(subtype as any);
-        let enemy: Entity;
-
-        if (unitDef) {
-            const instantiated = instantiateActorFromDefinitionWithCursor(propensityCursor, unitDef, {
-                actorId: enemyId,
-                position,
-                subtype,
-                factionId: 'enemy'
-            });
-            propensityCursor = instantiated.nextCursor;
-            enemy = instantiated.actor;
-        } else {
-                enemy = createEnemy({
-                    id: enemyId,
-                    subtype,
-                    position,
-                    speed: stats.speed || 1,
-                    skills: getEnemyCatalogSkillLoadout(subtype as any, { source: 'runtime', includePassive: true }).length > 0
-                        ? getEnemyCatalogSkillLoadout(subtype as any, { source: 'runtime', includePassive: true })
-                        : getEnemySkillLoadout(subtype as any),
-                    weightClass: stats.weightClass || 'Standard',
-                    armorBurdenTier: catalogEntry.contract.metabolicProfile.armorBurdenTier,
-                    enemyType: stats.type as 'melee' | 'ranged'
-                });
-            }
-
-        return {
-            ...enemy,
-            subtype,
-            enemyType: stats.type as 'melee' | 'ranged' | 'boss',
-            actionCooldown: stats.actionCooldown ?? enemy.actionCooldown,
-            isVisible: true
-        };
-    };
-
-    for (const forced of forcedSeeds.sort((a, b) => pointToKey(a).localeCompare(pointToKey(b)))) {
-        const entry = getEnemyCatalogEntry(forced.subtype as any);
-        if (!entry || remainingBudget < entry.bestiary.stats.cost) continue;
-        const key = pointToKey(forced);
-        if (usedKeys.has(key)) continue;
-        const enemy = instantiateSeed(forced.subtype, createHex(forced.q, forced.r));
-        if (!enemy) continue;
-        usedKeys.add(key);
-        enemies.push(enemy);
-        selectedSubtypes.push(forced.subtype);
-        remainingBudget -= entry.bestiary.stats.cost;
-    }
-
-    while (remainingBudget > 0 && usedKeys.size < spawnPositions.length) {
-        const affordableTypes = spawnProfile.allowedSubtypes.filter((subtype) => {
-            const entry = getEnemyCatalogEntry(subtype);
-            return !!entry
-                && entry.bestiary.stats.cost <= remainingBudget
-                && spawnProfileAllowsSubtype(spawnProfile, selectedSubtypes, subtype);
-        });
-        if (affordableTypes.length === 0) break;
-        const currentCounts = countSpawnTags(selectedSubtypes);
-        const frontlineCandidates = affordableTypes.filter(subtype =>
-            getEnemyCatalogEntry(subtype)?.contract.balanceTags.includes('frontline')
-        );
-        const candidatePool = currentCounts.frontline < spawnProfile.composition.frontlineMin && frontlineCandidates.length > 0
-            ? frontlineCandidates
-            : affordableTypes;
-        const enemyType = chooseWeightedSubtype(candidatePool, spawnProfile.role, rng);
-        if (!enemyType) break;
-        const entry = getEnemyCatalogEntry(enemyType);
-        if (!entry) break;
-        const availablePositions = spawnPositions.filter(position => !usedKeys.has(pointToKey(position)));
-        if (availablePositions.length === 0) break;
-        const position = availablePositions[Math.floor(rng.next() * availablePositions.length)];
-        const enemy = instantiateSeed(enemyType, position);
-        if (!enemy) break;
-        usedKeys.add(pointToKey(position));
-        enemies.push(enemy);
-        selectedSubtypes.push(enemyType);
-        remainingBudget -= entry.bestiary.stats.cost;
-    }
-
-    return enemies;
-};
-
 const buildVerificationFromFailure = (
     failure: GenerationFailure
 ): VerificationReport => ({
@@ -3377,7 +1916,7 @@ const runCompilerPass = (
                 state.realizedTiles,
                 state.resolvedMap
             );
-            const generatedEnemies = generateFloorEnemiesInternal(
+            const generatedEnemies = generateFloorEnemies(
                 state.input.floor,
                 state.spawnPositions,
                 state.input.seed,
@@ -3732,7 +2271,7 @@ export const compileStandaloneFloor = (
         artifactDigest
     };
 
-    const generatedEnemies = generateFloorEnemiesInternal(
+    const generatedEnemies = generateFloorEnemies(
         floor,
         spawnPositions,
         seed,
@@ -3828,12 +2367,6 @@ export const compileStandaloneFloor = (
         failure
     };
 };
-
-export const generateFloorEnemies = (
-    floor: number,
-    spawnPositions: Point[],
-    seed: string
-): Entity[] => generateFloorEnemiesInternal(floor, spawnPositions, seed);
 
 export const initializeGenerationForState = (
     baseState: GenerationState | undefined,

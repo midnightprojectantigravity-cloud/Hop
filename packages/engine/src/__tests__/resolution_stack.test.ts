@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveLifoStack } from '../systems/resolution-stack';
+import { ResolutionStackOverflowError, resolveLifoStack } from '../systems/resolution-stack';
 
 describe('resolution stack', () => {
     it('preserves input order while resolving via LIFO', () => {
@@ -73,5 +73,20 @@ describe('resolution stack', () => {
         expect(tickA?.afterReactionsQueued).toBe(1);
         expect(tickA?.bottomQueued).toBe(1);
         expect(tickA?.topQueued).toBe(0);
+    });
+
+    it('throws deterministically when the stack exceeds its max depth', () => {
+        expect(() => resolveLifoStack<string[], string>(
+            [],
+            ['A'],
+            {
+                apply: state => state,
+                preserveInputOrder: true,
+                maxDepth: 2,
+                getAfterReactions: (_state, item) => item === 'A'
+                    ? [{ item: 'A', enqueuePosition: 'top' }, { item: 'A', enqueuePosition: 'top' }]
+                    : []
+            }
+        )).toThrow(ResolutionStackOverflowError);
     });
 });

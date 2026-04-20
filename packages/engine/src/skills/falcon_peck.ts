@@ -1,7 +1,6 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getNeighbors, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 
 const FALCON_PECK_COMBAT = {
@@ -117,5 +116,5 @@ export const FALCON_PECK: SkillDefinition = {
             description: 'Peck hits 2 adjacent targets instead of 1.',
         },
     },
-    scenarios: getSkillScenarios('FALCON_PECK'),
+    
 };

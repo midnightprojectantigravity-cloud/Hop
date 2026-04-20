@@ -91,8 +91,8 @@ export const relicScenarios: ScenarioCollection = {
             },
             verify: (_state: GameState, logs: string[]) => {
                 const checks = {
-                    endTurnHazardResolved: logs.some(l => l.includes('player burns!')),
-                    damageEventOccurred: logs.some(l => l.includes('player burns!')),
+                    endTurnHazardResolved: logs.some(l => l.includes('player burns!') || l.includes('VANGUARD burns!')),
+                    damageEventOccurred: logs.some(l => l.includes('player burns!') || l.includes('VANGUARD burns!')),
                     relicTriggerMessageSeen: logs.some(l => l.includes('Steady Plates harden your stance.')),
                 };
                 return Object.values(checks).every(v => v === true);

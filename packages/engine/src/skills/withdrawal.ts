@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getNeighbors, hexDistance, hexDirection, hexAdd, getDirectionFromTo } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 import { SpatialSystem } from '../systems/spatial-system';
 import { getActorAt } from '../helpers';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
@@ -227,7 +226,7 @@ export const WITHDRAWAL: SkillDefinition = {
             description: 'Passive reaction does not consume cooldown.',
         },
     },
-    scenarios: getSkillScenarios('WITHDRAWAL'),
+    
 };
 
 /**

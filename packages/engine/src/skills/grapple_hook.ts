@@ -6,7 +6,6 @@ import {
 import { getActorAt } from '../helpers';
 import { applyEffects } from '../systems/effect-engine';
 import { pullToward, swap, kineticFling } from '../systems/movement/displacement-system';
-import { getSkillScenarios } from '../scenarios';
 import { SKILL_JUICE_SIGNATURES, JuiceHelpers } from '../systems/visual/juice-manifest';
 import { TileResolver } from '../systems/tiles/tile-effects';
 import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
@@ -190,5 +189,4 @@ export const GRAPPLE_HOOK: SkillDefinition = {
         });
     },
     upgrades: {},
-    scenarios: getSkillScenarios('GRAPPLE_HOOK')
 };

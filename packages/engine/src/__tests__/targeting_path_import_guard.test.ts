@@ -7,12 +7,14 @@ const ROOT = existsSync(join(process.cwd(), 'src'))
     : join(process.cwd(), 'packages', 'engine', 'src');
 const BANNED_IMPORT_PATTERNS = [
     /from\s+['"][^'"]*skills\/targeting['"]/,
-    /from\s+['"][^'"]*systems\/movement\/movement['"]/
+    /from\s+['"][^'"]*systems\/movement\/movement['"]/,
+    /from\s+['"][^'"]*systems\/theme['"]/
 ];
 
 const RETIRED_MODULES = [
     join(ROOT, 'skills', 'targeting.ts'),
-    join(ROOT, 'systems', 'movement', 'movement.ts')
+    join(ROOT, 'systems', 'movement', 'movement.ts'),
+    join(ROOT, 'systems', 'theme.ts')
 ];
 
 const walk = (dir: string): string[] => {

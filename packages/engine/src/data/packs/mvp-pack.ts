@@ -26,6 +26,7 @@ const createEnemyUnit = (config: {
     id: config.id,
     name: config.name,
     actorType: 'enemy',
+    unitKind: 'enemy',
     subtype: config.subtype,
     factionId: 'enemy',
     weightClass: config.weightClass,

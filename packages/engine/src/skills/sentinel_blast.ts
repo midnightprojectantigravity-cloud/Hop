@@ -1,7 +1,6 @@
 import type { SkillDefinition, Point, GameState, AtomicEffect, Actor } from '../types';
 import { getNeighbors, hexDistance } from '../hex';
 import { pointToKey } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 import { SpatialSystem } from '../systems/spatial-system';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 
@@ -90,5 +89,4 @@ export const SENTINEL_BLAST: SkillDefinition = {
         return SpatialSystem.getAreaTargets(state, origin, range);
     },
     upgrades: {},
-    scenarios: getSkillScenarios('SENTINEL_BLAST')
 };

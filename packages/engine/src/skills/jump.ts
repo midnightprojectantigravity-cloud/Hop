@@ -1,7 +1,6 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getNeighbors, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
@@ -191,5 +190,4 @@ export const JUMP: SkillDefinition = {
         METEOR_IMPACT: { id: 'METEOR_IMPACT', name: 'Meteor Impact', description: 'Can land on enemies to kill them' },
         FREE_JUMP: { id: 'FREE_JUMP', name: 'Free Jump', description: 'Can move after jumping' },
     },
-    scenarios: getSkillScenarios('JUMP')
 };

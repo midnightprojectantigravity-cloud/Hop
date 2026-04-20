@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { isBlockedByActor } from '../systems/validation';
 import {
     resolveRuntimeMovementExecutionPlan,
@@ -99,5 +98,4 @@ export const BASIC_MOVE: SkillDefinition = {
         return movementTargets.filter(point => !isBlockedByActor(state, point, actor.id));
     },
     upgrades: {},
-    scenarios: getSkillScenarios('BASIC_MOVE')
 };

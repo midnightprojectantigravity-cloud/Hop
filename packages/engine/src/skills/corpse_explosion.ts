@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDistance, getNeighbors, hexEquals } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { pointToKey } from '../hex';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
@@ -142,5 +141,4 @@ export const CORPSE_EXPLOSION: SkillDefinition = {
         return getCorpseTargetsInRange(state, origin, 4);
     },
     upgrades: {},
-    scenarios: getSkillScenarios('CORPSE_EXPLOSION')
 };

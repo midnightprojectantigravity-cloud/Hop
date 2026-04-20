@@ -196,8 +196,14 @@ export const validateBaseUnitDefinition = (input: unknown): ValidationIssue[] =>
     if (!isStr(input.id) || !/^[A-Z0-9_]+$/.test(input.id)) push(issues, '$.id', 'Expected uppercase id');
     if (!isStr(input.name) || input.name.length === 0) push(issues, '$.name', 'Expected non-empty string');
     if (!isStr(input.actorType) || !new Set(['player', 'enemy']).has(input.actorType)) push(issues, '$.actorType', 'Expected player|enemy');
+    if (input.unitKind !== undefined && (!isStr(input.unitKind) || !new Set(['archetype', 'enemy', 'companion', 'summon', 'custom']).has(input.unitKind))) {
+        push(issues, '$.unitKind', 'Expected archetype|enemy|companion|summon|custom');
+    }
     if (!isStr(input.factionId) || input.factionId.length === 0) push(issues, '$.factionId', 'Expected non-empty string');
     if (!isRecord(input.coordSpace) || input.coordSpace.system !== 'cube-axial' || input.coordSpace.pointFormat !== 'qrs') push(issues, '$.coordSpace', 'Expected {system:cube-axial,pointFormat:qrs}');
+    if (input.tags !== undefined) checkStringArray(input.tags, issues, '$.tags', { unique: true });
+    if (input.traits !== undefined) checkStringArray(input.traits, issues, '$.traits', { unique: true });
+    if (input.aiProfileId !== undefined && !isStr(input.aiProfileId)) push(issues, '$.aiProfileId', 'Expected string');
     if (!isRecord(input.instantiate)) {
         push(issues, '$.instantiate', 'Expected object');
     } else {
@@ -229,6 +235,9 @@ export const validateBaseUnitDefinition = (input: unknown): ValidationIssue[] =>
     } else {
         checkStringArray(input.skillLoadout.baseSkillIds, issues, '$.skillLoadout.baseSkillIds', { nonEmpty: true, unique: true });
         if (input.skillLoadout.passiveSkillIds !== undefined) checkStringArray(input.skillLoadout.passiveSkillIds, issues, '$.skillLoadout.passiveSkillIds', { unique: true });
+    }
+    if (input.lifecycle !== undefined && !isRecord(input.lifecycle)) {
+        push(issues, '$.lifecycle', 'Expected object');
     }
     return issues;
 };
@@ -343,7 +352,18 @@ export const compileBaseUnitBlueprint = (definition: BaseUnitDefinition): Compil
     definition,
     drawOrder: [...definition.instantiate.drawOrder],
     skillIds: [...definition.skillLoadout.baseSkillIds],
-    passiveSkillIds: [...(definition.skillLoadout.passiveSkillIds || [])]
+    passiveSkillIds: [...(definition.skillLoadout.passiveSkillIds || [])],
+    unitKind: definition.unitKind,
+    traits: [...(definition.traits || [])],
+    aiProfileId: definition.aiProfileId,
+    lifecycle: definition.lifecycle ? {
+        ...definition.lifecycle,
+        companionState: definition.lifecycle.companionState ? { ...definition.lifecycle.companionState } : undefined,
+        behaviorState: definition.lifecycle.behaviorState ? {
+            ...definition.lifecycle.behaviorState,
+            overlays: definition.lifecycle.behaviorState.overlays ? [...definition.lifecycle.behaviorState.overlays.map(overlay => ({ ...overlay }))] : undefined
+        } : undefined
+    } : undefined
 });
 
 export const compileCompositeSkillTemplate = (definition: CompositeSkillDefinition): CompiledCompositeSkillTemplate => {

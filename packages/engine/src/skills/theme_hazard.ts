@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState } from '../types';
 
-import { getSkillScenarios } from '../scenarios';
 
 /**
  * THEME HAZARD SCENARIOS
@@ -22,5 +21,4 @@ export const THEME_HAZARDS: SkillDefinition = {
         return { effects: [], messages: [] };
     },
     upgrades: {},
-    scenarios: getSkillScenarios('THEME_HAZARDS')
 };

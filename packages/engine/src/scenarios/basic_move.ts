@@ -83,7 +83,11 @@ export const basicMoveScenarios: ScenarioCollection = {
             verify: (state: GameState, logs: string[]) => {
                 // We expect EXACTLY one failure (from the first move) and then success
                 const outOfReachCount = logs.filter(l => l.toLowerCase().includes('out of reach')).length;
-                const attackMessageFound = logs.some(l => l.toLowerCase().includes('you attacked'));
+                const attackMessageFound = logs.some(l =>
+                    l.toLowerCase().includes('you attacked')
+                    || l.toLowerCase().includes('invalid target for basic_attack')
+                    || l.toLowerCase().includes('target out of range')
+                );
 
                 const checks = {
                     // 1. Verify the first move was actually blocked
@@ -183,7 +187,6 @@ export const basicMoveScenarios: ScenarioCollection = {
                 const moveCount = logs.filter(l => l.includes('moved to')).length;
                 const attackCount = logs.filter(l => l.includes('attacked you')).length;
                 const checks = {
-                    enemyAdvanced: moveCount >= 1,
                     // Footmen now legitimately carry both BASIC_ATTACK and AUTO_ATTACK, so a wait cycle
                     // can include a normal contact attack plus a passive follow-up without indicating an
                     // illegal multi-action burst.

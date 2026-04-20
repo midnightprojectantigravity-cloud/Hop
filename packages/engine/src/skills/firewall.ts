@@ -1,7 +1,6 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexAdd, hexDirection, hexDistance } from '../hex';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateAxialDirection, isBlockedByWall } from '../systems/validation';
 import { SpatialSystem } from '../systems/spatial-system';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
@@ -115,5 +114,4 @@ export const FIREWALL: SkillDefinition = {
         return SpatialSystem.getAxialTargets(state, origin, 4);
     },
     upgrades: {},
-    scenarios: getSkillScenarios('FIREWALL')
 };

@@ -1,7 +1,7 @@
 import type { GameState, Point } from '../../types';
 import type { Tile, TileTrait } from './tile-types';
 export { pointToKey } from '../../hex';
-import { hexEquals, isHexInRectangularGrid, pointToKey } from '../../hex';
+import { isHexInRectangularGrid, pointToKey } from '../../hex';
 
 export const UnifiedTileService = {
     /**
@@ -10,20 +10,7 @@ export const UnifiedTileService = {
      */
     getTileAt(state: GameState, pos: Point): Tile {
         const key = pointToKey(pos);
-        let tile: any = undefined;
-
-        if (state.tiles) {
-            if (state.tiles instanceof Map) {
-                tile = state.tiles.get(key);
-            } else if (Array.isArray(state.tiles)) {
-                tile = (state.tiles as any[]).find((t: any) =>
-                    (Array.isArray(t) && t[0] === key) ||
-                    (t.position && hexEquals(t.position, pos))
-                );
-            } else {
-                tile = (state.tiles as any)[key];
-            }
-        }
+        const tile = state.tiles instanceof Map ? state.tiles.get(key) : undefined;
 
         if (tile) return tile as Tile;
 

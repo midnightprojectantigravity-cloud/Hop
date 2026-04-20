@@ -1,12 +1,12 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getDirectionFromTo, getNeighbors, hexDirection, hexEquals } from '../hex';
 import { getActorAt } from '../helpers';
-import { getSkillScenarios } from '../scenarios';
 import { validateRange } from '../systems/validation';
 import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../systems/combat/combat-effect';
 import { extractTrinityStats } from '../systems/combat/combat-calculator';
 import { isStunned } from '../systems/status';
 import { resolveVirtualSkillDefinition } from '../systems/skill-upgrade-resolution';
+import { getSkillScenarios } from '../scenarios/skill-scenarios';
 
 /**
  * Basic Attack - A targeted melee attack skill.
@@ -34,6 +34,7 @@ export const BASIC_ATTACK: SkillDefinition = {
         trackingSignature: 'melee',
         weights: { body: 1 }
     },
+    scenarios: getSkillScenarios('BASIC_ATTACK'),
     execute: (state: GameState, attacker: Actor, target?: Point, activeUpgrades: string[] = []): { effects: AtomicEffect[]; messages: string[]; consumesTurn?: boolean } => {
         const effects: AtomicEffect[] = [];
         const messages: string[] = [];
@@ -287,5 +288,4 @@ export const BASIC_ATTACK: SkillDefinition = {
             ]
         },
     },
-    scenarios: getSkillScenarios('BASIC_ATTACK')
 };

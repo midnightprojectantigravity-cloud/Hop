@@ -373,27 +373,19 @@ const validateRuntimeMovementTarget = (
     definition: SkillRuntimeDefinition,
     state: GameState,
     attacker: Actor,
-    candidate: Point
+    candidate: Point,
+    targetRange: number
 ): boolean => {
     const movementPolicy = definition.movementPolicy;
     if (!movementPolicy) return true;
     const resolvedMovementPolicy = resolveRuntimeMovementPolicy(definition, state, attacker, candidate);
     if (!resolvedMovementPolicy) return true;
 
-    if (hexDistance(attacker.position, candidate) > resolvedMovementPolicy.range) {
+    if (hexDistance(attacker.position, candidate) > targetRange) {
         return false;
     }
 
     if (!movementPolicy.validateDestination) return true;
-
-    if (definition.id === 'DASH') {
-        const line = getHexLine(attacker.position, candidate);
-        for (const point of line.slice(1, -1)) {
-            if (!UnifiedTileService.isWalkable(state, point)) {
-                return false;
-            }
-        }
-    }
 
     return validateMovementDestination(
         state,
@@ -519,7 +511,7 @@ export const resolveRuntimeSkillValidTargets = (
             && anchorPointAllowed
             && (targeting.generator === 'movement_reachable'
                 ? true
-                : validateRuntimeMovementTarget(runtimeDefinition, state, attacker, candidate));
+                : validateRuntimeMovementTarget(runtimeDefinition, state, attacker, candidate, targeting.range));
         appendTrace(trace, {
             kind: 'target',
             path: `targeting.candidates.${createHex(candidate.q, candidate.r).q},${createHex(candidate.q, candidate.r).r}`,

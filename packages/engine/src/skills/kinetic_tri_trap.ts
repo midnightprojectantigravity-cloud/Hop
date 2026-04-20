@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { hexDirection, hexAdd } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 import { SpatialSystem } from '../systems/spatial-system';
 import { UnifiedTileService } from '../systems/tiles/unified-tile-service';
 import { consumeRandom } from '../systems/rng';
@@ -169,7 +168,7 @@ export const KINETIC_TRI_TRAP: SkillDefinition = {
             description: 'Individual trap reset cooldown reduced to 1.',
         },
     },
-    scenarios: getSkillScenarios('KINETIC_TRI_TRAP'),
+    
 };
 
 /**

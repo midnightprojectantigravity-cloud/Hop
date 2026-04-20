@@ -27,6 +27,19 @@ export interface ResolveLifoStackOptions<S, T> {
     describe?: (item: T) => string;
     preserveInputOrder?: boolean;
     startTick?: number;
+    maxDepth?: number;
+}
+
+export class ResolutionStackOverflowError extends Error {
+    readonly maxDepth: number;
+    readonly currentDepth: number;
+
+    constructor(maxDepth: number, currentDepth: number) {
+        super(`Resolution stack exceeded max depth ${maxDepth} (depth=${currentDepth})`);
+        this.name = 'ResolutionStackOverflowError';
+        this.maxDepth = maxDepth;
+        this.currentDepth = currentDepth;
+    }
 }
 
 export interface ResolveLifoStackResult<S> {
@@ -113,6 +126,7 @@ export const resolveLifoStack = <S, T>(
     items: T[],
     options: ResolveLifoStackOptions<S, T>
 ): ResolveLifoStackResult<S> => {
+    const maxDepth = options.maxDepth ?? 200;
     const ordered = options.preserveInputOrder === false ? [...items] : [...items].reverse();
     const stack: StackEntry<T>[] = ordered.map(item => ({
         item,
@@ -128,6 +142,9 @@ export const resolveLifoStack = <S, T>(
     let tick = options.startTick || 1;
 
     while (stack.length > 0) {
+        if (stack.length > maxDepth) {
+            throw new ResolutionStackOverflowError(maxDepth, stack.length);
+        }
         const depthBefore = stack.length;
         const entry = stack.pop() as StackEntry<T>;
 

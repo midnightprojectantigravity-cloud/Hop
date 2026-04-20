@@ -3,7 +3,9 @@ import type {
     CombatDamageElement,
     CombatDamageSubClass
 } from '../systems/combat/damage-taxonomy';
+import type { AiBehaviorOverlayInstance, GenericAiGoal, Point, StatusEffect } from '../types';
 import type { SkillUpgradePatchDefinition, SkillUpgradeRequirement } from '../types';
+import type { StatusID } from '../types/registry';
 export type RoundMode = 'none' | 'floor' | 'round' | 'ceil';
 
 export interface ClampRange {
@@ -69,11 +71,65 @@ export interface DerivedStatDefinition {
     params?: Record<string, number>;
 }
 
+export type UnitKind = 'archetype' | 'enemy' | 'companion' | 'summon' | 'custom';
+
+export interface UnitCompanionStateDefinition {
+    mode?: 'scout' | 'predator' | 'roost';
+    markTarget?: string | Point;
+    orbitStep?: number;
+    revivalCooldown?: number;
+    apexStrikeCooldown?: number;
+    healCooldown?: number;
+    keenSight?: boolean;
+    twinTalons?: boolean;
+    apexPredator?: boolean;
+}
+
+export interface UnitBehaviorOverlayDefinition {
+    id: string;
+    source: AiBehaviorOverlayInstance['source'];
+    sourceId?: string;
+    desiredRange?: number | [number, number];
+    rangeModel?: AiBehaviorOverlayInstance['rangeModel'];
+    offenseBias?: number;
+    controlBias?: number;
+    selfPreservationBias?: number;
+    commitBias?: number;
+    preferDamageOverPositioning?: boolean;
+    anchorActorId?: string;
+    anchorPoint?: Point;
+}
+
+export interface UnitBehaviorStateDefinition {
+    overlays?: AiBehaviorOverlayInstance[];
+    anchorActorId?: string;
+    anchorPoint?: Point;
+    controller?: 'manual' | 'generic_ai';
+    goal?: GenericAiGoal;
+    arenaTieBreakKey?: string;
+}
+
+export interface UnitLifecycleDefinition {
+    companionState?: UnitCompanionStateDefinition;
+    behaviorState?: UnitBehaviorStateDefinition;
+    visualAssetRef?: string;
+    isFlying?: boolean;
+    temporaryArmor?: number;
+    statusEffects?: Array<{
+        id: string;
+        type: StatusID;
+        duration?: number;
+        remainingActionPhases?: number;
+        tickWindow?: string;
+    }>;
+}
+
 export interface BaseUnitDefinition {
     version: string;
     id: string;
     name: string;
     actorType: 'player' | 'enemy';
+    unitKind?: UnitKind;
     subtype?: string;
     factionId: string;
     weightClass: 'Light' | 'Standard' | 'Heavy' | 'Anchored' | 'OuterWall';
@@ -82,6 +138,8 @@ export interface BaseUnitDefinition {
         pointFormat: 'qrs';
     };
     tags?: string[];
+    traits?: string[];
+    aiProfileId?: string;
     instantiate: {
         rngStream: string;
         seedSalt?: string;
@@ -124,6 +182,7 @@ export interface BaseUnitDefinition {
         temporaryArmor?: number;
         isVisible?: boolean;
     };
+    lifecycle?: UnitLifecycleDefinition;
     spawnProfile?: {
         preferredHex?: { q: number; r: number; s: number };
         allowHazardous?: boolean;
@@ -281,6 +340,10 @@ export interface CompiledBaseUnitBlueprint {
     drawOrder: string[];
     skillIds: string[];
     passiveSkillIds: string[];
+    unitKind?: UnitKind;
+    traits: string[];
+    aiProfileId?: string;
+    lifecycle?: UnitLifecycleDefinition;
 }
 
 export interface CompiledCompositeSkillTemplate {

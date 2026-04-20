@@ -1,6 +1,5 @@
 import type { SkillDefinition, GameState, Actor, AtomicEffect, Point } from '../types';
 import { getNeighbors } from '../hex';
-import { getSkillScenarios } from '../scenarios';
 import { isBlockedByWall, isBlockedByLava } from '../systems/validation';
 
 /**
@@ -59,5 +58,4 @@ export const SET_TRAP: SkillDefinition = {
         return getNeighbors(origin).filter(n => !isBlockedByWall(state, n) && !isBlockedByLava(state, n));
     },
     upgrades: {},
-    scenarios: getSkillScenarios('SET_TRAP')
 };

