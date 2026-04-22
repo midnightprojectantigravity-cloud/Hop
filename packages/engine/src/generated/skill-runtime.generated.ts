@@ -35,7 +35,7 @@ export const GENERATED_RUNTIME_SKILLS: SkillRuntimeDefinition[] = [
     "id": "ARCHER_SHOT",
     "name": "Archer Shot",
     "description": "Fire an arrow in a straight line at a hostile target.",
-    "slot": "offensive",
+    "slot": "passive",
     "icon": "🏹",
     "keywords": [
       "PROJECTILE",
@@ -7055,7 +7055,7 @@ export const GENERATED_RUNTIME_SKILL_IDS = [
 export type GeneratedRuntimeSkillID = typeof GENERATED_RUNTIME_SKILL_IDS[number];
 
 export const GENERATED_RUNTIME_SKILL_LIBRARY_METADATA: SkillLibraryMetadata = {
-  "generatedAt": "2026-04-20T17:47:27.789Z",
+  "generatedAt": "2026-04-20T23:52:02.757Z",
   "totalSkills": 51,
   "handlerBackedSkillCount": 0,
   "executionHandlerCount": 0,
@@ -7086,7 +7086,7 @@ export const GENERATED_RUNTIME_SKILL_LIBRARY_METADATA: SkillLibraryMetadata = {
       "id": "ARCHER_SHOT",
       "name": "Archer Shot",
       "sourcePath": "src/data/skills/archer_shot.skill.json",
-      "slot": "offensive",
+      "slot": "passive",
       "keywords": [
         "PROJECTILE",
         "RANGED",

@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
+import type { FloorTheme } from '@hop/engine';
 import { BiomeSandboxControlsPanel } from './biome-sandbox/BiomeSandboxControlsPanel';
 import { BiomeSandboxPreviewPane } from './biome-sandbox/BiomeSandboxPreviewPane';
 import { buildBiomeSandboxPreviewManifest } from './biome-sandbox/preview-manifest';
 import { useBiomeSandboxPathSets } from './biome-sandbox/use-biome-sandbox-path-sets';
 import { buildPreviewState } from './biome-sandbox/state/preview-state';
 import { normalizeHexColor } from './biome-sandbox/state/settings-utils';
+import { defaultsFromManifest, getBiomeSandboxThemeOptions, resolveBiomeSandboxTheme } from './biome-sandbox/state/default-settings';
 import { useBiomeSandboxSettings } from './biome-sandbox/state/use-biome-sandbox-settings';
 import type { VisualAssetManifest } from '../visual/asset-manifest';
 
@@ -22,7 +24,12 @@ export const BiomeSandbox: React.FC<BiomeSandboxProps> = ({ assetManifest, onBac
     resetSettings
   } = useBiomeSandboxSettings(assetManifest);
 
-  const themeKey = settings?.theme?.toLowerCase() || 'inferno';
+  const themeOptions = useMemo(() => getBiomeSandboxThemeOptions(assetManifest), [assetManifest]);
+  const resolvedTheme = useMemo(
+    () => resolveBiomeSandboxTheme(assetManifest, settings?.theme || 'inferno'),
+    [assetManifest, settings?.theme]
+  );
+  const themeKey = resolvedTheme.toLowerCase();
   const tintPickerColor = useMemo(
     () => normalizeHexColor(settings?.materials.tintColor || '#8b6f4a'),
     [settings?.materials.tintColor]
@@ -41,8 +48,13 @@ export const BiomeSandbox: React.FC<BiomeSandboxProps> = ({ assetManifest, onBac
 
   const previewState = useMemo(() => {
     if (!settings) return null;
-    return buildPreviewState(settings.theme, settings.seed, settings.injectHazards, settings.walls);
-  }, [settings]);
+    return buildPreviewState(resolvedTheme, settings.seed, settings.injectHazards, settings.walls);
+  }, [resolvedTheme, settings]);
+
+  const handleThemeChange = useCallback((nextTheme: FloorTheme) => {
+    if (!assetManifest) return;
+    setSettings(() => defaultsFromManifest(assetManifest, nextTheme));
+  }, [assetManifest, setSettings]);
 
   if (!assetManifest || !settings || !previewManifest || !previewState) {
     return (
@@ -66,6 +78,8 @@ export const BiomeSandbox: React.FC<BiomeSandboxProps> = ({ assetManifest, onBac
         setSettings={setSettings}
         pathSets={pathSets}
         copyStatus={copyStatus}
+        themeOptions={themeOptions}
+        onThemeChange={handleThemeChange}
         onBack={onBack}
         onReset={resetSettings}
         onCopySettings={copySettings}

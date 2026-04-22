@@ -1,8 +1,8 @@
-import type { Actor, AtomicEffect, GameState, Point } from '../../types';
+import type { Actor, GameState, Point } from '../../types';
 import { appendTrace, clonePoint } from './execution-context';
 import { evaluateRuntimeSkillPredicate, resolveRuntimeSkillActorById, resolveRuntimeSkillTargetActor } from './targeting';
 import type { PointResolutionContext } from './point-resolution';
-import type { CombatScriptInstruction, ResolutionTrace, ResolutionTraceMode, ResolvedSkillRuntime, SkillPhysicsPlan, SkillCollisionPolicy } from './types';
+import type { CombatScriptInstruction, ResolutionTrace, ResolvedSkillRuntime, SkillPhysicsPlan, SkillCollisionPolicy } from './types';
 
 export type LoweringExecutionContext = PointResolutionContext & {
     attackerTurnStartPosition?: Point;
@@ -85,8 +85,7 @@ export const instructionPassesRuntimeConditions = (
     state: GameState,
     attacker: Actor,
     context: LoweringExecutionContext,
-    executionTrace: ResolutionTrace,
-    traceMode: ResolutionTraceMode
+    executionTrace: ResolutionTrace
 ): boolean => {
     if (!instruction.conditions?.length) return true;
     const { conditionAttacker, conditionTargetActor, conditionPoint } = resolveInstructionConditionContext(state, context, attacker);

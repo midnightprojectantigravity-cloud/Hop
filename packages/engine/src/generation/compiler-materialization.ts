@@ -1,17 +1,15 @@
-import type { FloorTheme, Point } from '../types';
+import type { Point } from '../types';
 import { createHex, pointToKey } from '../hex';
 import { buildModuleRegistryIndex } from './modules';
 import { hexDistanceInt, hexRaycastInt } from './math/hex-int';
 import { createRng32, shuffleStable } from './rng32';
 import type {
     AuthoredFloorSpec,
-    AuthoredPathOverride,
     GenerationFailure,
     ModulePlan,
     ModulePlacement,
     NarrativeAnchor,
     NarrativeSceneRequest,
-    RouteMembership,
     SpatialPlan,
     SpatialClaim,
     TopologicalBlueprint
@@ -96,36 +94,6 @@ const getCandidateModuleEntriesForSlot = (
             b.constraintDensityScore - a.constraintDensityScore
             || a.id.localeCompare(b.id)
         );
-};
-
-const getPathOverride = (
-    authoredFloor: AuthoredFloor | undefined,
-    targetId: string
-): AuthoredPathOverride | undefined => authoredFloor?.pathOverrides?.[targetId];
-
-const resolveLandmarkRoute = (
-    override: AuthoredPathOverride | undefined,
-    onPathDefault: boolean,
-    fallbackMembership: Exclude<RouteMembership, 'hidden'>
-): { onPath: boolean; routeMembership: RouteMembership } => {
-    if (override?.routeHint === 'hidden') {
-        return {
-            onPath: false,
-            routeMembership: 'hidden'
-        };
-    }
-    if (override?.routeHint === 'primary' || override?.routeHint === 'alternate') {
-        const onPath = override.onPath ?? true;
-        return {
-            onPath,
-            routeMembership: onPath ? override.routeHint : 'hidden'
-        };
-    }
-    const onPath = override?.onPath ?? onPathDefault;
-    return {
-        onPath,
-        routeMembership: onPath ? fallbackMembership : 'hidden'
-    };
 };
 
 export const resolveModulePlan = (

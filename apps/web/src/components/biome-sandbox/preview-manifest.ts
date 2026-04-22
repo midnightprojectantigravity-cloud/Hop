@@ -1,5 +1,7 @@
 import type { BiomeSandboxSettings, BlendMode, MountainBlendMode } from './types';
 import type {
+  VisualAssetEntry,
+  VisualAssetFormat,
   VisualAssetManifest,
   VisualBiomeMaterialProfile,
   VisualBiomeThemePreset,
@@ -9,6 +11,7 @@ import type {
   VisualBiomeWallsThemeOverride
 } from '../../visual/asset-manifest';
 import { getBiomeThemePreset } from '../../visual/asset-manifest';
+import { resolveBiomeSandboxMountainAssets } from './mountain-assets';
 
 const BASE_URL = import.meta.env.BASE_URL || '/';
 const UNDERCURRENT_SCALE_MIN = 64;
@@ -63,6 +66,25 @@ const readMountainBlendMode = (blend: unknown): MountainBlendMode => {
   return readBlendMode(blend);
 };
 
+const SUPPORTED_ASSET_FORMATS: VisualAssetFormat[] = ['svg', 'webp', 'avif', 'png', 'jpg', 'jpeg'];
+
+const inferAssetFormat = (assetPath: string, fallback: VisualAssetFormat): VisualAssetFormat => {
+  const ext = String(assetPath || '').trim().toLowerCase().match(/\.([a-z0-9]+)(?:$|[?#])/i)?.[1];
+  if (ext && SUPPORTED_ASSET_FORMATS.includes(ext as VisualAssetFormat)) {
+    return ext as VisualAssetFormat;
+  }
+  return fallback;
+};
+
+const toSyntheticMountainAssetId = (themeKey: string, assetPath: string): string => {
+  const normalized = `${themeKey}.${assetPath}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/\.{2,}/g, '.')
+    .replace(/^\.|\.$/g, '');
+  return `prop.sandbox.preview.mountain.${normalized || 'custom'}`;
+};
+
 export const buildBiomeSandboxPreviewManifest = (
   assetManifest: VisualAssetManifest | null,
   settings: BiomeSandboxSettings | null,
@@ -70,11 +92,12 @@ export const buildBiomeSandboxPreviewManifest = (
 ): VisualAssetManifest | null => {
   if (!assetManifest || !settings) return null;
 
+  const normalizedThemeKey = String(themeKey || '').toLowerCase();
   const underPath = toRuntimeAssetPath(settings.undercurrent.path);
   const crustPath = toRuntimeAssetPath(settings.crust.path);
   const detailAPath = toRuntimeAssetPath(settings.materials.detailA.path);
   const detailBPath = toRuntimeAssetPath(settings.materials.detailB.path);
-  const presetBase = getBiomeThemePreset(assetManifest, themeKey) as VisualBiomeThemePreset | undefined;
+  const presetBase = getBiomeThemePreset(assetManifest, normalizedThemeKey) as VisualBiomeThemePreset | undefined;
   const underBase = presetBase?.biomeLayers?.undercurrent ?? assetManifest.biomeLayers?.undercurrent;
   const crustBase = presetBase?.biomeLayers?.crust
     ?? assetManifest.biomeLayers?.crust
@@ -93,7 +116,7 @@ export const buildBiomeSandboxPreviewManifest = (
     ? {
         ...(underBase || { default: underPath || crustPath || '' }),
         default: underPath || underBase?.default || '',
-        themes: { ...(underBase?.themes || {}), [themeKey]: underPath || underBase?.default || '' },
+        themes: { ...(underBase?.themes || {}), [normalizedThemeKey]: underPath || underBase?.default || '' },
         mode: settings.undercurrent.mode,
         scalePx: clamp(settings.undercurrent.scalePx, UNDERCURRENT_SCALE_MIN, UNDERCURRENT_SCALE_MAX),
         opacity: clamp(settings.undercurrent.opacity, 0, 1),
@@ -111,7 +134,7 @@ export const buildBiomeSandboxPreviewManifest = (
     ? {
         ...(crustBase || { default: crustPath || underPath || '' }),
         default: crustPath || crustBase?.default || '',
-        themes: { ...(crustBase?.themes || {}), [themeKey]: crustPath || crustBase?.default || '' },
+        themes: { ...(crustBase?.themes || {}), [normalizedThemeKey]: crustPath || crustBase?.default || '' },
         mode: settings.crust.mode,
         scalePx: Math.max(64, settings.crust.scalePx),
         opacity: 1,
@@ -123,7 +146,7 @@ export const buildBiomeSandboxPreviewManifest = (
 
   const detailADefault = detailAPath || crustMaterialBase?.detailA?.default || '';
   const detailAThemes = { ...(crustMaterialBase?.detailA?.themes || {}) };
-  if (detailADefault) detailAThemes[themeKey] = detailADefault;
+  if (detailADefault) detailAThemes[normalizedThemeKey] = detailADefault;
   const detailALayer: VisualBiomeTextureLayer | undefined = detailADefault
     ? {
         ...(crustMaterialBase?.detailA || { default: detailADefault }),
@@ -137,7 +160,7 @@ export const buildBiomeSandboxPreviewManifest = (
 
   const detailBDefault = detailBPath || crustMaterialBase?.detailB?.default || '';
   const detailBThemes = { ...(crustMaterialBase?.detailB?.themes || {}) };
-  if (detailBDefault) detailBThemes[themeKey] = detailBDefault;
+  if (detailBDefault) detailBThemes[normalizedThemeKey] = detailBDefault;
   const detailBLayer: VisualBiomeTextureLayer | undefined = detailBDefault
     ? {
         ...(crustMaterialBase?.detailB || { default: detailBDefault }),
@@ -153,7 +176,7 @@ export const buildBiomeSandboxPreviewManifest = (
     || crustMaterialBase?.tint?.default
     || '#8b6f4a';
   const tintThemes = { ...(crustMaterialBase?.tint?.themes || {}) };
-  tintThemes[themeKey] = tintDefault;
+  tintThemes[normalizedThemeKey] = tintDefault;
   const tintProfile: VisualBiomeTintProfile = {
     ...(crustMaterialBase?.tint || { default: tintDefault }),
     default: tintDefault,
@@ -170,9 +193,10 @@ export const buildBiomeSandboxPreviewManifest = (
       }
     : undefined;
   const resolvedMountainPath = toRuntimeAssetPath(settings.walls.mountainPath);
+  const { templateMountainAsset } = resolveBiomeSandboxMountainAssets(assetManifest, normalizedThemeKey);
   const presetWallsBase = presetBase?.walls as VisualBiomeWallsProfile | undefined;
   const wallThemePatch: VisualBiomeWallsThemeOverride = {
-    ...(presetWallsBase || assetManifest.walls?.themes?.[themeKey] || {}),
+    ...(presetWallsBase || assetManifest.walls?.themes?.[normalizedThemeKey] || {}),
     mountainPath: resolvedMountainPath,
     scale: clamp(settings.walls.mountainScale, 0.2, 3),
     offsetX: settings.walls.mountainOffsetX,
@@ -225,7 +249,7 @@ export const buildBiomeSandboxPreviewManifest = (
     mountainTintOpacity: wallThemePatch.mountainTintOpacity,
     themes: {
       ...(assetManifest.walls?.themes || {}),
-      [themeKey]: wallThemePatch
+      [normalizedThemeKey]: wallThemePatch
     }
   };
   const presetLayers: VisualBiomeThemePreset['biomeLayers'] = {
@@ -251,6 +275,28 @@ export const buildBiomeSandboxPreviewManifest = (
     biomeMaterials: presetMaterials,
     walls: wallsProfile
   };
+  const hasExactMountainAsset = Boolean(
+    resolvedMountainPath
+    && (assetManifest.assets || []).some(asset => toRuntimeAssetPath(asset.path) === resolvedMountainPath)
+  );
+  const syntheticMountainAsset: VisualAssetEntry | null = (
+    resolvedMountainPath
+    && !hasExactMountainAsset
+    && templateMountainAsset
+  )
+    ? {
+        id: toSyntheticMountainAssetId(normalizedThemeKey, resolvedMountainPath),
+        type: 'prop',
+        layer: 'prop',
+        recommendedFormat: inferAssetFormat(resolvedMountainPath, templateMountainAsset.recommendedFormat),
+        path: resolvedMountainPath,
+        width: templateMountainAsset.width,
+        height: templateMountainAsset.height,
+        theme: normalizedThemeKey,
+        anchor: templateMountainAsset.anchor,
+        tags: ['clutter', 'obstacle', 'mountain', 'blocking', normalizedThemeKey]
+      }
+    : null;
 
   return {
     ...assetManifest,
@@ -272,7 +318,10 @@ export const buildBiomeSandboxPreviewManifest = (
     walls: wallsProfile,
     biomePresets: {
       ...(assetManifest.biomePresets || {}),
-      [themeKey]: themePreset
-    }
+      [normalizedThemeKey]: themePreset
+    },
+    assets: syntheticMountainAsset
+      ? [...(assetManifest.assets || []), syntheticMountainAsset]
+      : (assetManifest.assets || [])
   };
 };

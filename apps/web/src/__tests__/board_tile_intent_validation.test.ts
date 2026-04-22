@@ -32,6 +32,20 @@ describe('board tile intent validation', () => {
     expect(allowed).toBe(true);
   });
 
+  it('allows archery passive targets as direct tile clicks', () => {
+    const allowed = canDispatchBoardTileIntent({
+      tile: hex(3, 4, -7),
+      playerPos: hex(3, 6, -9),
+      selectedSkillId: null,
+      selectedSkillTargetSet: new Set(),
+      defaultPassiveSkillByTargetKey: new Map([['3,4', 'ARCHER_SHOT']]),
+      hasPrimaryMovementSkills: true,
+      fallbackNeighborSet: new Set()
+    });
+
+    expect(allowed).toBe(true);
+  });
+
   it('blocks fallback-neighbor movement when strict target/path parity is enabled', () => {
     const allowed = canDispatchBoardTileIntent({
       tile: hex(1, 0, -1),

@@ -1,37 +1,12 @@
-import {
-    hexAdd,
-    getNeighbors,
-    getDirectionFromTo,
-    hexDistance,
-    hexDirection,
-    hexEquals
-} from '../../hex';
 import type {
-    InformationProvider,
-    InformationQuery,
     Actor,
     AtomicEffect,
     GameState,
-    MovementProvider,
-    MovementQuery,
     Point,
-    SenseProvider,
-    SenseQuery,
-    SkillCapabilities,
     SkillDefinition
 } from '../../types';
 import { createRaiseDeadSkeletonId } from '../entities/companion-id-strategies';
-import { createCompanion } from '../entities/entity-factory';
-import { extractTrinityStats } from '../combat/combat-calculator';
-import { createDamageEffectFromCombat, resolveSkillCombatDamage } from '../combat/combat-effect';
 import { resolveForce } from '../combat/force';
-import { createBombActor } from '../effects/bomb-runtime';
-import { processKineticPulse } from '../movement/kinetic-kernel';
-import { SpatialSystem } from '../spatial-system';
-import { materializeSkillDefinitionCapabilityProviders } from './capability-materialization';
-import { resolveSummonPlacement } from '../summon-placement';
-import { validateMovementDestination } from '../capabilities/movement-policy';
-import { UnifiedTileService } from '../tiles/unified-tile-service';
 import { resolveRuntimeMovementExecutionPlan } from './movement';
 import { resolveSkillRuntime } from './resolve';
 import {
@@ -65,7 +40,6 @@ import { preflightRuntimeExecution } from './execution-preflight';
 import {
     adjustMagnitudeForWeightClass,
     resolveDirectionVector,
-    resolveRuntimeStatusMultipliers,
     toCollisionPolicy
 } from './physics-resolution';
 import {
@@ -187,7 +161,7 @@ const lowerResolvedSkillRuntime = (
     );
 
     for (const instruction of resolved.combatScript) {
-        if (!instructionPassesRuntimeConditions(instruction, resolved, state, attacker, context, executionTrace, traceMode)) {
+        if (!instructionPassesRuntimeConditions(instruction, resolved, state, attacker, context, executionTrace)) {
             continue;
         }
 
@@ -272,7 +246,6 @@ const lowerResolvedSkillRuntime = (
                         resolveRuntimeSkillActorById
                     },
                     appendTrace,
-                    resolveRuntimeStatusMultipliers,
                     resolveForce
                 );
                 effects.push(...materialized.effects);

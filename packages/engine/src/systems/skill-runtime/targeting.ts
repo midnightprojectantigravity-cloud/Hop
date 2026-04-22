@@ -3,7 +3,6 @@ import {
     createHex,
     getGridForShape,
     getNeighbors,
-    getHexLine,
     hexDistance,
     hexEquals,
     pointToKey

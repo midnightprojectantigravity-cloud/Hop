@@ -1,11 +1,10 @@
-import type { Entity, GameState, MapShape, Point, Room } from '../types';
+import type { Entity, MapShape, Point } from '../types';
 import type { Tile } from '../systems/tiles/tile-types';
 import { BASE_TILES } from '../systems/tiles/tile-registry';
 import { createHex, getGridForShape, pointToKey } from '../hex';
 import { getEnemyCatalogEntry, getEnemyCatalogSkillLoadout, getFloorSpawnProfile } from '../data/enemies';
-import { ensureTacticalDataBootstrapped } from '../systems/tactical-data-bootstrap';
 import { getBaseUnitDefinitionBySubtype } from '../systems/entities/base-unit-registry';
-import { instantiateActorFromDefinitionWithCursor, type PropensityRngCursor } from '../systems/entities/propensity-instantiation';
+import { instantiateActorFromDefinitionWithCursor } from '../systems/entities/propensity-instantiation';
 import { createEnemy, getEnemySkillLoadout } from '../systems/entities/entity-factory';
 import type {
     CompiledFloorArtifact,
@@ -14,7 +13,6 @@ import type {
     GenerationMapShape,
     GenerationState,
     ModulePlan,
-    PathEdge,
     PathSummary,
     SceneSignature
 } from './schema';
@@ -55,34 +53,6 @@ const emptyGeneratedPathNetwork = (): GeneratedPathNetwork => ({
     maxStraightRun: 0,
     environmentalPressureClusters: []
 });
-
-const canonicalPathEdge = (left: string, right: string): PathEdge =>
-    left.localeCompare(right) <= 0
-        ? { fromKey: left, toKey: right }
-        : { fromKey: right, toKey: left };
-
-const buildEdgeSignature = (edge: PathEdge): string => `${edge.fromKey}|${edge.toKey}`;
-
-const buildEdgesFromTileKeys = (tileKeys: string[]): PathEdge[] => {
-    const seen = new Set<string>();
-    const edges: PathEdge[] = [];
-    for (let index = 1; index < tileKeys.length; index += 1) {
-        const previous = tileKeys[index - 1];
-        const current = tileKeys[index];
-        if (!previous || !current || previous === current) continue;
-        const edge = canonicalPathEdge(previous, current);
-        const signature = buildEdgeSignature(edge);
-        if (seen.has(signature)) continue;
-        seen.add(signature);
-        edges.push(edge);
-    }
-    return edges;
-};
-
-const sortPathEdges = (edges: Iterable<PathEdge>): PathEdge[] =>
-    Array.from(edges).sort((left, right) =>
-        left.fromKey.localeCompare(right.fromKey) || left.toKey.localeCompare(right.toKey)
-    );
 
 export const buildPathSummary = (pathNetwork: GeneratedPathNetwork): PathSummary => {
     const mainLandmarkIds = pathNetwork.landmarks

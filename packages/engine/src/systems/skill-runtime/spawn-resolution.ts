@@ -1,5 +1,4 @@
 import type { Actor, AtomicEffect, GameState, Point } from '../../types';
-import { pointToKey } from '../../hex';
 import { addStatus } from '../entities/actor';
 
 export const syncDisplacementEffects = (

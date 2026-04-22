@@ -1,4 +1,3 @@
-import { hexDistance } from '../../hex';
 import type { Actor, AtomicEffect, GameState, Point } from '../../types';
 import { resolveForce } from '../combat/force';
 import { processKineticPulse } from '../movement/kinetic-kernel';
@@ -6,7 +5,7 @@ import type { PointResolutionContext } from './point-resolution';
 import type { SkillCollisionPolicy, SkillPhysicsPlan } from './types';
 import { clonePoint, resolveActorLabel } from './execution-context';
 import { resolvePathRef } from './path-resolution';
-import { toCollisionPolicy, adjustMagnitudeForWeightClass, resolveDirectionVector, resolveRuntimeStatusMultipliers } from './physics-resolution';
+import { toCollisionPolicy, adjustMagnitudeForWeightClass, resolveDirectionVector } from './physics-resolution';
 
 export type MovementMaterializationDeps = {
     resolveActorRef: (
@@ -143,7 +142,6 @@ export const materializeApplyForceInstruction = (
     resolved: { runtime: { id: string }; physicsPlan: SkillPhysicsPlan },
     deps: MovementMaterializationDeps,
     appendTrace: (trace: any, entry: any) => void,
-    resolveRuntimeStatusMultipliersFn: typeof resolveRuntimeStatusMultipliers,
     resolveForceFn: typeof resolveForce
 ): { effects: AtomicEffect[]; messages: string[] } => {
     const actorRef = deps.resolveActorRef(instruction.target, attacker, state, context) as Actor | undefined;

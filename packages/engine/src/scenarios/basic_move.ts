@@ -184,7 +184,6 @@ export const basicMoveScenarios: ScenarioCollection = {
                 engine.wait();
             },
             verify: (_state: GameState, logs: string[]) => {
-                const moveCount = logs.filter(l => l.includes('moved to')).length;
                 const attackCount = logs.filter(l => l.includes('attacked you')).length;
                 const checks = {
                     // Footmen now legitimately carry both BASIC_ATTACK and AUTO_ATTACK, so a wait cycle

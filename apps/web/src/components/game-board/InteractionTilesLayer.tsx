@@ -11,6 +11,7 @@ export interface InteractionTileModel {
   isValidMove: boolean;
   isStairs: boolean;
   isLava: boolean;
+  isToxic?: boolean;
   isFire: boolean;
   isVoid: boolean;
   isShrine: boolean;

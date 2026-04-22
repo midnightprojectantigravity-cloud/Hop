@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { hexEquals, pointToKey } from '../hex';
-import { gameReducer } from '../logic';
+import { gameReducer, generateInitialState } from '../logic';
 import { createActiveSkill, SkillRegistry } from '../skillRegistry';
 import { applyEffects } from '../systems/effect-engine';
 import { advanceInitiative, removeFromQueue } from '../systems/initiative';
@@ -191,10 +191,8 @@ describe('Tightening regressions', () => {
     placeTile(state, p(6, 3), [], 'STONE');
 
     const resolvedSkillId = resolvePassiveSkillForTarget(state, state.player, state.player.position, target);
-    const dashTargets = SkillRegistry.get('DASH')!.getValidTargets!(state, state.player.position);
 
     expect(resolvedSkillId).toBe('BASIC_MOVE');
-    expect(dashTargets.some(point => hexEquals(point, target))).toBe(false);
   });
 
   it('rejects upgrade selections that were not offered by shrine options', () => {

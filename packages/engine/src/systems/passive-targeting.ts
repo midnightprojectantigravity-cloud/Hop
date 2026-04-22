@@ -2,7 +2,7 @@ import { hexEquals, pointToKey } from '../hex';
 import { SkillRegistry } from '../skillRegistry';
 import type { Actor, GameState, Point } from '../types';
 
-export const DEFAULT_PASSIVE_SKILL_PRIORITY = ['BASIC_ATTACK', 'BASIC_MOVE', 'DASH'] as const;
+export const DEFAULT_PASSIVE_SKILL_PRIORITY = ['BASIC_ATTACK', 'ARCHER_SHOT', 'BASIC_MOVE', 'DASH'] as const;
 
 const resolvePassivePriorityIndex = (skillId: string): number => {
     const index = DEFAULT_PASSIVE_SKILL_PRIORITY.indexOf(skillId as (typeof DEFAULT_PASSIVE_SKILL_PRIORITY)[number]);

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-20T17:47:27.789Z",
+  "generatedAt": "2026-04-20T23:52:02.757Z",
   "totalSkills": 51,
   "handlerBackedSkillCount": 0,
   "executionHandlerCount": 0,
@@ -30,7 +30,7 @@
       "id": "ARCHER_SHOT",
       "name": "Archer Shot",
       "sourcePath": "src/data/skills/archer_shot.skill.json",
-      "slot": "offensive",
+      "slot": "passive",
       "keywords": [
         "PROJECTILE",
         "RANGED",

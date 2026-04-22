@@ -29,11 +29,14 @@ const hashString = (input: string): number => {
 
 const hashFloat = (input: string): number => hashString(input) / 0xffffffff;
 
+const SANDBOX_PREVIEW_FLOOR = 4;
+const SANDBOX_CONTENT_THEME: FloorTheme = 'inferno';
+
 const hasWallTraits = (traits: Set<string>): boolean =>
   traits.has('BLOCKS_MOVEMENT') && traits.has('BLOCKS_LOS');
 
 const hasHazardTraits = (traits: Set<string>): boolean =>
-  traits.has('LAVA') || traits.has('FIRE') || (traits.has('HAZARDOUS') && traits.has('LIQUID'));
+  traits.has('LAVA') || traits.has('TOXIC') || traits.has('FIRE') || (traits.has('HAZARDOUS') && traits.has('LIQUID'));
 
 const getNeighborKeys = (position: Point): string[] =>
   AXIAL_NEIGHBOR_OFFSETS.map(offset =>
@@ -82,6 +85,7 @@ const setWallTraits = (tiles: Map<string, any>, key: string, enabled: boolean) =
     traits.add('BLOCKS_MOVEMENT');
     traits.add('BLOCKS_LOS');
     traits.delete('LAVA');
+    traits.delete('TOXIC');
     traits.delete('FIRE');
     traits.delete('LIQUID');
     traits.delete('HAZARDOUS');
@@ -107,7 +111,12 @@ const cloneTiles = (state: GameState): Map<string, any> => {
   return out;
 };
 
-export const applySyntheticHazards = (tiles: Map<string, any>, center: Point) => {
+export const applySyntheticHazards = (tiles: Map<string, any>, center: Point, theme: FloorTheme) => {
+  const hazardTraitsForTheme = (theme: FloorTheme): string[] =>
+    theme === 'void'
+      ? ['HAZARDOUS', 'LIQUID', 'TOXIC']
+      : ['HAZARDOUS', 'LIQUID', 'LAVA'];
+
   const mark = (q: number, r: number, traitsToAdd: string[]) => {
     const p: Point = { q, r, s: -q - r };
     const key = pointToKey(p);
@@ -122,17 +131,19 @@ export const applySyntheticHazards = (tiles: Map<string, any>, center: Point) =>
     });
   };
 
-  const lavaOffsets: Array<[number, number]> = [
+  const hazardOffsets: Array<[number, number]> = [
     [0, 0], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1],
     [2, -1], [2, 0], [1, 1], [-2, 1], [-2, 0], [-1, -1]
   ];
-  for (const [dq, dr] of lavaOffsets) {
-    mark(center.q + dq, center.r + dr, ['HAZARDOUS', 'LIQUID', 'LAVA']);
+  for (const [dq, dr] of hazardOffsets) {
+    mark(center.q + dq, center.r + dr, hazardTraitsForTheme(theme));
   }
 
-  const fireOffsets: Array<[number, number]> = [[3, -1], [3, 0], [2, 1], [-3, 1], [-3, 0], [-2, -1]];
-  for (const [dq, dr] of fireOffsets) {
-    mark(center.q + dq, center.r + dr, ['HAZARDOUS', 'FIRE']);
+  if (theme !== 'void') {
+    const fireOffsets: Array<[number, number]> = [[3, -1], [3, 0], [2, 1], [-3, 1], [-3, 0], [-2, -1]];
+    for (const [dq, dr] of fireOffsets) {
+      mark(center.q + dq, center.r + dr, ['HAZARDOUS', 'FIRE']);
+    }
   }
 };
 
@@ -204,30 +215,26 @@ export const applySyntheticWalls = (tiles: Map<string, any>, seed: string, spawn
   }
 };
 
-const themeFloor = (theme: FloorTheme): number => {
-  switch (theme) {
-    case 'inferno':
-      return 4;
-    case 'throne':
-      return 6;
-    case 'frozen':
-      return 8;
-    case 'void':
-      return 10;
-    case 'catacombs':
-    default:
-      return 1;
-  }
-};
-
 export const buildPreviewState = (theme: FloorTheme, seed: string, injectHazards: boolean, walls: WallSettings): GameState => {
-  const floor = themeFloor(theme);
+  const floor = SANDBOX_PREVIEW_FLOOR;
   const safeSeed = seed.trim() || 'biome-sandbox-seed';
-  const base = generateInitialState(floor, safeSeed, safeSeed, undefined, DEFAULT_LOADOUTS.VANGUARD);
+  const base = generateInitialState(
+    floor,
+    safeSeed,
+    safeSeed,
+    undefined,
+    DEFAULT_LOADOUTS.VANGUARD,
+    undefined,
+    undefined,
+    {
+      themeId: theme,
+      contentThemeId: SANDBOX_CONTENT_THEME
+    }
+  );
   const tiles = cloneTiles(base);
   applySyntheticWalls(tiles, safeSeed, base.player.position, walls);
   if (injectHazards) {
-    applySyntheticHazards(tiles, base.player.position);
+    applySyntheticHazards(tiles, base.player.position, theme);
   }
   return {
     ...base,
@@ -242,4 +249,3 @@ export const buildPreviewState = (theme: FloorTheme, seed: string, injectHazards
     intentPreview: undefined
   };
 };
-

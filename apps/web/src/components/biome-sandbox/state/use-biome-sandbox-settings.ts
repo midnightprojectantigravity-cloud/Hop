@@ -4,7 +4,7 @@ import type {
 } from '../types';
 import type { VisualAssetManifest } from '../../../visual/asset-manifest';
 import { buildBiomeSandboxExportPayload } from '../export-payload';
-import { defaultsFromManifest } from './default-settings';
+import { defaultsFromManifest, getBiomeSandboxThemeOptions } from './default-settings';
 import {
   SETTINGS_STORAGE_KEY,
   hydrateStoredSettings,
@@ -30,7 +30,8 @@ export const useBiomeSandboxSettings = (
     if (!assetManifest || initializedRef.current) return;
     const defaults = defaultsFromManifest(assetManifest, 'inferno');
     const stored = parseStoredSettings(localStorage.getItem(SETTINGS_STORAGE_KEY));
-    setSettings(hydrateStoredSettings(defaults, stored));
+    const themeOptions = getBiomeSandboxThemeOptions(assetManifest);
+    setSettings(hydrateStoredSettings(defaults, stored, themeOptions));
     initializedRef.current = true;
   }, [assetManifest]);
 

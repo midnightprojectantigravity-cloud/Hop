@@ -65,9 +65,28 @@ describe('SkillTray', () => {
       />
     );
 
-    expect(html).toContain('Corpse Explosion');
+    expect(html).toContain('Death Touch');
     expect(html).toContain('Raise Dead');
     expect(html).toContain('Soul Swap');
-    expect(html.match(/No Target/g)?.length).toBe(3);
+    expect(html.match(/No Target/g)?.length).toBe(2);
+  });
+
+  it('hides archer shot from the skill tray while keeping passive click targeting available', () => {
+    const hunter = recomputeVisibility(
+      generateInitialState(1, 'skill-tray-hunter-start', 'skill-tray-hunter-start', undefined, DEFAULT_LOADOUTS.HUNTER)
+    );
+
+    const html = renderToStaticMarkup(
+      <SkillTray
+        skills={hunter.player.activeSkills || []}
+        selectedSkillId={null}
+        onSelectSkill={vi.fn()}
+        hasSpear={hunter.hasSpear}
+        gameState={hunter}
+        compact
+      />
+    );
+
+    expect(html).not.toContain('Archer Shot');
   });
 });

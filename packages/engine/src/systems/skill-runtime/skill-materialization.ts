@@ -1,5 +1,5 @@
 import type { GameState, SkillDefinition, Actor, Point } from '../../types';
-import type { ResolutionTraceMode, SkillRuntimeDefinition, SkillExecutionWithRuntimeResult } from './types';
+import type { SkillRuntimeDefinition, SkillExecutionWithRuntimeResult } from './types';
 import {
     buildMaterializedIntentProfile,
     buildMaterializedSkillScenarios,
@@ -35,7 +35,6 @@ export const buildMaterializedSkillDefinition = (
         combat: deriveSkillDefinitionCombatProfile(definition),
         capabilities: materializeSkillDefinitionCapabilityProviders(definition),
         execute: (state, attacker, target, activeUpgrades = [], context = {}) => {
-            const traceMode = (context.traceMode as ResolutionTraceMode | undefined) || 'summary';
             const execution = execute(state, attacker, target, activeUpgrades, context);
             return {
                 effects: execution.effects,

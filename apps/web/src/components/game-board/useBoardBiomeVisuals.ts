@@ -316,9 +316,35 @@ export const useBoardBiomeVisuals = ({
         || crustMaterialVisible
     );
 
+    const undercurrentPatternVersion = useMemo(
+        () => hashString([
+            biomeThemeKey,
+            undercurrentHref || '',
+            undercurrentMode,
+            undercurrentScalePx,
+            undercurrentOpacity,
+            undercurrentOffset.x,
+            undercurrentOffset.y,
+            undercurrentScroll.x,
+            undercurrentScroll.y,
+            undercurrentScroll.durationMs
+        ].join('|')).toString(16),
+        [
+            biomeThemeKey,
+            undercurrentHref,
+            undercurrentMode,
+            undercurrentScalePx,
+            undercurrentOpacity,
+            undercurrentOffset.x,
+            undercurrentOffset.y,
+            undercurrentScroll.x,
+            undercurrentScroll.y,
+            undercurrentScroll.durationMs
+        ]
+    );
     const undercurrentPatternId = useMemo(
-        () => `biome-undercurrent-${gameState.floor}`,
-        [gameState.floor]
+        () => `biome-undercurrent-${gameState.floor}-${undercurrentPatternVersion}`,
+        [gameState.floor, undercurrentPatternVersion]
     );
     const crustPatternId = useMemo(
         () => `biome-crust-${gameState.floor}`,
@@ -347,7 +373,7 @@ export const useBoardBiomeVisuals = ({
         for (const hex of cells) {
             const key = pointToKey(hex);
             const flags = tileVisualFlags.get(key);
-            if (!flags || (!flags.isLava && !flags.isFire && !flags.isVoid)) continue;
+            if (!flags || (!flags.isLava && !flags.isToxic && !flags.isFire && !flags.isVoid)) continue;
             const { x, y } = hexToPixel(hex, TILE_SIZE);
             holes.push({ key, x, y });
         }

@@ -20,7 +20,11 @@ export interface BiomeSandboxPathSectionProps extends BiomeSandboxSectionProps {
   pathSets: BiomeSandboxPathSets;
 }
 
-export const FLOOR_THEMES: FloorTheme[] = ['catacombs', 'inferno', 'throne', 'frozen', 'void'];
+export interface BiomeSandboxPreviewSectionProps extends BiomeSandboxSectionProps {
+  themeOptions: FloorTheme[];
+  onThemeChange: (theme: FloorTheme) => void;
+}
+
 export const MODE_OPTIONS: LayerMode[] = ['off', 'repeat', 'cover'];
 export const BLEND_OPTIONS: BlendMode[] = ['normal', 'multiply', 'overlay', 'soft-light', 'screen', 'color-dodge'];
 export const MOUNTAIN_BLEND_OPTIONS: MountainBlendMode[] = ['off', 'multiply', 'overlay', 'soft-light', 'screen', 'color-dodge', 'normal'];

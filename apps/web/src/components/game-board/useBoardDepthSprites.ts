@@ -6,7 +6,7 @@ import type {
     VisualBiomeClutterLayer,
 } from '../../visual/asset-manifest';
 
-type TileFlags = { isWall: boolean; isLava: boolean; isFire: boolean; isVoid: boolean };
+type TileFlags = { isWall: boolean; isLava: boolean; isToxic: boolean; isFire: boolean; isVoid: boolean };
 
 type BoardDepthSprite = {
     id: string;
@@ -49,6 +49,13 @@ const parseMountainClusterSize = (asset: VisualAssetEntry): number => {
     return 1;
 };
 
+const isMountainAsset = (asset: VisualAssetEntry): boolean => {
+    if (asset.type !== 'prop') return false;
+    const id = asset.id.toLowerCase();
+    const tags = new Set((asset.tags || []).map(t => t.toLowerCase()));
+    return id.includes('mountain') || tags.has('mountain');
+};
+
 interface UseBoardDepthSpritesArgs<TMountainSettings extends { scale: number; offsetY: number }> {
     assetManifest?: VisualAssetManifest | null;
     biomeThemeKey: string;
@@ -77,23 +84,21 @@ export const useBoardDepthSprites = <TMountainSettings extends { scale: number; 
     resolveMountainSettings,
 }: UseBoardDepthSpritesArgs<TMountainSettings>) => {
     const mountainAssets = useMemo(() => {
-        const all = (assetManifest?.assets || []).filter(asset => {
-            if (asset.type !== 'prop') return false;
-            const id = asset.id.toLowerCase();
-            const tags = new Set((asset.tags || []).map(t => t.toLowerCase()));
-            const isMountain = id.includes('mountain') || tags.has('mountain');
-            if (!isMountain) return false;
+        const sorted = (assetManifest?.assets || [])
+            .filter(isMountainAsset)
+            .sort((a, b) => a.id.localeCompare(b.id));
+        const presetPath = String(wallsThemeMountainPath || wallsMountainPath || '').trim();
+        const overridePath = String(mountainAssetPathOverride || presetPath).trim();
+        if (overridePath) {
+            const exactMatch = sorted.find(asset => asset.path === overridePath);
+            return exactMatch ? [exactMatch] : [];
+        }
+
+        return sorted.filter(asset => {
             if (!asset.theme) return true;
             const theme = asset.theme.toLowerCase();
             return theme === biomeThemeKey || theme === 'core';
         });
-        const sorted = all.sort((a, b) => a.id.localeCompare(b.id));
-        const presetPath = String(wallsThemeMountainPath || wallsMountainPath || '').trim();
-        const overridePath = String(mountainAssetPathOverride || presetPath).trim();
-        if (!overridePath) return sorted;
-
-        const exactMatch = sorted.find(asset => asset.path === overridePath);
-        return exactMatch ? [exactMatch] : [];
     }, [assetManifest?.assets, biomeThemeKey, mountainAssetPathOverride, wallsMountainPath, wallsThemeMountainPath]);
 
     const mountainSettingsByAssetId = useMemo(() => {
@@ -156,7 +161,7 @@ export const useBoardDepthSprites = <TMountainSettings extends { scale: number; 
         for (const hex of cells) {
             const key = pointToKey(hex);
             const flags = tileVisualFlags.get(key);
-            if (flags?.isWall || flags?.isLava || flags?.isFire || flags?.isVoid) continue;
+            if (flags?.isWall || flags?.isLava || flags?.isToxic || flags?.isFire || flags?.isVoid) continue;
             const { y } = hexToPixel(hex, TILE_SIZE);
 
             for (let slot = 0; slot < maxPerHex; slot++) {

@@ -47,10 +47,10 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
       {slots.flatMap((slot) => {
         const slotSkills = skills.filter((s) => s.slot === slot);
         return slotSkills.map((skill) => {
-          const isSelected = selectedSkillId === skill.id;
           const isOnCooldown = skill.currentCooldown > 0;
-          const isSpearSlot = skill.id === 'SPEAR_THROW';
           const def = getSkillDefinition(skill.id);
+          const isSelected = selectedSkillId === skill.id;
+          const isSpearSlot = skill.id === 'SPEAR_THROW';
           const resourcePreview = def ? resolveIresActionPreview(gameState.player, skill.id, def.resourceProfile, gameState.ruleset, combatPressureMode) : undefined;
           const resourceBlocked = !!resourcePreview?.blockedReason;
           const validTargetCount = def?.getValidTargets
@@ -152,7 +152,7 @@ export const SkillTray: React.FC<SkillTrayProps> = ({
             </button>
           );
         });
-      })}
+      }).filter(Boolean)}
     </div>
   );
 };

@@ -3,7 +3,7 @@ import type {
     CombatDamageElement,
     CombatDamageSubClass
 } from '../systems/combat/damage-taxonomy';
-import type { AiBehaviorOverlayInstance, GenericAiGoal, Point, StatusEffect } from '../types';
+import type { AiBehaviorOverlayInstance, GenericAiGoal, Point } from '../types';
 import type { SkillUpgradePatchDefinition, SkillUpgradeRequirement } from '../types';
 import type { StatusID } from '../types/registry';
 export type RoundMode = 'none' | 'floor' | 'round' | 'ceil';

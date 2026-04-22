@@ -9,20 +9,19 @@ import { createDailySeed, toDateKey } from '../systems/run-objectives';
 import { resolveBiomeHazardTileId } from '../systems/biomes';
 import { registerCompilerPassApi } from './session';
 import { buildModuleRegistryIndex } from './modules';
-import { hexDistanceInt, hasClearLosInt, hexParity, hexRaycastInt } from './math/hex-int';
+import { hexDistanceInt, hasClearLosInt } from './math/hex-int';
 import { createRng32, shuffleStable } from './rng32';
 import { advanceGenerationStateFromCompletedFloor, buildDirectorEntropyKey, createGenerationState, ensureGenerationState, initializeFloorTelemetry } from './telemetry';
 import { hashString, stableStringify } from './hash';
 import {
-    buildEdgeSignature,
     buildEdgesFromTileKeys,
+    buildEdgeSignature,
     buildPathBendKeys,
     computeMaxStraightRun,
     isHazardousPathTile,
     isPathEligibleTile,
     parseKeyToHex,
     resolveTileRouteMembership,
-    sortPathEdges,
     walkableNeighborKeys
 } from './compiler-path-utils';
 import {
@@ -30,7 +29,6 @@ import {
     buildVisualPathNetwork
 } from './compiler-path-network';
 import {
-    BaseArena,
     collectAnchors,
     buildBaseArena,
     buildTopologicalBlueprint,
@@ -40,6 +38,7 @@ import {
     resolveMapConfig,
     resolveNarrativeSceneRequest
 } from './compiler-context';
+import type { BaseArena } from './compiler-context';
 import {
     registerSpatialClaims,
     realizeSceneEvidence,
@@ -53,15 +52,13 @@ import {
     encodeTileBaseIds,
     encodeTileEffects,
     emptyArtifact,
-    rebuildEnemiesFromArtifact,
-    rebuildTilesFromArtifact
+    rebuildEnemiesFromArtifact
 } from './artifact-helpers';
 import { generateFloorEnemies } from './enemy-generation';
 import type {
     AuthoredPathOverride,
     AuthoredFloorFamilySpec,
     AuthoredFloorSpec,
-    ClosedPathRequirement,
     CompiledFloorArtifact,
     CompilerPass,
     CompilerSessionInput,
@@ -74,22 +71,16 @@ import type {
     GeneratedPathNetwork,
     GenerationDebugSnapshot,
     GenerationFailure,
-    GenerationMapShape,
     GenerationSpecInput,
     GenerationState,
     LocalHex,
     ModulePlan,
     ModulePlacement,
     NarrativeAnchor,
-    NarrativeSceneRequest,
     PathEdge,
     PathLandmark,
     RouteMembership,
-    RouteProfile,
-    PathSegment,
-    PathSummary,
     SceneSignature,
-    SpatialBudget,
     SpatialClaim,
     SpatialClaimHardness,
     SpatialPlan,
@@ -175,14 +166,6 @@ const TILE_CODE_BY_ID = {
     VOID: 3,
     TOXIC: 4
 } as const;
-
-const TILE_ID_BY_CODE: Record<number, keyof typeof TILE_CODE_BY_ID> = {
-    0: 'STONE',
-    1: 'WALL',
-    2: 'LAVA',
-    3: 'VOID',
-    4: 'TOXIC'
-};
 
 const themeDefaultClosure = (theme: string): 'WALL' | 'VOID' =>
     theme === 'inferno' ? 'WALL' : 'VOID';
@@ -950,81 +933,6 @@ const findShortestPath = (
         tileKeys,
         edges: buildEdgesFromTileKeys(tileKeys)
     };
-};
-
-const buildOrderedMainLandmarks = (landmarks: PathLandmark[], tiles: Map<string, Tile>): string[] | GenerationFailure => {
-    const landmarksById = new Map(landmarks.map(landmark => [landmark.id, landmark]));
-    const start = landmarksById.get('entry');
-    const exit = landmarksById.get('exit');
-    if (!start || !exit) {
-        return {
-            stage: 'buildTacticalPathNetwork',
-            code: 'TACTICAL_PATH_START_EXIT_UNREACHABLE',
-            severity: 'error',
-            conflict: {
-                authoredId: 'arena',
-                constraintType: 'TACTICAL_PATH_START_EXIT_UNREACHABLE',
-                spatialContext: {
-                    hexes: [start?.point || createHex(0, 0), exit?.point || createHex(0, 0)],
-                    anchorIds: ['entry', 'exit']
-                }
-            },
-            diagnostics: ['Path landmarks must include entry and exit.']
-        };
-    }
-
-    const mainCandidates = landmarks
-        .filter(landmark =>
-            landmark.onPath
-            && landmark.routeMembership !== 'alternate'
-            && landmark.id !== 'entry'
-            && landmark.id !== 'exit'
-        )
-        .sort((left, right) =>
-            left.orderHint - right.orderHint
-            || hexDistanceInt(start.point, left.point) - hexDistanceInt(start.point, right.point)
-            || left.id.localeCompare(right.id)
-        );
-
-    const chain = ['entry', 'exit'];
-    for (const candidate of mainCandidates) {
-        let bestIndex = -1;
-        let bestScore = Number.POSITIVE_INFINITY;
-        for (let index = 1; index < chain.length; index += 1) {
-            const previousId = chain[index - 1]!;
-            const nextId = chain[index]!;
-            const previous = landmarksById.get(previousId)!;
-            const next = landmarksById.get(nextId)!;
-            const direct = findShortestPath(tiles, [pointToKey(previous.point)], pointToKey(next.point), new Set());
-            const toCandidate = findShortestPath(tiles, [pointToKey(previous.point)], pointToKey(candidate.point), new Set());
-            const fromCandidate = findShortestPath(tiles, [pointToKey(candidate.point)], pointToKey(next.point), new Set());
-            if (!toCandidate || !fromCandidate) continue;
-            const score = toCandidate.cost + fromCandidate.cost - (direct?.cost ?? 0);
-            if (score < bestScore || (score === bestScore && index < bestIndex)) {
-                bestScore = score;
-                bestIndex = index;
-            }
-        }
-        if (bestIndex === -1) {
-            return {
-                stage: 'buildTacticalPathNetwork',
-                code: 'TACTICAL_PATH_MAIN_LANDMARK_UNREACHABLE',
-                severity: 'error',
-                conflict: {
-                    authoredId: candidate.id,
-                    constraintType: 'TACTICAL_PATH_MAIN_LANDMARK_UNREACHABLE',
-                    spatialContext: {
-                        hexes: [candidate.point],
-                        anchorIds: [candidate.id]
-                    }
-                },
-                diagnostics: [`Main-path landmark ${candidate.id} cannot be connected to the route chain.`]
-            };
-        }
-        chain.splice(bestIndex, 0, candidate.id);
-    }
-
-    return chain;
 };
 
 const applyEnvironmentalPressure = (

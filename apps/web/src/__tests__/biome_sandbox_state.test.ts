@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { hydrateStoredSettings, parseStoredSettings } from '../components/biome-sandbox/state/settings-storage';
+import {
+  defaultsFromManifest,
+  getBiomeSandboxThemeOptions,
+  resolveBiomeSandboxTheme
+} from '../components/biome-sandbox/state/default-settings';
 import { normalizeHexColor, readBlendMode, readMountainBlendMode } from '../components/biome-sandbox/state/settings-utils';
 import type { BiomeSandboxSettings } from '../components/biome-sandbox/types';
+import type { VisualAssetManifest } from '../visual/asset-manifest';
 
 const defaultSettings: BiomeSandboxSettings = {
   theme: 'inferno',
@@ -68,6 +74,23 @@ const defaultSettings: BiomeSandboxSettings = {
   }
 };
 
+const sandboxManifest = {
+  assets: [],
+  biomeLayers: {},
+  biomeMaterials: {},
+  walls: {},
+  biomePresets: {
+    inferno: {
+      seed: 'inferno-seed',
+      injectHazards: true
+    },
+    void: {
+      seed: 'void-seed',
+      injectHazards: true
+    }
+  }
+} as unknown as VisualAssetManifest;
+
 describe('biome sandbox state helpers', () => {
   it('normalizes and reads blend/color helpers deterministically', () => {
     expect(normalizeHexColor('#abc')).toBe('#aabbcc');
@@ -76,6 +99,14 @@ describe('biome sandbox state helpers', () => {
     expect(readBlendMode('unknown')).toBe('multiply');
     expect(readMountainBlendMode('off')).toBe('off');
     expect(readMountainBlendMode('overlay')).toBe('overlay');
+  });
+
+  it('derives preset-backed themes and coerces unsupported themes to inferno', () => {
+    expect(getBiomeSandboxThemeOptions(sandboxManifest)).toEqual(['inferno', 'void']);
+    expect(resolveBiomeSandboxTheme(sandboxManifest, 'throne')).toBe('inferno');
+
+    const defaults = defaultsFromManifest(sandboxManifest, 'throne');
+    expect(defaults.theme).toBe('inferno');
   });
 
   it('hydrates stored settings with clamped values', () => {
@@ -101,5 +132,17 @@ describe('biome sandbox state helpers', () => {
     expect(hydrated.walls.mode).toBe(defaultSettings.walls.mode);
     expect(hydrated.walls.mountainTintColor).toBe('#aabbcc');
   });
-});
 
+  it('falls back to the default preset when the stored theme is no longer supported', () => {
+    const defaults = defaultsFromManifest(sandboxManifest, 'inferno');
+    const stored = parseStoredSettings(JSON.stringify({
+      ...defaultSettings,
+      theme: 'throne',
+      undercurrent: { ...defaultSettings.undercurrent, path: '/assets/void-under.webp' }
+    }));
+
+    const hydrated = hydrateStoredSettings(defaults, stored, getBiomeSandboxThemeOptions(sandboxManifest));
+    expect(hydrated.theme).toBe('inferno');
+    expect(hydrated.undercurrent.path).toBe(defaults.undercurrent.path);
+  });
+});

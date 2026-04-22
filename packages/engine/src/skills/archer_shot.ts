@@ -16,7 +16,7 @@ export const ARCHER_SHOT: SkillDefinition = {
     id: 'ARCHER_SHOT',
     name: 'Archer Shot',
     description: 'Fire an arrow in a straight line at a hostile target.',
-    slot: 'offensive',
+    slot: 'passive',
     icon: '🏹',
     baseVariables: {
         range: 4,

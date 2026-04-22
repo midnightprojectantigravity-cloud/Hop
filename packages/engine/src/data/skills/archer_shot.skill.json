@@ -2,7 +2,7 @@
   "id": "ARCHER_SHOT",
   "name": "Archer Shot",
   "description": "Fire an arrow in a straight line at a hostile target.",
-  "slot": "offensive",
+  "slot": "passive",
   "icon": "\ud83c\udff9",
   "keywords": [
     "PROJECTILE",

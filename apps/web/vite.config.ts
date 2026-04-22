@@ -52,7 +52,7 @@ export default defineConfig(({ mode }) => ({
     ...(mode === 'analyze' ? [bundleStatsPlugin()] : [])
   ],
   root: '.',
-  base: '/Hop',
+  base: '/Hop/',
   worker: {
     format: 'es'
   },
@@ -84,6 +84,6 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     port: 5175,
-    strictPort: true,
+    strictPort: true
   }
 }))

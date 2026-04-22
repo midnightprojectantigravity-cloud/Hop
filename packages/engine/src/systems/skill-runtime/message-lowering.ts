@@ -1,4 +1,4 @@
-import type { Actor, GameState, Point } from '../../types';
+import type { Actor, GameState } from '../../types';
 import { resolveActorLabel } from './execution-context';
 import { materializeAttackSummaryMessages, resolveMovementSummaryMessage } from './message-materialization';
 import { resolveRuntimeMovementPolicy, resolveRuntimeSkillActorById } from './targeting';

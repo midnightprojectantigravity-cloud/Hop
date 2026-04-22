@@ -8,3 +8,4 @@ export * from './compiler';
 export * from './validation';
 export * from './specs/default-worldgen-spec';
 export * from './specs/inferno-vertical-slice';
+export { rebuildEnemiesFromArtifact, rebuildTilesFromArtifact } from './artifact-helpers';

@@ -178,6 +178,6 @@ describe('game board skill click', () => {
     });
 
     expect(onMove).toHaveBeenCalledTimes(1);
-    expect(onMove).toHaveBeenCalledWith(jumpTarget, undefined);
+    expect(onMove).toHaveBeenCalledWith(jumpTarget, 'BASIC_MOVE');
   });
 });

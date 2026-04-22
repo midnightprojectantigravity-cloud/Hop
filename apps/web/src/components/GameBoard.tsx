@@ -334,9 +334,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 );
             const isSkillHighlight = !!selectedSkillId && selectedSkillTargetSet.has(tileKey);
             const renderWallTile = isWall && !mountainCoveredWallKeys.has(tileKey);
-            const interactionOnly = hybridInteractionLayerEnabled && !renderWallTile && !isVoid && !isLava && !isToxic && !isFire;
             const isStairs = tileKey === stairsKey;
             const isShrine = shrineKey ? tileKey === shrineKey : false;
+            const interactionOnly = hybridInteractionLayerEnabled && !renderWallTile && !isStairs && !isShrine;
             const tileAssetId = resolveTileAssetId({
                 isWall: renderWallTile,
                 isLava,
@@ -354,6 +354,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 isValidMove: isMoveHighlight || isSkillHighlight,
                 isStairs,
                 isLava,
+                isToxic,
                 isFire,
                 isVoid,
                 isShrine,

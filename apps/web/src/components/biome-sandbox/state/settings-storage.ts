@@ -1,3 +1,4 @@
+import type { FloorTheme } from '@hop/engine';
 import type {
   BiomeSandboxSettings,
   WallMode
@@ -32,12 +33,18 @@ export const parseStoredSettings = (raw: string | null): BiomeSandboxSettings | 
 
 export const hydrateStoredSettings = (
   defaults: BiomeSandboxSettings,
-  stored: BiomeSandboxSettings | null
+  stored: BiomeSandboxSettings | null,
+  themeOptions: readonly FloorTheme[] = [defaults.theme]
 ): BiomeSandboxSettings => {
   if (!stored) return defaults;
+  const storedTheme = String(stored.theme || '').toLowerCase() as FloorTheme;
+  if (!themeOptions.includes(storedTheme)) {
+    return defaults;
+  }
   return {
     ...defaults,
     ...stored,
+    theme: storedTheme,
     undercurrent: {
       ...defaults.undercurrent,
       ...(stored.undercurrent || {}),
@@ -155,4 +162,3 @@ export const hydrateStoredSettings = (
     }
   };
 };
-

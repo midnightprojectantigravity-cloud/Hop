@@ -1,4 +1,5 @@
 import React from 'react';
+import type { FloorTheme } from '@hop/engine';
 import type { BiomeSandboxPathSets, BiomeSandboxSettings } from './types';
 import type { BiomeSandboxSettingsSetter } from './controls/shared';
 import { BiomeSandboxPreviewSection } from './controls/preview-section';
@@ -13,6 +14,8 @@ interface BiomeSandboxControlsPanelProps {
   setSettings: BiomeSandboxSettingsSetter;
   pathSets: BiomeSandboxPathSets;
   copyStatus: string;
+  themeOptions: FloorTheme[];
+  onThemeChange: (theme: FloorTheme) => void;
   onBack: () => void;
   onReset: () => void;
   onCopySettings: () => void | Promise<void>;
@@ -25,6 +28,8 @@ export const BiomeSandboxControlsPanel: React.FC<BiomeSandboxControlsPanelProps>
   setSettings,
   pathSets,
   copyStatus,
+  themeOptions,
+  onThemeChange,
   onBack,
   onReset,
   onCopySettings,
@@ -66,6 +71,8 @@ export const BiomeSandboxControlsPanel: React.FC<BiomeSandboxControlsPanelProps>
         <BiomeSandboxPreviewSection
           settings={settings}
           setSettings={setSettings}
+          themeOptions={themeOptions}
+          onThemeChange={onThemeChange}
         />
 
         <BiomeSandboxUndercurrentSection

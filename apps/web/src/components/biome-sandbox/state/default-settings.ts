@@ -1,14 +1,12 @@
 import type { FloorTheme } from '@hop/engine';
 import type {
   VisualAssetManifest,
-  VisualBiomeThemePreset,
   VisualBiomeTextureLayer,
   VisualBiomeTintProfile,
   VisualBiomeWallsProfile,
   VisualBiomeWallsThemeOverride,
   VisualMountainRenderSettings
 } from '../../../visual/asset-manifest';
-import { getBiomeThemePreset } from '../../../visual/asset-manifest';
 import {
   DETAIL_SCALE_MAX,
   DETAIL_SCALE_MIN,
@@ -19,6 +17,7 @@ import {
   readBlendMode,
   readMountainBlendMode
 } from './settings-utils';
+import { resolveBiomeSandboxMountainAssets } from '../mountain-assets';
 import type {
   BiomeSandboxSettings,
   LayerMode,
@@ -65,9 +64,50 @@ const readWallMountainOverride = <T,>(
   return base as T | undefined;
 };
 
-export const defaultsFromManifest = (manifest: VisualAssetManifest, theme: FloorTheme): BiomeSandboxSettings => {
-  const themeKey = theme.toLowerCase();
-  const themePreset = getBiomeThemePreset(manifest, themeKey) as VisualBiomeThemePreset | undefined;
+const SANDBOX_DEFAULT_THEME: FloorTheme = 'inferno';
+const SANDBOX_THEME_PRIORITY: FloorTheme[] = ['inferno', 'void', 'catacombs', 'throne', 'frozen'];
+
+const isFloorTheme = (theme: string): theme is FloorTheme =>
+  theme === 'catacombs'
+  || theme === 'inferno'
+  || theme === 'throne'
+  || theme === 'frozen'
+  || theme === 'void';
+
+const normalizeSandboxThemes = (themes: string[]): FloorTheme[] => {
+  const unique = Array.from(new Set(themes.map(theme => theme.toLowerCase()).filter(isFloorTheme)));
+  const ordered = SANDBOX_THEME_PRIORITY.filter(theme => unique.includes(theme));
+  for (const theme of unique) {
+    if (!ordered.includes(theme)) ordered.push(theme);
+  }
+  return ordered.length > 0 ? ordered : [SANDBOX_DEFAULT_THEME];
+};
+
+export const getBiomeSandboxThemeOptions = (manifest: VisualAssetManifest | null | undefined): FloorTheme[] => {
+  if (!manifest?.biomePresets) return [SANDBOX_DEFAULT_THEME];
+  return normalizeSandboxThemes(Object.keys(manifest.biomePresets));
+};
+
+export const resolveBiomeSandboxTheme = (
+  manifest: VisualAssetManifest | null | undefined,
+  theme: FloorTheme | string
+): FloorTheme => {
+  const options = getBiomeSandboxThemeOptions(manifest);
+  const requested = String(theme || '').toLowerCase();
+  if (options.includes(requested as FloorTheme)) return requested as FloorTheme;
+  if (options.includes(SANDBOX_DEFAULT_THEME)) return SANDBOX_DEFAULT_THEME;
+  return options[0] || SANDBOX_DEFAULT_THEME;
+};
+
+export const defaultsFromManifest = (manifest: VisualAssetManifest, theme: FloorTheme | string): BiomeSandboxSettings => {
+  const themeKey = resolveBiomeSandboxTheme(manifest, theme).toLowerCase();
+  const {
+    themePreset,
+    wallsProfile,
+    wallsThemeOverride,
+    mountainPath,
+    selectedMountainAsset
+  } = resolveBiomeSandboxMountainAssets(manifest, themeKey);
   const undercurrentLayer = themePreset?.biomeLayers?.undercurrent ?? manifest.biomeLayers?.undercurrent;
   const crustLayer = themePreset?.biomeLayers?.crust
     ?? manifest.biomeLayers?.crust
@@ -84,33 +124,6 @@ export const defaultsFromManifest = (manifest: VisualAssetManifest, theme: Floor
   const detailA = crustMaterial?.detailA;
   const detailB = crustMaterial?.detailB;
   const tint = crustMaterial?.tint;
-  const wallsProfile = (themePreset?.walls || manifest.walls) as Partial<VisualBiomeWallsProfile> | undefined;
-  const wallsThemeOverride = (
-    themePreset?.walls
-      ? themePreset.walls
-      : manifest.walls?.themes?.[themeKey]
-  ) as Partial<VisualBiomeWallsThemeOverride> | undefined;
-  const mountainCandidates = (manifest.assets || [])
-    .filter((asset) => {
-      if (asset.type !== 'prop') return false;
-      const id = asset.id.toLowerCase();
-      const tags = new Set((asset.tags || []).map(tag => tag.toLowerCase()));
-      if (!id.includes('mountain') && !tags.has('mountain')) return false;
-      if (!asset.theme) return true;
-      const assetTheme = asset.theme.toLowerCase();
-      return assetTheme === themeKey || assetTheme === 'core';
-    })
-    .sort((a, b) => a.id.localeCompare(b.id));
-  const presetMountainPath = String(
-    wallsThemeOverride?.mountainPath
-    ?? wallsProfile?.mountainPath
-    ?? ''
-  ).trim();
-  const mountainPath = presetMountainPath
-    || mountainCandidates.find(asset => asset.path.toLowerCase().includes('biome.volcano.mountain.03.webp'))?.path
-    || mountainCandidates[0]?.path
-    || '';
-  const selectedMountainAsset = mountainCandidates.find(asset => asset.path === mountainPath) || mountainCandidates[0];
   const assetMountainDefaults = selectedMountainAsset?.mountainSettings as VisualMountainRenderSettings | undefined;
   const assetMountainThemeDefaults = selectedMountainAsset?.mountainSettingsByTheme?.[themeKey] as VisualMountainRenderSettings | undefined;
   const presetAssetMountainDefaults = (
@@ -170,7 +183,7 @@ export const defaultsFromManifest = (manifest: VisualAssetManifest, theme: Floor
   };
 
   return {
-    theme,
+    theme: themeKey as FloorTheme,
     seed: String(themePreset?.seed || 'biome-sandbox-seed'),
     injectHazards: themePreset?.injectHazards !== undefined ? Boolean(themePreset.injectHazards) : true,
     undercurrent: {

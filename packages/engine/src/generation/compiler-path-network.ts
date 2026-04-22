@@ -2,21 +2,18 @@ import type { Point } from '../types';
 import { createHex, pointToKey } from '../hex';
 import { hexDistanceInt } from './math/hex-int';
 import {
-    buildEdgeSignature,
     buildEdgesFromTileKeys,
-    buildPathBendKeys,
+    buildEdgeSignature,
     computeMaxStraightRun,
     isHazardousPathTile,
     isPathEligibleTile,
     parseKeyToHex,
-    resolveTileRouteMembership,
     sortPathEdges,
     walkableNeighborKeys
 } from './compiler-path-utils';
 import type {
     AuthoredFloorSpec,
     AuthoredPathOverride,
-    FloorIntentRequest,
     GeneratedPathNetwork,
     GenerationFailure,
     ModulePlan,
