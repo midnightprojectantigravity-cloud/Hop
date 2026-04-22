@@ -183,12 +183,12 @@
   "biomePresets": {
     "void": {
       "seed": "biome-sandbox-seed",
-      "injectHazards": true,
+      "injectHazards": false,
       "biomeLayers": {
         "undercurrent": {
           "default": "/assets/biomes/biome.black.toxic.01.webp",
           "mode": "repeat",
-          "scalePx": 192,
+          "scalePx": 176,
           "opacity": 0.62,
           "offsetX": 0,
           "offsetY": 0,
@@ -199,9 +199,9 @@
           }
         },
         "crust": {
-          "default": "/assets/biomes/biome.black.floor.02.webp",
+          "default": "/assets/biomes/biome.black.floor.01.webp",
           "mode": "repeat",
-          "scalePx": 176,
+          "scalePx": 170,
           "opacity": 1,
           "seedShiftPx": 56,
           "offsetX": 0,
@@ -215,28 +215,28 @@
       },
       "walls": {
         "mode": "custom",
-        "interiorDensity": 0,
-        "clusterBias": 0,
-        "keepPerimeter": true,
+        "interiorDensity": 0.04,
+        "clusterBias": 0.07,
+        "keepPerimeter": false,
         "mountainPath": "/assets/biomes/biome.black.obsidian.01.webp",
-        "mountainScale": 0.53,
-        "mountainOffsetX": 0,
-        "mountainOffsetY": 0,
+        "mountainScale": 0.59,
+        "mountainOffsetX": 2,
+        "mountainOffsetY": -8,
         "mountainAnchorX": 0.5,
         "mountainAnchorY": 0.55,
         "mountainCrustBlendMode": "multiply",
         "mountainCrustBlendOpacity": 1,
-        "mountainTintColor": "#4e3636",
+        "mountainTintColor": "#688b18",
         "mountainTintBlendMode": "overlay",
         "mountainTintOpacity": 1,
-        "scale": 0.53,
-        "offsetX": 0,
-        "offsetY": 0,
+        "scale": 0.59,
+        "offsetX": 2,
+        "offsetY": -8,
         "anchorX": 0.5,
         "anchorY": 0.55,
         "crustBlendMode": "multiply",
         "crustBlendOpacity": 1,
-        "tintColor": "#4e3636",
+        "tintColor": "#688b18",
         "tintBlendMode": "overlay",
         "tintOpacity": 1
       },
@@ -255,8 +255,8 @@
             "opacity": 0.14
           },
           "tint": {
-            "default": "#536e8e",
-            "opacity": 0.14,
+            "default": "#3e5065",
+            "opacity": 0.83,
             "blendMode": "overlay"
           }
         }
@@ -264,7 +264,7 @@
     },
     "inferno": {
       "seed": "biome-sandbox-seed",
-      "injectHazards": true,
+      "injectHazards": false,
       "biomeLayers": {
         "undercurrent": {
           "default": "/assets/biomes/biome.red.lava.01.webp",
@@ -280,9 +280,9 @@
           }
         },
         "crust": {
-          "default": "/assets/biomes/biome.red.floor.01.webp",
+          "default": "/assets/biomes/biome.red.floor.04.webp",
           "mode": "repeat",
-          "scalePx": 256,
+          "scalePx": 172,
           "opacity": 1,
           "seedShiftPx": 96,
           "offsetX": 0,
@@ -291,37 +291,33 @@
         "clutter": {
           "density": 0.14,
           "maxPerHex": 1,
-          "bleedScaleMax": 2,
-          "tags": [
-            "clutter",
-            "obstacle"
-          ]
+          "bleedScaleMax": 2
         }
       },
       "walls": {
         "mode": "custom",
         "interiorDensity": 0.05,
-        "clusterBias": 0,
-        "keepPerimeter": true,
-        "mountainPath": "/assets/biomes/biome.volcano.mountain.05.webp",
-        "mountainScale": 0.53,
-        "mountainOffsetX": 0,
-        "mountainOffsetY": 0,
+        "clusterBias": 0.07,
+        "keepPerimeter": false,
+        "mountainPath": "/assets/biomes/biome.red.boulder.01.webp",
+        "mountainScale": 0.68,
+        "mountainOffsetX": 2,
+        "mountainOffsetY": -10,
         "mountainAnchorX": 0.5,
         "mountainAnchorY": 0.55,
         "mountainCrustBlendMode": "multiply",
         "mountainCrustBlendOpacity": 1,
-        "mountainTintColor": "#4e3636",
+        "mountainTintColor": "#b45f5f",
         "mountainTintBlendMode": "overlay",
         "mountainTintOpacity": 1,
-        "scale": 0.53,
-        "offsetX": 0,
-        "offsetY": 0,
+        "scale": 0.68,
+        "offsetX": 2,
+        "offsetY": -10,
         "anchorX": 0.5,
         "anchorY": 0.55,
         "crustBlendMode": "multiply",
         "crustBlendOpacity": 1,
-        "tintColor": "#4e3636",
+        "tintColor": "#b45f5f",
         "tintBlendMode": "overlay",
         "tintOpacity": 1
       },
@@ -340,8 +336,8 @@
             "opacity": 0.14
           },
           "tint": {
-            "default": "#e0e0e0",
-            "opacity": 0.67,
+            "default": "#867ab3",
+            "opacity": 0.63,
             "blendMode": "overlay"
           }
         }
