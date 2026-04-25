@@ -188,7 +188,7 @@
         "undercurrent": {
           "default": "/assets/biomes/biome.black.toxic.01.webp",
           "mode": "repeat",
-          "scalePx": 276,
+          "scalePx": 176,
           "opacity": 0.62,
           "offsetX": 0,
           "offsetY": 0,
@@ -201,7 +201,7 @@
         "crust": {
           "default": "/assets/biomes/biome.black.floor.01.webp",
           "mode": "repeat",
-          "scalePx": 170,
+          "scalePx": 370,
           "opacity": 1,
           "seedShiftPx": 56,
           "offsetX": 0,
